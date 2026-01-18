@@ -1,0 +1,332 @@
+[
+  {
+    "id": 1,
+    "word": "a",
+    "phoneticUk": "/ə/",
+    "phoneticUs": "/ə/",
+    "audioUk": "a_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "a man/horse/unit",
+    "definitions": [
+      {
+        "text": "used before countable or singular nouns referring to people or things that have not already been mentioned",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "a1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 2,
+    "word": "abandon",
+    "phoneticUk": "/əˈbændən/",
+    "phoneticUs": "/əˈbændən/",
+    "audioUk": "abandon_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "abandon somebody, The baby had been abandoned by its mother.",
+    "definitions": [
+      {
+        "text": "to leave somebody, especially somebody you are responsible for, with no intention of returning",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [
+      {
+        "text": "abandon one's family [pet]  ",
+        "trans": "家族[ペット]を捨てる.",
+        "source": "abceed",
+        "weight": 100
+      },
+      {
+        "text": "The village was abandoned because of a famine.  ",
+        "trans": "その村は飢饉のために人が去った",
+        "source": "abceed",
+        "weight": 100
+      },
+      {
+        "text": "abandon one's attempt to set the record  ",
+        "trans": "記録の樹立を断念する.",
+        "source": "abceed",
+        "weight": 100
+      }
+    ],
+    "tags": [
+      "oxford",
+      "abceed",
+      "abceed_level_5"
+    ],
+    "source": "oxford_5000",
+    "source_meta": {
+      "id_book": "wisdom_ej4",
+      "id_word": "WDEJ_a0000370"
+    },
+    "cefrLevel": "b2",
+    "abceed_level": 5,
+    "abceed_rank": 1930,
+    "definition_jp": "を捨てる, 置き去りにする; 遺棄する",
+    "learningPriority": 0
+  },
+  {
+    "id": 3,
+    "word": "ability",
+    "phoneticUk": "/əˈbɪləti/",
+    "phoneticUs": "/əˈbɪləti/",
+    "audioUk": "ability_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "People with the disease may lose their ability to communicate.",
+    "definitions": [
+      {
+        "text": "the fact that somebody/something is able to do something",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [
+      {
+        "text": "have the [an] ability to speak English",
+        "trans": "英語を話す能力がある",
+        "source": "abceed",
+        "weight": 100
+      },
+      {
+        "text": "He improved his ability in reading.",
+        "trans": "彼は読解の力をつけた",
+        "source": "abceed",
+        "weight": 100
+      }
+    ],
+    "tags": [
+      "oxford",
+      "abceed",
+      "abceed_level_3"
+    ],
+    "source": "oxford_5000",
+    "source_meta": {
+      "id_book": "wisdom_ej4",
+      "id_word": "WDEJ_a0000750"
+    },
+    "cefrLevel": "a2",
+    "abceed_level": 3,
+    "abceed_rank": 826,
+    "definition_jp": "能力, …できること",
+    "learningPriority": 0
+  },
+  {
+    "id": 4,
+    "word": "able",
+    "phoneticUk": "/ˈeɪbl/",
+    "phoneticUs": "/ˈeɪbl/",
+    "audioUk": "able_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "You must be able to speak French for this job.",
+    "definitions": [
+      {
+        "text": "to have the skill, intelligence, opportunity, etc. needed to do something",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "a2",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 5,
+    "word": "abolish",
+    "phoneticUk": "/əˈbɒlɪʃ/",
+    "phoneticUs": "/əˈbɑːlɪʃ/",
+    "audioUk": "abolish_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "This tax should be abolished.",
+    "definitions": [
+      {
+        "text": "to officially end a law, a system or an institution",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "c1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 6,
+    "word": "abortion",
+    "phoneticUk": "/əˈbɔːʃn/",
+    "phoneticUs": "/əˈbɔːrʃn/",
+    "audioUk": "abortion_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "to support/oppose abortion",
+    "definitions": [
+      {
+        "text": "the deliberate ending of a pregnancy at an early stage",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "c1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 7,
+    "word": "about",
+    "phoneticUk": "/əˈbaʊt/",
+    "phoneticUs": "/əˈbaʊt/",
+    "audioUk": "about_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "It costs about $10.",
+    "definitions": [
+      {
+        "text": "on the subject of somebody/something; in connection with somebody/something",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "a1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 9,
+    "word": "above",
+    "phoneticUk": "/əˈbʌv/",
+    "phoneticUs": "/əˈbʌv/",
+    "audioUk": "above_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "Put it on the shelf above.",
+    "definitions": [
+      {
+        "text": "at or to a higher place or position than something/somebody",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "a1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  },
+  {
+    "id": 11,
+    "word": "abroad",
+    "phoneticUk": "/əˈbrɔːd/",
+    "phoneticUs": "/əˈbrɔːd/",
+    "audioUk": "abroad_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "to go/travel/live/study abroad ",
+    "definitions": [
+      {
+        "text": "in or to a foreign country",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [
+      {
+        "text": "go abroad",
+        "trans": "外国[海外]に[へ]行く",
+        "source": "abceed",
+        "weight": 100
+      },
+      {
+        "text": "There is a rumor abroad that she will come back soon.",
+        "trans": "彼女が近々復帰するといううわさがある.",
+        "source": "abceed",
+        "weight": 100
+      }
+    ],
+    "tags": [
+      "oxford",
+      "abceed",
+      "abceed_level_3"
+    ],
+    "source": "oxford_5000",
+    "source_meta": {
+      "id_book": "wisdom_ej4",
+      "id_word": "WDEJ_a0001280"
+    },
+    "cefrLevel": "a2",
+    "abceed_level": 3,
+    "abceed_rank": 1247,
+    "definition_jp": "外国に, 海外に",
+    "learningPriority": 0
+  },
+  {
+    "id": 12,
+    "word": "absence",
+    "phoneticUk": "/ˈæbsəns/",
+    "phoneticUs": "/ˈæbsəns/",
+    "audioUk": "absence_uk.mp3",
+    "partOfSpeech": null,
+    "commonExample": "in somebody's absence, The decision was made in my absence (= while I was not there).",
+    "definitions": [
+      {
+        "text": "the fact of somebody being away from a place where they are usually expected to be; the occasion or period of time when somebody is away",
+        "type": "oxford"
+      }
+    ],
+    "scenarios": [],
+    "collocations": [],
+    "tags": [
+      "oxford"
+    ],
+    "source": "oxford_5000",
+    "source_meta": null,
+    "cefrLevel": "c1",
+    "abceed_level": null,
+    "abceed_rank": null,
+    "definition_jp": null,
+    "learningPriority": 0
+  }
+]

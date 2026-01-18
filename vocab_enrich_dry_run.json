@@ -1,0 +1,165 @@
+[
+  {
+    "word": "a",
+    "definition_cn": "",
+    "definitions": {
+      "business_cn": null,
+      "general_cn": ""
+    },
+    "is_toeic_core": false,
+    "scenarios": [],
+    "collocations": []
+  },
+  {
+    "word": "abandon",
+    "definition_cn": "放弃",
+    "definitions": {
+      "business_cn": "放弃(项目/计划)",
+      "general_cn": "抛弃；遗弃"
+    },
+    "is_toeic_core": true,
+    "scenarios": [
+      "项目终止",
+      "合同解除"
+    ],
+    "collocations": [
+      {
+        "text": "abandon one's family [pet]",
+        "trans": "抛弃家人[宠物]",
+        "origin": "abceed"
+      },
+      {
+        "text": "The village was abandoned because of a famine.",
+        "trans": "由于饥荒，村庄被遗弃",
+        "origin": "abceed"
+      },
+      {
+        "text": "abandon one's attempt to set the record",
+        "trans": "放弃创造纪录的尝试",
+        "origin": "abceed"
+      }
+    ]
+  },
+  {
+    "word": "ability",
+    "definition_cn": "能力",
+    "definitions": {
+      "business_cn": "业务能力",
+      "general_cn": "才能"
+    },
+    "is_toeic_core": true,
+    "scenarios": [
+      "绩效考核",
+      "人才评估"
+    ],
+    "collocations": [
+      {
+        "text": "have the [an] ability to speak English",
+        "trans": "具备英语会话能力",
+        "origin": "abceed"
+      },
+      {
+        "text": "He improved his ability in reading.",
+        "trans": "他提升了阅读理解能力",
+        "origin": "abceed"
+      }
+    ]
+  },
+  {
+    "word": "able",
+    "definition_cn": "能够",
+    "definitions": {
+      "business_cn": null,
+      "general_cn": "有能力的"
+    },
+    "is_toeic_core": false,
+    "scenarios": [],
+    "collocations": []
+  },
+  {
+    "word": "abolish",
+    "definition_cn": "废除",
+    "definitions": {
+      "business_cn": "废止(制度)",
+      "general_cn": "取消"
+    },
+    "is_toeic_core": true,
+    "scenarios": [
+      "政策改革",
+      "法规修订"
+    ],
+    "collocations": []
+  },
+  {
+    "word": "abortion",
+    "definition_cn": "流产",
+    "definitions": {
+      "business_cn": null,
+      "general_cn": "堕胎"
+    },
+    "is_toeic_core": false,
+    "scenarios": [],
+    "collocations": []
+  },
+  {
+    "word": "about",
+    "definition_cn": "关于",
+    "definitions": {
+      "business_cn": null,
+      "general_cn": "大约"
+    },
+    "is_toeic_core": false,
+    "scenarios": [],
+    "collocations": []
+  },
+  {
+    "word": "above",
+    "definition_cn": "在...上",
+    "definitions": {
+      "business_cn": null,
+      "general_cn": "超过"
+    },
+    "is_toeic_core": false,
+    "scenarios": [],
+    "collocations": []
+  },
+  {
+    "word": "abroad",
+    "definition_cn": "海外",
+    "definitions": {
+      "business_cn": "海外(业务)",
+      "general_cn": "在国外"
+    },
+    "is_toeic_core": true,
+    "scenarios": [
+      "国际商务",
+      "海外出差"
+    ],
+    "collocations": [
+      {
+        "text": "go abroad",
+        "trans": "出国",
+        "origin": "abceed"
+      },
+      {
+        "text": "There is a rumor abroad that she will come back soon.",
+        "trans": "外界传闻她即将回归",
+        "origin": "abceed"
+      }
+    ]
+  },
+  {
+    "word": "absence",
+    "definition_cn": "缺席",
+    "definitions": {
+      "business_cn": "缺勤",
+      "general_cn": "不在场"
+    },
+    "is_toeic_core": true,
+    "scenarios": [
+      "考勤管理",
+      "会议记录"
+    ],
+    "collocations": []
+  }
+]

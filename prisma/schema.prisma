@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vocab {
+  // 1. 核心标识
+  id               Int      @id @default(autoincrement())
+  word             String   @unique
+
+  // 2. 基础语料 (From Oxford 5000)
+  phoneticUk       String?  // 英式音标
+  phoneticUs       String?  // 美式音标
+  audioUk          String?  // 英式音频 URL
+  partOfSpeech     String?  // 词性
+  commonExample    String?  // 通用例句
+  
+  // 3. 语义与场景 (AI 增强)
+  // [关键] 卡片式 UI 专用的简明中文释义 (从 JP 或 EN 翻译而来)
+  // 示例: "抛弃；中止"
+  definition_cn    String?  
+
+  // definitions 结构: [{type: 'general', text: '...'}, {type: 'business', text: '...'}]
+  // [关键] 结构化释义 (详情页用)
+  // 结构: { "business_cn": "会议记录", "general_cn": "分钟" }
+  definitions      Json?     
+  
+  // [关键] 商务属性开关 (用于 Sidebar 筛选 "Business Only")
+  is_toeic_core    Boolean  @default(false)
+
+  scenarios        String[] // 商务场景标签 (AI Cleaned)
+  
+  // collocations 结构: [{text: '...', trans: '...', source: 'abceed', weight: 100}]
+  collocations     Json?     // 常用搭配 (AI Generated / Abceed)
+  tags             String[] // 自动标签 (e.g. toeic_900)
+  
+  // 4. 元数据
+  source           String   @default("oxford_5000") // 数据来源
+  source_meta      Json?    // 源数据 Meta (id_book, id_word)
+
+  // 5. 分级策略
+  cefrLevel        String?  // A1 - C2
+  abceed_level     Int?     // Abceed Level (1-12)
+  abceed_rank      Int?     // Sort Order
+  definition_jp    String?  // 日文释义 (Reference)
+  learningPriority Int      @default(0) // 100(Core), 60(Support), 0(Noise)
+  
+  // 向量字段
+  // embedding Unsupported("vector(1536)")?
+
+  // 关联
+  progress         UserProgress[]
+  articles         ArticleVocab[]
+
+  @@index([learningPriority])
+  @@index([scenarios])
+}
+
+model UserProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  vocabId   Int
+  
+  // SRS 调度
+  status    LearningStatus @default(NEW) // NEW, LEARNING, REVIEW, MASTERED
+  interval  Int            @default(0)   // 天数
+  easeFactor Float         @default(2.5)
+  dueDate   DateTime       @default(now())
+  
+  // 🔥 五维矩阵 (V/A/M/C/X)
+  // { "V": 80, "A": 20, "M": 90, "C": 40, "X": 60 }
+  masteryMatrix Json       @default("{}")
+
+  // 语境锚点 (记录上次阅读遇到的句子)
+  lastContextSentence String? @db.Text
+
+  user      User     @relation(fields: [userId], references: [id])
+  vocab     Vocab    @relation(fields: [vocabId], references: [id])
+
+  @@unique([userId, vocabId])
+  @@index([userId, dueDate])
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  body        Json     // 存储段落结构，方便前端 token 化渲染
+  summaryZh   String?
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id])
+  vocabs      ArticleVocab[]
+}
+
+model ArticleVocab {
+  articleId String
+  vocabId   Int
+  role      VocabRole // TARGET(新词), CONTEXT(复习词)
+
+  article   Article @relation(fields: [articleId], references: [id])
+  vocab     Vocab   @relation(fields: [vocabId], references: [id])
+
+  @@id([articleId, vocabId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  
+  progress  UserProgress[]
+  articles  Article[]
+}
+
+enum LearningStatus {
+  NEW
+  LEARNING
+  REVIEW
+  MASTERED
+}
+
+enum VocabRole {
+  TARGET
+  CONTEXT
+}
