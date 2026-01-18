@@ -308,6 +308,32 @@ describe('generateWordAction', () => {
 }
 ```
 
+## 8. Scripting Standards (脚本规范)
+
+All executable scripts in `scripts/` MUST include a Chinese header comment.
+
+### A. Header Template (Mandatory)
+
+```typescript
+/**
+ * [Script Name/Title]
+ * 
+ * 功能：
+ *   [Brief description of purpose]
+ * 
+ * 使用方法：
+ *   npx tsx scripts/[filename].ts [args]
+ * 
+ * ⚠️ 注意：
+ *   1. [Env Vars requirements]
+ *   2. [Special warnings, e.g. server-only handling]
+ */
+```
+
+### B. Environment Handling
+* Use `try { process.loadEnvFile(); } catch (e) {}` for local `.env` loading.
+* Use `npx tsx` for execution.
+
 ---
 
 **Instruction to LLM (EXECUTION PROTOCOL):**
