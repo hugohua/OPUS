@@ -50,8 +50,8 @@ model Vocab {
   definition_jp    String?  // 日文释义 (Reference)
   learningPriority Int      @default(0) // 100(Core), 60(Support), 0(Noise)
   
-  // 向量字段
-  // embedding Unsupported("vector(1536)")?
+  // 向量字段 (1536 维，用于语义搜索)
+  embedding Unsupported("vector(1536)")?
 
   // 关联
   progress         UserProgress[]

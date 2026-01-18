@@ -1,3 +1,47 @@
+/**
+ * =============================================================================
+ * 📝 脚本名称: enrich-vocab-ai.ts
+ * 📌 功能描述: 词汇 AI 智能增强脚本 (中文翻译 + TOEIC 分类)
+ * =============================================================================
+ *
+ * 🎯 主要功能:
+ *   1. 从数据库获取尚未进行 AI 增强的词汇 (definition_cn = null)
+ *   2. 调用 AI 模型进行批量处理:
+ *      - 日语释义翻译为简体中文
+ *      - 生成简洁的中文定义 (适用于记忆卡片)
+ *      - 判断是否为 TOEIC 核心词汇
+ *      - 生成使用场景标签
+ *      - 补充/翻译搭配短语
+ *   3. 将 AI 结果写回数据库
+ *
+ * 🔧 环境变量 (在 .env 中配置):
+ *   - OPENAI_API_KEY     : API 密钥
+ *   - OPENAI_BASE_URL    : API 基础 URL (可用于 OpenRouter 等代理)
+ *   - AI_MODEL_NAME      : 模型名称 (默认: deepseek-v3.2)
+ *
+ * 📊 处理逻辑:
+ *   - 每批处理 10 个词汇 (BATCH_SIZE = 10)
+ *   - AI 输出会经过 Zod Schema 验证
+ *   - 失败时会输出原始响应用于调试
+ *
+ * 🚀 运行方式:
+ *   # 试运行 (不写入数据库，结果保存到 vocab_enrich_dry_run.json)
+ *   npx tsx scripts/enrich-vocab-ai.ts --dry-run
+ *
+ *   # 正式运行 (写入数据库)
+ *   npx tsx scripts/enrich-vocab-ai.ts
+ *
+ *   # 批量处理 (可配合 watch 或循环脚本多次运行)
+ *   while true; do npx tsx scripts/enrich-vocab-ai.ts; sleep 5; done
+ *
+ * ⚠️ 注意事项:
+ *   - 运行前确保 .env 中 AI 相关配置正确
+ *   - 使用 --dry-run 先验证 AI 输出格式
+ *   - 脚本幂等，可重复运行处理剩余词汇
+ *   - 建议先用 enrich-vocab.ts 完成基础数据导入
+ *
+ * =============================================================================
+ */
 
 import { PrismaClient } from '../generated/prisma/client';
 import { generateText } from 'ai';

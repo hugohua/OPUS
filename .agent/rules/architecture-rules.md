@@ -107,6 +107,207 @@ export type ActionState<T = any> = {
 * **Client:** Use `sonner` or `toast` to display error messages.
 * **Forms:** Use `react-hook-form` mapped to Zod errors.
 
+## 6. Logging (日志规范)
+
+使用统一的 Pino 日志模块 `lib/logger.ts`，**禁止直接使用 `console.log`**。
+
+### A. 基本用法
+
+```typescript
+import { logger, createLogger } from '@/lib/logger';
+
+// 1. 直接使用主日志器
+logger.info('Server started');
+
+// 2. 创建模块专用日志器 (推荐)
+const log = createLogger('etl');  // module = 'etl'
+log.info({ batch: 1 }, 'Processing batch');
+```
+
+### B. AI 服务错误日志
+
+AI 调用失败时必须使用 `logAIError` 记录完整上下文：
+
+```typescript
+import { logAIError } from '@/lib/logger';
+
+logAIError({
+    error,
+    systemPrompt,   // System Prompt
+    userPrompt,     // User Prompt / Input
+    rawResponse,    // AI 原始响应
+    model,          // 模型名称
+    context,        // 调用位置描述
+});
+```
+
+### C. 错误日志上下文要求
+
+**错误日志必须包含足够的上下文信息用于 LLM 定位问题：**
+
+| 场景 | 必需字段 |
+|------|----------|
+| ETL 批处理 | `batch`, `model`, `wordCount`, `words`, `error (含 stack)` |
+| AI 调用 | `model`, `systemPrompt`, `userPrompt`, `rawResponse` |
+| API 请求 | `path`, `method`, `statusCode`, `body` |
+
+### D. 日志文件
+
+```
+logs/
+├── app.log      # 所有日志 (JSON Lines)
+└── errors.log   # 仅错误日志 (level >= 50)
+```
+
+* 日志自动输出到控制台 + 文件
+* `logs/` 目录已添加到 `.gitignore`
+
+## 7. Testing Strategy (测试规范)
+
+### A. Tooling & Setup
+
+* **Runner:** `Vitest` (Fast, Native ESM, excellent Next.js compatibility).
+* **Mocking:** `vitest-mock-extended` (Type-safe Prisma/Service mocking).
+* **Location:** Co-locate tests with modules using `__tests__/` folders:
+  * `lib/validations/__tests__/`
+  * `actions/__tests__/`
+
+**`vitest.config.ts` Reference:**
+
+```typescript
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+export default defineConfig({
+  plugins: [react(), tsconfigPaths()],
+  test: {
+    environment: 'node', // Use 'jsdom' for component tests
+    globals: true,
+    include: ['**/__tests__/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['lib/validations/**', 'actions/**'],
+    },
+  },
+});
+```
+
+### B. Tier 1: Data Integrity (P0 - MANDATORY)
+
+**Target:** `lib/validations/*.ts` (Zod Schemas)
+
+* **Why:** Zod is the "Gatekeeper". If the schema fails to catch dirty data, the database will be polluted.
+* **Coverage Baseline:** 100% for all exported schemas.
+* **Rule:** Every Zod schema MUST have unit tests covering:
+  1. **Happy Path:** Valid inputs pass.
+  2. **Edge Cases:** Empty strings, negative numbers, invalid Enums.
+  3. **Sanitization:** Ensure `.transform()` logic works (e.g., trimming whitespace).
+
+**Naming Convention:** `[schema-name].test.ts` (e.g., `word.test.ts`)
+
+**Example (`lib/validations/__tests__/word.test.ts`):**
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { wordSchema } from '../word';
+
+describe('wordSchema', () => {
+  it('should reject empty or whitespace-only words', () => {
+    expect(wordSchema.safeParse({ word: '' }).success).toBe(false);
+    expect(wordSchema.safeParse({ word: '   ' }).success).toBe(false);
+  });
+
+  it('should allow valid scenarios enum', () => {
+    const result = wordSchema.safeParse({ 
+      word: 'test', 
+      scenarios: ['personnel'] 
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject invalid scenarios', () => {
+    const result = wordSchema.safeParse({ 
+      word: 'test', 
+      scenarios: ['human_resources'] // Invalid mapping check
+    });
+    expect(result.success).toBe(false);
+  });
+});
+```
+
+### C. Tier 2: Critical Business Logic (P1 - HIGHLY RECOMMENDED)
+
+**Target:** `actions/*.ts` (Server Actions)
+
+* **Why:** This is where **Money (AI Tokens)** and **State (DB Mutations)** are handled.
+* **Coverage Baseline:** ≥80% for critical actions.
+* **Scope:** Focus ONLY on Actions that:
+  1. **Write to DB:** `create`, `update`, `delete`.
+  2. **Call External APIs:** AI Generation, Payment, etc.
+
+**Strict Mocking Rule:**
+
+* **NEVER** connect to the real Database in tests. Use `vitest-mock-extended`.
+* **NEVER** call the real LLM API. Mock the service layer (`lib/ai/*.ts`).
+
+**Naming Convention:** `[action-name].test.ts` (e.g., `word-actions.test.ts`)
+
+**Example (`actions/__tests__/generate-word.test.ts`):**
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { generateWordAction } from '../word-actions';
+import { db } from '@/lib/db';
+import { mockDeep, mockReset } from 'vitest-mock-extended';
+
+// 1. Mock DB & AI Service
+vi.mock('@/lib/db', () => ({ db: mockDeep() }));
+vi.mock('@/lib/ai/VocabularyAIService', () => ({
+  generateMetadata: vi.fn().mockResolvedValue({ /* Fake AI Response */ })
+}));
+
+const mockDb = db as unknown as ReturnType<typeof mockDeep>;
+
+describe('generateWordAction', () => {
+  beforeEach(() => mockReset(mockDb));
+
+  it('should return error for invalid input (Zod check)', async () => {
+    const result = await generateWordAction({ word: '' });
+    expect(result.status).toBe('error');
+    // Ensure no DB/AI calls happened
+    expect(mockDb.word.create).not.toHaveBeenCalled();
+  });
+
+  it('should persist data and return success on valid input', async () => {
+    // Setup Mock DB Return
+    mockDb.word.create.mockResolvedValue({ id: '1', word: 'apple' } as any);
+
+    const result = await generateWordAction({ word: 'apple' });
+
+    expect(result.status).toBe('success');
+    expect(mockDb.word.create).toHaveBeenCalled();
+  });
+});
+```
+
+### D. Execution & CI Integration
+
+* **Local:** Run `npm run test` before every commit.
+* **CI Pipeline:** Must fail if **P0 (Tier 1)** tests fail.
+* **Scripts (`package.json`):**
+
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+
 ---
 
 **Instruction to LLM (EXECUTION PROTOCOL):**

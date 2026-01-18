@@ -8,3 +8,8 @@ node_modules
 out/
 # Build cache
 *.tsbuildinfo
+output
+
+# Logs
+logs/
+*.log

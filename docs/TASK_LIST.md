@@ -7,14 +7,11 @@
     * **状态：** 已完成
     * **内容：** 定义 Vocab, UserProgress, Article 表结构。
 
-- [ ] **Task 1.2: Enable pgvector & Migration**
-    * **目标：** 在 Postgres 中开启向量扩展，并应用 Schema。
-    * **指令要点：**
-        1. 执行 SQL `CREATE EXTENSION IF NOT EXISTS vector;`。
-        2. 在 `Vocab` 表中取消 `embedding` 字段的注释：`embedding Unsupported("vector(1536)")?`。
-        3. 运行 `npx prisma db push`。
+- [x] **Task 1.2: Enable pgvector & Migration**
+    * **状态：** 已完成
+    * **内容：** 启用 pgvector 扩展，在 Vocab 表添加 embedding 向量字段。
 
-- [ ] **Task 1.3: Implement ETL Script (DeepSeek)**
+- [x] **Task 1.3: Implement ETL Script (DeepSeek)**
     * **目标：** 实现数据清洗与分级计算脚本。
     * **指令要点：**
         1. 创建 `scripts/enrich-vocab.ts`。
@@ -39,7 +36,7 @@
 ## 🟡 第二阶段: AI 内容引擎 (Content Engine)
 > **目标：** 跑通“1+N”文章生成闭环。
 
-- [ ] **Task 2.1: Article Generation Service**
+- [x] **Task 2.1: Article Generation Service**
     * **目标：** 封装生成文章的核心业务逻辑。
     * **指令要点：** 实现 `generateDailyArticle` Action，包含选词逻辑、Prompt 拼接、DeepSeek 调用、结果入库。
 

@@ -8,7 +8,7 @@
 
 ## 待办事项
 - [ ] Task 1.2: 启用 pgvector 扩展并完善 Prisma Schema
-- [ ] Task 1.3: 实现 ETL 脚本 (DeepSeek 数据清洗)
+- [x] Task 1.3: 实现 ETL 脚本 (DeepSeek 数据清洗)
 - [ ] Task 1.4: 数据库种子脚本
 - [ ] Task 1.5: 向量化脚本
 

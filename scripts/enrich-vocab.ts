@@ -1,3 +1,37 @@
+/**
+ * =============================================================================
+ * 📝 脚本名称: enrich-vocab.ts
+ * 📌 功能描述: 词汇数据源合并脚本 (Oxford 5000 + Abceed)
+ * =============================================================================
+ *
+ * 🎯 主要功能:
+ *   1. 从本地 JSON 文件加载 Oxford 5000 和 Abceed 词库数据
+ *   2. 将两个数据源进行智能合并 (以 word 为 key 进行匹配)
+ *   3. 批量 upsert 到数据库的 Vocab 表
+ *
+ * 📂 数据文件 (需放置在 raw_data/ 目录下):
+ *   - oxford_5000.json  : Oxford 5000 词表 (含音标、CEFR 等级、例句)
+ *   - abceed.json       : Abceed TOEIC 词库 (含日语释义、难度等级、搭配)
+ *
+ * 📊 数据合并逻辑:
+ *   - Oxford 词汇: 添加 'oxford' tag, 使用其 CEFR Level、音标、例句
+ *   - Abceed 匹配: 追加 'abceed' + 'abceed_level_N' tags, 使用其日语释义和搭配
+ *   - Abceed 独有: 单独入库，仅包含 Abceed 元数据
+ *
+ * 🚀 运行方式:
+ *   # 试运行 (不写入数据库，仅输出预览)
+ *   npx tsx scripts/enrich-vocab.ts --dry-run
+ *
+ *   # 正式运行 (写入数据库)
+ *   npx tsx scripts/enrich-vocab.ts
+ *
+ * ⚠️ 注意事项:
+ *   - 运行前确保 raw_data/ 目录下有对应的 JSON 文件
+ *   - 使用 --dry-run 先行验证数据是否正确
+ *   - 此脚本为一次性初始化脚本，重复运行会更新已有记录
+ *
+ * =============================================================================
+ */
 
 import { PrismaClient } from '../generated/prisma/client';
 import fs from 'fs';
