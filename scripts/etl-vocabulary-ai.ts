@@ -6,12 +6,12 @@
  *   主要填充: definition_cn (简明释义), definitions (结构化释义), Scenarios (场景), Collocations (搭配).
  *   自动映射: is_toeic_core -> learningPriority (100/60).
  * 
- * 限额管理 (生产级保护):
- *   - 两级熔断: 429 Rate Limit -> 5 分钟冷却; Quota Exhausted -> 暂停到次日 16:30 (PT 午夜)
- *   - 指数退避: 3 次重试，间隔 5s -> 10s -> 20s
- *   - 速率节流: 每批次间隔 120 秒 (--continuous 模式)
- *   - 每小时上限: 最多 25 批/小时，超出自动暂停
- *   - 连续失败保护: 连续失败 5 次后触发长时间冷却
+ * 限额管理 (针对 Gemini 免费层优化):
+ *   - 批次间隔: 10 分钟 (每小时 6 批，卡在免费层限额内)
+ *   - 每小时上限: 最多 6 批/小时
+ *   - 两级熔断: 429 Rate Limit -> 10 分钟冷却; Quota Exhausted -> 暂停到次日 16:30 (PT 午夜)
+ *   - 指数退避: 3 次重试，间隔 10s -> 20s -> 40s
+ *   - 连续失败保护: 连续失败 3 次后触发长时间冷却
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
@@ -49,12 +49,12 @@ const log = createLogger('etl');
 
 // --- Configuration ---
 const BATCH_SIZE = 10;
-const RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000;  // 5 分钟冷却 (保守策略)
-const BATCH_INTERVAL_MS = 120 * 1000;           // 2 分钟间隔 (避免触发限流)
+const RATE_LIMIT_COOLDOWN_MS = 10 * 60 * 1000;  // 10 分钟冷却 (Gemini 免费层需要更长)
+const BATCH_INTERVAL_MS = 10 * 60 * 1000;        // 10 分钟间隔 (每小时 6 批，正好卡在限额内)
 const MAX_RETRIES = 3;
-const BASE_RETRY_DELAY_MS = 5000;               // 5 秒基础退避
-const MAX_REQUESTS_PER_HOUR = 25;               // 每小时最多 25 批 (安全上限)
-const MAX_CONSECUTIVE_FAILURES = 5;             // 连续失败 5 次后长时间暂停
+const BASE_RETRY_DELAY_MS = 10000;               // 10 秒基础退避
+const MAX_REQUESTS_PER_HOUR = 6;                 // 每小时最多 6 批 (根据实际限额调整)
+const MAX_CONSECUTIVE_FAILURES = 3;              // 连续失败 3 次后长时间暂停
 
 // --- Rate Limit Detection ---
 interface RateLimitInfo {
@@ -196,7 +196,7 @@ async function processBatchWithRetry(
                     },
                 });
                 updateCount++;
-                console.info({ word: item.word, priority: vocabPriority, isToeicCore: item.is_toeic_core }, '✓ Word updated');
+                log.info({ word: item.word, priority: vocabPriority, isToeicCore: item.is_toeic_core }, '✓ Word updated');
             }
 
             return { success: true, processedCount: updateCount };
