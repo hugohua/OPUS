@@ -162,6 +162,7 @@ export class VocabularyAIService {
                 model: this.model,
                 system: VOCABULARY_ENRICHMENT_PROMPT,
                 prompt: userPrompt,
+                temperature: 0.1, // 低温度确保 ETL 输出一致性
             });
 
             rawResponse = text;

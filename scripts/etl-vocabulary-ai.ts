@@ -196,7 +196,7 @@ async function processBatchWithRetry(
                     },
                 });
                 updateCount++;
-                log.debug({ word: item.word, isToeicCore: item.is_toeic_core }, 'Updated word');
+                console.info({ word: item.word, priority: vocabPriority, isToeicCore: item.is_toeic_core }, '✓ Word updated');
             }
 
             return { success: true, processedCount: updateCount };
