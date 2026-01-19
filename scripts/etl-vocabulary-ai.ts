@@ -6,10 +6,12 @@
  *   主要填充: definition_cn (简明释义), definitions (结构化释义), Scenarios (场景), Collocations (搭配).
  *   自动映射: is_toeic_core -> learningPriority (100/60).
  * 
- * 限额管理 (Gemini/通用):
- *   - 两级熔断: 429 Rate Limit -> 2 分钟冷却; Quota Exhausted -> 暂停到次日 16:30 (PT 午夜)
+ * 限额管理 (生产级保护):
+ *   - 两级熔断: 429 Rate Limit -> 5 分钟冷却; Quota Exhausted -> 暂停到次日 16:30 (PT 午夜)
  *   - 指数退避: 3 次重试，间隔 5s -> 10s -> 20s
- *   - 速率节流: 每批次间隔 60 秒 (--continuous 模式)
+ *   - 速率节流: 每批次间隔 120 秒 (--continuous 模式)
+ *   - 每小时上限: 最多 25 批/小时，超出自动暂停
+ *   - 连续失败保护: 连续失败 5 次后触发长时间冷却
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
@@ -46,11 +48,13 @@ try {
 const log = createLogger('etl');
 
 // --- Configuration ---
-const BATCH_SIZE = 15;
-const RATE_LIMIT_COOLDOWN_MS = 2 * 60 * 1000;  // 2 分钟冷却
-const BATCH_INTERVAL_MS = 60 * 1000;            // 1 分钟间隔
+const BATCH_SIZE = 10;
+const RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000;  // 5 分钟冷却 (保守策略)
+const BATCH_INTERVAL_MS = 120 * 1000;           // 2 分钟间隔 (避免触发限流)
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 5000;               // 5 秒基础退避
+const MAX_REQUESTS_PER_HOUR = 25;               // 每小时最多 25 批 (安全上限)
+const MAX_CONSECUTIVE_FAILURES = 5;             // 连续失败 5 次后长时间暂停
 
 // --- Rate Limit Detection ---
 interface RateLimitInfo {
@@ -119,6 +123,9 @@ interface ProcessingStats {
     totalFailed: number;
     batchCount: number;
     startTime: Date;
+    consecutiveFailures: number;      // 连续失败计数
+    requestsThisHour: number;         // 本小时请求数
+    hourStartTime: Date;              // 本小时开始时间
 }
 
 const prisma = new PrismaClient();
@@ -323,12 +330,38 @@ async function main() {
         totalSuccess: 0,
         totalFailed: 0,
         batchCount: 0,
-        startTime: new Date()
+        startTime: new Date(),
+        consecutiveFailures: 0,
+        requestsThisHour: 0,
+        hourStartTime: new Date()
     };
 
     // Main Loop
     let shouldContinue = true;
     while (shouldContinue) {
+        // 0. 检查每小时请求上限
+        const now = new Date();
+        const hourElapsed = now.getTime() - stats.hourStartTime.getTime();
+        if (hourElapsed >= 60 * 60 * 1000) {
+            // 新的一小时，重置计数器
+            stats.requestsThisHour = 0;
+            stats.hourStartTime = now;
+            log.info('New hour started, request counter reset');
+        }
+
+        if (stats.requestsThisHour >= MAX_REQUESTS_PER_HOUR) {
+            const waitMs = 60 * 60 * 1000 - hourElapsed;
+            log.warn({
+                requestsThisHour: stats.requestsThisHour,
+                limit: MAX_REQUESTS_PER_HOUR,
+                waitDuration: formatDuration(waitMs)
+            }, 'THROTTLE: Hourly request limit reached, waiting');
+            await sleep(waitMs);
+            stats.requestsThisHour = 0;
+            stats.hourStartTime = new Date();
+            continue;
+        }
+
         // 1. Fetch batch
         const wordsToProcess = await fetchNextBatch();
 
@@ -338,9 +371,11 @@ async function main() {
         }
 
         stats.batchCount++;
+        stats.requestsThisHour++;
         log.info({
             batch: stats.batchCount,
             count: wordsToProcess.length,
+            requestsThisHour: stats.requestsThisHour,
             words: wordsToProcess.map(w => w.word).join(', ')
         }, 'Processing batch');
 
@@ -354,8 +389,22 @@ async function main() {
         if (result.success) {
             stats.totalSuccess += result.processedCount;
             stats.totalProcessed += result.processedCount;
+            stats.consecutiveFailures = 0; // 重置连续失败计数
         } else {
             stats.totalFailed += wordsToProcess.length;
+            stats.consecutiveFailures++;
+
+            // 连续失败累加冷却 (指数增长)
+            if (stats.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                const longCooldownMs = RATE_LIMIT_COOLDOWN_MS * stats.consecutiveFailures;
+                log.error({
+                    consecutiveFailures: stats.consecutiveFailures,
+                    cooldown: formatDuration(longCooldownMs)
+                }, 'CIRCUIT BREAKER: Too many consecutive failures, long cooldown');
+                await sleep(longCooldownMs);
+                stats.consecutiveFailures = 0; // 长冷却后重置
+                continue;
+            }
 
             // Handle Circuit Breaker
             if (result.circuitBreak === 'level2') {
@@ -370,14 +419,19 @@ async function main() {
                 if (isContinuous) {
                     await sleep(waitMs);
                     log.info('Resuming after quota reset');
+                    stats.consecutiveFailures = 0;
                     continue;
                 } else {
                     break;
                 }
             } else if (result.circuitBreak === 'level1') {
-                // Rate limit - short cooldown
-                log.warn({ cooldown: formatDuration(RATE_LIMIT_COOLDOWN_MS) }, 'COOLDOWN: Rate limit triggered');
-                await sleep(RATE_LIMIT_COOLDOWN_MS);
+                // Rate limit - cooldown with progressive backoff
+                const cooldownMs = RATE_LIMIT_COOLDOWN_MS * (1 + stats.consecutiveFailures * 0.5);
+                log.warn({
+                    cooldown: formatDuration(cooldownMs),
+                    consecutiveFailures: stats.consecutiveFailures
+                }, 'COOLDOWN: Rate limit triggered');
+                await sleep(cooldownMs);
                 log.info('Resuming after cooldown');
                 continue;
             }
@@ -388,6 +442,7 @@ async function main() {
         log.info({
             success: stats.totalSuccess,
             failed: stats.totalFailed,
+            consecutiveFailures: stats.consecutiveFailures,
             elapsed: formatDuration(elapsed)
         }, 'Progress');
 
