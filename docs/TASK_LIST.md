@@ -1,76 +1,157 @@
-# Opus 项目开发任务清单 (Development Task List)
+# 🚀 Opus Mobile (V3.0) Vibe Coding Master List
 
-## 🟢 第一阶段: 数据基石 (Data Infrastructure)
-> **目标：** 完成数据库构建、数据清洗、向量化存储。
+**Master Directive for LLM:**
+You are building **Opus**, a **Mobile Workplace Simulator** for TOEIC preparation.
 
-- [x] **Task 1.1: Finalize Prisma Schema**
-    * **状态：** 已完成
-    * **内容：** 定义 Vocab, UserProgress, Article 表结构。
-
-- [x] **Task 1.2: Enable pgvector & Migration**
-    * **状态：** 已完成
-    * **内容：** 启用 pgvector 扩展，在 Vocab 表添加 embedding 向量字段。
-
-- [x] **Task 1.3: Implement ETL Script (DeepSeek)**
-    * **目标：** 实现数据清洗与分级计算脚本。
-    * **指令要点：**
-        1. 创建 `scripts/enrich-vocab.ts`。
-        2. 调用 DeepSeek API 清洗单词数据（场景标签、商务释义）。
-        3. 实现 `calculatePriority` 核心打分逻辑 (Core/Support/Noise)。
-
-- [ ] **Task 1.4: Database Seeding**
-    * **目标：** 将清洗后的 JSON 数据写入数据库。
-    * **指令要点：**
-        1. 编写 `prisma/seed.ts`。
-        2. 读取 JSON 并 upsert 到数据库。
-
-- [ ] **Task 1.5: Vectorization Script**
-    * **目标：** 为数据库中的单词生成 Embeddings。
-    * **指令要点：**
-        1. 创建 `scripts/vectorize-vocab.ts`。
-        2. 调用 OpenAI `text-embedding-3-small`。
-        3. 使用 `prisma.$executeRaw` 更新向量字段。
+* **Mindset**: Don't build a "Reader". Build an "Inbox".
+* **UI Strategy**: "Dumb" Frontend (Markdown Renderer) + "Smart" Backend (Prompt Engineering).
+* **Tech Stack**: Next.js 14 (App Router), Prisma, pgvector, Shadcn UI (Mobile), Tailwind CSS.
+* **Data Source**: All vocabulary metadata is pre-calculated via **Gemini ETL** (stored in DB).
 
 ---
 
-## 🟡 第二阶段: AI 内容引擎 (Content Engine)
-> **目标：** 跑通“1+N”文章生成闭环。
+## 🟢 Phase 0: Data Foundation (The Bedrock)
 
-- [x] **Task 2.1: Article Generation Service**
-    * **目标：** 封装生成文章的核心业务逻辑。
-    * **指令要点：** 实现 `generateDailyArticle` Action，包含选词逻辑、Prompt 拼接、DeepSeek 调用、结果入库。
+> **Goal**: Ensure the DB supports the "5-Dimensional" simulation before building UI.
 
-- [ ] **Task 2.2: Reader UI Components**
-    * **目标：** 搭建阅读器界面。
-    * **指令要点：** 开发 `SmartText.tsx`，实现文本分词、高亮 Target/Context 单词、点击事件。
+* [x] **Task 0.1: Finalize Prisma Schema**
+* **Status**: Done.
+* **Context**: `Word` table includes `word_family` (JSON), `synonyms`, `priority`. `UserWordProgress` split into `v_score`, `c_score`, etc.
 
-- [ ] **Task 2.3: Reader Page Integration**
-    * **目标：** 组装页面。
-    * **指令要点：** `/reader` 页面开发，串联 Action 和 UI。
+
+* [x] **Task 0.2: Enable pgvector**
+* **Status**: Done.
+
+
+* [ ] **Task 0.3: ETL Script (Enrichment)**
+* **Instruction**: Create/Update `scripts/enrich-vocab.ts`.
+* **CRITICAL UPDATE**:
+1. **Model**: Use `google/gemini-2.0-flash-preview` (or 1.5 Flash).
+2. **Prompt**: Use **Opus ETL Prompt v1.0** (Strict polysemy control).
+3. **Config**: `temperature: 0.1`, `batch_size: 12`.
+
+
+* **Logic**: Fetch raw words -> Call Gemini -> Save `vocab_enriched.json`.
+
+
+* [ ] **Task 0.4: Database Seeding**
+* **Instruction**: Create `prisma/seed.ts`.
+* **Logic**: Read `vocab_enriched.json`. Upsert data into `Word` table.
+* **Verify**: Ensure `word_family` (n/v/adj) and `confusing_words` are correctly populated.
+* **Command**: `npx prisma db seed`.
+
+
+* [ ] **Task 0.5: Vectorization Script**
+* **Instruction**: Create `scripts/vectorize-vocab.ts`.
+* **Logic**: Fetch words without embeddings. Generate embeddings using OpenAI `text-embedding-3-small`. Save to `Word.embedding`.
+* **Why**: Required for finding contextually relevant words for the "1+N" engine.
+
+
 
 ---
 
-## 🔵 第三阶段: 用户与记忆系统 (User & Memory)
-> **目标：** 接入五维记忆模型和 SRS 算法。
+## 🟡 Phase 1: Briefing Engine (The Brain)
 
-- [ ] **Task 3.1: Auth Integration**
-    * **目标：** 接入 Clerk 或 NextAuth。
+> **Goal**: Refactor the old "Article Generator" into the new "Briefing Generator".
 
-- [ ] **Task 3.2: 5-Dim Update Logic**
-    * **目标：** 实现五维分数更新。
-    * **指令要点：** 实现 `recordInteraction`，根据阅读或做题结果更新 V/A/M/C/X 矩阵。
+* [ ] **Task 1.1: Refactor `generateBriefing` Action** (Critical)
+* **Status**: **Needs Refactor** (Old code generates Article string, we need Briefing JSON).
+* **File**: `src/actions/generate-briefing.ts`
+* **Input**: `userId`, `targetWord`.
+* **Logic**:
+1. Fetch Target Word + 3 Context Words (via Vector Search).
+2. Select Dimension: **V** (Morphology) or **C** (Collocation) *[Start with these two for MVP]*.
+3. Call LLM with **PRD V3.0 Prompt** (generate JSON with `segments`).
 
-- [ ] **Task 3.3: SRS Scheduler**
-    * **目标：** 实现间隔重复算法。
-    * **指令要点：** 实现简版 SM-2 算法，计算 `dueDate`。
 
-- [ ] **Task 3.4: Dashboard**
-    * **目标：** 可视化展示。
-    * **指令要点：** 使用 Recharts 绘制五维雷达图。
+* **Output JSON**:
+```typescript
+{
+  meta: { format: "email", sender: "HR" },
+  segments: [
+    { type: "intro", content_markdown: "..." },
+    { type: "interaction", task: { style: "bubble_select", options: [...] } }
+  ]
+}
+
+```
+
+
+
+
+* [ ] **Task 1.2: Fallback Template (Safety Net)**
+* **Instruction**: Create `src/lib/templates/fallback-briefing.ts`.
+* **Logic**: A hardcoded "Meeting Reschedule" email JSON.
+* **Usage**: If LLM API fails or times out (>3s), return this immediately to prevent UI crash.
+
+
 
 ---
 
-## 🟣 第四阶段: 打磨与优化 (Polish)
+## 🔵 Phase 2: Inbox & Briefing UI (The Body)
 
-- [ ] **Task 4.1: Vocab Sheet UI** (完善单词详情底抽屉)
-- [ ] **Task 4.2: Streaming Response** (文章生成流式输出)
+> **Goal**: "Thumb-Driven" Interface. No complex dashboards.
+
+* [ ] **Task 2.1: The "Inbox" Stream (Home Page)**
+* **File**: `src/app/page.tsx`
+* **UI**: A Stack or Swiper view.
+* **Logic**:
+1. Fetch next `Briefing` on load.
+2. Show Skeleton while loading.
+3. Render current Briefing Card.
+4. On complete -> Swipe animation -> Load next.
+
+
+
+
+* [ ] **Task 2.2: Dumb Markdown Renderer**
+* **File**: `src/components/briefing/markdown-renderer.tsx`
+* **Tech**: `react-markdown`.
+* **Styles**:
+* `<mark>` -> `bg-yellow-500/20 text-yellow-200` (Signal words).
+* `**bold**` -> `text-emerald-400 font-bold` (Target words).
+
+
+
+
+* [ ] **Task 2.3: Unified Interaction Components**
+* **File**: `src/components/briefing/interaction-zone.tsx`
+* **Constraint**: All inputs must be in the **Bottom 30%** of the screen.
+* **Components**:
+* `SwipeChoice`: For V-Dim (Left/Right).
+* `BubbleSelect`: For C-Dim (Floating chips).
+
+
+
+
+
+---
+
+## 🟣 Phase 3: The Simulation Loop (The Soul)
+
+> **Goal**: Gamify the feedback.
+
+* [ ] **Task 3.1: Record Interaction Action**
+* **File**: `src/actions/record-outcome.ts`
+* **Logic**:
+1. Receive `wordId`, `dimension` (e.g., 'C'), `isCorrect`.
+2. Update `UserWordProgress.${dimension}_score`.
+3. Calculate new `next_review_at` (Simplified SRS).
+
+
+
+
+* [ ] **Task 3.2: Feedback UI (Haptic & KPI)**
+* **UI**: A subtle bottom sheet or toast after answering.
+* **Copy**: "KPI Updated" (not "Correct"), "Performance Review Needed" (not "Wrong").
+* **Tech**: Use `navigator.vibrate` for haptic feedback.
+
+
+
+---
+
+## ⚫ Phase 4: Expansion (Later)
+
+* Task 4.1: X Dimension (Logic Insert)
+* Task 4.2: Multi-Doc Dimension
+* Task 4.3: Auth Integration

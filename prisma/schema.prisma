@@ -37,6 +37,13 @@ model Vocab {
   
   // collocations 结构: [{text: '...', trans: '...', source: 'abceed', weight: 100}]
   collocations     Json?     // 常用搭配 (AI Generated / Abceed)
+  
+  // 3.1 AI 增强 Pro Max (ETL V3.0)
+  priority         VocabPriority? // 优先级 (CORE: 核心商务词, SUPPORT: 支撑词, NOISE: 简单词)
+  word_family      Json?          // 词族变形 { n: "...", v: "..." }
+  confusing_words  String[]       // 易混淆词 (Malapropisms)
+  synonyms         String[]       // 商务近义词
+  
   tags             String[] // 自动标签 (e.g. toeic_900)
   
   // 4. 元数据
@@ -128,4 +135,10 @@ enum LearningStatus {
 enum VocabRole {
   TARGET
   CONTEXT
+}
+
+enum VocabPriority {
+  CORE
+  SUPPORT
+  NOISE
 }

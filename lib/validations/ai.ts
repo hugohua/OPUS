@@ -30,15 +30,35 @@ export const VocabularyInputSchema = z.object({
     col_jp: z.array(z.any()).optional(),
 });
 
+// 新增 Priority 枚举
+export const PriorityEnum = z.enum(["CORE", "SUPPORT", "NOISE"]);
+
+// 新增 Word Family 结构
+export const WordFamilySchema = z.object({
+    n: z.string().nullable(),
+    v: z.string().nullable(),
+    adj: z.string().nullable(),
+    adv: z.string().nullable(),
+});
+
 // AI 输出单项
-export const VocabularyResultItemSchema = z.object({
+const BaseVocabularyResultItemSchema = z.object({
     word: z.string(),
     definition_cn: z.string().max(10),
     definitions: DefinitionsSchema,
-    is_toeic_core: z.boolean(),
+    priority: PriorityEnum,
     scenarios: z.array(ScenariosEnum),
     collocations: z.array(CollocationSchema),
+    word_family: WordFamilySchema.nullable().optional(),
+    confusing_words: z.array(z.string()),
+    synonyms: z.array(z.string()),
 });
+
+// 使用 transform 自动推导 is_toeic_core，保持向下兼容
+export const VocabularyResultItemSchema = BaseVocabularyResultItemSchema.transform((data) => ({
+    ...data,
+    is_toeic_core: data.priority === "CORE"
+}));
 
 // AI 输出完整结构
 export const VocabularyResultSchema = z.object({

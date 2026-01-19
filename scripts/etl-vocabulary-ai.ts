@@ -28,7 +28,8 @@
  */
 
 import { PrismaClient } from '../generated/prisma/client';
-import { VocabularyAIService, calculatePriority } from '../lib/ai';
+import { VocabularyAIService } from '../lib/ai/VocabularyAIService';
+import { calculatePriority } from '../lib/ai/utils';
 import { createLogger } from '../lib/logger';
 import type { VocabularyInput } from '../types/ai';
 import fs from 'fs/promises';
@@ -166,6 +167,11 @@ async function processBatchWithRetry(
                 const original_cefr = wordsToProcess.find((w: any) => w.word === item.word)?.cefrLevel;
                 const learningPriority = calculatePriority(item.is_toeic_core, original_cefr);
 
+                // Map string priority to Enum
+                let vocabPriority: any = 'SUPPORT'; // Default
+                if (item.priority === 'CORE') vocabPriority = 'CORE';
+                if (item.priority === 'NOISE') vocabPriority = 'NOISE';
+
                 await prisma.vocab.update({
                     where: { id: original.id },
                     data: {
@@ -175,6 +181,11 @@ async function processBatchWithRetry(
                         learningPriority: learningPriority,
                         scenarios: item.scenarios,
                         collocations: finalCollocations as any,
+                        // Pro Max Fields
+                        priority: vocabPriority,
+                        word_family: item.word_family as any,
+                        confusing_words: item.confusing_words,
+                        synonyms: item.synonyms,
                     },
                 });
                 updateCount++;
