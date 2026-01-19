@@ -334,6 +334,9 @@ All executable scripts in `scripts/` MUST include a Chinese header comment.
 * Use `try { process.loadEnvFile(); } catch (e) {}` for local `.env` loading.
 * Use `npx tsx` for execution.
 
+
+### C. 文件生成
+* 若脚本需要生成文件，生成的文件统一放在 output 目录下
 ---
 
 **Instruction to LLM (EXECUTION PROTOCOL):**

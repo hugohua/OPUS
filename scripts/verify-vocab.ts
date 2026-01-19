@@ -1,3 +1,17 @@
+/**
+ * 词汇数据验证脚本
+ *
+ * 功能：
+ *   检查指定单词在数据库中的存在性及字段完整性。
+ *   用于快速验证数据导入是否成功。
+ *
+ * 使用方法：
+ *   npx tsx scripts/verify-vocab.ts
+ *
+ * ⚠️ 注意：
+ *   1. 需要正确配置 DATABASE_URL 环境变量
+ *   2. 可在 main() 函数中修改 words 数组以验证不同单词
+ */
 
 import { PrismaClient } from '../generated/prisma/client';
 

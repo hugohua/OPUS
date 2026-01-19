@@ -13,13 +13,13 @@
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
- *      npx tsx scripts/etl-vocabulary-qwen.ts --dry-run
+ *      npx tsx scripts/etl-vocabulary-ai.ts --dry-run
  * 
  *   2. Live Run (单批次):
- *      npx tsx scripts/etl-vocabulary-qwen.ts
+ *      npx tsx scripts/etl-vocabulary-ai.ts
  * 
  *   3. Continuous Mode (持续循环处理, 每分钟一批):
- *      npx tsx scripts/etl-vocabulary-qwen.ts --continuous
+ *      npx tsx scripts/etl-vocabulary-ai.ts --continuous
  * 
  * 环境变量 (.env):
  *   - DATABASE_URL: 数据库连接
@@ -278,14 +278,15 @@ async function fetchNextBatch() {
 // --- Prepare AI Input ---
 function prepareAIInput(wordsToProcess: any[]): VocabularyInput[] {
     return wordsToProcess.map((w: any) => {
+        // 解析 definitions：使用最新的对象格式 { business_cn, general_cn }
         let def_en = "";
-        if (w.definitions && Array.isArray(w.definitions)) {
-            const defs = w.definitions as any[];
-            const enDef = defs.find(d => d.type === 'general' || d.type === 'english' || d.type === 'oxford');
-            if (enDef) def_en = enDef.text;
-            else if (defs.length > 0 && defs[0].text) def_en = defs[0].text;
+        if (w.definitions && typeof w.definitions === 'object' && !Array.isArray(w.definitions)) {
+            // 新格式: { business_cn, general_cn }
+            const defs = w.definitions as { business_cn?: string; general_cn?: string };
+            def_en = defs.general_cn || defs.business_cn || "";
         }
 
+        // Col JP: Extract abceed collocations
         let col_jp: any[] = [];
         if (w.collocations && Array.isArray(w.collocations)) {
             col_jp = (w.collocations as any[]).filter(c => c.source === 'abceed');

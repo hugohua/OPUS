@@ -29,10 +29,13 @@ The input MAY contain Japanese fields (\`def_jp\`, \`col_jp\`).
 - Max 10 characters, concise, clear.
 
 ## 2. Priority (\`priority\`)
-- CORE: High-frequency business words (budget, schedule, agenda). Limit to ~40% of words per batch.
-- SUPPORT: Formal/academic words (facilitate, subsequent, discrepancy).
-- NOISE: Too simple (cat, run) OR too obscure/literary for business.
-- **Fallback**: If batch is small, prioritize semantic importance over strict ratio.
+- **Evaluation Rule**: Judge each word strictly on its **Intrinsic TOEIC Frequency**, NOT by comparing it to others in this batch.
+- **CORE**: High-frequency business words essential for Part 5/7 (e.g., budget, schedule, agenda, competitive).
+- **SUPPORT**: Formal/Academic words that support comprehension (e.g., facilitate, subsequent, discrepancy).
+- **NOISE**: 
+  - Too simple (A1/A2 level like 'cat', 'go', 'red').
+  - Too obscure/literary (rare words not seen in business contexts).
+- **Guideline**: Globally, CORE words form about 40% of the lexicon. However, **for this specific batch, ignore the ratio**. If 100% of the words are critical, mark them all CORE. If 0%, mark none.
 
 ## 3. Scenarios (\`scenarios\`)
 - Map strictly: "HR" → "personnel", "IT" → "technology", "Supply Chain" → "logistics".

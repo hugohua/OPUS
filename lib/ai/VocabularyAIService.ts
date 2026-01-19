@@ -116,9 +116,13 @@ function createProxyFetch(): typeof fetch | undefined {
  * 
  * 使用 AI 模型处理词汇数据，生成：
  * - 简明中文释义 (definition_cn)
- * - 结构化释义 (definitions)
+ * - 结构化释义 (definitions: { business_cn, general_cn })
+ * - 优先级分类 (priority: CORE/SUPPORT/NOISE)
  * - 商务场景标签 (scenarios)
  * - 常用搭配 (collocations)
+ * - 词族变形 (word_family: { n, v, adj, adv })
+ * - 易混淆词 (confusing_words)
+ * - 商务近义词 (synonyms)
  * 
  * 支持 HTTPS_PROXY 环境变量配置代理（仅用于 AI 请求）
  */
