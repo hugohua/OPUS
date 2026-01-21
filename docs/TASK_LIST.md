@@ -47,7 +47,7 @@
 > **目标**: 构建 **Level 0 特训引擎** (生成 S-V-O 单句)，替代原先的邮件生成器。
 
 * [x] **Task 1.1: 实现 Drill Prompt (特训提示词) **
-* **文件**: `src/lib/prompts/drill.ts`。
+* **文件**: `lib/prompts/drill.ts`。
 * **逻辑**: 创建 `getDrillPrompt`。强制执行 **Level 0 约束**:
 1. 最大长度 15 个词。
 2. 严格的 **S-V-O (主谓宾)** 结构。
@@ -58,7 +58,7 @@
 
 * [x] **Task 1.2: 重构 `generateBriefing` Action **
 * **状态**: **需要重构** (切换到 Level 0 逻辑)。
-* **文件**: `src/actions/generate-briefing.ts`。
+* **文件**: `actions/generate-briefing.ts`。
 * **逻辑**:
 1. **检查每日熔断**: 如果 `today_count >= 20`，立即返回 `RestCard` (休息卡)。
 2. 获取 目标词 + 上下文词。
@@ -82,7 +82,7 @@
 
 
 * [x] **Task 1.3: 兜底模板 (安全网)**
-* **指令**: 创建 `src/lib/templates/fallback-briefing.ts`。
+* **指令**: 创建 `lib/templates/fallback-briefing.ts`。
 * **逻辑**: 一个硬编码的 **Level 0 卡片** (例如: "<s>System</s> <v>saved</v> <o>data</o>.")。
 * **用途**: 当 Gemini 超时或报错时返回此内容。
 
@@ -94,8 +94,8 @@
 
 > **目标**: "拇指驱动" 界面 + **认知辅助** (句法高亮 + TTS)。
 
-* [ ] **Task 2.1: "收件箱" 信息流 (首页)**
-* **文件**: `src/app/page.tsx`。
+* [x] **Task 2.1: "收件箱" 信息流 (首页)**
+* **文件**: `app/page.tsx`。
 * **逻辑**:
 1. 获取下一个 `Briefing`。
 2. 加载时 **自动播放 TTS** (`window.speechSynthesis`)。
@@ -104,8 +104,8 @@
 
 
 
-* [ ] **Task 2.2: 句法高亮渲染器 *[已更新]* **
-* **文件**: `src/components/briefing/syntax-text.tsx` (替代 markdown-renderer)。
+* [x] **Task 2.2: 句法高亮渲染器 *[已更新]* **
+* **文件**: `components/briefing/syntax-text.tsx` (替代 markdown-renderer)。
 * **逻辑**: 解析 `<s>`, `<v>`, `<o>` 标签。
 * **样式**:
 * `<s>`: 绿色下划线。
@@ -115,8 +115,8 @@
 
 
 
-* [ ] **Task 2.3: 统一交互组件**
-* **文件**: `src/components/briefing/interaction-zone.tsx`。
+* [x] **Task 2.3: 统一交互组件**
+* **文件**: `components/briefing/interaction-zone.tsx`。
 * **约束**: 位于屏幕底部 30% 区域。
 * **组件**:
 * `SwipeChoice`: 用于 V 维度 (左右二选一) - **Level 0 核心**。
@@ -133,7 +133,7 @@
 > **目标**: 记录进度并强制执行 **每日熔断**。
 
 * [ ] **Task 3.1: 记录结果 Action *[已更新]* **
-* **文件**: `src/actions/record-outcome.ts`。
+* **文件**: `actions/record-outcome.ts`。
 * **逻辑**:
 1. 更新 `UserWordProgress`。
 2. 增加 `today_count` (今日完成数)。

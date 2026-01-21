@@ -36,6 +36,79 @@ export function repairJson(content: string): string {
 }
 
 /**
+ * 尝试从截断的 JSON 中恢复已完成的 items
+ * 策略：找到最后一个完整的 item 对象，截断后续内容并闭合 JSON
+ */
+export function recoverTruncatedJson(content: string): { recovered: string; itemsDropped: number } | null {
+    try {
+        // 查找 "items": [ 的位置
+        const itemsMatch = content.match(/"items"\s*:\s*\[/);
+        if (!itemsMatch || itemsMatch.index === undefined) {
+            return null;
+        }
+
+        const itemsStart = itemsMatch.index + itemsMatch[0].length;
+
+        // 找到所有完整的 item 对象 (以 }, 或 } 结尾，后跟 { 或 ])
+        // 使用贪婪匹配找到最后一个完整的 }
+        let lastCompleteEnd = -1;
+        let braceCount = 0;
+        let inString = false;
+        let escapeNext = false;
+        let completeItems = 0;
+
+        for (let i = itemsStart; i < content.length; i++) {
+            const char = content[i];
+
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+
+            if (char === '\\') {
+                escapeNext = true;
+                continue;
+            }
+
+            if (char === '"') {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString) continue;
+
+            if (char === '{') {
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0) {
+                    // 找到一个完整的 item
+                    lastCompleteEnd = i;
+                    completeItems++;
+                }
+            }
+        }
+
+        if (lastCompleteEnd === -1 || completeItems === 0) {
+            return null;
+        }
+
+        // 计算被丢弃的 items 数量（粗略估计）
+        const remaining = content.slice(lastCompleteEnd + 1);
+        const incompleteItemStart = remaining.indexOf('{');
+        const itemsDropped = incompleteItemStart !== -1 ? 1 : 0;
+
+        // 重建 JSON：截取到最后一个完整 item，然后闭合
+        const prefix = content.slice(0, lastCompleteEnd + 1);
+        const recovered = prefix + ']}';
+
+        return { recovered, itemsDropped };
+    } catch {
+        return null;
+    }
+}
+
+/**
  * AI 解析上下文 (用于错误日志)
  */
 export interface ParseContext {
@@ -46,26 +119,46 @@ export interface ParseContext {
 
 /**
  * 安全解析 JSON 并使用 Zod 验证
+ * 支持从截断的 JSON 中恢复已完成的部分
+ * 
  * @param content - AI 返回的原始文本
  * @param schema - Zod Schema 用于验证
  * @param context - 可选，用于错误日志的上下文信息
  */
 export function safeParse<T>(content: string, schema: z.ZodSchema<T>, context?: ParseContext): T {
+    const cleaned = repairJson(content);
+
+    // 第一次尝试：直接解析
     try {
-        const cleaned = repairJson(content);
         const parsed = JSON.parse(cleaned);
 
         // 处理 AI 返回数组而非对象的情况
         if (Array.isArray(parsed)) {
-            // 检查 schema 是否期望 { items: [...] } 结构
             return schema.parse({ items: parsed });
         }
 
         return schema.parse(parsed);
-    } catch (error) {
-        // 记录详细错误日志
+    } catch (firstError) {
+        // 第二次尝试：尝试恢复截断的 JSON
+        const recovery = recoverTruncatedJson(cleaned);
+
+        if (recovery && recovery.itemsDropped >= 0) {
+            try {
+                const parsed = JSON.parse(recovery.recovered);
+                console.log(`⚠️ JSON 截断恢复: 成功恢复 ${parsed.items?.length || 0} 个 items，丢弃 ${recovery.itemsDropped} 个不完整的`);
+
+                if (Array.isArray(parsed)) {
+                    return schema.parse({ items: parsed });
+                }
+                return schema.parse(parsed);
+            } catch (recoveryError) {
+                // 恢复也失败，记录原始错误
+            }
+        }
+
+        // 所有尝试都失败，记录详细错误日志
         logAIError({
-            error,
+            error: firstError,
             systemPrompt: context?.systemPrompt,
             userPrompt: context?.userPrompt,
             rawResponse: content,
@@ -73,7 +166,7 @@ export function safeParse<T>(content: string, schema: z.ZodSchema<T>, context?: 
             context: 'JSON 解析/验证失败',
         });
 
-        throw error;
+        throw firstError;
     }
 }
 

@@ -199,5 +199,5 @@ interface BriefingPayload {
 
 1. **Mobile First**: 所有 UI 组件宽度锁定 `max-w-md`，高度 `min-h-screen`。
 2. **Cognitive Safety [New]**: 在 Level 0 代码中，必须包含“每日上限”检查逻辑。如果今日已完成 20 条，直接返回 "Rest Card"。
-3. **Strict Typing**: 使用 `src/lib/safe-json.ts` 中的 Zod Helper 校验所有数据库 JSON。
+3. **Strict Typing**: 使用 `lib/safe-json.ts` 中的 Zod Helper 校验所有数据库 JSON。
 4. **Error Boundary**: 如果 LLM 生成超时，Level 0 应降级显示数据库中的 `commonExample` 字段，确保应用不崩溃。

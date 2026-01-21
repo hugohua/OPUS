@@ -11,17 +11,13 @@
  */
 
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { DRILL_SYSTEM_PROMPT, getDrillUserPrompt, type DrillContext } from '@/lib/prompts/drill';
 import { BriefingPayloadSchema, type BriefingPayload } from '@/lib/validations/briefing';
 import { FALLBACK_BRIEFING, REST_CARD_BRIEFING } from '@/lib/templates/fallback-briefing';
 import { safeParse } from '@/lib/ai/utils';
 import { createLogger, logAIError } from '@/lib/logger';
+import { getAIModel } from '@/lib/ai/client';
 import type { ActionState } from '@/types';
-
-// Proxy support
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import nodeFetch, { RequestInit as NodeFetchRequestInit } from 'node-fetch';
 
 const log = createLogger('briefing');
 
@@ -30,40 +26,6 @@ const log = createLogger('briefing');
 // ============================================
 
 const DAILY_CAP = 20;
-
-// ============================================
-// Proxy Fetch (复用 VocabularyAIService 逻辑)
-// ============================================
-
-function createProxyFetch(): typeof fetch | undefined {
-    const proxyUrl = process.env.HTTPS_PROXY;
-
-    if (!proxyUrl) {
-        return undefined;
-    }
-
-    log.info({ proxy: proxyUrl }, 'Proxy enabled for Briefing AI requests');
-    const agent = new HttpsProxyAgent(proxyUrl);
-
-    const proxyFetch = async (
-        input: RequestInfo | URL,
-        init?: RequestInit
-    ): Promise<Response> => {
-        const url = typeof input === 'string' ? input : input.toString();
-
-        const nodeFetchInit: NodeFetchRequestInit = {
-            method: init?.method,
-            headers: init?.headers as NodeFetchRequestInit['headers'],
-            body: init?.body as NodeFetchRequestInit['body'],
-            agent,
-        };
-
-        const response = await nodeFetch(url, nodeFetchInit);
-        return response as unknown as Response;
-    };
-
-    return proxyFetch;
-}
 
 // ============================================
 // Main Action
@@ -122,16 +84,7 @@ export async function generateBriefingAction(
     // 3. Call LLM
     // ============================================
     try {
-        const modelName = process.env.AI_MODEL_NAME || 'qwen-plus';
-        const proxyFetch = createProxyFetch();
-
-        const openai = createOpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            baseURL: process.env.OPENAI_BASE_URL,
-            ...(proxyFetch && { fetch: proxyFetch }),
-        });
-
-        const model = openai.chat(modelName);
+        const { model, modelName } = getAIModel('default');
 
         log.info({ targetWord: input.targetWord, model: modelName }, 'Generating Drill Card');
 

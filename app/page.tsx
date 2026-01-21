@@ -1,14 +1,12 @@
-export default function Home() {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[80vh] p-6 space-y-6 text-center">
-            <div className="space-y-2">
-                <h1 className="text-4xl font-serif font-bold text-foreground">Opus</h1>
-                <p className="text-muted-foreground">AI Contextual Reader</p>
-            </div>
+import { getNextBriefing } from '@/actions/game-loop';
+import { InboxClient } from '@/components/briefing/inbox-client';
 
-            <div className="p-4 rounded-lg bg-card border border-border">
-                <p className="text-sm">Environment Initialized Successfully.</p>
-            </div>
-        </div>
-    );
+export const dynamic = 'force-dynamic';
+
+export default async function InboxPage() {
+    // Phase 2 MVP: Always start with count 0 (session based)
+    // Phase 3: Will fetch actual progress from DB
+    const initialBriefing = await getNextBriefing(0);
+
+    return <InboxClient initialBriefing={initialBriefing} />;
 }

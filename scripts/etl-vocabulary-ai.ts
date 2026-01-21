@@ -8,7 +8,7 @@
  * 
  * 配置模式:
  *   - 免费版 (默认): 保守限流，适合 Gemini 免费层 (10 分钟间隔，每小时 6 批)
- *   - 收费版 (--paid): 宽松限流，适合 Qwen/DeepSeek/付费 API (5 秒间隔，每小时 120 批)
+ *   - 收费版 (--paid): 宽松限流，适合 Qwen/DeepSeek/付费 API (2 秒间隔，每小时 360 批)
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
@@ -23,7 +23,7 @@
  *   4. Continuous Mode - 免费版 (持续循环, 10 分钟一批):
  *      npx tsx scripts/etl-vocabulary-ai.ts --continuous
  * 
- *   5. Continuous Mode - 收费版 (持续循环, 5 秒一批):
+ *   5. Continuous Mode - 收费版 (持续循环, 2 秒一批, 并发 2):
  *      npx tsx scripts/etl-vocabulary-ai.ts --continuous --paid
  * 
  * 环境变量 (.env):
@@ -54,22 +54,24 @@ const log = createLogger('etl');
 // 免费版配置 (Gemini Free Tier)
 const FREE_TIER_CONFIG = {
     BATCH_SIZE: 10,
-    RATE_LIMIT_COOLDOWN_MS: 10 * 60 * 1000,      // 10 分钟冷却
-    BATCH_INTERVAL_MS: 10 * 60 * 1000,           // 10 分钟间隔 (每小时 6 批)
+    PARALLEL_REQUESTS: 1,        // 免费版不支持并发
+    RATE_LIMIT_COOLDOWN_MS: 10 * 60 * 1000,
+    BATCH_INTERVAL_MS: 10 * 60 * 1000,
     MAX_RETRIES: 3,
-    BASE_RETRY_DELAY_MS: 10000,                  // 10 秒基础退避
-    MAX_REQUESTS_PER_HOUR: 6,                    // 每小时 6 批
+    BASE_RETRY_DELAY_MS: 10000,
+    MAX_REQUESTS_PER_HOUR: 6,
     MAX_CONSECUTIVE_FAILURES: 3,
 };
 
 // 收费版配置 (Qwen/DeepSeek/Gemini Paid)
 const PAID_TIER_CONFIG = {
-    BATCH_SIZE: 5,
-    RATE_LIMIT_COOLDOWN_MS: 5 * 1000,           // 5 秒冷却
-    BATCH_INTERVAL_MS: 5 * 1000,                 // 5 秒间隔
+    BATCH_SIZE: 8,              // 提升 Batch 到 10
+    PARALLEL_REQUESTS: 6,        // 并发请求数 (2线程)
+    RATE_LIMIT_COOLDOWN_MS: 5 * 1000,
+    BATCH_INTERVAL_MS: 2 * 1000, // 2s 间隔
     MAX_RETRIES: 3,
-    BASE_RETRY_DELAY_MS: 2000,                   // 2 秒基础退避
-    MAX_REQUESTS_PER_HOUR: 120,                  // 每小时 120 批 (每分钟 2 批)
+    BASE_RETRY_DELAY_MS: 2000,
+    MAX_REQUESTS_PER_HOUR: 360,  // 每小时 360 批
     MAX_CONSECUTIVE_FAILURES: 5,
 };
 
@@ -80,6 +82,7 @@ const CONFIG = isPaidTier ? PAID_TIER_CONFIG : FREE_TIER_CONFIG;
 // 解构配置供后续使用
 const {
     BATCH_SIZE,
+    PARALLEL_REQUESTS,
     RATE_LIMIT_COOLDOWN_MS,
     BATCH_INTERVAL_MS,
     MAX_RETRIES,
@@ -87,6 +90,15 @@ const {
     MAX_REQUESTS_PER_HOUR,
     MAX_CONSECUTIVE_FAILURES,
 } = CONFIG;
+
+// Helper: Chunk Array
+function chunkArray<T>(array: T[], size: number): T[][] {
+    const chunked: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunked.push(array.slice(i, i + size));
+    }
+    return chunked;
+}
 
 // --- Rate Limit Detection ---
 interface RateLimitInfo {
@@ -175,10 +187,10 @@ async function processBatchWithRetry(
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            console.log({ attempt, maxRetries: MAX_RETRIES, wordCount: aiInput.length }, 'Sending words to AI');
+            console.log({ attempt, maxRetries: MAX_RETRIES, wordCount: aiInput.length, model: modelName }, 'Sending words to AI');
             const result = await aiService.enrichVocabulary(aiInput);
 
-            log.info({ itemCount: result.items.length }, 'AI response received');
+            log.info({ itemCount: result.items.length, model: modelName }, 'AI response received');
 
             if (isDryRun) {
                 log.info('DRY-RUN: Skipping DB update');
@@ -252,7 +264,7 @@ async function processBatchWithRetry(
                 // Level 1: Short-term Rate Limit
                 if (attempt < MAX_RETRIES) {
                     const backoffMs = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-                    log.warn({ backoff: formatDuration(backoffMs) }, 'Rate Limit 429 detected, backing off');
+                    log.warn({ backoff: formatDuration(backoffMs), model: modelName }, 'Rate Limit 429 detected, backing off');
                     await sleep(backoffMs);
                     continue;
                 } else {
@@ -355,6 +367,7 @@ async function main() {
         tier: isPaidTier ? 'PAID (宽松限流)' : 'FREE (保守限流)',
         model: aiService.getModelName(),
         batchSize: BATCH_SIZE,
+        parallelRequests: PARALLEL_REQUESTS,
         batchInterval: `${BATCH_INTERVAL_MS / 1000}s`,
         maxRequestsPerHour: MAX_REQUESTS_PER_HOUR,
     }, 'Configuration');
@@ -413,62 +426,79 @@ async function main() {
             words: wordsToProcess.map(w => w.word).join(', ')
         }, 'Processing batch');
 
-        // 2. Process batch
-        const aiInput = prepareAIInput(wordsToProcess);
-        const result = await processBatchWithRetry(aiService, aiInput, wordsToProcess, isDryRun, {
-            batchId: stats.batchCount,
-            modelName: aiService.getModelName()
-        });
+        // 2. Process batch (Parallel)
+        const subBatchSize = Math.ceil(wordsToProcess.length / PARALLEL_REQUESTS);
+        const chunks = chunkArray(wordsToProcess, subBatchSize);
 
-        if (result.success) {
-            stats.totalSuccess += result.processedCount;
-            stats.totalProcessed += result.processedCount;
-            stats.consecutiveFailures = 0; // 重置连续失败计数
-        } else {
-            stats.totalFailed += wordsToProcess.length;
+        log.info({
+            parallelRequests: chunks.length,
+            wordsPerRequest: subBatchSize
+        }, 'Starting parallel processing');
+
+        const results = await Promise.all(chunks.map((chunk, index) => {
+            const aiInput = prepareAIInput(chunk);
+            return processBatchWithRetry(aiService, aiInput, chunk, isDryRun, {
+                batchId: stats.batchCount,
+                modelName: `${aiService.getModelName()}-thread-${index + 1}`
+            });
+        }));
+
+        // Aggregate Results
+        let aggregatedSuccess = 0;
+        let circuitBreakAction: 'level1' | 'level2' | undefined;
+
+        for (const res of results) {
+            aggregatedSuccess += res.processedCount;
+            if (res.circuitBreak) {
+                // Prioritize level2 over level1
+                if (res.circuitBreak === 'level2') circuitBreakAction = 'level2';
+                else if (!circuitBreakAction) circuitBreakAction = 'level1';
+            }
+        }
+
+        // Update Stats
+        stats.totalSuccess += aggregatedSuccess;
+        stats.totalProcessed += aggregatedSuccess;
+        const failedCount = wordsToProcess.length - aggregatedSuccess;
+        stats.totalFailed += failedCount;
+
+        if (failedCount > 0 && aggregatedSuccess === 0) {
             stats.consecutiveFailures++;
+        } else {
+            stats.consecutiveFailures = 0;
+        }
 
-            // 连续失败累加冷却 (指数增长)
-            if (stats.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-                const longCooldownMs = RATE_LIMIT_COOLDOWN_MS * stats.consecutiveFailures;
-                log.error({
-                    consecutiveFailures: stats.consecutiveFailures,
-                    cooldown: formatDuration(longCooldownMs)
-                }, 'CIRCUIT BREAKER: Too many consecutive failures, long cooldown');
-                await sleep(longCooldownMs);
-                stats.consecutiveFailures = 0; // 长冷却后重置
+        // Circuit Breaker Handling
+        if (circuitBreakAction === 'level2') {
+            const resetTime = getNextResetTime();
+            const waitMs = resetTime.getTime() - Date.now();
+            log.warn({
+                resumeAt: resetTime.toLocaleString(),
+                waitDuration: formatDuration(waitMs)
+            }, 'PAUSED: Waiting for quota reset');
+            if (isContinuous) {
+                await sleep(waitMs);
+                stats.consecutiveFailures = 0;
                 continue;
+            } else {
+                break;
             }
-
-            // Handle Circuit Breaker
-            if (result.circuitBreak === 'level2') {
-                // Daily quota exhausted - pause until reset
-                const resetTime = getNextResetTime();
-                const waitMs = resetTime.getTime() - Date.now();
-                log.warn({
-                    resumeAt: resetTime.toLocaleString(),
-                    waitDuration: formatDuration(waitMs)
-                }, 'PAUSED: Waiting for quota reset');
-
-                if (isContinuous) {
-                    await sleep(waitMs);
-                    log.info('Resuming after quota reset');
-                    stats.consecutiveFailures = 0;
-                    continue;
-                } else {
-                    break;
-                }
-            } else if (result.circuitBreak === 'level1') {
-                // Rate limit - cooldown with progressive backoff
-                const cooldownMs = RATE_LIMIT_COOLDOWN_MS * (1 + stats.consecutiveFailures * 0.5);
-                log.warn({
-                    cooldown: formatDuration(cooldownMs),
-                    consecutiveFailures: stats.consecutiveFailures
-                }, 'COOLDOWN: Rate limit triggered');
-                await sleep(cooldownMs);
-                log.info('Resuming after cooldown');
-                continue;
-            }
+        } else if (circuitBreakAction === 'level1') {
+            // Rate limit cooldown
+            const cooldownMs = RATE_LIMIT_COOLDOWN_MS * (1 + stats.consecutiveFailures * 0.5);
+            log.warn({
+                cooldown: formatDuration(cooldownMs),
+                consecutiveFailures: stats.consecutiveFailures
+            }, 'COOLDOWN: Rate limit triggered');
+            await sleep(cooldownMs);
+        } else if (stats.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            const longCooldownMs = RATE_LIMIT_COOLDOWN_MS * stats.consecutiveFailures;
+            log.error({
+                consecutiveFailures: stats.consecutiveFailures,
+                cooldown: formatDuration(longCooldownMs)
+            }, 'CIRCUIT BREAKER: Too many consecutive failures');
+            await sleep(longCooldownMs);
+            stats.consecutiveFailures = 0;
         }
 
         // Print progress

@@ -27,7 +27,8 @@ export const InteractionTaskSchema = z.object({
     question_markdown: z.string(),
     options: z.array(z.string()).min(2),
     answer_key: z.string(),
-    explanation_markdown: z.string(),
+    /** 解释逻辑 (Refutation + Syntax) */
+    explanation_markdown: z.string().optional(),
 });
 
 // ============================================

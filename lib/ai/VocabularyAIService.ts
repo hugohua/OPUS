@@ -1,14 +1,10 @@
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { VocabularyResultSchema } from '@/lib/validations/ai';
 import type { VocabularyInput, VocabularyResult } from '@/types/ai';
 import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/prompts/vocabulary';
 import { safeParse } from './utils';
 import { createLogger, logAIError } from '@/lib/logger';
-
-// Proxy support
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import nodeFetch, { RequestInit as NodeFetchRequestInit } from 'node-fetch';
+import { getAIModel } from './client';
 
 const log = createLogger('ai');
 
@@ -75,43 +71,6 @@ function sanitizeAIResponseText(text: string): string {
 }
 
 /**
- * 创建带代理的 fetch 函数（仅用于 AI 调用）
- * 使用 node-fetch 替代原生 fetch，因为原生 fetch 不支持 agent
- */
-function createProxyFetch(): typeof fetch | undefined {
-    const proxyUrl = process.env.HTTPS_PROXY;
-
-    if (!proxyUrl) {
-        return undefined; // 不使用代理，使用默认 fetch
-    }
-
-    log.info({ proxy: proxyUrl }, 'Proxy enabled for AI requests');
-    const agent = new HttpsProxyAgent(proxyUrl);
-
-    // 使用 node-fetch 并注入代理 agent
-    const proxyFetch = async (
-        input: RequestInfo | URL,
-        init?: RequestInit
-    ): Promise<Response> => {
-        const url = typeof input === 'string' ? input : input.toString();
-
-        const nodeFetchInit: NodeFetchRequestInit = {
-            method: init?.method,
-            headers: init?.headers as NodeFetchRequestInit['headers'],
-            body: init?.body as NodeFetchRequestInit['body'],
-            agent, // 注入代理
-        };
-
-        const response = await nodeFetch(url, nodeFetchInit);
-
-        // 将 node-fetch Response 转换为标准 Response
-        return response as unknown as Response;
-    };
-
-    return proxyFetch;
-}
-
-/**
  * 词汇 AI 增强服务
  * 
  * 使用 AI 模型处理词汇数据，生成：
@@ -130,19 +89,13 @@ export class VocabularyAIService {
     private model;
     private modelName: string;
 
-    constructor(modelName?: string) {
-        this.modelName = modelName || process.env.AI_MODEL_NAME || 'qwen-plus';
+    constructor() {
+        // 使用集中式工厂创建 ETL 专用模型实例
+        const { model, modelName } = getAIModel('etl');
+        this.model = model;
+        this.modelName = modelName;
 
-        // 创建 OpenAI 客户端，可选注入代理 fetch
-        const proxyFetch = createProxyFetch();
-
-        const openai = createOpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            baseURL: process.env.OPENAI_BASE_URL,
-            ...(proxyFetch && { fetch: proxyFetch }),
-        });
-
-        this.model = openai.chat(this.modelName);
+        log.info({ model: this.modelName }, 'VocabularyAIService initialized');
     }
 
     /**

@@ -10,46 +10,63 @@
 // ============================================
 
 export interface DrillContext {
-    /** 目标词汇 */
-    targetWord: string;
-    /** 核心释义 */
-    meaning: string;
-    /** 复习词汇列表 (1+N 规则中的 N) */
-    contextWords: string[];
-    /** 词族变体 { v: "reject", n: "rejection" } */
-    wordFamily: Record<string, string>;
+  /** 目标词汇 */
+  targetWord: string;
+  /** 核心释义 */
+  meaning: string;
+  /** 复习词汇列表 (1+N 规则中的 N) */
+  contextWords: string[];
+  /** 词族变体 { v: "reject", n: "rejection" } */
+  wordFamily: Record<string, string>;
 }
 
 // ============================================
 // SYSTEM Prompt (固定)
 // ============================================
 
-export const DRILL_SYSTEM_PROMPT = `# ROLE
-You are the "Briefing Engine" for Opus. 
-Target Audience: Level 0 Learners (Rehab Phase).
+export const DRILL_SYSTEM_PROMPT = `
+# ROLE
+You are the "Briefing Engine" for Opus, serving Level 0 Learners (Rehab Phase).
 
 # OBJECTIVE
-Generate a "Drill Card" JSON for the Target Word, incorporating Context Words if possible.
+Generate a "Drill Card" JSON for the Target Word, integrating Context Words.
 
 # LEVEL 0 CONSTRAINTS (NON-NEGOTIABLE)
 1. **Sentence Structure**: 
-   - STRICT S-V-O (Subject + Verb + Object).
+   - STRICT S-V-O only (no clauses, no extensions).
+   - **Constraint**: Sentence MUST map exactly to ONE <s> + ONE <v> + ONE <o>.
    - Max 15 words.
-   - NO relative clauses, NO complex tenses.
+   - **Tone: Professional Workplace Context ONLY.**
 
-2. **The "1+N" Rule (Context Integration)**:
-   - You are provided with a list of "Context Words" (Review Words).
-   - **Action**: Try to use 1 or 2 of these Context Words to fill the <s>Subject</s> or <o>Object</o> slots.
-   - **Priority**: Syntax Safety > Context Integration. (Do NOT break S-V-O just to force a context word in).
+2. **The "1+N" Integration Strategy**:
+   - **Target Word**: Must be the Core Verb or Object.
+   - **Action**: Integrate Context Words as **Pre-modifiers** (Adjectives/Nouns) inside the <s>Subject</s> or <o>Object</o>.
+   - **STRICT CONSTRAINT (ANTI-BLOAT)**: 
+     - **Pre-Position ONLY**: Place modifiers **BEFORE** the main noun (e.g., "The **urgent** email").
+     - **BANNED**: Do NOT use prepositional phrases (e.g., NO "The email **with urgency**").
+     - **Drop Strategy**: If a context word requires a preposition to fit, **DROP IT**.
+   - *Metaphor*: You act as a "Collage Artist", pasting words into strict slots.
 
 3. **Syntax Tagging**:
-   - Wrap <s>Subject</s> (include articles).
-   - Wrap <v>Verb</v> (Main action).
-   - Wrap <o>Object</o> (include articles).
+   - **Rule**: Tags MUST wrap the **ENTIRE** phrase (Articles + Adjectives + Noun). 
+   - **Constraint**: Each group MUST appear exactly once.
+   - **Bad**: The <s>senior manager</s> / <s>manager</s>
+   - **Good**: <s>The senior manager</s>
+   - <s>Subject Group</s>
+   - <v>Verb Group</v> (Auxiliary + Main Verb: "did not sign")
+   - <o>Object Group</o>
 
-4. **Interaction**:
-   - Create a binary choice fill-in-the-blank for the **Target Word**.
-   - Options: Correct Form vs Distractor (from Word Family).
+4. **Interaction (CRITICAL)**:
+   - **Choice Rule**: EXACTLY two options (Correct Form vs Word-Family Distractor).
+   - **Dimension**: MUST be "V" (Visual Audit).
+   - **Scope Rule**: The distractor MUST be from the same word family as the Target Word.
+  Do NOT reference any other words.
+   - **Explanation Logic (Chinese)**: 
+     - **Goal**: Explain syntax logic AND refute the distractor.
+     - **Format**: Follow the strict template below. DO NOT improvise.
+     - **Template**: 使用下方中文示例的句式结构，不得逐字翻译英文模板。
+     - **Constraint**: Simplified Chinese. Max 25 chars.
+     - *Example*: "缺谓语 <v>。此处需填动词，而 approval 是名词。"
 
 # OUTPUT FORMAT (JSON ONLY)
 {
@@ -57,30 +74,31 @@ Generate a "Drill Card" JSON for the Target Word, incorporating Context Words if
   "segments": [
     {
       "type": "text",
-      "content_markdown": "<s>The manager</s> <v>confirmed</v> <o>the email</o>.",
-      "audio_text": "The manager confirmed the email.",
-      "translation_cn": "经理确认了邮件。"
+      "content_markdown": "<s>The senior manager</s> <v>approved</v> <o>the urgent budget</o>.",
+      "audio_text": "The senior manager approved the urgent budget.",
+      "translation_cn": "高级经理批准了紧急预算。"
     },
     {
       "type": "interaction",
       "dimension": "V",
       "task": {
         "style": "swipe_card",
-        "question_markdown": "The manager _______ the email.",
-        "options": ["confirm", "confirmed"],
-        "answer_key": "confirmed",
-        "explanation_markdown": "Past tense required. 需要过去时态。"
+        "question_markdown": "The senior manager _______ the urgent budget.",
+        "options": ["approve", "approved"],
+        "answer_key": "approved",
+        "explanation_markdown": "缺谓语 <v>。语境为过去发生，需用 approved。"
       }
     }
   ]
-}`;
+}
+`.trim();
 
 // ============================================
 // USER Prompt (动态生成)
 // ============================================
 
 export function getDrillUserPrompt(context: DrillContext): string {
-    return `# INPUT DATA
+  return `# INPUT DATA
 Target Word (The "1"): "${context.targetWord}"
 Core Meaning: "${context.meaning}"
 Context Words (The "N" - Try to use): ${JSON.stringify(context.contextWords)}
