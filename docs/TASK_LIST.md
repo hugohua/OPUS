@@ -1,76 +1,78 @@
-# 🚀 Opus Mobile (V3.0) Vibe Coding Master List
+# Opus Mobile (V3.3) Vibe Coding 任务清单
 
-**Master Directive for LLM:**
-You are building **Opus**, a **Mobile Workplace Simulator** for TOEIC preparation.
+**给 LLM 的核心指令 (Master Directive):**
+你正在构建 **Opus**，一个用于认知复健 (Level 0) 的 **口袋职场模拟器**。
 
-* **Mindset**: Don't build a "Reader". Build an "Inbox".
-* **UI Strategy**: "Dumb" Frontend (Markdown Renderer) + "Smart" Backend (Prompt Engineering).
-* **Tech Stack**: Next.js 14 (App Router), Prisma, pgvector, Shadcn UI (Mobile), Tailwind CSS.
-* **Data Source**: All vocabulary metadata is pre-calculated via **Gemini ETL** (stored in DB).
+* **核心思维**: "先活下来 (Survive First)"。每日限制 20 张卡片。不要做一个“阅读器”，要做一个“特训器 (Drill)”。
+* **UI 策略**: "哑巴" 前端 (负责句法高亮) + "聪明" 后端 (负责 Drill Prompt 生成)。
+* **技术栈**: Next.js 14 (App Router), Prisma, pgvector, Shadcn UI (Mobile), Tailwind CSS。
+* **数据源**: 所有词汇元数据均通过 **Gemini ETL** 预计算。
 
 ---
 
-## 🟢 Phase 0: Data Foundation (The Bedrock)
+## 🟢 Phase 0: 数据基石 (The Bedrock)
 
-> **Goal**: Ensure the DB supports the "5-Dimensional" simulation before building UI.
+> **目标**: 确保数据库支持“五维”模拟，并处理好 Gemini 3 Preview 的限制。
 
-* [x] **Task 0.1: Finalize Prisma Schema**
-* **Status**: Done.
-* **Context**: `Word` table includes `word_family` (JSON), `synonyms`, `priority`. `UserWordProgress` split into `v_score`, `c_score`, etc.
-
-
-* [x] **Task 0.2: Enable pgvector**
-* **Status**: Done.
+* [x] **Task 0.1: 定稿 Prisma Schema**
+* **状态**: 完成。
+* **内容**: `Word` 表包含 `word_family` (JSON), `synonyms`, `priority`。
 
 
-* [ ] **Task 0.3: ETL Script (Enrichment)**
-* **Instruction**: Create/Update `scripts/enrich-vocab.ts`.
-* **CRITICAL UPDATE**:
-1. **Model**: Use `google/gemini-2.0-flash-preview` (or 1.5 Flash).
-2. **Prompt**: Use **Opus ETL Prompt v1.0** (Strict polysemy control).
-3. **Config**: `temperature: 0.1`, `batch_size: 12`.
+* [x] **Task 0.2: 启用 pgvector**
+* **状态**: 完成。
 
 
-* **Logic**: Fetch raw words -> Call Gemini -> Save `vocab_enriched.json`.
+* [x] **Task 0.3: ETL 脚本 (数据清洗) **
+* **指令**: 创建/更新 `scripts/enrich-vocab.ts`。
+* **关键更新 (CRITICAL)**:
+1. **模型**: 使用 `google/gemini-2.0-flash-preview` (或 3 Flash)。
+
+* [x] **Task 0.4: 数据库填充 (Seed)**
+* **指令**: 创建 `prisma/seed.ts`。
+* **命令**: `npx prisma db seed`。
 
 
-* [ ] **Task 0.4: Database Seeding**
-* **Instruction**: Create `prisma/seed.ts`.
-* **Logic**: Read `vocab_enriched.json`. Upsert data into `Word` table.
-* **Verify**: Ensure `word_family` (n/v/adj) and `confusing_words` are correctly populated.
-* **Command**: `npx prisma db seed`.
+* [ ] **Task 0.5: 向量化脚本**
+* **指令**: 创建 `scripts/vectorize-vocab.ts`。
+* **逻辑**: 使用 OpenAI `text-embedding-3-small` 生成 Embedding。
 
-
-* [ ] **Task 0.5: Vectorization Script**
-* **Instruction**: Create `scripts/vectorize-vocab.ts`.
-* **Logic**: Fetch words without embeddings. Generate embeddings using OpenAI `text-embedding-3-small`. Save to `Word.embedding`.
-* **Why**: Required for finding contextually relevant words for the "1+N" engine.
 
 
 
 ---
 
-## 🟡 Phase 1: Briefing Engine (The Brain)
+## 🟡 Phase 1: 简报引擎 (The Brain)
 
-> **Goal**: Refactor the old "Article Generator" into the new "Briefing Generator".
+> **目标**: 构建 **Level 0 特训引擎** (生成 S-V-O 单句)，替代原先的邮件生成器。
 
-* [ ] **Task 1.1: Refactor `generateBriefing` Action** (Critical)
-* **Status**: **Needs Refactor** (Old code generates Article string, we need Briefing JSON).
-* **File**: `src/actions/generate-briefing.ts`
-* **Input**: `userId`, `targetWord`.
-* **Logic**:
-1. Fetch Target Word + 3 Context Words (via Vector Search).
-2. Select Dimension: **V** (Morphology) or **C** (Collocation) *[Start with these two for MVP]*.
-3. Call LLM with **PRD V3.0 Prompt** (generate JSON with `segments`).
+* [x] **Task 1.1: 实现 Drill Prompt (特训提示词) **
+* **文件**: `src/lib/prompts/drill.ts`。
+* **逻辑**: 创建 `getDrillPrompt`。强制执行 **Level 0 约束**:
+1. 最大长度 15 个词。
+2. 严格的 **S-V-O (主谓宾)** 结构。
+3. **强制 XML 标签**: `<s>`, `<v>`, `<o>`。
 
 
-* **Output JSON**:
+
+
+* [x] **Task 1.2: 重构 `generateBriefing` Action **
+* **状态**: **需要重构** (切换到 Level 0 逻辑)。
+* **文件**: `src/actions/generate-briefing.ts`。
+* **逻辑**:
+1. **检查每日熔断**: 如果 `today_count >= 20`，立即返回 `RestCard` (休息卡)。
+2. 获取 目标词 + 上下文词。
+3. 调用 LLM 执行 **Drill Prompt** (Task 1.1)。
+4. 使用 `safe-json` 解析结果。
+
+
+* **输出 JSON**:
 ```typescript
 {
-  meta: { format: "email", sender: "HR" },
+  meta: { format: "chat", level: 0 },
   segments: [
-    { type: "intro", content_markdown: "..." },
-    { type: "interaction", task: { style: "bubble_select", options: [...] } }
+    { type: "text", content_markdown: "<s>The manager</s>..." }, // 必须包含 XML 标签
+    { type: "interaction", dimension: "V", task: { ... } }
   ]
 }
 
@@ -79,79 +81,78 @@ You are building **Opus**, a **Mobile Workplace Simulator** for TOEIC preparatio
 
 
 
-* [ ] **Task 1.2: Fallback Template (Safety Net)**
-* **Instruction**: Create `src/lib/templates/fallback-briefing.ts`.
-* **Logic**: A hardcoded "Meeting Reschedule" email JSON.
-* **Usage**: If LLM API fails or times out (>3s), return this immediately to prevent UI crash.
+* [x] **Task 1.3: 兜底模板 (安全网)**
+* **指令**: 创建 `src/lib/templates/fallback-briefing.ts`。
+* **逻辑**: 一个硬编码的 **Level 0 卡片** (例如: "<s>System</s> <v>saved</v> <o>data</o>.")。
+* **用途**: 当 Gemini 超时或报错时返回此内容。
 
 
 
 ---
 
-## 🔵 Phase 2: Inbox & Briefing UI (The Body)
+## 🔵 Phase 2: 收件箱与界面 (The Body)
 
-> **Goal**: "Thumb-Driven" Interface. No complex dashboards.
+> **目标**: "拇指驱动" 界面 + **认知辅助** (句法高亮 + TTS)。
 
-* [ ] **Task 2.1: The "Inbox" Stream (Home Page)**
-* **File**: `src/app/page.tsx`
-* **UI**: A Stack or Swiper view.
-* **Logic**:
-1. Fetch next `Briefing` on load.
-2. Show Skeleton while loading.
-3. Render current Briefing Card.
-4. On complete -> Swipe animation -> Load next.
+* [ ] **Task 2.1: "收件箱" 信息流 (首页)**
+* **文件**: `src/app/page.tsx`。
+* **逻辑**:
+1. 获取下一个 `Briefing`。
+2. 加载时 **自动播放 TTS** (`window.speechSynthesis`)。
+3. 渲染卡片。
 
 
 
 
-* [ ] **Task 2.2: Dumb Markdown Renderer**
-* **File**: `src/components/briefing/markdown-renderer.tsx`
-* **Tech**: `react-markdown`.
-* **Styles**:
-* `<mark>` -> `bg-yellow-500/20 text-yellow-200` (Signal words).
-* `**bold**` -> `text-emerald-400 font-bold` (Target words).
+* [ ] **Task 2.2: 句法高亮渲染器 *[已更新]* **
+* **文件**: `src/components/briefing/syntax-text.tsx` (替代 markdown-renderer)。
+* **逻辑**: 解析 `<s>`, `<v>`, `<o>` 标签。
+* **样式**:
+* `<s>`: 绿色下划线。
+* `<v>`: **红色粗体**。
+* `<o>`: 蓝色背景。
 
 
 
 
-* [ ] **Task 2.3: Unified Interaction Components**
-* **File**: `src/components/briefing/interaction-zone.tsx`
-* **Constraint**: All inputs must be in the **Bottom 30%** of the screen.
-* **Components**:
-* `SwipeChoice`: For V-Dim (Left/Right).
-* `BubbleSelect`: For C-Dim (Floating chips).
+* [ ] **Task 2.3: 统一交互组件**
+* **文件**: `src/components/briefing/interaction-zone.tsx`。
+* **约束**: 位于屏幕底部 30% 区域。
+* **组件**:
+* `SwipeChoice`: 用于 V 维度 (左右二选一) - **Level 0 核心**。
+* `FlipCard`: 背面显示全句中文翻译。
 
 
-
-
-
----
-
-## 🟣 Phase 3: The Simulation Loop (The Soul)
-
-> **Goal**: Gamify the feedback.
-
-* [ ] **Task 3.1: Record Interaction Action**
-* **File**: `src/actions/record-outcome.ts`
-* **Logic**:
-1. Receive `wordId`, `dimension` (e.g., 'C'), `isCorrect`.
-2. Update `UserWordProgress.${dimension}_score`.
-3. Calculate new `next_review_at` (Simplified SRS).
-
-
-
-
-* [ ] **Task 3.2: Feedback UI (Haptic & KPI)**
-* **UI**: A subtle bottom sheet or toast after answering.
-* **Copy**: "KPI Updated" (not "Correct"), "Performance Review Needed" (not "Wrong").
-* **Tech**: Use `navigator.vibrate` for haptic feedback.
 
 
 
 ---
 
-## ⚫ Phase 4: Expansion (Later)
+## 🟣 Phase 3: 模拟循环 (The Soul)
 
-* Task 4.1: X Dimension (Logic Insert)
-* Task 4.2: Multi-Doc Dimension
-* Task 4.3: Auth Integration
+> **目标**: 记录进度并强制执行 **每日熔断**。
+
+* [ ] **Task 3.1: 记录结果 Action *[已更新]* **
+* **文件**: `src/actions/record-outcome.ts`。
+* **逻辑**:
+1. 更新 `UserWordProgress`。
+2. 增加 `today_count` (今日完成数)。
+3. **返回**: `daily_cap_reached: boolean`。
+
+
+
+
+* [ ] **Task 3.2: 休息卡 (Rest Card) UI *[新增]* **
+* **UI**: 一张平静的、不可交互的卡片。
+* **文案**: "You survived today. See you tomorrow." (今日已存活，明日再战)。
+* **触发**: 当 `daily_cap_reached` 为 true 时显示。
+
+
+
+---
+
+## ⚫ Phase 4: 扩展 (后续规划)
+
+* Task 4.1: X 维度 (逻辑插入题)
+* Task 4.2: Level 1 升级 (邮件生成)
+* Task 4.3: Auth 集成 (登录鉴权)

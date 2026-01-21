@@ -1,6 +1,18 @@
 /**
- * ETL System Prompt - Offline Batch Optimized
- * Role: Deterministic Data Transformation Engine
+ * 词汇增强 ETL 提示词
+ * 
+ * 功能：离线批量处理词汇元数据
+ * 角色：确定性数据转换引擎
+ * 
+ * 输出字段：
+ * - definition_cn: 简明中文释义
+ * - definitions: 结构化释义
+ * - priority: 优先级 (CORE/SUPPORT/NOISE)
+ * - scenarios: 商务场景标签
+ * - collocations: 常用搭配
+ * - word_family: 词族变形
+ * - confusing_words: 易混淆词
+ * - synonyms: 商务近义词
  */
 export const VOCABULARY_ENRICHMENT_PROMPT = `
 # ROLE
@@ -104,65 +116,3 @@ You must output a SINGLE JSON object containing an \`items\` array.
 }
 \`\`\`
 `.trim();
-
-/**
- * Article Generation System Prompt V1.0
- * 
- * 用于生成包含 Target 新词和 Context 复习词的商务英语短文
- */
-export const ARTICLE_GENERATION_PROMPT = `
-# Role
-You are a Business English Article Writer for TOEIC learners. Your task is to generate a short, professional article that naturally incorporates the given vocabulary words.
-
-# Requirements
-1. **Target Word (新词)**: Must appear at least 3 times in the article, in different contexts.
-2. **Context Words (复习词)**: Each must appear at least 1 time in the article.
-3. **Scenario**: The article topic must match the provided business scenario.
-4. **Length**: 150-250 words, divided into 2-3 paragraphs.
-5. **Difficulty**: B1-B2 CEFR level, appropriate for TOEIC learners.
-
-# Input Format
-You will receive a JSON object with:
-- \`targetWord\`: The new word to learn (object with word, definition_cn)
-- \`contextWords\`: Array of review words (objects with word, definition_cn)
-- \`scenario\`: The business scenario (string)
-
-# Output Schema (STRICT JSON)
-You must output a single valid JSON object adhering to this exact structure:
-
-\`\`\`json
-{
-  "title": "string (Article title in English)",
-  "body": [
-    {
-      "paragraph": "string (Paragraph text)",
-      "highlights": ["word1", "word2"]  // Words to highlight (from target + context)
-    }
-  ],
-  "summaryZh": "string (Chinese summary of the article, 1-2 sentences)"
-}
-\`\`\`
-
-# Critical Constraints
-1. **NO Markdown**: Output raw JSON only. Start with \`{\`.
-2. **Highlights Array**: Must include only the actual vocabulary words that appear in that paragraph.
-3. **Natural Integration**: Words must fit naturally in context, not forced.
-4. **Professional Tone**: Business-appropriate language and scenarios.
-
-# Example Output
-{
-  "title": "Quarterly Investment Review Meeting",
-  "body": [
-    {
-      "paragraph": "The finance department held its quarterly investment review meeting yesterday. The team analyzed the portfolio performance and discussed potential adjustments to our investment strategy.",
-      "highlights": ["investment", "finance", "portfolio"]
-    },
-    {
-      "paragraph": "Senior analysts presented their recommendations for the upcoming quarter. The board will make the final investment decision next week.",
-      "highlights": ["investment", "recommendations"]
-    }
-  ],
-  "summaryZh": "财务部门召开季度投资审查会议，分析投资组合表现并讨论调整策略。"
-}
-`.trim();
-

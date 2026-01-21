@@ -3,23 +3,23 @@
 | 属性 | 内容 |
 | --- | --- |
 | **项目名称** | Opus (Mobile) |
-| **版本** | **3.0 (Final Master)** |
-| **核心理念** | **"Don't Study. Execute." (拒绝死记，直接履职)** |
+| **版本** | **3.3 (Cognitive Rehab Edition)** |
+| **核心理念** | **"Survive First, Then Upgrade." (拒绝死记，先活下来，再履职)** |
 | **产品形态** | **口袋职场模拟器 (Pocket Workplace Simulator)** |
-| **技术栈** | Next.js 14+ (App Router), Prisma, pgvector, Gemini/DeepSeek (LLM) |
+| **技术栈** | Next.js 14+ (App Router), Prisma, pgvector, Gemini 3 Flash (ETL/GenAI) |
 | **UI 框架** | Shadcn UI + Tailwind CSS + Framer Motion (Mobile First) |
-| **更新时间** | 2026-01-19 |
+| **更新时间** | 2026-01-21 |
 
 ---
 
 ## 1. 产品愿景 (Vision)
 
 我们将传统的“背单词 App”重构为一款 **沉浸式商务模拟工具**。
-用户身份不再是“学生”，而是虚拟跨国公司的 **“实习高管 (Executive Intern)”**。
+用户身份从跨国公司的 **“Trainee (新兵/培训生)”** 起步，通过认知复健建立信心，逐步晋升为 **“Executive (高管)”**。
 用户不是在“做题”，而是在 **Inbox (收件箱)** 中处理 **Briefings (微任务)**。
 
 * **核心策略**: **One Interface, Adaptive Difficulty (一套界面，内容自适应)**。
-* **交互原则**: 拇指驱动 (Thumb-Driven)、极速流 (Instant Flow)、全员选择题 (Closed-ended)。
+* **交互原则**: 拇指驱动 (Thumb-Driven)、极速流 (Instant Flow)、**心理安全 (Psychological Safety)**。
 
 ---
 
@@ -28,55 +28,75 @@
 **设计铁律：前端是“哑巴”，后端是“大脑”。**
 前端不再维护“简单版/困难版”两套组件。难度差异完全由 **后端 Prompt 生成的 Markdown 格式** 和 **信息密度** 决定。
 
-### 2.1 难度自适应机制 (The Invisible Hand)
+### 2.1 难度自适应矩阵 (The Invisible Hand) [Updated]
 
-| 用户等级 | **Level 1 (Entry / ~500分)** | **Level 2 (Executive / ~800分)** |
-| --- | --- | --- |
-| **核心隐喻** | **带辅助轮骑行** (Scaffolding) | **真实路况骑行** (Real World) |
-| **V 维度 (校对)** | **Visual Anchors**: 关键词根加粗。<br>
+> **增量说明**: 新增 **Level 0** 列，专门服务于 1500 词汇量的复健期用户。
 
-<br>`Display: "The **compet**ition is..."` | **Raw Text**: 无视觉辅助，需自行识别。<br>
+| 用户等级 | **Level 0: Trainee (新兵)** <br>
 
-<br>`Display: "The competition is..."` |
-| **X 维度 (逻辑)** | **Signal Lights**: 逻辑词高亮。<br>
+<br> *(Phase 1 重点)* | **Level 1: Intern (实习)** <br>
 
-<br>`Display: "Sales fell. <mark>However</mark>, ..."` | **Hidden Logic**: 无高亮，需通读全段寻找逻辑线索。 |
-| **信息密度** | **S-V-O**: 主谓宾简单句，无冗余修饰。 | **Complex**: 包含插入语、被动语态、商务客套话。 |
-| **实现技术** | `react-markdown` 渲染 `**bold**` 和 `<mark>` | `react-markdown` 渲染纯文本 |
+<br> *(原 Level 1)* | **Level 2: Executive (高管)** <br>
+
+<br> *(原 Level 2)* |
+| --- | --- | --- | --- |
+| **核心隐喻** | **认知复健** (Rehab) | **带辅助轮骑行** (Scaffolding) | **真实路况骑行** (Real World) |
+| **Briefing 形态** | **Micro-Sentence (单句指令)** <br>
+
+<br> 强制 S-V-O 结构，无从句。 | **Short Email (短邮件)** <br>
+
+<br> 简单商务段落。 | **Memo / Report (报告)** <br>
+
+<br> 复杂长难句。 |
+| **X 维度 (逻辑)** | **Syntax Highlighter (句法高亮)** <br>
+
+<br> 🟢主语 🔴谓语 🔵宾语 | **Visual Anchors** <br>
+
+<br> 关键词根加粗。 | **Hidden Logic** <br>
+
+<br> 无辅助。 |
+| **翻译策略** | **Full Translation** <br>
+
+<br> 卡片背面全句中译。 | **Hint Only** <br>
+
+<br> 仅难词提示。 | **None** <br>
+
+<br> 无翻译。 |
+| **每日限制** | **20 Cards (熔断保护)** <br>
+
+<br> 防止报复性学习导致的挫败。 | 无限制 | 无限制 |
+
+### 2.2 句法高亮系统 (Syntax Highlighter) [New]
+
+针对 Level 0 用户，前端需解析后端生成的 XML 标签并渲染颜色，辅助识别句子骨架：
+
+* `<s>Subject</s>` → **绿色下划线** (主语)
+* `<v>Verb</v>` → **红色粗体** (谓语/核心)
+* `<o>Object</o>` → **蓝色背景** (宾语)
 
 ---
 
 ## 3. 五维职场模拟系统 (5-Dim Simulation)
 
-基于 **ETL Prompt v1.0** 清洗出的高质量数据，驱动以下五种任务流：
+基于 **ETL Prompt v1.1** 清洗出的高质量数据，驱动以下五种任务流。
 
 ### 3.1 V (形) - Visual Audit (拼写/词性)
 
 * **场景**: 审核文档中的拼写错误或词性误用。
-* **数据源**: `Word.word_family` (词性), `Word.confusing_words` (形近词)。
+* **Level 0 特性**: **权重 80%**。主要考察 `word_family` (如 `sign` vs `signature`)，这是 Part 5 提分最快的路径。
 * **交互**: **Binary Swipe (左右滑)**。
-* *左滑*: Reject (有错)。
-* *右滑*: Approve (无错)。
-
-
 
 ### 3.2 C (搭) - Drafting (拟写)
 
 * **场景**: 补全邮件草稿中的固定搭配。
-* **数据源**: `Word.collocations` (需区分 `abceed` 原生和 `ai` 生成)。
+* **Level 0 特性**: **权重 20%**。积累高频语块。
 * **交互**: **Bubble Select (气泡填空)**。
-* 底部悬浮 2-3 个气泡选项 (Chips)。
-
-
 
 ### 3.3 M (义) - Decision (决策)
 
 * **场景**: 确认合同条款含义，或进行商务同义替换。
-* **数据源**: `Word.synonyms` (必须是 Formal Business 词汇)。
-* **交互**: **Flash Card (翻转/二选一)**。
-* 考察点：`competitive` = `economical` (实惠的)，而非 `aggressive` (好斗的)。
-
-
+* **Level 0 特性**: **关闭**。避免认知过载。
+* **Level 1+**: 开启，使用 **Flash Card (翻转/二选一)**。
 
 ### 3.4 X (境) - Logic (逻辑) *[Phase 2]*
 
@@ -88,42 +108,56 @@
 * **场景**: 双文档信息比对 (Part 7)。
 * **交互**: **Serial View (串行阅读)**。
 
+### 3.6 A (音) - Audio Scaffolding [New]
+
+* **场景**: 建立音形联系，辅助听力复健。
+* **交互**: **TTS Auto-play**。卡片加载时自动播放当前句子的朗读音频。
+
 ---
 
-## 4. "1+N" 内容引擎 (Engine V3.0)
+## 4. "1+N" 内容引擎 (Engine V3.3)
 
 后端 Server Action 负责实时生成 Briefing。
 
-### 4.1 数据流 (Data Flow)
+### 4.1 数据流 (Data Flow) [Updated]
 
-1. **Fetch**: 从 DB 获取 `Target Word` 及其静态元数据 (由 ETL 脚本预处理好的)。
-2. **Context**: 通过 pgvector 查找 3 个相关词 (Context Words)。
-3. **Generate**: 调用 LLM (Gemini/DeepSeek)，传入 **Briefing Prompt**。
-4. **Render**: 前端接收 JSON，渲染为 Markdown 卡片。
+1. **Fetch**: 获取 `Target Word`。
+2. **Route**:
+* 若 `Level == 0`: 调用 **Drill Prompt** (强制生成 S-V-O 单句)。
+* 若 `Level > 0`: 调用 **Scenario Prompt** (生成邮件)。
 
-### 4.2 输出数据结构 (Standardized JSON)
+
+3. **Generate**: 调用 LLM (Gemini 3 Flash)。
+4. **Render**: 前端接收 JSON。
+
+### 4.2 输出数据结构 (Standardized JSON) [Updated]
 
 ```typescript
 interface BriefingPayload {
   meta: {
-    format: "email" | "memo" | "chat"; // 决定容器皮肤
+    format: "chat" | "email" | "memo"; // Level 0 使用 "chat" 气泡样式
     sender: string;
-    kpi_impact: "HIGH" | "MEDIUM"; // 决定反馈震动强度
+    level: 0 | 1 | 2; // [New] 指示前端开启何种辅助模式
   };
   segments: [
     {
       type: "text",
-      content_markdown: "Subject: Re: <mark>Urgent</mark> Update...", // 带样式的文本
+      // Level 0 Example: "<s>The manager</s> <v>signed</v> <o>the contract</o>."
+      // Level 1 Example: "Subject: Re: <mark>Urgent</mark> Update..."
+      content_markdown: string; 
+      
+      // [New] 音频播放文本
+      audio_text?: string;
     },
     {
       type: "interaction",
-      dimension: "V", // 或 "C", "M"
+      dimension: "V", 
       task: {
-        style: "swipe_card", // 或 "bubble_select"
-        question_markdown: "Is the word **minute** used correctly?",
-        options: ["Yes", "No"],
-        answer_key: "Yes",
-        explanation_markdown: "**Minute** here means *meeting record*."
+        style: "swipe_card",
+        question_markdown: "The manager _______ the contract.", // Level 0 填空
+        options: ["sign", "signed"],
+        answer_key: "signed",
+        explanation_markdown: "Past tense is required."
       }
     }
   ];
@@ -135,23 +169,26 @@ interface BriefingPayload {
 
 ## 5. 开发路线图 (Vibe Coding Roadmap)
 
+> **增量说明**: 调整了 Phase 1 的优先级，优先开发 Level 0 复健模式。
+
 ### Phase 0: Data Foundation (已锁定)
 
-* ✅ **Schema**: `word_family`, `synonyms`, `confusing_words` 字段已定义。
-* ✅ **ETL Prompt v1.0**: 锁定 **Gemini Flash + Temp 0.1**，确保多义词隔离 (minute ≠ micro) 和商务语境纯度。
-* 🔄 **Action**: 执行 `scripts/enrich-vocab.ts` 和 `prisma/seed.ts`。
+* ✅ **Schema**: `word_family`, `synonyms`, `priority` 字段已定义。
+* ✅ **ETL Prompt v1.1**: 锁定 Gemini 3 Flash，确保多义词隔离。
+* 🔄 **Action**: 执行 `scripts/enrich-vocab.ts` (Batch Size 6, Rate Limit Enabled)。
 
-### Phase 1: The Engine (当前重点)
+### Phase 1: The Bootcamp (Level 0 MVP) [Current Focus]
 
-* 开发 `generateBriefing` Server Action。
-* 实现 **Fallback 机制**：当 AI 超时时，返回硬编码的“会议延期通知”邮件模板。
+* **Engine**: 实现 `Drill Prompt` (单句生成) 和 `Daily Cap` (每日20条熔断)。
+* **UI**: 开发 **Syntax Highlighter** 组件 (`<s>`标签渲染) 和 **TTS Auto-play**。
+* **Interaction**: 实现 V 维度二选一交互。
 
-### Phase 2: The Inbox UI
+### Phase 2: The Intern (Level 1 Upgrade)
 
-* 实现 **Stack View** (卡片堆叠) 或 **Infinite Scroll**。
-* 开发 **Markdown Renderer** 组件 (配置 `rehype-raw` 支持 `<mark>`)。
+* **Engine**: 实现 `Scenario Prompt` (邮件生成)。
+* **UI**: 实现标准邮件卡片和 Markdown 渲染。
 
-### Phase 3: Feedback Loop
+### Phase 3: The Executive & Feedback
 
 * 实现 Haptic Feedback (触感反馈)。
 * 实现 KPI 结算动画。
@@ -161,6 +198,6 @@ interface BriefingPayload {
 ## 6. 给 LLM Copilot 的元指令 (Meta-Instructions)
 
 1. **Mobile First**: 所有 UI 组件宽度锁定 `max-w-md`，高度 `min-h-screen`。
-2. **No Loading Spinners**: 尽量使用 Skeleton (骨架屏) 或 Optimistic UI。AI 生成慢时，先显示上一张卡片的结算动画。
-3. **Strict Typing**: 所有数据库操作必须通过 Zod 校验，确保 ETL 进来的 JSON 字段不为空。
-4. **Error Boundary**: 这是一个模拟器。如果数据出错了，显示 "Connection Lost: Reconnecting to HQ..." 而不是 "500 Error".
+2. **Cognitive Safety [New]**: 在 Level 0 代码中，必须包含“每日上限”检查逻辑。如果今日已完成 20 条，直接返回 "Rest Card"。
+3. **Strict Typing**: 使用 `src/lib/safe-json.ts` 中的 Zod Helper 校验所有数据库 JSON。
+4. **Error Boundary**: 如果 LLM 生成超时，Level 0 应降级显示数据库中的 `commonExample` 字段，确保应用不崩溃。

@@ -6,22 +6,25 @@
  *   主要填充: definition_cn (简明释义), definitions (结构化释义), Scenarios (场景), Collocations (搭配).
  *   自动映射: is_toeic_core -> learningPriority (100/60).
  * 
- * 限额管理 (针对 Gemini 免费层优化):
- *   - 批次间隔: 10 分钟 (每小时 6 批，卡在免费层限额内)
- *   - 每小时上限: 最多 6 批/小时
- *   - 两级熔断: 429 Rate Limit -> 10 分钟冷却; Quota Exhausted -> 暂停到次日 16:30 (PT 午夜)
- *   - 指数退避: 3 次重试，间隔 10s -> 20s -> 40s
- *   - 连续失败保护: 连续失败 3 次后触发长时间冷却
+ * 配置模式:
+ *   - 免费版 (默认): 保守限流，适合 Gemini 免费层 (10 分钟间隔，每小时 6 批)
+ *   - 收费版 (--paid): 宽松限流，适合 Qwen/DeepSeek/付费 API (5 秒间隔，每小时 120 批)
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
  *      npx tsx scripts/etl-vocabulary-ai.ts --dry-run
  * 
- *   2. Live Run (单批次):
+ *   2. Live Run - 免费版 (单批次):
  *      npx tsx scripts/etl-vocabulary-ai.ts
  * 
- *   3. Continuous Mode (持续循环处理, 每分钟一批):
+ *   3. Live Run - 收费版 (单批次):
+ *      npx tsx scripts/etl-vocabulary-ai.ts --paid
+ * 
+ *   4. Continuous Mode - 免费版 (持续循环, 10 分钟一批):
  *      npx tsx scripts/etl-vocabulary-ai.ts --continuous
+ * 
+ *   5. Continuous Mode - 收费版 (持续循环, 5 秒一批):
+ *      npx tsx scripts/etl-vocabulary-ai.ts --continuous --paid
  * 
  * 环境变量 (.env):
  *   - DATABASE_URL: 数据库连接
@@ -47,14 +50,43 @@ try {
 // --- Logger ---
 const log = createLogger('etl');
 
-// --- Configuration ---
-const BATCH_SIZE = 10;
-const RATE_LIMIT_COOLDOWN_MS = 10 * 60 * 1000;  // 10 分钟冷却 (Gemini 免费层需要更长)
-const BATCH_INTERVAL_MS = 10 * 60 * 1000;        // 10 分钟间隔 (每小时 6 批，正好卡在限额内)
-const MAX_RETRIES = 3;
-const BASE_RETRY_DELAY_MS = 10000;               // 10 秒基础退避
-const MAX_REQUESTS_PER_HOUR = 6;                 // 每小时最多 6 批 (根据实际限额调整)
-const MAX_CONSECUTIVE_FAILURES = 3;              // 连续失败 3 次后长时间暂停
+// --- Configuration Presets ---
+// 免费版配置 (Gemini Free Tier)
+const FREE_TIER_CONFIG = {
+    BATCH_SIZE: 10,
+    RATE_LIMIT_COOLDOWN_MS: 10 * 60 * 1000,      // 10 分钟冷却
+    BATCH_INTERVAL_MS: 10 * 60 * 1000,           // 10 分钟间隔 (每小时 6 批)
+    MAX_RETRIES: 3,
+    BASE_RETRY_DELAY_MS: 10000,                  // 10 秒基础退避
+    MAX_REQUESTS_PER_HOUR: 6,                    // 每小时 6 批
+    MAX_CONSECUTIVE_FAILURES: 3,
+};
+
+// 收费版配置 (Qwen/DeepSeek/Gemini Paid)
+const PAID_TIER_CONFIG = {
+    BATCH_SIZE: 5,
+    RATE_LIMIT_COOLDOWN_MS: 5 * 1000,           // 5 秒冷却
+    BATCH_INTERVAL_MS: 5 * 1000,                 // 5 秒间隔
+    MAX_RETRIES: 3,
+    BASE_RETRY_DELAY_MS: 2000,                   // 2 秒基础退避
+    MAX_REQUESTS_PER_HOUR: 120,                  // 每小时 120 批 (每分钟 2 批)
+    MAX_CONSECUTIVE_FAILURES: 5,
+};
+
+// 根据命令行参数选择配置
+const isPaidTier = process.argv.includes('--paid');
+const CONFIG = isPaidTier ? PAID_TIER_CONFIG : FREE_TIER_CONFIG;
+
+// 解构配置供后续使用
+const {
+    BATCH_SIZE,
+    RATE_LIMIT_COOLDOWN_MS,
+    BATCH_INTERVAL_MS,
+    MAX_RETRIES,
+    BASE_RETRY_DELAY_MS,
+    MAX_REQUESTS_PER_HOUR,
+    MAX_CONSECUTIVE_FAILURES,
+} = CONFIG;
 
 // --- Rate Limit Detection ---
 interface RateLimitInfo {
@@ -143,16 +175,16 @@ async function processBatchWithRetry(
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            log.info({ attempt, maxRetries: MAX_RETRIES, wordCount: aiInput.length }, 'Sending words to AI');
+            console.log({ attempt, maxRetries: MAX_RETRIES, wordCount: aiInput.length }, 'Sending words to AI');
             const result = await aiService.enrichVocabulary(aiInput);
 
             log.info({ itemCount: result.items.length }, 'AI response received');
 
             if (isDryRun) {
                 log.info('DRY-RUN: Skipping DB update');
-                const resultFile = path.join(process.cwd(), 'output/etl_qwen_output.json');
+                const resultFile = path.join(process.cwd(), `output/etl_${modelName}_output.json`);
                 await fs.mkdir(path.dirname(resultFile), { recursive: true });
-                await fs.writeFile(resultFile, JSON.stringify(result, null, 2));
+                await fs.writeFile(resultFile, JSON.stringify(result, null, 2), 'utf-8');
                 log.info({ file: resultFile }, 'DRY-RUN: Results written to file');
                 return { success: true, processedCount: result.items.length };
             }
@@ -210,7 +242,7 @@ async function processBatchWithRetry(
                     batch: batchId,
                     model: modelName,
                     wordCount: words.length,
-                    words,
+                    words: words.join(', '),
                     error: { message: rateLimitInfo.message }
                 }, 'CIRCUIT BREAKER L2: Daily quota exhausted');
                 return { success: false, processedCount: 0, circuitBreak: 'level2' };
@@ -228,7 +260,7 @@ async function processBatchWithRetry(
                         batch: batchId,
                         model: modelName,
                         wordCount: words.length,
-                        words,
+                        words: words.join(', '),
                         attempts: MAX_RETRIES
                     }, 'CIRCUIT BREAKER L1: Rate limit persists after max retries');
                     return { success: false, processedCount: 0, circuitBreak: 'level1' };
@@ -249,7 +281,7 @@ async function processBatchWithRetry(
                     batch: batchId,
                     model: modelName,
                     wordCount: words.length,
-                    words,
+                    words: words.join(', '),
                     error: error instanceof Error ? {
                         name: error.name,
                         message: error.message,
@@ -315,14 +347,16 @@ async function main() {
 
     const aiService = new VocabularyAIService();
 
-    log.info('═══════════════════════════════════════════════════════════');
-    log.info('  ETL Vocabulary Enrichment Script');
-    log.info('═══════════════════════════════════════════════════════════');
-    log.info({
+    console.log('='.repeat(60));
+    console.log('  ETL Vocabulary Enrichment Script');
+    console.log('='.repeat(60));
+    console.log({
         mode: isDryRun ? 'DRY-RUN' : isContinuous ? 'CONTINUOUS' : 'SINGLE BATCH',
+        tier: isPaidTier ? 'PAID (宽松限流)' : 'FREE (保守限流)',
         model: aiService.getModelName(),
         batchSize: BATCH_SIZE,
-        rate: isContinuous ? `1 batch per ${BATCH_INTERVAL_MS / 1000}s` : undefined
+        batchInterval: `${BATCH_INTERVAL_MS / 1000}s`,
+        maxRequestsPerHour: MAX_REQUESTS_PER_HOUR,
     }, 'Configuration');
 
     const stats: ProcessingStats = {
@@ -458,14 +492,14 @@ async function main() {
 
     // Final Summary
     const totalElapsed = Date.now() - stats.startTime.getTime();
-    log.info('═══════════════════════════════════════════════════════════');
+    log.info('='.repeat(60));
     log.info({
         totalBatches: stats.batchCount,
         totalSuccess: stats.totalSuccess,
         totalFailed: stats.totalFailed,
         totalDuration: formatDuration(totalElapsed)
     }, 'Final Summary');
-    log.info('═══════════════════════════════════════════════════════════');
+    log.info('='.repeat(60));
 }
 
 main()

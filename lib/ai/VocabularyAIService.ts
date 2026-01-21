@@ -2,7 +2,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { VocabularyResultSchema } from '@/lib/validations/ai';
 import type { VocabularyInput, VocabularyResult } from '@/types/ai';
-import { VOCABULARY_ENRICHMENT_PROMPT } from './prompts';
+import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/prompts/vocabulary';
 import { safeParse } from './utils';
 import { createLogger, logAIError } from '@/lib/logger';
 
@@ -152,7 +152,6 @@ export class VocabularyAIService {
      */
     async enrichVocabulary(inputs: VocabularyInput[]): Promise<VocabularyResult> {
         const words = inputs.map(i => i.word);
-        log.info({ wordCount: inputs.length, model: this.modelName, words }, 'Processing vocabulary batch');
 
         const userPrompt = JSON.stringify(inputs);
         let rawResponse: string | undefined;
