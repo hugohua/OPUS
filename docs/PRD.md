@@ -3,12 +3,12 @@
 | 属性 | 内容 |
 | --- | --- |
 | **项目名称** | Opus (Mobile) |
-| **版本** | **3.3 (Cognitive Rehab Edition)** |
+| **版本** | **3.4 (Hybrid Fetch / Compiler Edition)** |
 | **核心理念** | **"Survive First, Then Upgrade." (拒绝死记，先活下来，再履职)** |
 | **产品形态** | **口袋职场模拟器 (Pocket Workplace Simulator)** |
 | **技术栈** | Next.js 14+ (App Router), Prisma, pgvector, Gemini 3 Flash (ETL/GenAI) |
 | **UI 框架** | Shadcn UI + Tailwind CSS + Framer Motion (Mobile First) |
-| **更新时间** | 2026-01-21 |
+| **更新时间** | 2026-01-22 |
 
 ---
 
@@ -162,8 +162,47 @@ interface BriefingPayload {
     }
   ];
 }
-
 ```
+
+## 4.5 后端逻辑：调度器 (混合取词 V3.0)
+
+*(替换原有的随机取词逻辑)*
+
+**核心目标**: 构建每日学习队列 (Daily Queue, 20个坑位)，严格执行 **30/50/20** 的黄金配比，平衡“生存(新学)”与“复健(复习)”。
+
+### A. 选词算法 (三级漏斗模型)
+
+后端服务 (`actions/get-next-drill.ts`) 必须通过 SQL `UNION ALL` 执行以下优先级瀑布流：
+
+1.  **优先级 1: 抢救队列 (The "Weak Syntax" Queue) [上限 6 个]**
+    *   **目标**: 那些“由于句法薄弱而反复做错”的夹生词。
+    *   **筛选条件**: `status = 'LEARNING'` AND `dim_v_score < 30` (V维度 < 30分)。
+    *   **排序**: `next_review_at ASC` (优先处理急需复习的)。
+
+2.  **优先级 2: 复习队列 (SRS Due) [上限 4 个]**
+    *   **目标**: 根据 SRS 算法今天到期需要复习的词。
+    *   **筛选条件**: `status = 'LEARNING'` AND `next_review_at <= NOW()`。
+    *   **排序**: `frequency_score DESC` (高频词/高ROI词优先)。
+
+3.  **优先级 3: 新词填充 (New Acquisition) [填满剩余坑位]**
+    *   **目标**: 高价值的新词。
+    *   **筛选条件**: `status = 'NEW'` AND `level <= 1`。
+    *   **排序 (生存优先排序 Survival Sort)**:
+        1.  **词性 (POS)**: **动词 (v) > 名词 (n)**。
+            *   *Impl Note*: 优先读取 `partOfSpeech`；若为空，则解析 `word_family` JSON (`v` 字段存在即视为动词)，确保 S-V-O 核心词优先。
+        2.  **市场热度**: `frequency_score DESC` (Abceed 出题概率，热度高者优先)。
+        3.  **认知负荷**: `LENGTH(word) ASC` (短词优先，降低拼写焦虑)。
+
+### B. "1+N" 语境词选取规则
+
+当为核心词 (Target Word) 抓取 **语境词 (Context Words, N)** 时：
+
+*   **过滤条件**: 必须拥有名词或形容词形式 (`word_family->>'n'` 存在 或 `word_family->>'adj'` 存在)。
+*   **禁忌**: 纯动词 (Pure Verbs) **严禁** 作为语境词出现，以防止破坏 S-V-O 结构。
+
+### C. 架构决策：五维得分全字段化
+
+为了支持从 `masteryMatrix` JSON 中高效筛选（如 `dim_v_score < 30`），我们在 V1.2 版本决定将五维得分（V/C/M/X/A）全部提升为 `UserProgress` 表的独立字段。
 
 ---
 

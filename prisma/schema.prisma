@@ -57,6 +57,9 @@ model Vocab {
   definition_jp    String?  // 日文释义 (Reference)
   learningPriority Int      @default(0) // 100(Core), 60(Support), 0(Noise)
   
+  // [V1.2] 市场价值分 (Abceed ETL)
+  frequency_score  Int      @default(0) // 0-100 用于生存优先排序
+
   // 向量字段 (1536 维，用于语义搜索)
   embedding Unsupported("vector(1536)")?
 
@@ -66,6 +69,7 @@ model Vocab {
 
   @@index([learningPriority])
   @@index([scenarios])
+  @@index([frequency_score]) // [V1.2] 生存优先排序索引
 }
 
 model UserProgress {
@@ -86,11 +90,24 @@ model UserProgress {
   // 语境锚点 (记录上次阅读遇到的句子)
   lastContextSentence String? @db.Text
 
+  // [V1.2 New] 五维认知模型分数 (独立字段版)
+  // 用于混合取词引擎的高性能筛选 (e.g., 找出 V < 30 或 X < 20 的词)
+  dim_v_score    Int       @default(0)  // V: Visual Audit
+  dim_c_score    Int       @default(0)  // C: Drafting
+  dim_m_score    Int       @default(0)  // M: Decision
+  dim_x_score    Int       @default(0)  // X: Logic
+  dim_a_score    Int       @default(0)  // A: Audio
+
+  // [V1.2 New] SRS 调度系统
+  next_review_at DateTime?              // 下次复习时间
+  
   user      User     @relation(fields: [userId], references: [id])
   vocab     Vocab    @relation(fields: [vocabId], references: [id])
 
   @@unique([userId, vocabId])
   @@index([userId, dueDate])
+  @@index([userId, dim_v_score])      // [V1.2] 抢救队列核心索引
+  @@index([userId, next_review_at])   // [V1.2] 复习队列核心索引
 }
 
 model Article {

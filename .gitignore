@@ -13,3 +13,4 @@ output
 # Logs
 logs/
 *.log
+backups

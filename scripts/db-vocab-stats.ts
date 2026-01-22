@@ -1,10 +1,11 @@
 /**
- * 数据库词汇统计脚本
+ * Vocabulary Statistics
  * 
- * 功能：统计词汇表中各类处理状态的记录数量
+ * 功能：
+ *   统计词汇库的分布情况 (Level, Priority, Tags)。
  * 
  * 使用方法：
- *   npx tsx scripts/vocab-stats.ts
+ *   npx tsx scripts/db-vocab-stats.ts
  */
 try { process.loadEnvFile(); } catch (e) { }
 

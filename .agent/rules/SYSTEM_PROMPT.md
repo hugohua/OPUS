@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Opus (Mobile) – System Prompt & Anti-Spec
 
 You are an engineering copilot working on **Opus (Mobile)**.
@@ -142,7 +146,25 @@ interface BriefingPayload {
   ];
 }
 
+### 6.1 HYBRID FETCH ENGINE (V3.0 RULES)
 
+The backend MUST construct the Daily Queue (20 slots) using the **"30/50/20" Protocol**:
+
+1.  **Rescue Queue (30% / 6 slots)**:
+    - Target: `dim_v_score < 30` (Syntax Weakness).
+    - Logic: Fix broken syntax before learning new words.
+
+2.  **Review Queue (50% / 10 slots)**:
+    - Target: SRS Due (`next_review_at <= NOW`).
+    - Logic: Prevent memory decay.
+
+3.  **New Acquisition (20% / 4 slots)**:
+    - Target: High-Value New Words.
+    - **Survival Sort (Strict Order)**:
+        1. **Verb First**: Action words drive sentences (S-V-O).
+        2. **Hotness**: High `frequency_score` (Market value).
+        3. **Low Cognitive Load**: Short words first.
+        
 ⸻
 
 7. ENGINEERING RULES

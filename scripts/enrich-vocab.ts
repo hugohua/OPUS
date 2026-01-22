@@ -33,6 +33,7 @@
  * =============================================================================
  */
 
+try { process.loadEnvFile(); } catch { }
 import { PrismaClient } from '../generated/prisma/client';
 import fs from 'fs';
 import path from 'path';
@@ -97,6 +98,17 @@ interface AbceedFlat {
     pos: string;
     meanings: AbceedMeaning[];
     source_meta: { id_book: string; id_word: string };
+}
+
+// Helper to normalize POS tags to match "v.", "n." format used in SQL
+function normalizePos(pos: string | undefined): string | null {
+    if (!pos) return null;
+    const lower = pos.toLowerCase();
+    if (lower.startsWith('verb')) return 'v.';
+    if (lower.startsWith('noun')) return 'n.';
+    if (lower.startsWith('adj')) return 'adj.';
+    if (lower.startsWith('adv')) return 'adv.';
+    return lower;
 }
 
 // --- Main ---
@@ -233,6 +245,7 @@ async function main() {
                     source_meta: sourceMeta || undefined,
                     definition_jp: definitionJp,
                     tags: tags,
+                    partOfSpeech: normalizePos(ox.type), // [Fix] Map POS
                 },
                 create: {
                     word: ox.word,
@@ -249,6 +262,7 @@ async function main() {
                     source_meta: sourceMeta || undefined,
                     definition_jp: definitionJp,
                     tags: tags,
+                    partOfSpeech: normalizePos(ox.type), // [Fix] Map POS
                 }
             });
         }
@@ -257,7 +271,11 @@ async function main() {
         if (isDryRun && updatedCount <= 5) {
             console.log(`[DryRun] Processed Oxford: ${ox.word}`, { abceedLevel, tagsCount: tags.length });
         }
+        if (!isDryRun && updatedCount % 100 === 0) {
+            process.stdout.write(`\r✅ Processed Oxford: ${updatedCount}/${oxfordList.length}`);
+        }
     }
+    console.log(""); // New line after loop
 
     // 5. Process Remaining Abceed Words (New)
     console.log(`Processing ${abceedMap.size} remaining Abceed words...`);
@@ -288,7 +306,8 @@ async function main() {
                     source_meta: abMeta.source_meta,
                     definition_jp: definitionJp,
                     collocations: collocations,
-                    tags: ['abceed', `abceed_level_${abMeta.level}`]
+                    tags: ['abceed', `abceed_level_${abMeta.level}`],
+                    partOfSpeech: abMeta.pos, // [Fix] Map Abceed POS (Use raw for now)
                 },
                 create: {
                     word: abMeta.word,
@@ -299,7 +318,8 @@ async function main() {
                     abceed_rank: abMeta.rank,
                     source_meta: abMeta.source_meta,
                     definition_jp: definitionJp,
-                    tags: ['abceed', `abceed_level_${abMeta.level}`]
+                    tags: ['abceed', `abceed_level_${abMeta.level}`],
+                    partOfSpeech: abMeta.pos, // [Fix] Map Abceed POS
                 }
             });
         }
@@ -307,7 +327,11 @@ async function main() {
         if (isDryRun && abceedNewCount <= 5) {
             console.log(`[DryRun] New Abceed Word: ${abMeta.word}`);
         }
+        if (!isDryRun && abceedNewCount % 100 === 0) {
+            process.stdout.write(`\r✅ Processed Abceed: ${abceedNewCount}/${abceedMap.size}`);
+        }
     }
+    console.log(""); // New line after loop
 
     console.log(`
   🏁 JOB COMPLETE!

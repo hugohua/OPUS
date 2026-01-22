@@ -104,6 +104,7 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 interface RateLimitInfo {
     isRateLimit: boolean;
     isDailyQuota: boolean;
+    isServiceUnavailable: boolean;
     message: string;
 }
 
@@ -119,9 +120,15 @@ function detectRateLimitError(error: unknown): RateLimitInfo {
         errorMsg.includes('resource_exhausted') ||
         errorMsg.includes('quota has been exceeded');
 
+    const isServiceUnavailable = errorMsg.includes('service unavailable') ||
+        errorMsg.includes('503') ||
+        errorMsg.includes('bad gateway') ||
+        errorMsg.includes('502');
+
     return {
         isRateLimit: isRateLimit || isDailyQuota,
         isDailyQuota,
+        isServiceUnavailable,
         message: error instanceof Error ? error.message : String(error)
     };
 }
@@ -181,7 +188,7 @@ async function processBatchWithRetry(
     wordsToProcess: any[],
     isDryRun: boolean,
     batchContext: { batchId: number; modelName: string }
-): Promise<{ success: boolean; processedCount: number; circuitBreak?: 'level1' | 'level2' }> {
+): Promise<{ success: boolean; processedCount: number; circuitBreak?: 'level1' | 'level2' | 'service_outage' }> {
     const { batchId, modelName } = batchContext;
     const words = wordsToProcess.map(w => w.word);
 
@@ -247,6 +254,16 @@ async function processBatchWithRetry(
 
         } catch (error) {
             const rateLimitInfo = detectRateLimitError(error);
+
+            if (rateLimitInfo.isServiceUnavailable) {
+                // Critical: Service Outage (503/502)
+                log.error({
+                    batch: batchId,
+                    model: modelName,
+                    error: { message: rateLimitInfo.message }
+                }, 'CIRCUIT BREAKER: Service Unavailable (503) detected');
+                return { success: false, processedCount: 0, circuitBreak: 'service_outage' };
+            }
 
             if (rateLimitInfo.isDailyQuota) {
                 // Level 2: Daily Quota Exhausted
@@ -445,13 +462,14 @@ async function main() {
 
         // Aggregate Results
         let aggregatedSuccess = 0;
-        let circuitBreakAction: 'level1' | 'level2' | undefined;
+        let circuitBreakAction: 'level1' | 'level2' | 'service_outage' | undefined;
 
         for (const res of results) {
             aggregatedSuccess += res.processedCount;
             if (res.circuitBreak) {
-                // Prioritize level2 over level1
-                if (res.circuitBreak === 'level2') circuitBreakAction = 'level2';
+                // Priority: service_outage > level2 > level1
+                if (res.circuitBreak === 'service_outage') circuitBreakAction = 'service_outage';
+                else if (res.circuitBreak === 'level2' && circuitBreakAction !== 'service_outage') circuitBreakAction = 'level2';
                 else if (!circuitBreakAction) circuitBreakAction = 'level1';
             }
         }
@@ -469,7 +487,20 @@ async function main() {
         }
 
         // Circuit Breaker Handling
-        if (circuitBreakAction === 'level2') {
+        if (circuitBreakAction === 'service_outage') {
+            const waitMs = 5 * 60 * 1000; // 5 minutes
+            log.warn({
+                waitDuration: formatDuration(waitMs)
+            }, 'CRITICAL PAUSE: AI Service Unavailable. Sleeping for 5 minutes...');
+
+            if (isContinuous) {
+                await sleep(waitMs);
+                stats.consecutiveFailures = 0; // Reset failures to give it a fresh try
+                continue;
+            } else {
+                break;
+            }
+        } else if (circuitBreakAction === 'level2') {
             const resetTime = getNextResetTime();
             const waitMs = resetTime.getTime() - Date.now();
             log.warn({
