@@ -100,6 +100,7 @@ model UserProgress {
 
   // [V1.2 New] SRS 调度系统
   next_review_at DateTime?              // 下次复习时间
+  last_review_at DateTime?              // [New] 上次复习时间 (用于 Session Batch & Activity Tracking)
   
   user      User     @relation(fields: [userId], references: [id])
   vocab     Vocab    @relation(fields: [vocabId], references: [id])

@@ -32,6 +32,7 @@ export async function getNextBriefing(todayCount: number): Promise<ActionState<B
         // This ensures the strict "Smart Backend" logic is encapsulated
         return await generateBriefingAction({
             targetWord: drillData.targetWord,
+            vocabId: drillData.vocabId, // [New]
             meaning: drillData.meaning,
             contextWords: drillData.contextWords,
             wordFamily: drillData.wordFamily,

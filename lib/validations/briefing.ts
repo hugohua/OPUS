@@ -49,6 +49,7 @@ export const BriefingMetaSchema = z.object({
     format: z.enum(["chat", "email", "memo"]),
     sender: z.string(),
     level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+    vocabId: z.number().optional(), // [New] Passed through for persistence
 });
 
 export const BriefingPayloadSchema = z.object({

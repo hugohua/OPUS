@@ -62,9 +62,9 @@
 <br> 仅难词提示。 | **None** <br>
 
 <br> 无翻译。 |
-| **每日限制** | **20 Cards (熔断保护)** <br>
+| **机制** | **Session Batch (分组模式)** <br>
 
-<br> 防止报复性学习导致的挫败。 | 无限制 | 无限制 |
+<br> 每组 20 张卡片。完成后展示小结，可开启下一组。 | 无限制 | 无限制 |
 
 ### 2.2 句法高亮系统 (Syntax Highlighter) [New]
 
@@ -237,6 +237,6 @@ interface BriefingPayload {
 ## 6. 给 LLM Copilot 的元指令 (Meta-Instructions)
 
 1. **Mobile First**: 所有 UI 组件宽度锁定 `max-w-md`，高度 `min-h-screen`。
-2. **Cognitive Safety [New]**: 在 Level 0 代码中，必须包含“每日上限”检查逻辑。如果今日已完成 20 条，直接返回 "Rest Card"。
+2. **Cognitive Safety [Updated]**: 在 Level 0 代码中，移除强制的“每日上限”熔断。改为 **Session Batch** 模式（每组 20 张），完成后需要用户主动触发下一组，防止无意识的无尽刷题。
 3. **Strict Typing**: 使用 `lib/safe-json.ts` 中的 Zod Helper 校验所有数据库 JSON。
 4. **Error Boundary**: 如果 LLM 生成超时，Level 0 应降级显示数据库中的 `commonExample` 字段，确保应用不崩溃。

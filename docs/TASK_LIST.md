@@ -109,3 +109,7 @@
     *   启用 Level 1 逻辑，支持邮件格式和 "Hint Only" 翻译。
 *   [ ] **Task 4.2: X 维度 (Logic / Slot Machine)**
 *   [ ] **Task 4.3: Auth 集成 & User Profile**
+
+## 待优化
+* [ ] 优化单词记忆曲线
+* [ ] 优化卡片加载逻辑，建议预加载或一次生成

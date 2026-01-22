@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { createLogger } from '@/lib/logger';
-import { Vocab } from '@prisma/client';
+import type { Vocab } from '@/generated/prisma/client';
 
 const log = createLogger('get-next-drill');
 
@@ -20,6 +20,7 @@ interface DrillCandidate {
 
 interface NextDrillResult {
     targetWord: string;
+    vocabId: number; // [New]
     meaning: string;
     contextWords: string[];
     wordFamily: Record<string, string>;
@@ -55,8 +56,7 @@ export async function getNextDrillWord(userId: string): Promise<NextDrillResult 
                 LIMIT 6
             )
             UNION ALL
-            /* 优先级 2: 复习队列 (上限 4 个) */
-            /* 目标: SRS 到期 */
+            /* 优先级 2: 复习队列 (修正: 50% = 10个) */
             (
                 SELECT 
                     v.id as "vocabId", 
@@ -69,14 +69,12 @@ export async function getNextDrillWord(userId: string): Promise<NextDrillResult 
                 WHERE up."userId" = ${userId}
                   AND up.status = 'LEARNING'
                   AND up.next_review_at <= NOW()
-                  /* 排除已经被抢救队列捕获的词，避免逻辑重复 */
                   AND up.dim_v_score >= 30 
                 ORDER BY v.frequency_score DESC
-                LIMIT 4
+                LIMIT 10
             )
             UNION ALL
             /* 优先级 3: 新词填充 (填满剩余坑位) */
-            /* 目标: 高价值新词 */
             (
                 SELECT 
                     v.id as "vocabId", 
@@ -87,18 +85,15 @@ export async function getNextDrillWord(userId: string): Promise<NextDrillResult 
                 FROM "Vocab" v
                 LEFT JOIN "UserProgress" up ON v.id = up."vocabId" AND up."userId" = ${userId}
                 WHERE (up.status IS NULL OR up.status = 'NEW')
-                  AND (v.abceed_level <= 1 OR v.is_toeic_core = true) -- Level 0/1 范围
+                  AND (v.abceed_level <= 1 OR v.is_toeic_core = true)
                 ORDER BY 
-                  /* 生存排序: 动词优先 */
                   CASE 
                     WHEN v.word_family->>'v' IS NOT NULL THEN 1 
                     ELSE 2 
                   END ASC,
-                  /* 市场热度 */
                   v.frequency_score DESC,
-                  /* 认知负荷 (短词优先) */
                   LENGTH(v.word) ASC
-                LIMIT 1
+                LIMIT 10 
             )
             LIMIT 1;
         `;
@@ -116,6 +111,7 @@ export async function getNextDrillWord(userId: string): Promise<NextDrillResult 
 
         return {
             targetWord: target.word,
+            vocabId: target.vocabId, // [New]
             meaning: target.definition_cn || '暂无释义',
             contextWords,
             wordFamily: (target.word_family as Record<string, string>) || { v: target.word },

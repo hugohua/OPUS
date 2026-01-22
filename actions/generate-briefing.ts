@@ -34,6 +34,8 @@ const DAILY_CAP = 20;
 interface GenerateBriefingInput {
     /** 目标词汇 */
     targetWord: string;
+    /** 单词 ID (Persist Target) */
+    vocabId?: number;
     /** 核心释义 */
     meaning: string;
     /** 复习词汇列表 (1+N 规则中的 N) */
@@ -55,17 +57,9 @@ export async function generateBriefingAction(
 ): Promise<ActionState<BriefingPayload>> {
     const todayCount = input.todayCount ?? 0;
 
-    // ============================================
-    // 1. Daily Cap Check (SYSTEM_PROMPT.md L76)
-    // ============================================
-    if (todayCount >= DAILY_CAP) {
-        log.info({ todayCount }, 'Daily cap reached, returning REST_CARD');
-        return {
-            status: 'success',
-            message: 'Daily cap reached',
-            data: REST_CARD_BRIEFING,
-        };
-    }
+    // 1. Daily Cap Check (Removed for Session Batch Mode)
+    // Server no longer enforces rigid daily limits. Flow is controlled by client session batching.
+    // if (todayCount >= DAILY_CAP) { ... }
 
     // ============================================
     // 2. Prepare Context
@@ -106,6 +100,11 @@ export async function generateBriefingAction(
             userPrompt,
             model: modelName,
         });
+
+        // Patch vocabId into meta
+        if (input.vocabId) {
+            briefing.meta.vocabId = input.vocabId;
+        }
 
         return {
             status: 'success',

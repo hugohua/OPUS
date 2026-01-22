@@ -77,7 +77,7 @@ System has 3 levels. **ALL USERS START AT LEVEL 0.**
 - ONE sentence only  
 - STRICT S–V–O, NO clauses, NO implicit logic  
 - FULL Chinese translation  
-- DAILY LIMIT: 20 cards (HARD STOP)  
+- SESSION BATCH: 20 cards per batch (Unlimited Batches)  
 - Syntax Highlighter: `<s>` subject, `<v>` verb, `<o>` object  
 
 ### Level 1 — Intern
@@ -148,7 +148,7 @@ interface BriefingPayload {
 
 ### 6.1 HYBRID FETCH ENGINE (V3.0 RULES)
 
-The backend MUST construct the Daily Queue (20 slots) using the **"30/50/20" Protocol**:
+The backend MUST construct the Session Batch (20 slots) using the **"30/50/20" Protocol**:
 
 1.  **Rescue Queue (30% / 6 slots)**:
     - Target: `dim_v_score < 30` (Syntax Weakness).
@@ -170,7 +170,7 @@ The backend MUST construct the Daily Queue (20 slots) using the **"30/50/20" Pro
 7. ENGINEERING RULES
 	•	Mobile-first (max-w-md)
 	•	Strict typing (Zod validation)
-	•	Level 0 MUST check daily cap
+	•	Level 0 uses Session Batch (20) instead of Hard Daily Cap
 	•	LLM timeout → fallback to DB example
 	•	Any “smart optimization” reducing psychological safety is INVALID
 
