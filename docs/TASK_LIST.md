@@ -30,9 +30,9 @@
     *   **指令**: 创建 `prisma/seed.ts`。
     *   **命令**: `npx prisma db seed`。
 
-*   [ ] **Task 0.5: 向量化脚本**
+*   [x] **Task 0.5: 向量化脚本**
     *   **指令**: 创建 `scripts/vectorize-vocab.ts`。
-    *   **逻辑**: 使用 OpenAI `text-embedding-3-small` 生成 Embedding。
+    *   **逻辑**: 使用 Aliyun `text-embedding-v2` (1536维) + 语义三明治 Payload。
 
 ---
 
