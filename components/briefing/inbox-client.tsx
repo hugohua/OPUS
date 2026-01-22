@@ -87,26 +87,32 @@ export function InboxClient({ initialBriefing }: InboxClientProps) {
             // ============================================
             // Persistence Logic
             // ============================================
-            // We assume briefing.meta.targetWordId or similar exists? 
-            // Wait, BriefingPayload schema doesn't strictly pass vocabId back yet? 
-            // Let's look at BriefingPayload. 
-            // If it's pure generated text, we might miss the ID. 
-            // PRD says: backend "Fetch target word". 
-            // Optimization: We need vocabId to record outcome.
-            // Temporary Hack: use existing recordOutcome with a mock logical check if ID missing, 
-            // BUT actually we NEED ID.
-            // Check getNextBriefing return. 
-            // It calls generateBriefingAction. 
-            // generateBriefingAction returns BriefingPayload. 
-            // Payload doesn't have ID. 
-            // CRITICAL FIX needed: Pass ID through. 
-            // For now, I will add TODO comment and logic.
-            // See Plan Step 2 (logic fix).
+            const vocabId = briefing?.meta?.vocabId;
 
-            // Wait, getNextBriefing calls generateBriefing. 
-            // We need to pass vocab ID in the payload meta.
+            if (vocabId) {
+                try {
+                    // Fire and forget (don't block UI)
+                    // But we log error if it fails
+                    recordOutcome(vocabId, true).then(res => {
+                        if (res.status === 'error') {
+                            console.error("Failed to save progress:", res.message);
+                            toast.error("Progress not saved");
+                        }
+                    });
+                } catch (err) {
+                    console.error("Persistence Error:", err);
+                }
+            } else {
+                console.warn("Missing vocabId in briefing meta. Progress not saved.");
+            }
+
         } else {
             setFeedback("Try again. (Hint: Check the tense)");
+            // Record failure (silent)
+            const vocabId = briefing?.meta?.vocabId;
+            if (vocabId) {
+                recordOutcome(vocabId, false);
+            }
         }
     };
 
