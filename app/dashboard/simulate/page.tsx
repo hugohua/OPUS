@@ -39,18 +39,18 @@ interface ModeConfig {
 const MODES: ModeConfig[] = [
     {
         id: "BLITZ",
-        title: "Phrase Blitz",
-        desc: "High-velocity review. Context-first, low friction.",
+        title: "短语闪词",
+        desc: "高速复习。语境优先，低阻力。",
         icon: Zap,
         colorClass: "text-orange-600 dark:text-orange-400",
         batchSize: 20,
         backlog: 5, // Mock
-        href: "/blitz",
+        href: "/dashboard/blitz",
     },
     {
         id: "SYNTAX",
-        title: "Syntax Drill",
-        desc: "Repair broken grammar logic. Survive S-V-O.",
+        title: "语法钻研",
+        desc: "修复破碎的语法逻辑。掌握 S-V-O 核心句式。",
         icon: Zap,
         colorClass: "text-teal-600 dark:text-teal-400",
         batchSize: 20,
@@ -59,8 +59,8 @@ const MODES: ModeConfig[] = [
     },
     {
         id: "CHUNKING",
-        title: "Chunking Flow",
-        desc: "Master fixed phrases and business collocations.",
+        title: "语块流畅",
+        desc: "掌握固定短语和商务搭配，提升表达自然度。",
         icon: Puzzle,
         colorClass: "text-blue-600 dark:text-blue-400",
         batchSize: 30,
@@ -69,8 +69,8 @@ const MODES: ModeConfig[] = [
     },
     {
         id: "NUANCE",
-        title: "Nuance Audit",
-        desc: "Precision wording for executive decisions.",
+        title: "细微差异审计",
+        desc: "为高管决策提供精准用词，理解语义背后的深度。",
         icon: Scale,
         colorClass: "text-violet-600 dark:text-violet-400",
         batchSize: 50,
@@ -84,8 +84,8 @@ export default function SimulatePage() {
         <div className="p-6 space-y-6 pb-24">
             {/* Header */}
             <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight">Simulate</h1>
-                <p className="text-muted-foreground">Choose your training simulation.</p>
+                <h1 className="text-3xl font-bold tracking-tight">模拟训练</h1>
+                <p className="text-muted-foreground">选择你的训练模拟课目。</p>
             </div>
 
             {/* Grid */}
@@ -104,7 +104,7 @@ export default function SimulatePage() {
                                     </div>
                                     {mode.backlog > 0 && (
                                         <Badge variant="destructive" className="animate-pulse">
-                                            {mode.backlog} Due
+                                            {mode.backlog} 个待复习
                                         </Badge>
                                     )}
                                 </CardHeader>
@@ -115,7 +115,7 @@ export default function SimulatePage() {
                                 </CardContent>
                                 <CardFooter className="pt-0 flex gap-2">
                                     <Badge variant="outline" className="text-xs font-normal">
-                                        Batch: {mode.batchSize}
+                                        规模: {mode.batchSize}
                                     </Badge>
                                     {/* Level Indicator? */}
                                 </CardFooter>

@@ -6,14 +6,14 @@ import { useMemo } from 'react';
 
 // --- CVA ---
 const syntaxVariants = cva(
-    "inline-block px-1.5 py-0.5 rounded mx-0.5 font-medium border border-transparent transition-colors",
+    "inline-block px-2 py-0.5 rounded-md mx-1 font-semibold border transition-all duration-300 shadow-sm",
     {
         variants: {
             type: {
-                s: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
-                v: "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
-                o: "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
-                plain: "bg-transparent text-foreground",
+                s: "bg-emerald-100 text-emerald-800 border-emerald-200/50 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30 backdrop-blur-[2px]",
+                v: "bg-rose-100 text-rose-800 border-rose-200/50 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 backdrop-blur-[2px]",
+                o: "bg-sky-100 text-sky-800 border-sky-200/50 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30 backdrop-blur-[2px]",
+                plain: "bg-transparent text-foreground border-transparent shadow-none",
             },
         },
         defaultVariants: {

@@ -37,11 +37,27 @@ async function main() {
         }
     });
 
+    // 统计 partOfSpeech 分布
+    const posStats = await prisma.vocab.groupBy({
+        by: ['partOfSpeech'],
+        _count: {
+            _all: true
+        }
+    });
+
     console.log('=== 数据库词汇统计 ===');
     console.log(`总词汇数: ${total}`);
     console.log(`未处理 (definition_cn = null): ${unprocessed}`);
     console.log(`需补全新字段 (有 definition_cn 但缺 word_family): ${needsUpdate}`);
     console.log(`已完整处理: ${complete}`);
+
+    console.log('\n=== Part of Speech 分布 (按数量降序) ===');
+    posStats
+        .sort((a, b) => b._count._all - a._count._all)
+        .forEach(stat => {
+            const pos = stat.partOfSpeech === null ? 'NULL' : stat.partOfSpeech;
+            console.log(`${pos.padEnd(20)}: ${stat._count._all}`);
+        });
 }
 
 main().finally(() => prisma.$disconnect());

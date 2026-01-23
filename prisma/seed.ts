@@ -1,7 +1,7 @@
 try { process.loadEnvFile(); } catch { }
 
 import { PrismaClient } from '../generated/prisma/client'
-import bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -43,8 +43,7 @@ async function main() {
 
     console.log(`👤 Created Admin User: ${adminUser.name} (${adminUser.email})`)
 
-    // # NextAuth Secret
-    // AUTH_SECRET="8452f5a6a9ffeb4ac2ea877c258f9d390a86fa57c44d39814f9525ff485b6034"
+
 
     console.log('✅ Seed finished.')
 }

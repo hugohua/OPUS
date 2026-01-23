@@ -129,7 +129,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
             {/* Top: Header & Counter */}
-            <div className="flex items-center gap-4 py-4 px-2">
+            <div className="flex items-center gap-4 py-4 px-2 z-30">
                 <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard/simulate')}>
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -142,34 +142,51 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                 <div className="w-9" /> {/* Spacer for centering */}
             </div>
 
-            {/* Middle: Content Renderer */}
-            <div className="flex-1 flex flex-col items-center justify-center p-4 gap-8">
-                {/* Context Card */}
-                {textSegment && (
-                    <Card className="p-6 w-full shadow-md border-l-4 border-l-primary/50 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-3 mb-4 opacity-70">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700" />
-                            <div className="text-xs font-medium uppercase">System Briefing</div>
-                        </div>
+            {/* Middle: Content Renderer with Grid Background */}
+            <div className="flex-1 relative overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <div className="h-full w-full dark:bg-background bg-white dark:bg-grid-white/[0.05] bg-grid-black/[0.05] relative flex items-center justify-center">
+                        <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-background bg-white [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+                    </div>
+                </div>
 
-                        <SyntaxText content={textSegment.content_markdown || ''} />
+                <div className="relative z-10 h-full overflow-y-auto px-4 py-8">
+                    <div className="max-w-3xl mx-auto flex flex-col items-center gap-12">
+                        {/* Context Card */}
+                        {textSegment && (
+                            <Card className="p-8 w-full shadow-2xl border-t-4 border-t-primary/40 bg-card/80 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
+                                <div className="flex items-center gap-4 mb-6 opacity-80">
+                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                        <CheckCircle className="w-6 h-6 stroke-[1.5px]" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Intelligence</span>
+                                        <span className="text-xs font-semibold uppercase">System Briefing</span>
+                                    </div>
+                                </div>
 
-                        {textSegment.translation_cn && (
-                            <p className="mt-4 text-sm text-muted-foreground border-t pt-2">
-                                {textSegment.translation_cn}
-                            </p>
+                                <SyntaxText content={textSegment.content_markdown || ''} className="text-2xl font-medium tracking-tight" />
+
+                                {(textSegment as any).translation_cn && (
+                                    <div className="mt-6 pt-4 border-t border-dashed border-border/50">
+                                        <p className="text-sm text-muted-foreground/80 leading-relaxed italic">
+                                            " {(textSegment as any).translation_cn} "
+                                        </p>
+                                    </div>
+                                )}
+                            </Card>
                         )}
-                    </Card>
-                )}
 
-                {/* Interaction */}
-                {interactSegment && interactSegment.task && (
-                    <InteractionZone
-                        key={index} // Reset state on change
-                        task={interactSegment.task}
-                        onComplete={handleComplete}
-                    />
-                )}
+                        {/* Interaction */}
+                        {interactSegment && interactSegment.task && (
+                            <InteractionZone
+                                key={index} // Reset state on change
+                                task={interactSegment.task}
+                                onComplete={handleComplete}
+                            />
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
