@@ -20,7 +20,7 @@
     /* White */
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 239 84% 67%;
     /* Electric Indigo #6366F1 */
     --primary-foreground: 210 40% 98%;
 
@@ -35,7 +35,7 @@
     /* Slate 500 #64748B */
 
     --accent: 210 40% 96.1%;
-    /* Electric Indigo */
+    /* Electric Indigo (Background) */
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -44,10 +44,10 @@
     --border: 214.3 31.8% 91.4%;
     /* Slate 200 #E2E8F0 */
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 239 84% 67%;
     /* Indigo Ring */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     /* 12px for Pro Max roundedness */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -72,9 +72,9 @@
     /* Slate 950 */
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 239 84% 67%;
     /* Electric Indigo #6366F1 */
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
     --secondary: 217.2 32.6% 17.5%;
     /* Slate 900 */
@@ -95,7 +95,7 @@
     --border: 217.2 32.6% 17.5%;
     /* Slate 900 */
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 239 84% 67%;
     /* Indigo Ring */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;

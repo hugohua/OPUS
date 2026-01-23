@@ -10,7 +10,7 @@
  */
 try { process.loadEnvFile(); } catch (e) { console.warn('Env not loaded via process.loadEnvFile'); }
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 
 async function main() {
     console.log('--- Checking UserProgress Persistence ---');

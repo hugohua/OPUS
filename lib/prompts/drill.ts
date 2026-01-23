@@ -106,3 +106,17 @@ Available Word Family: ${JSON.stringify(context.wordFamily)}
 
 GENERATE DRILL CARD JSON NOW.`;
 }
+
+export function getDrillBatchPrompt(inputs: DrillContext[]) {
+  const userPrompt = `
+GENERATE ${inputs.length} DRILL CARDS.
+
+INPUT DATA:
+${JSON.stringify(inputs, null, 2)}
+`.trim();
+
+  return {
+    system: DRILL_SYSTEM_PROMPT + "\n\nIMPORTANT: Output an object with a 'drills' array containing the cards.",
+    user: userPrompt
+  };
+}

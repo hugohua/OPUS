@@ -80,7 +80,14 @@ model UserProgress {
   // SRS 调度
   status    LearningStatus @default(NEW) // NEW, LEARNING, REVIEW, MASTERED
   interval  Int            @default(0)   // 天数
-  easeFactor Float         @default(2.5)
+  
+  // FSRS v5 Fields
+  stability      Float    @default(0)
+  difficulty     Float    @default(0)
+  reps           Int      @default(0)
+  lapses         Int      @default(0)
+  state          Int      @default(0) // 0=New, 1=Learning, 2=Review, 3=Relearning
+  last_review_at DateTime?
   dueDate   DateTime       @default(now())
   
   // 🔥 五维矩阵 (V/A/M/C/X)
@@ -100,8 +107,6 @@ model UserProgress {
 
   // [V1.2 New] SRS 调度系统
   next_review_at DateTime?              // 下次复习时间
-  last_review_at DateTime?              // [New] 上次复习时间 (用于 Session Batch & Activity Tracking)
-  
   user      User     @relation(fields: [userId], references: [id])
   vocab     Vocab    @relation(fields: [vocabId], references: [id])
 
@@ -134,13 +139,44 @@ model ArticleVocab {
   @@id([articleId, vocabId])
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+
+
+model InvitationCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
   
-  progress  UserProgress[]
-  articles  Article[]
+  // 限制使用次数 (比如给部门同事生成的码，可以设为 20 次)
+  maxUses     Int       @default(1) 
+  usedCount   Int       @default(0)
+  
+  isActive    Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime? // 可选：有效期
+}
+
+model User {
+  id            String    @id @default(cuid())
+  
+  // 1. 极简账号信息
+  // 对于同事/朋友，Email 是唯一的 ID
+  email         String    @unique
+  password      String    // bcrypt hash
+  name          String?   // 显示名称
+  
+  // 2. 邀请码关联 (可选，用于记录是谁邀请的，或者使用了哪个码)
+  invitedByCode String?   
+
+  // 3. 业务数据 (保持 PRD V1.4 不变)
+  timezone      String    @default("Asia/Shanghai") 
+  settings      Json?     @default("{}") // { "autoPlay": true }
+  
+  // 核心资产
+  progress      UserProgress[]
+  articles      Article[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 enum LearningStatus {

@@ -66,7 +66,7 @@ const FREE_TIER_CONFIG = {
 // 收费版配置 (Qwen/DeepSeek/Gemini Paid)
 const PAID_TIER_CONFIG = {
     BATCH_SIZE: 8,              // 提升 Batch 到 10
-    PARALLEL_REQUESTS: 6,        // 并发请求数 (2线程)
+    PARALLEL_REQUESTS: 8,        // 并发请求数 (2线程)
     RATE_LIMIT_COOLDOWN_MS: 5 * 1000,
     BATCH_INTERVAL_MS: 2 * 1000, // 2s 间隔
     MAX_RETRIES: 3,

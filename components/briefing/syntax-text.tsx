@@ -1,106 +1,87 @@
-import React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
+'use client';
+
+import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
-// ============================================
-// Types & Interfaces
-// ============================================
-
-const segmentVariants = cva('inline-block transition-colors duration-300 rounded-sm px-0.5 -mx-0.5', {
-    variants: {
-        type: {
-            text: 'text-foreground',
-            s: 'underline decoration-2 underline-offset-4 decoration-green-500/50 hover:decoration-green-500', // Subject
-            v: 'font-bold text-red-600 dark:text-red-400 mx-[3px]', // Verb
-            o: 'bg-blue-100 dark:bg-blue-500/20 text-blue-900 dark:text-blue-100 font-medium', // Object - Boosted contrast
-            mark: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-900 dark:text-yellow-100 font-medium', // Focus - Boosted contrast
+// --- CVA ---
+const syntaxVariants = cva(
+    "inline-block px-1.5 py-0.5 rounded mx-0.5 font-medium border border-transparent transition-colors",
+    {
+        variants: {
+            type: {
+                s: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+                v: "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
+                o: "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+                plain: "bg-transparent text-foreground",
+            },
         },
-    },
-    defaultVariants: {
-        type: 'text',
-    },
-});
-
-type SegmentType = VariantProps<typeof segmentVariants>['type'];
+        defaultVariants: {
+            type: "plain",
+        },
+    }
+);
 
 interface SyntaxTextProps {
-    /** The raw markdown string containing XML tags like <s>...</s> */
-    content: string;
+    content: string; // e.g. "<s>The manager</s> <v>signed</v> <o>the contract</o>."
     className?: string;
 }
 
-// ============================================
-// Helpers
-// ============================================
-
-/**
- * Regex to capture XML-like tags: 
- * <s>content</s>, <v>content</v>, <o>content</o>, <mark>content</mark>
- * 
- * Captures:
- * 1. The full tag (e.g. "<s>text</s>")
- * 2. The tag name (e.g. "s")
- * 3. The inner text (e.g. "text")
- */
-const TAG_REGEX = /<([svo]|mark)>(.*?)<\/\1>/g;
-
-// ============================================
-// Component
-// ============================================
-
 export function SyntaxText({ content, className }: SyntaxTextProps) {
-    if (!content) return null;
+    // Parsing Logic
+    const segments = useMemo(() => {
+        // Regex to match tags: <s>...</s> or <v>...</v> or <o>...</o>
+        // Global match, capturing group for tag type and content
+        // We split by tag regex to get parts
+        // Regex: /<([svo])>(.*?)<\/\1>/g
+        // But split logic is tricky with capture groups.
+        // Let's use a simpler tokenization or regex replace.
 
-    // Split content by tags, preserving the separators to process them
-    // We can't just use split because we want to map them to CVA variants.
-    // Instead, let's use a matchAll approach or a sophisticated split.
+        // We want to return an array of { text, type }.
+        const regex = /<([svo])>(.*?)<\/\1>/gi;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
 
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    // Reset regex state since it's global
-    TAG_REGEX.lastIndex = 0;
-
-    while ((match = TAG_REGEX.exec(content)) !== null) {
-        const [fullMatch, tagName, innerText] = match;
-        const startIndex = match.index;
-
-        // 1. Push preceding plain text
-        if (startIndex > lastIndex) {
-            const text = content.slice(lastIndex, startIndex);
-            parts.push(
-                <span key={`text-${lastIndex}`} className={segmentVariants({ type: 'text' })}>
-                    {text}
-                </span>
-            );
+        while ((match = regex.exec(content)) !== null) {
+            // Text before match
+            if (match.index > lastIndex) {
+                parts.push({
+                    type: 'plain',
+                    text: content.substring(lastIndex, match.index),
+                });
+            }
+            // Matched tag
+            parts.push({
+                type: match[1].toLowerCase(), // s, v, o
+                text: match[2],
+            });
+            lastIndex = regex.lastIndex;
+        }
+        // Remaining text
+        if (lastIndex < content.length) {
+            parts.push({
+                type: 'plain',
+                text: content.substring(lastIndex),
+            });
         }
 
-        // 2. Push styled segment
-        // tagName is guaranteed to be 's', 'v', 'o', or 'mark' by the regex
-        const type = tagName as SegmentType;
-        parts.push(
-            <span key={`tag-${startIndex}`} className={cn(segmentVariants({ type }))}>
-                {innerText}
-            </span>
-        );
-
-        lastIndex = startIndex + fullMatch.length;
-    }
-
-    // 3. Push remaining plain text
-    if (lastIndex < content.length) {
-        const text = content.slice(lastIndex);
-        parts.push(
-            <span key={`text-${lastIndex}`} className={segmentVariants({ type: 'text' })}>
-                {text}
-            </span>
-        );
-    }
+        return parts;
+    }, [content]);
 
     return (
-        <p className={cn("text-lg md:text-xl leading-relaxed tracking-wide text-foreground", className)}>
-            {parts}
-        </p>
+        <div className={cn("text-lg leading-relaxed", className)}>
+            {segments.map((seg, i) => (
+                <span
+                    key={i}
+                    className={cn(
+                        syntaxVariants({ type: seg.type as any }),
+                        seg.type === 'plain' ? "" : "shadow-sm"
+                    )}
+                >
+                    {seg.text}
+                </span>
+            ))}
+        </div>
     );
 }

@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('auth-mock');
@@ -17,6 +17,7 @@ export async function getMockUser() {
             create: {
                 email: MOCK_USER_EMAIL,
                 name: 'Admin User',
+                password: '$2b$10$Zdm79t9NLUZ1qND8iVXRD.BZiPOJMDkHy9Uh/5BRbb/AQynEXgPMe', // 123456
             },
         });
         return user;

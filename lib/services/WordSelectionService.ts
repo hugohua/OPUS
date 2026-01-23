@@ -1,5 +1,5 @@
 import 'server-only';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { Vocab, UserProgress } from '@/generated/prisma/client';
 import { createLogger } from '@/lib/logger';
 

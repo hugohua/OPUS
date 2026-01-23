@@ -1,167 +1,120 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo, useSpring, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Check, X, ChevronLeft, ChevronRight, Hand } from 'lucide-react';
-import type { BriefingPayload } from '@/lib/validations/briefing';
+import { CheckCircle2, XCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// ============================================
-// Types
-// ============================================
-
-type InteractionTask = Extract<BriefingPayload['segments'][number], { type: 'interaction' }>['task'];
+interface InteractionTask {
+    style: 'swipe_card' | 'bubble_select';
+    question_markdown: string;
+    options: string[];
+    answer_key: string;
+    explanation_markdown?: string; // Revealed after
+}
 
 interface InteractionZoneProps {
     task: InteractionTask;
     onComplete: (isCorrect: boolean) => void;
-    className?: string;
 }
 
-// ============================================
-// Sub-component: SwipeChoice
-// ============================================
+export function InteractionZone({ task, onComplete }: InteractionZoneProps) {
+    const [selected, setSelected] = useState<string | null>(null);
+    const [submitted, setSubmitted] = useState(false);
 
-interface SwipeChoiceProps {
-    options: string[];
-    answerKey: string;
-    questionMarkdown: string;
-    onComplete: (isCorrect: boolean) => void;
-}
+    // Parse Question: "The manager _______ the budget."
+    // We want to render the hole?
+    // Or just display question text.
 
-const SWIPE_THRESHOLD = 80;
-const SWIPE_VELOCITY = 800; // Trigger on fast flick
+    const handleSelect = (option: string) => {
+        if (submitted) return;
+        setSelected(option);
+        setSubmitted(true);
 
-function SwipeChoice({ options, answerKey, questionMarkdown, onComplete }: SwipeChoiceProps) {
-    const leftOption = options[0];
-    const rightOption = options[1] || options[0];
+        // Immediate Feedback delay or direct?
+        // User wants "Safety". Maybe immediate show result.
+        // Call parent after short delay?
+        const isCorrect = option === task.answer_key;
 
-    const x = useMotionValue(0);
-    const rotate = useTransform(x, [-200, 200], [-15, 15]); // Add subtle rotation
-
-    // Smooth opacity for labels on the card
-    const leftOpacity = useTransform(x, [-100, -20], [1, 0]);
-    const rightOpacity = useTransform(x, [20, 100], [0, 1]);
-
-    // Background color shifts
-    const bgOpacity = useTransform(x, [-150, 0, 150], [0.1, 0, 0.1]);
-    const borderLeftColor = useTransform(x, [-100, 0], ['rgba(16, 185, 129, 1)', 'rgba(16, 185, 129, 0)']); // Tailwind Emerald-500
-    const borderRightColor = useTransform(x, [0, 100], ['rgba(59, 130, 246, 0)', 'rgba(59, 130, 246, 1)']); // Tailwind Blue-500
-
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const handleDragEnd = (_: any, info: PanInfo) => {
-        const offset = info.offset.x;
-        const velocity = info.velocity.x;
-
-        // Check Trigger Conditions
-        if (offset < -SWIPE_THRESHOLD || velocity < -SWIPE_VELOCITY) {
-            handleSelection(leftOption);
-        } else if (offset > SWIPE_THRESHOLD || velocity > SWIPE_VELOCITY) {
-            handleSelection(rightOption);
-        } else {
-            // Spring back via layout animation automatically (dragSnapToOrigin)
-        }
-    };
-
-    const handleSelection = (selectedOption: string) => {
-        const isCorrect = selectedOption === answerKey;
-        onComplete(isCorrect);
+        // Trigger callback after visual feedback (e.g. 1s)
+        setTimeout(() => {
+            onComplete(isCorrect);
+            // Reset local state if parent doesn't unmount?
+            // Usually parent moves to next card, re-mounting this component or changing key.
+        }, 1500);
     };
 
     return (
-        <div ref={containerRef} className="w-full h-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="w-full space-y-6 pt-4">
+            {/* Question Text */}
+            <h3 className="text-xl font-medium text-center leading-relaxed">
+                {task.question_markdown.split('_______').map((part, i, arr) => (
+                    <span key={i}>
+                        {part}
+                        {i < arr.length - 1 && (
+                            <span className="inline-block border-b-2 border-primary w-16 mx-1 text-center font-bold text-primary">
+                                {submitted && selected}
+                            </span>
+                        )}
+                    </span>
+                ))}
+            </h3>
 
-            {/* Validated Question Container with shrink-0 */}
-            <div className="mb-4 text-center px-4 shrink-0 z-10">
-                <p className="text-xl font-medium leading-relaxed text-foreground">
-                    {questionMarkdown}
-                </p>
+            {/* Options - We treat swipe_card and bubble_select similarly for now using Badges */}
+            <div className="flex flex-wrap gap-3 justify-center">
+                {task.options.map((opt) => {
+                    const isSelected = selected === opt;
+                    const isCorrect = opt === task.answer_key;
+
+                    let variant: "outline" | "default" | "destructive" | "secondary" = "outline";
+                    if (submitted) {
+                        if (isSelected && isCorrect) variant = "default"; // Greenish? Default is Primary (Indigo)
+                        else if (isSelected && !isCorrect) variant = "destructive";
+                        else if (!isSelected && isCorrect) variant = "secondary"; // Show correct answer
+                    } else {
+                        variant = isSelected ? "default" : "outline"; // Hover/Active state
+                    }
+
+                    // Custom styles for success state if needed
+                    const successClass = (submitted && isCorrect && isSelected) ? "bg-emerald-500 hover:bg-emerald-600 border-emerald-500" : "";
+                    const correctHintClass = (submitted && isCorrect && !isSelected) ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "";
+
+                    return (
+                        <Badge
+                            key={opt}
+                            variant={variant}
+                            className={cn(
+                                "text-lg py-2 px-6 cursor-pointer hover:scale-105 transition-all active:scale-95 select-none",
+                                successClass,
+                                correctHintClass
+                            )}
+                            onClick={() => handleSelect(opt)}
+                        >
+                            {opt}
+                            {submitted && isSelected && (
+                                isCorrect
+                                    ? <CheckCircle2 className="w-4 h-4 ml-2" />
+                                    : <XCircle className="w-4 h-4 ml-2" />
+                            )}
+                        </Badge>
+                    );
+                })}
             </div>
 
-            {/* The Draggable Card - Safe Height & No Aspect Ratio dependency for heavy squeeze */}
-            <motion.div
-                drag="x"
-                dragConstraints={containerRef} // Allow movement within container
-                dragSnapToOrigin={true} // Automatic spring back
-                dragElastic={0.6} // iOS Standard Rubber Banding
-                dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }} // Snappy return
-                style={{ x, rotate }}
-                onDragEnd={handleDragEnd}
-                className="relative z-20 w-full max-w-sm h-80 min-h-[320px] bg-card border border-border rounded-2xl shadow-xl flex items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none shrink-0"
-                whileHover={{ scale: 1.02, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                whileTap={{ scale: 0.98 }}
-            >
-                {/* Visual Feedback Overlays on Card */}
-                {/* Left Choice Indicator (Now Green/Emerald for "Choice A" instead of danger) */}
-                <motion.div
-                    style={{ opacity: leftOpacity }}
-                    className="absolute right-6 top-6 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-200 px-4 py-2 rounded-lg font-bold border border-emerald-200 dark:border-emerald-800 pointer-events-none"
-                >
-                    {leftOption}
-                </motion.div>
-
-                {/* Right Choice Indicator */}
-                <motion.div
-                    style={{ opacity: rightOpacity }}
-                    className="absolute left-6 top-6 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-200 px-4 py-2 rounded-lg font-bold border border-blue-200 dark:border-blue-800 pointer-events-none"
-                >
-                    {rightOption}
-                </motion.div>
-
-                <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
-                    <Hand className="w-8 h-8" strokeWidth={1.5} />
-                    <span className="text-sm font-medium">Drag to decide</span>
-                </div>
-
-                {/* Glowing Border Feedback */}
-                <motion.div style={{ borderColor: borderLeftColor }} className="absolute inset-0 border-4 rounded-2xl border-transparent pointer-events-none" />
-                <motion.div style={{ borderColor: borderRightColor }} className="absolute inset-0 border-4 rounded-2xl border-transparent pointer-events-none" />
-
-            </motion.div>
-
-            {/* Static Indicators below -> NOW CLICKABLE CONTROLS */}
-            <div className="grid grid-cols-2 gap-4 w-full max-w-sm mt-8 px-2">
-                <Button
-                    variant="ghost"
-                    className="h-16 flex flex-col items-center justify-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors border-0"
-                    onClick={() => handleSelection(leftOption)}
-                >
-                    <ChevronLeft className="w-5 h-5 mb-1 opacity-50" />
-                    <span className="text-sm font-bold">{leftOption}</span>
-                </Button>
-
-                <Button
-                    variant="ghost"
-                    className="h-16 flex flex-col items-center justify-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border-0"
-                    onClick={() => handleSelection(rightOption)}
-                >
-                    <ChevronRight className="w-5 h-5 mb-1 opacity-50" />
-                    <span className="text-sm font-bold">{rightOption}</span>
-                </Button>
-            </div>
+            {/* Explanation Reveal */}
+            <AnimatePresence>
+                {submitted && task.explanation_markdown && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground border border-border/50 text-center"
+                    >
+                        {task.explanation_markdown}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
-}
-
-// ============================================
-// Main Component
-// ============================================
-
-export function InteractionZone({ task, onComplete, className }: InteractionZoneProps) {
-    if (task.style === 'swipe_card' && task.options && task.options.length >= 2) {
-        return (
-            <div className={cn("relative h-full w-full", className)}>
-                <SwipeChoice
-                    options={task.options}
-                    answerKey={task.answer_key}
-                    questionMarkdown={task.question_markdown}
-                    onComplete={onComplete}
-                />
-            </div>
-        );
-    }
-
-    return null;
 }

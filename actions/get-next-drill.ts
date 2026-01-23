@@ -1,148 +1,288 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import type { Vocab } from '@/generated/prisma/client';
+import { ActionState } from '@/types/action';
+import { BriefingPayload, SessionMode } from '@/types/briefing';
+import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
+import { getDrillBatchPrompt } from '@/lib/prompts/drill';
+import { getAIModel } from '@/lib/ai/client';
+import { generateObject, generateText } from 'ai';
 
-const log = createLogger('get-next-drill');
+const log = createLogger('actions:get-next-drill');
 
-// ============================================
-// Types
-// ============================================
+// --- AI Output Schema ---
+const DrillSegmentSchema = z.object({
+    type: z.enum(['text', 'interaction']),
+    content_markdown: z.string().optional(),
+    audio_text: z.string().optional(),
+    dimension: z.string().optional(),
+    task: z.object({
+        style: z.enum(['swipe_card', 'bubble_select']),
+        question_markdown: z.string(),
+        options: z.array(z.string()),
+        answer_key: z.string(),
+        explanation_markdown: z.string().optional(),
+    }).optional(),
+});
+
+const SingleDrillSchema = z.object({
+    meta: z.object({
+        format: z.enum(['chat', 'email', 'memo']),
+        mode: z.enum(['SYNTAX', 'CHUNKING', 'NUANCE']),
+        target_word: z.string().optional(),
+    }),
+    segments: z.array(DrillSegmentSchema),
+});
+
+const BatchDrillOutputSchema = z.object({
+    drills: z.array(SingleDrillSchema),
+});
+
+// --- Constants ---
+const BATCH_SIZE_MAP: Record<SessionMode, number> = {
+    SYNTAX: 20,
+    CHUNKING: 30,
+    NUANCE: 50,
+};
+
+// --- Main Action ---
+export async function getNextDrillBatch(
+    input: GetBriefingInput
+): Promise<ActionState<BriefingPayload[]>> {
+    try {
+        // 1. Validate Input
+        const validated = GetBriefingSchema.parse(input);
+        const { userId, mode, limit: inputLimit, excludeVocabIds } = validated;
+        // Use input limit if provided (pagination), otherwise fallback to batch size (legacy/full)
+        // Actually, schema now defaults limit to 10. We should respect it if it's explicitly passed for lazy loading.
+        // But for initial load? The user requirement says "First generate 10... then load more".
+        // So we will respect the inputLimit.
+        const effectiveLimit = inputLimit;
+
+        log.info({ userId, mode, limit: effectiveLimit, excludedCount: excludeVocabIds.length }, 'Fetching drill batch');
+
+        // 2. Fetch Candidates (30/50/20 Protocol)
+        const candidates = await fetchCandidates(userId, effectiveLimit, mode, excludeVocabIds);
+
+        if (candidates.length === 0) {
+            return { status: 'error', message: 'No vocab candidates found.' };
+        }
+
+        // 3. Enrich Context (1+N Rule) & Format Prompt Inputs
+        const promptInputs = await Promise.all(
+            candidates.map(async (c) => {
+                const contextWords = await getContextWords(c.word);
+                return {
+                    targetWord: c.word,
+                    meaning: c.definition_cn || '暂无释义',
+                    contextWords,
+                    wordFamily: (c.word_family as Record<string, string>) || { v: c.word },
+                };
+            })
+        );
+
+        // 4. Generate Content via AI
+        const { system, user } = getDrillBatchPrompt(promptInputs);
+
+        const { model } = getAIModel('default');
+
+        // Use generateText for more robustness with potential markdown wrapping
+        const { text } = await generateText({
+            model,
+            system,
+            prompt: user,
+        });
+
+        // Clean markdown code blocks if present
+        const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(cleanJson);
+        } catch (e) {
+            log.error({ text }, 'Failed to parse AI JSON response');
+            throw new Error('AI response was not valid JSON');
+        }
+
+        // Enforce the requested mode to prevent validation errors if AI hallucinates/mixes case
+        if (parsedData && Array.isArray(parsedData.drills)) {
+            parsedData.drills.forEach((d: any) => {
+                if (d.meta) {
+                    d.meta.mode = mode;
+                }
+            });
+        }
+
+        // Validate structure
+        const result = BatchDrillOutputSchema.safeParse(parsedData);
+        if (!result.success) {
+            log.error({ errors: result.error }, 'AI response schema validation failed');
+            throw new Error('AI response did not match schema');
+        }
+
+        log.info({ count: result.data.drills.length }, 'AI generation complete');
+
+        // 5. Transform/Hydrate Output
+        const payload: BriefingPayload[] = result.data.drills.map((drill, idx) => {
+            const targetStr = drill.meta.target_word;
+            const candidate = targetStr ? candidates.find(c => c.word === targetStr) : candidates[idx];
+            const safeCandidate = candidate || candidates[idx];
+
+            return {
+                meta: {
+                    format: drill.meta.format as any,
+                    mode: mode, // Redundant but safe
+                    batch_size: effectiveLimit,
+                    sys_prompt_version: 'v2.7',
+                    vocabId: safeCandidate?.vocabId, // safely access
+                    target_word: safeCandidate?.word,
+                },
+                segments: drill.segments as any[],
+            };
+        });
+
+        return {
+            status: 'success',
+            message: 'Batch generated successfully',
+            data: payload,
+        };
+
+    } catch (error: any) {
+        log.error({ error }, 'getNextDrillBatch failed');
+        return {
+            status: 'error',
+            message: error.message || 'Failed to generate drill batch',
+            fieldErrors: {},
+        };
+    }
+}
+
+// --- Helpers ---
 
 interface DrillCandidate {
     vocabId: number;
     word: string;
     definition_cn: string;
     word_family: any;
-    priority_level: number; // 1=抢救队列, 2=复习队列, 3=新词队列
+    priority_level: number;
+    frequency_score: number;
 }
 
-interface NextDrillResult {
-    targetWord: string;
-    vocabId: number; // [New]
-    meaning: string;
-    contextWords: string[];
-    wordFamily: Record<string, string>;
-}
+async function fetchCandidates(
+    userId: string,
+    limit: number,
+    mode: SessionMode,
+    excludeIds: number[]
+): Promise<DrillCandidate[]> {
+    const rescueLimit = Math.ceil(limit * 0.3);
+    const reviewLimit = Math.ceil(limit * 0.5);
+    // newLimit is not explicitly used in query logic below but useful for mental model
+    // const newLimit = limit - rescueLimit - reviewLimit; 
 
-// ============================================
-// 核心逻辑: 三级漏斗模型 (3-Level Funnel)
-// ============================================
+    // Common exclusion filter
+    const excludeFilter = excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {};
 
-/**
- * 获取下一个 Drill 单词
- * 实现 "生存优先 (Survival First)" 的三级漏斗算法
- */
-export async function getNextDrillWord(userId: string): Promise<NextDrillResult | null> {
-    try {
-        // 1. 通过 SQL 瀑布流获取目标词
-        const targetRaw = await prisma.$queryRaw<DrillCandidate[]>`
-            /* 优先级 1: 抢救队列 (上限 6 个) */
-            /* 目标: 句法薄弱词 (V < 30) */
-            (
-                SELECT 
-                    v.id as "vocabId", 
-                    v.word, 
-                    v.definition_cn, 
-                    v.word_family,
-                    1 as priority_level
-                FROM "UserProgress" up
-                JOIN "Vocab" v ON up."vocabId" = v.id
-                WHERE up."userId" = ${userId}
-                  AND up.status = 'LEARNING'
-                  AND up.dim_v_score < 30
-                ORDER BY up.next_review_at ASC
-                LIMIT 6
-            )
-            UNION ALL
-            /* 优先级 2: 复习队列 (修正: 50% = 10个) */
-            (
-                SELECT 
-                    v.id as "vocabId", 
-                    v.word, 
-                    v.definition_cn, 
-                    v.word_family,
-                    2 as priority_level
-                FROM "UserProgress" up
-                JOIN "Vocab" v ON up."vocabId" = v.id
-                WHERE up."userId" = ${userId}
-                  AND up.status = 'LEARNING'
-                  AND up.next_review_at <= NOW()
-                  AND up.dim_v_score >= 30 
-                ORDER BY v.frequency_score DESC
-                LIMIT 10
-            )
-            UNION ALL
-            /* 优先级 3: 新词填充 (填满剩余坑位) */
-            (
-                SELECT 
-                    v.id as "vocabId", 
-                    v.word, 
-                    v.definition_cn, 
-                    v.word_family,
-                    3 as priority_level
-                FROM "Vocab" v
-                LEFT JOIN "UserProgress" up ON v.id = up."vocabId" AND up."userId" = ${userId}
-                WHERE (up.status IS NULL OR up.status = 'NEW')
-                  AND (v.abceed_level <= 1 OR v.is_toeic_core = true)
-                ORDER BY 
-                  CASE 
-                    WHEN v.word_family->>'v' IS NOT NULL THEN 1 
-                    ELSE 2 
-                  END ASC,
-                  v.frequency_score DESC,
-                  LENGTH(v.word) ASC
-                LIMIT 10 
-            )
-            LIMIT 1;
-        `;
+    const [rescueRaw, reviewRaw] = await Promise.all([
+        prisma.userProgress.findMany({
+            where: {
+                userId,
+                status: { in: ['LEARNING', 'REVIEW'] },
+                dim_v_score: { lt: 30 },
+                vocab: { ...excludeFilter }
+            },
+            take: rescueLimit,
+            orderBy: { next_review_at: 'asc' },
+            include: { vocab: true }
+        }),
+        prisma.userProgress.findMany({
+            where: {
+                userId,
+                status: { in: ['LEARNING', 'REVIEW'] },
+                next_review_at: { lte: new Date() },
+                dim_v_score: { gte: 30 },
+                vocab: { ...excludeFilter }
+            },
+            take: reviewLimit * 2,
+            orderBy: { next_review_at: 'asc' },
+            include: { vocab: true }
+        })
+    ]);
 
-        if (targetRaw.length === 0) {
-            log.warn('未找到 Drill 候选词');
-            return null;
-        }
+    const rescue = rescueRaw.map(x => mapToCandidate(x.vocab, 1));
+    const review = reviewRaw.map(x => mapToCandidate(x.vocab, 2));
 
-        const target = targetRaw[0];
-        log.info({ word: target.word, level: target.priority_level }, '已选择 Drill 目标词');
+    let final: DrillCandidate[] = [];
+    final.push(...rescue);
 
-        // 2. 获取语境词 (1+N 规则)
-        const contextWords = await getContextWords(target.word);
+    const guaranteedNew = Math.floor(limit * 0.2);
+    // Ensure we don't take negative slots if rescue filled everything (unlikely with 0.3 limit but possible if logical bugs)
+    // review slots = (limit - rescue) - guaranteedNew.
+    // e.g. 20 - 6 - 4 = 10.
+    const slotsForReviewCorrect = Math.max(0, limit - final.length - guaranteedNew);
 
-        return {
-            targetWord: target.word,
-            vocabId: target.vocabId, // [New]
-            meaning: target.definition_cn || '暂无释义',
-            contextWords,
-            wordFamily: (target.word_family as Record<string, string>) || { v: target.word },
-        };
-
-    } catch (error) {
-        log.error({ error }, 'getNextDrillWord 执行错误');
-        throw error;
+    if (slotsForReviewCorrect > 0) {
+        final.push(...review.slice(0, slotsForReviewCorrect));
     }
+
+    let posFilter: string[] | undefined;
+    if (mode === 'SYNTAX') posFilter = ['v', 'n', 'v.', 'n.', 'vi', 'vt', 'vi.', 'vt.', 'noun', 'verb', '名詞', '動詞'];
+
+    const newWordsRaw = await prisma.vocab.findMany({
+        where: {
+            progress: { none: { userId } },
+            ...excludeFilter, // Apply exclusion to new words too
+            ...(posFilter ? { partOfSpeech: { in: posFilter } } : {}),
+            OR: [
+                { abceed_level: { lte: 1 } },
+                { is_toeic_core: true }
+            ]
+        },
+        orderBy: [
+            { frequency_score: 'desc' }
+        ],
+        take: limit,
+    });
+
+    const newWords = newWordsRaw.map(x => mapToCandidate(x, 3));
+
+    const slotsRemaining = limit - final.length;
+    if (slotsRemaining > 0) {
+        final.push(...newWords.slice(0, slotsRemaining));
+    }
+
+    if (final.length < limit && review.length > slotsForReviewCorrect) {
+        const moreReview = review.slice(slotsForReviewCorrect, slotsForReviewCorrect + (limit - final.length));
+        final.push(...moreReview);
+    }
+
+    return final;
 }
 
-/**
- * 获取语境词
- * 规则: 必须是名词或形容词。严禁纯动词。
- */
+function mapToCandidate(v: any, priority: number): DrillCandidate {
+    return {
+        vocabId: v.id,
+        word: v.word,
+        definition_cn: v.definition_cn,
+        word_family: v.word_family,
+        priority_level: priority,
+        frequency_score: v.frequency_score
+    };
+}
+
 async function getContextWords(targetWord: string): Promise<string[]> {
     const candidates = await prisma.$queryRaw<Array<{ word: string }>>`
         SELECT word 
         FROM "Vocab"
         WHERE word != ${targetWord}
           AND CHAR_LENGTH(word) > 3
-          /* 规则: 必须包含名词或形容词形式 */
           AND (
             word_family->>'n' IS NOT NULL 
             OR word_family->>'adj' IS NOT NULL
           )
-          /* 规则: 禁止纯动词 (如果既无名词也无形容词形式，则视为纯动词风险) */
-          /* 注意: 上面的 AND 子句已经强制要求存在 n 或 adj，因此纯动词已被过滤 */
         ORDER BY RANDOM()
         LIMIT 3;
     `;
-
     return candidates.map(c => c.word);
 }

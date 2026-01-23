@@ -2,7 +2,7 @@
 
 import 'server-only';
 import { revalidatePath } from 'next/cache';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { WordSelectionService } from '@/lib/services/WordSelectionService';
 import { ArticleAIService } from '@/lib/ai/ArticleAIService';
 import { ActionState } from '@/types';
@@ -85,6 +85,7 @@ export async function generateDailyArticleAction(
                             id: userId,
                             email: 'test@example.com',
                             name: 'Test User',
+                            password: '$2b$10$Zdm79t9NLUZ1qND8iVXRD.BZiPOJMDkHy9Uh/5BRbb/AQynEXgPMe', // 123456
                         }
                     });
                 } else {

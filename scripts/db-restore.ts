@@ -71,6 +71,11 @@ async function main() {
 
         console.log(`🔄 正在恢复 ${cleanVocabs.length} 条 Vocab 记录...`);
 
+        // Clear existing data
+        console.log('🧹 清空现有 Vocab 表...');
+        await prisma.vocab.deleteMany({});
+        console.log('✅ 表已清空');
+
         // Batch insert
         // Prisma createMany is efficient
         const batchSize = 1000;

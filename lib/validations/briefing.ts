@@ -1,68 +1,68 @@
 /**
  * Briefing 验证模块
- * 功能：定义 BriefingPayload 的 Zod Schema
- * 
- * 遵循 SYSTEM_PROMPT.md L118-143 规范
+ * 功能：
+ *   定义 Briefing 相关的 Zod Schema 验证规则
+ *   包含 Session 模式、输入验证、评分结果等
  */
+import { z } from 'zod';
 
-import { z } from "zod";
+export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE']);
 
-// ============================================
-// Text Segment Schema
-// ============================================
+export type SessionMode = z.infer<typeof SessionModeSchema>;
 
-export const TextSegmentSchema = z.object({
-    type: z.literal("text"),
-    content_markdown: z.string(),
+export const GetBriefingSchema = z.object({
+    userId: z.string().cuid(),
+    mode: SessionModeSchema.default('SYNTAX'),
+    limit: z.number().int().min(1).max(50).default(10),
+    excludeVocabIds: z.array(z.number().int()).default([]),
+});
+
+// FSRS 评分: 1=Again(重来), 2=Hard(困难), 3=Good(良好), 4=Easy(简单)
+export const RatingSchema = z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4)
+]);
+
+export const RecordOutcomeSchema = z.object({
+    userId: z.string().cuid(),
+    vocabId: z.number().int().positive(),
+    grade: RatingSchema,
+    mode: SessionModeSchema,
+});
+
+export type GetBriefingInput = z.input<typeof GetBriefingSchema>;
+export type RecordOutcomeInput = z.infer<typeof RecordOutcomeSchema>;
+
+// --- Briefing Content Schemas ---
+
+export const DrillSegmentSchema = z.object({
+    type: z.enum(['text', 'interaction']),
+    content_markdown: z.string().optional(),
     audio_text: z.string().optional(),
-    translation_cn: z.string().optional(),
-});
-
-// ============================================
-// Interaction Task Schema
-// ============================================
-
-export const InteractionTaskSchema = z.object({
-    style: z.enum(["swipe_card", "bubble_select"]),
-    question_markdown: z.string(),
-    options: z.array(z.string()).min(2),
-    answer_key: z.string(),
-    /** 解释逻辑 (Refutation + Syntax) */
-    explanation_markdown: z.string().optional(),
-});
-
-// ============================================
-// Interaction Segment Schema
-// ============================================
-
-export const InteractionSegmentSchema = z.object({
-    type: z.literal("interaction"),
-    dimension: z.enum(["V", "C", "M", "X"]),
-    task: InteractionTaskSchema,
-});
-
-// ============================================
-// Full BriefingPayload Schema
-// ============================================
-
-export const BriefingMetaSchema = z.object({
-    format: z.enum(["chat", "email", "memo"]),
-    sender: z.string(),
-    level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
-    vocabId: z.number().optional(), // [New] Passed through for persistence
+    dimension: z.string().optional(),
+    task: z.object({
+        style: z.enum(['swipe_card', 'bubble_select']),
+        question_markdown: z.string(),
+        options: z.array(z.string()),
+        answer_key: z.string(),
+        explanation_markdown: z.string().optional(),
+    }).optional(),
 });
 
 export const BriefingPayloadSchema = z.object({
-    meta: BriefingMetaSchema,
-    segments: z.array(z.union([TextSegmentSchema, InteractionSegmentSchema])),
+    meta: z.object({
+        format: z.enum(['chat', 'email', 'memo']),
+        mode: SessionModeSchema,
+        batch_size: z.number().optional(),
+        sys_prompt_version: z.string().optional(),
+        vocabId: z.number().optional(),
+        target_word: z.string().optional(),
+        sender: z.string().optional(),
+        level: z.number().optional(),
+    }),
+    segments: z.array(DrillSegmentSchema),
 });
 
-// ============================================
-// Type Exports
-// ============================================
-
-export type TextSegment = z.infer<typeof TextSegmentSchema>;
-export type InteractionTask = z.infer<typeof InteractionTaskSchema>;
-export type InteractionSegment = z.infer<typeof InteractionSegmentSchema>;
-export type BriefingMeta = z.infer<typeof BriefingMetaSchema>;
 export type BriefingPayload = z.infer<typeof BriefingPayloadSchema>;
