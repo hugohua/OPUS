@@ -22,9 +22,9 @@ const config: Config = {
 		},
 		extend: {
 			fontFamily: {
-				serif: [
-					'var(--font-serif)',
-					'serif'
+				mono: [
+					'var(--font-mono)',
+					'monospace'
 				],
 				sans: [
 					'var(--font-sans)',
@@ -64,6 +64,21 @@ const config: Config = {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				// Opus v1.5 Semantic Tokens
+				brand: {
+					core: 'hsl(var(--brand-core))',
+				},
+				status: {
+					ready: 'hsl(var(--status-ready))',
+					warn: 'hsl(var(--status-warn))',
+					lock: 'hsl(var(--status-lock))',
+				},
+				syntax: {
+					s: 'hsl(var(--syntax-s))',
+					v: 'hsl(var(--syntax-v))',
+					o: 'hsl(var(--syntax-o))',
+					x: 'hsl(var(--syntax-x))',
 				},
 				chart: {
 					'1': 'hsl(var(--chart-1))',

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * 📝 脚本名称: backfill-vocab-fields.ts
+ * 📝 脚本名称: data-backfill-vocab-fields.ts
  * 📌 功能描述: 补全旧数据缺失的新字段 (word_family, synonyms, confusing_words)
  * =============================================================================
  *
@@ -11,14 +11,14 @@
  * 📊 处理逻辑:
  *   - 查询条件: definition_cn != null AND word_family = null
  *   - 每批处理 10 个词汇
- *   - 使用与 enrich-vocab-ai.ts 相同的 AI Prompt
+ *   - 使用与 data-etl-vocabulary-ai.ts 相同的 AI Prompt
  *
  * 🚀 运行方式:
  *   # 试运行 (不写入数据库)
- *   npx tsx scripts/backfill-vocab-fields.ts --dry-run
+ *   npx tsx scripts/data-backfill-vocab-fields.ts --dry-run
  *
  *   # 正式运行
- *   npx tsx scripts/backfill-vocab-fields.ts
+ *   npx tsx scripts/data-backfill-vocab-fields.ts
  *
  * ⚠️ 注意事项:
  *   - 此脚本专门用于补全旧数据，不会处理 definition_cn = null 的记录

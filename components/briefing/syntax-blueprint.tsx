@@ -25,14 +25,14 @@ export function SyntaxBlueprint({ content, tenseHint, isRevealed, className }: S
     }, [content]);
 
     return (
-        <div className={cn("bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 mb-6 shrink-0 w-full", className)}>
+        <div className={cn("bg-surface dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-xl shadow-sm p-4 mb-6 shrink-0 w-full", className)}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center">
+                <h2 className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest flex items-center">
                     <span className="w-2 h-2 bg-violet-500 rounded-full mr-2 shadow-[0_0_8px_rgba(139,92,246,0.6)]"></span>
                     Syntax Blueprint
                 </h2>
-                <code className="text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">S → V → O</code>
+                <code className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">S → V → O</code>
             </div>
 
             {/* Flow Chart */}
@@ -41,13 +41,13 @@ export function SyntaxBlueprint({ content, tenseHint, isRevealed, className }: S
                 {/* SUBJECT NODE */}
                 <div className="flex flex-col w-[30%] group">
                     <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 mb-1 font-semibold uppercase tracking-wider pl-1">Subject</span>
-                    <div className="bg-white dark:bg-slate-950 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 p-2 rounded-md shadow-sm break-words opacity-90 group-hover:opacity-100 group-hover:border-emerald-300 transition-all">
+                    <div className="bg-white dark:bg-zinc-950 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 p-2 rounded-md shadow-sm break-words opacity-90 group-hover:opacity-100 group-hover:border-emerald-300 transition-all">
                         {parts.subject}
                     </div>
                 </div>
 
                 {/* Connector */}
-                <div className="text-slate-300 dark:text-slate-700 pt-6 flex justify-center w-[5%]">
+                <div className="text-zinc-300 dark:text-zinc-700 pt-6 flex justify-center w-[5%]">
                     <ArrowRight className="w-4 h-4" />
                 </div>
 
@@ -69,14 +69,14 @@ export function SyntaxBlueprint({ content, tenseHint, isRevealed, className }: S
                 </div>
 
                 {/* Connector */}
-                <div className="text-slate-300 dark:text-slate-700 pt-6 flex justify-center w-[5%]">
+                <div className="text-zinc-300 dark:text-zinc-700 pt-6 flex justify-center w-[5%]">
                     <ArrowRight className="w-4 h-4" />
                 </div>
 
                 {/* OBJECT NODE */}
                 <div className="flex flex-col w-[30%] group">
-                    <span className="text-[9px] text-slate-500/70 dark:text-slate-400/70 mb-1 font-semibold uppercase tracking-wider pl-1">Object</span>
-                    <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 p-2 rounded-md shadow-sm break-words opacity-90 group-hover:opacity-100 group-hover:border-slate-300 transition-all">
+                    <span className="text-[9px] text-zinc-500/70 dark:text-zinc-400/70 mb-1 font-semibold uppercase tracking-wider pl-1">Object</span>
+                    <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 p-2 rounded-md shadow-sm break-words opacity-90 group-hover:opacity-100 group-hover:border-zinc-300 transition-all">
                         {parts.object}
                     </div>
                 </div>

@@ -4,12 +4,14 @@
 Phase 1.5: 沉浸式体验 (The Immersion Release)
 
 ## 当前任务
-Task 1.6: 模拟页加载速度优化 (已完成)
+Task 1.5: Topic Briefing & Phase 1.5 Features
 
 ## 待办事项
 - [x] Optimization: 模拟页预加载机制 (Drill Cache + Prefetch)
 - [ ] Task 1.5.1: Magic Paste (语境注入) [P0]
 - [ ] Task 1.5.2: Commute Mode (Audio Playlist & TTS)
+- [x] Task 1.5.3: PRD Update (Topic Briefing) - Doc Integration
+- [ ] Task 1.5.4: Topic Briefing (AI Context Generator) - Implementation
 - [ ] Task 3.2: Rest Card UI (每日休息卡)
 
 ## 上下文

@@ -10,7 +10,7 @@
  *     3. 其他: 10
  * 
  * 使用方法：
- *   npx tsx scripts/db-backfill-frequency.ts
+ *   npx tsx scripts/data-backfill-frequency.ts
  */
 
 import { PrismaClient } from '../generated/prisma/client';

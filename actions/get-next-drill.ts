@@ -32,7 +32,7 @@ const DrillSegmentSchema = z.object({
 const SingleDrillSchema = z.object({
     meta: z.object({
         format: z.enum(['chat', 'email', 'memo']),
-        mode: z.enum(['SYNTAX', 'CHUNKING', 'NUANCE']),
+        mode: z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ']),
         target_word: z.string().optional(),
     }),
     segments: z.array(DrillSegmentSchema),
@@ -47,6 +47,7 @@ const BATCH_SIZE_MAP: Record<SessionMode, number> = {
     SYNTAX: 20,
     CHUNKING: 30,
     NUANCE: 50,
+    BLITZ: 10,
 };
 
 // --- Main Action ---

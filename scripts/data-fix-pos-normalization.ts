@@ -5,7 +5,7 @@
  *   将数据库中混乱的 partOfSpeech 字段统一为标准英文缩写。
  * 
  * 使用方法：
- *   npx tsx scripts/fix-pos-normalization.ts
+ *   npx tsx scripts/data-fix-pos-normalization.ts
  */
 try { process.loadEnvFile(); } catch (e) { }
 

@@ -16,6 +16,7 @@ export const FALLBACK_BRIEFING: BriefingPayload = {
         format: "chat",
         sender: "System",
         level: 0,
+        mode: "SYNTAX",
     },
     segments: [
         {
@@ -46,6 +47,7 @@ export const REST_CARD_BRIEFING: BriefingPayload = {
         format: "chat",
         sender: "System",
         level: 0,
+        mode: "SYNTAX",
     },
     segments: [
         {

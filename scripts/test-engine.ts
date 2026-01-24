@@ -32,7 +32,8 @@ async function main() {
                 data: {
                     id: TEST_USER_ID,
                     email: 'test-v3@example.com',
-                    name: 'Test Logic V3'
+                    name: 'Test Logic V3',
+                    password: 'hashed-password-placeholder',
                 }
             });
             logger.info("Created dummy user: " + TEST_USER_ID);

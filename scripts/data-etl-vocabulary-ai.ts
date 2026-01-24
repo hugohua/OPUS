@@ -12,19 +12,19 @@
  * 
  * 使用方法:
  *   1. Dry Run (仅生成 JSON, 不修改数据库):
- *      npx tsx scripts/etl-vocabulary-ai.ts --dry-run
+ *   npx tsx scripts/data-etl-vocabulary-ai.ts --dry-run
  * 
  *   2. Live Run - 免费版 (单批次):
- *      npx tsx scripts/etl-vocabulary-ai.ts
+ *      npx tsx scripts/data-etl-vocabulary-ai.ts
  * 
  *   3. Live Run - 收费版 (单批次):
- *      npx tsx scripts/etl-vocabulary-ai.ts --paid
+ *      npx tsx scripts/data-etl-vocabulary-ai.ts --paid
  * 
  *   4. Continuous Mode - 免费版 (持续循环, 10 分钟一批):
- *      npx tsx scripts/etl-vocabulary-ai.ts --continuous
+ *      npx tsx scripts/data-etl-vocabulary-ai.ts --continuous
  * 
  *   5. Continuous Mode - 收费版 (持续循环, 2 秒一批, 并发 2):
- *      npx tsx scripts/etl-vocabulary-ai.ts --continuous --paid
+ *      npx tsx scripts/data-etl-vocabulary-ai.ts --continuous --paid
  * 
  * 环境变量 (.env):
  *   - DATABASE_URL: 数据库连接
@@ -65,7 +65,7 @@ const FREE_TIER_CONFIG = {
 
 // 收费版配置 (Qwen/DeepSeek/Gemini Paid)
 const PAID_TIER_CONFIG = {
-    BATCH_SIZE: 8,              // 提升 Batch 到 10
+    BATCH_SIZE: 6,              // 提升 Batch 到 10
     PARALLEL_REQUESTS: 8,        // 并发请求数 (2线程)
     RATE_LIMIT_COOLDOWN_MS: 5 * 1000,
     BATCH_INTERVAL_MS: 2 * 1000, // 2s 间隔

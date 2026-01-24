@@ -11,9 +11,9 @@
  *   目的: 确保 "minutes" 被理解为 "会议记录" 而非 "时间单位"。
  * 
  * 使用方法:
- *   npx tsx scripts/vectorize-vocab.ts
- *   npx tsx scripts/vectorize-vocab.ts --dry-run
- *   npx tsx scripts/vectorize-vocab.ts --force (强制重新生成所有向量)
+ *   npx tsx scripts/data-vectorize-vocab.ts
+ *   npx tsx scripts/data-vectorize-vocab.ts --dry-run
+ *   npx tsx scripts/data-vectorize-vocab.ts --force (强制重新生成所有向量)
  * 
  * 环境变量:
  *   DASHSCOPE_API_KEY (必需)

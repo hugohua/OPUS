@@ -16,7 +16,7 @@
  *      请在 `actions/article.ts` 和依赖服务中临时注释掉 `import 'server-only';`。
  */
 import { generateDailyArticleAction } from '@/actions/article';
-import { prisma } from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 
 // Load Env

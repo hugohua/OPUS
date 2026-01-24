@@ -56,14 +56,16 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
         <div className="w-full space-y-8 pt-8 px-2 max-w-2xl mx-auto">
             {/* Question Text */}
             <div className="relative group">
-                <h3 className="text-2xl font-bold text-center leading-relaxed tracking-tight px-4">
+                <h3 className="text-2xl font-bold text-left leading-relaxed tracking-tight px-4 text-zinc-900 dark:text-zinc-100">
                     {task.question_markdown.split('_______').map((part, i, arr) => (
                         <span key={i}>
                             {part}
                             {i < arr.length - 1 && (
                                 <span className={cn(
-                                    "inline-flex items-center justify-center min-w-[100px] border-b-4 mx-2 transition-all duration-300 h-10",
-                                    submitted ? "border-primary/20 text-primary scale-105" : "border-primary/50 animate-pulse"
+                                    "inline-flex items-center justify-center min-w-[100px] border-b-4 mx-2 transition-all duration-300 h-10 font-mono text-xl",
+                                    submitted
+                                        ? "border-violet-500 text-violet-600 dark:text-violet-400 scale-105"
+                                        : "border-zinc-300 dark:border-zinc-700 text-transparent animate-pulse bg-zinc-100 dark:bg-zinc-800/50 rounded-lg px-2"
                                 )}>
                                     {submitted ? selected : "?"}
                                 </span>
@@ -79,14 +81,15 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
                     const isSelected = selected === opt;
                     const isCorrect = opt === task.answer_key;
 
-                    let variantClass = "bg-card hover:bg-accent border-border";
+                    let variantClass = "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300";
+
                     if (submitted) {
-                        if (isSelected && isCorrect) variantClass = "bg-emerald-500 text-white border-emerald-500 ring-4 ring-emerald-500/20";
-                        else if (isSelected && !isCorrect) variantClass = "bg-destructive text-destructive-foreground border-destructive ring-4 ring-destructive/20";
-                        else if (!isSelected && isCorrect) variantClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800";
+                        if (isSelected && isCorrect) variantClass = "bg-emerald-500 text-white border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg";
+                        else if (isSelected && !isCorrect) variantClass = "bg-red-500 text-white border-red-500 ring-4 ring-red-500/20";
+                        else if (!isSelected && isCorrect) variantClass = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900";
                         else variantClass = "opacity-40 grayscale-[0.5]";
                     } else {
-                        if (isSelected) variantClass = "bg-primary text-primary-foreground border-primary shadow-lg ring-4 ring-primary/20 -translate-y-1";
+                        if (isSelected) variantClass = "bg-violet-600 text-white border-violet-600 shadow-lg ring-4 ring-violet-500/20 -translate-y-1";
                     }
 
                     return (
@@ -94,17 +97,17 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
                             key={opt}
                             disabled={submitted}
                             className={cn(
-                                "relative flex items-center justify-between p-4 rounded-2xl border-2 font-bold text-lg transition-all duration-300 active:scale-[0.98] group",
+                                "relative flex items-center justify-between p-4 rounded-xl border-2 font-bold text-lg transition-all duration-200 active:scale-[0.98] group shadow-sm",
                                 variantClass
                             )}
                             onClick={() => handleSelect(opt)}
                         >
-                            <span className="flex-1 text-center">{opt}</span>
+                            <span className="flex-1 text-center font-medium">{opt}</span>
                             <div className="absolute right-4">
                                 {submitted && isSelected && (
                                     isCorrect
-                                        ? <CheckCircle2 className="w-6 h-6 animate-in zoom-in" />
-                                        : <XCircle className="w-6 h-6 animate-in zoom-in" />
+                                        ? <CheckCircle2 className="w-6 h-6 animate-in zoom-in text-white" />
+                                        : <XCircle className="w-6 h-6 animate-in zoom-in text-white" />
                                 )}
                             </div>
                         </button>

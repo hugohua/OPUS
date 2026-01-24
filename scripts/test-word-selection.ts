@@ -12,7 +12,7 @@
  *   临时调试时，请在 `lib/services/WordSelectionService.ts` 中注释掉 `import 'server-only';`。
  */
 import { WordSelectionService } from '@/lib/services/WordSelectionService';
-import { prisma } from '@/lib/prisma';
+import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 
 // Load Env

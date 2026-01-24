@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE']);
+export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ']);
 
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
@@ -42,6 +42,7 @@ export const DrillSegmentSchema = z.object({
     type: z.enum(['text', 'interaction']),
     content_markdown: z.string().optional(),
     audio_text: z.string().optional(),
+    translation_cn: z.string().optional(),
     dimension: z.string().optional(),
     task: z.object({
         style: z.enum(['swipe_card', 'bubble_select']),

@@ -1,4 +1,4 @@
-export type SessionMode = "SYNTAX" | "CHUNKING" | "NUANCE";
+export type SessionMode = "SYNTAX" | "CHUNKING" | "NUANCE" | "BLITZ";
 
 export type BriefingFormat = "chat" | "email" | "memo";
 

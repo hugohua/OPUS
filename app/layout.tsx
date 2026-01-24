@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const playfair = Playfair_Display({
+const jetbrainsMono = JetBrains_Mono({
     subsets: ["latin"],
-    variable: "--font-serif",
+    variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function RootLayout({
                 className={cn(
                     "min-h-screen bg-background font-sans antialiased",
                     inter.variable,
-                    playfair.variable
+                    jetbrainsMono.variable
                 )}
             >
                 <ThemeProvider
