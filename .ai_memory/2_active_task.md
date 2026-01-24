@@ -1,18 +1,19 @@
 # 当前任务状态
 
 ## 当前阶段
-第一阶段: 数据基石 (Data Infrastructure)
+Phase 1.5: 沉浸式体验 (The Immersion Release)
 
 ## 当前任务
-环境初始化与 Schema 完善
+Task 1.6: 模拟页加载速度优化 (已完成)
 
 ## 待办事项
-- [ ] Task 1.2: 启用 pgvector 扩展并完善 Prisma Schema
-- [x] Task 1.3: 实现 ETL 脚本 (DeepSeek 数据清洗)
-- [ ] Task 1.4: 数据库种子脚本
-- [ ] Task 1.5: 向量化脚本
+- [x] Optimization: 模拟页预加载机制 (Drill Cache + Prefetch)
+- [ ] Task 1.5.1: Magic Paste (语境注入) [P0]
+- [ ] Task 1.5.2: Commute Mode (Audio Playlist & TTS)
+- [ ] Task 3.2: Rest Card UI (每日休息卡)
 
 ## 上下文
-- 当前 `prisma/schema.prisma` 仅有基础配置，缺少 TDD 中定义的完整模型
-- 需要创建 Next.js 项目结构 (app/, components/)
-- 数据库连接字符串已配置: `postgresql://postgres:postgres@localhost:5432/opus`
+- 发现 `dashboard/simulate` 页面存在 10s+ 的 LLM 生成延迟。
+- 实施了 "Drill Cache" 机制 (Schema + Logic)。
+- 实现了 "生产者-消费者" 模型：首页进入 `simulate` 时预热缓存，`session` 页面优先消费缓存。
+- 验证脚本 `scripts/verify-drill-cache.ts` 通过。

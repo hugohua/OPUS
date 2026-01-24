@@ -4,7 +4,7 @@
  * 
  * 功能：
  *   从 backups/ 目录读取最新的 JSON 文件并恢复到数据库。
- *   主要恢复 Vocab 表。
+ *   支持 Vocab, User, UserProgress, Article, ArticleVocab, InvitationCode 表。
  * 
  * 使用方法：
  *   npx tsx scripts/db-restore.ts
@@ -13,14 +13,35 @@
 import { PrismaClient } from '../generated/prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 // Load env
 try { process.loadEnvFile(); } catch { }
 
 const prisma = new PrismaClient();
 
+const MOCK_USER_EMAIL = '13964332@qq.com';
+
 async function main() {
     console.log('📦 开始恢复数据...');
+
+    // Ensure mock user exists first
+    console.log('👤 确保 Mock 用户存在...');
+    let adminUser = await prisma.user.findUnique({ where: { email: MOCK_USER_EMAIL } });
+    if (!adminUser) {
+        console.log('   - 未找到 Mock 用户，准备直接创建...');
+        adminUser = await prisma.user.create({
+            data: {
+                email: MOCK_USER_EMAIL,
+                name: 'Hugo',
+                password: '$2b$10$YourDefaultBcryptHashHere', // bcrypt hash for '13964332' or default
+                invitedByCode: 'OPUS_GENESIS_KEY'
+            }
+        });
+        console.log(`✅ 已创建 Mock 用户 ID: ${adminUser.id}`);
+    } else {
+        console.log(`✅ 已确认 Admin 用户 ID: ${adminUser.id}`);
+    }
 
     const backupDir = path.join(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) {
@@ -28,80 +49,102 @@ async function main() {
         return;
     }
 
-    // Find latest vocab backup
     const files = fs.readdirSync(backupDir);
-    const vocabFile = files
-        .filter(f => f.startsWith('vocab-') && f.endsWith('.json'))
-        .sort()
-        .pop();
+    const getLatestFile = (prefix: string) => {
+        return files
+            .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
+            .sort()
+            .pop();
+    };
 
-    if (!vocabFile) {
-        console.error('❌ 没有找到 Vocab 备份文件');
-        return;
-    }
-
-    const filePath = path.join(backupDir, vocabFile);
-    console.log(`📄 读取备份文件: ${vocabFile}`);
+    const tables = [
+        { name: 'Vocab', prefix: 'vocab-', prisma: (prisma as any).vocab },
+        { name: 'User', prefix: 'user-', prisma: (prisma as any).user },
+        { name: 'UserProgress', prefix: 'progress-', prisma: (prisma as any).userProgress },
+        { name: 'Article', prefix: 'article-', prisma: (prisma as any).article },
+        { name: 'ArticleVocab', prefix: 'articleVocab-', prisma: (prisma as any).articleVocab },
+        { name: 'InvitationCode', prefix: 'invitationCode-', prisma: (prisma as any).invitationCode },
+    ];
 
     try {
-        const rawData = fs.readFileSync(filePath, 'utf-8');
-        const vocabs = JSON.parse(rawData);
-
-        if (!Array.isArray(vocabs) || vocabs.length === 0) {
-            console.log('⚠️ 备份文件为空或格式错误');
-            return;
-        }
-
-        // Clean data for insertion
-        const cleanVocabs = vocabs.map((v: any) => {
-            // Remove embedding to avoid compatibility issues with Unsupported type
-            const { embedding, ...rest } = v;
-
-            // Ensure frequency_score exists (if backup is old)
-            if (rest.frequency_score === undefined) {
-                rest.frequency_score = 0;
+        for (const table of tables) {
+            const latestFile = getLatestFile(table.prefix);
+            if (!latestFile) {
+                console.log(`⚠️ 跳过 ${table.name}: 找不到以 ${table.prefix} 开头的备份文件`);
+                continue;
             }
 
-            // Remove id to allow Postgres to handle sequence properly?
-            // No, we want to keep IDs to preserve relationships if any.
-            // But we must update the sequence later if we insert IDs manually.
-            // For now, let's keep IDs.
-            return rest;
-        });
+            const filePath = path.join(backupDir, latestFile);
+            console.log(`\n🔄 正在处理表: ${table.name} (文件: ${latestFile})...`);
+            const rawData = fs.readFileSync(filePath, 'utf-8');
+            const data = JSON.parse(rawData);
 
-        console.log(`🔄 正在恢复 ${cleanVocabs.length} 条 Vocab 记录...`);
+            if (!Array.isArray(data) || data.length === 0) {
+                console.log(`   - 备份数据为空，跳过。`);
+                continue;
+            }
 
-        // Clear existing data
-        console.log('🧹 清空现有 Vocab 表...');
-        await prisma.vocab.deleteMany({});
-        console.log('✅ 表已清空');
+            // Clean & Fix data for main branch compatibility
+            const cleanData = data.map((item: any) => {
+                const { embedding, ...rest } = item;
 
-        // Batch insert
-        // Prisma createMany is efficient
-        const batchSize = 1000;
-        for (let i = 0; i < cleanVocabs.length; i += batchSize) {
-            const batch = cleanVocabs.slice(i, i + batchSize);
-            await prisma.vocab.createMany({
-                data: batch,
-                skipDuplicates: true // In case some data already exists
+                // Field Fixes for branch compatibility
+                if (table.name === 'User') {
+                    if (!rest.password) rest.password = '$2b$10$YourDefaultBcryptHashHere'; // Should be a valid hash
+                    if (!rest.updatedAt) rest.updatedAt = new Date();
+                    if (!rest.timezone) rest.timezone = 'Asia/Shanghai';
+                }
+
+                if (table.name === 'Vocab') {
+                    if (rest.frequency_score === undefined) rest.frequency_score = 0;
+                    if (rest.learningPriority === undefined) rest.learningPriority = 0;
+                }
+
+                if (table.name === 'UserProgress') {
+                    // FSRS v5 compatibility - Remove old fields
+                    delete (rest as any).easeFactor;
+
+                    // Fix Foreign Key - Map old userId to current adminUser.id
+                    rest.userId = (adminUser as any).id;
+
+                    if (rest.stability === undefined) rest.stability = 0;
+                    if (rest.difficulty === undefined) rest.difficulty = 0;
+                    if (rest.reps === undefined) rest.reps = 0;
+                    if (rest.lapses === undefined) rest.lapses = 0;
+                    if (rest.state === undefined) rest.state = 0;
+                }
+
+                return rest;
             });
-            console.log(`   - 已插入 ${Math.min(i + batchSize, cleanVocabs.length)} / ${cleanVocabs.length}`);
+
+            console.log(`   - 正在清空表...`);
+            await table.prisma.deleteMany({});
+
+            console.log(`   - 正在插入 ${cleanData.length} 条记录...`);
+            const batchSize = 500;
+            for (let i = 0; i < cleanData.length; i += batchSize) {
+                const batch = cleanData.slice(i, i + batchSize);
+                await table.prisma.createMany({
+                    data: batch,
+                    skipDuplicates: true
+                });
+            }
+
+            // Sync sequence for ID (only for tables with BigInt/Int autoincrement PK)
+            if (table.name === 'Vocab') {
+                const maxIdResult = await prisma.vocab.findFirst({
+                    orderBy: { id: 'desc' },
+                    select: { id: true }
+                });
+                if (maxIdResult) {
+                    await prisma.$queryRawUnsafe(`SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxIdResult.id})`);
+                }
+            }
+
+            console.log(`✅ ${table.name} 恢复完成`);
         }
 
-        // Update sequence (Critical for Postgres when inserting manual IDs)
-        // We need to find the max ID and set the sequence
-        const maxIdResult = await prisma.vocab.findFirst({
-            orderBy: { id: 'desc' },
-            select: { id: true }
-        });
-
-        if (maxIdResult) {
-            const resetSql = `SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxIdResult.id})`;
-            await prisma.$queryRawUnsafe(resetSql);
-            console.log(`🔢 序列已重置为: ${maxIdResult.id}`);
-        }
-
-        console.log('\n🎉 数据恢复完成！');
+        console.log('\n🎉 所有表数据恢复成功！');
 
     } catch (error) {
         console.error('❌ 恢复失败:', error);

@@ -8,7 +8,9 @@ import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
 import { getDrillBatchPrompt } from '@/lib/prompts/drill';
 import { getAIModel } from '@/lib/ai/client';
+
 import { generateObject, generateText } from 'ai';
+import { findCachedDrill, markDrillConsumed } from '@/lib/drill-cache';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -54,7 +56,7 @@ export async function getNextDrillBatch(
     try {
         // 1. Validate Input
         const validated = GetBriefingSchema.parse(input);
-        const { userId, mode, limit: inputLimit, excludeVocabIds } = validated;
+        const { userId, mode, limit: inputLimit, excludeVocabIds, forceRefresh } = validated;
         // Use input limit if provided (pagination), otherwise fallback to batch size (legacy/full)
         // Actually, schema now defaults limit to 10. We should respect it if it's explicitly passed for lazy loading.
         // But for initial load? The user requirement says "First generate 10... then load more".
@@ -62,6 +64,26 @@ export async function getNextDrillBatch(
         const effectiveLimit = inputLimit;
 
         log.info({ userId, mode, limit: effectiveLimit, excludedCount: excludeVocabIds.length }, 'Fetching drill batch');
+
+        // 0. Cache Check (Optimization)
+        // If we have a cached batch, return it immediately!
+        if (effectiveLimit >= 10 && !forceRefresh) { // Only use cache for full batches, not micro-fetches
+            const cached = await findCachedDrill(userId, mode);
+            if (cached) {
+                log.info({ cacheId: cached.id }, 'Cache Hit! Returning pre-generated drill.');
+
+                // Mark as consumed (async, don't block return? No, for consistency we await)
+                await markDrillConsumed(cached.id);
+
+                return {
+                    status: 'success',
+                    message: 'Batch retrieved from cache',
+                    data: cached.payload as unknown as BriefingPayload[],
+                };
+            }
+        }
+
+        log.info('Cache Miss. Proceeding to real-time generation.');
 
         // 2. Fetch Candidates (30/50/20 Protocol)
         const candidates = await fetchCandidates(userId, effectiveLimit, mode, excludeVocabIds);

@@ -3,7 +3,7 @@
 import { HybridSelector } from '@/lib/engine/hybrid-selector';
 import { createLogger } from '@/lib/logger';
 import type { ActionState } from '@/types';
-import type { Vocab } from '../../generated/prisma/client';
+import type { Vocab } from '@/generated/prisma/client';
 
 const log = createLogger('actions/fetch-queue');
 

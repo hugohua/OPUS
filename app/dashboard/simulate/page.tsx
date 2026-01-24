@@ -79,7 +79,17 @@ const MODES: ModeConfig[] = [
     },
 ];
 
+// ... (previous imports)
+import { useEffect } from 'react';
+import { prefetchDrills } from '@/actions/prefetch-drills';
+
 export default function SimulatePage() {
+    // ⚡️ Trigger Prefetch on Mount
+    useEffect(() => {
+        // Fire and forget - don't block UI
+        prefetchDrills();
+    }, []);
+
     return (
         <div className="p-6 space-y-6 pb-24">
             {/* Header */}

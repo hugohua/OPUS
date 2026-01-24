@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
-import { SyntaxText } from '@/components/briefing/syntax-text';
+import { SyntaxBlueprint } from '@/components/briefing/syntax-blueprint';
 import { InteractionZone } from '@/components/briefing/interaction-zone';
 import { recordOutcome } from '@/actions/record-outcome';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
@@ -28,6 +28,12 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const [index, setIndex] = useState(0);
     const [completed, setCompleted] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isRevealed, setIsRevealed] = useState(false);
+
+    // Reset revealed state when moving to next drill
+    useEffect(() => {
+        setIsRevealed(false);
+    }, [index]);
 
     // Track loaded VocabIDs to exclude them in next fetch
     // Initialize with IDs from initial payload
@@ -154,27 +160,20 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                     <div className="max-w-3xl mx-auto flex flex-col items-center gap-12">
                         {/* Context Card */}
                         {textSegment && (
-                            <Card className="p-8 w-full shadow-2xl border-t-4 border-t-primary/40 bg-card/80 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
-                                <div className="flex items-center gap-4 mb-6 opacity-80">
-                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                                        <CheckCircle className="w-6 h-6 stroke-[1.5px]" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Intelligence</span>
-                                        <span className="text-xs font-semibold uppercase">System Briefing</span>
-                                    </div>
-                                </div>
-
-                                <SyntaxText content={textSegment.content_markdown || ''} className="text-2xl font-medium tracking-tight" />
+                            <div className="w-full flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out">
+                                <SyntaxBlueprint
+                                    content={textSegment.content_markdown || ''}
+                                    isRevealed={isRevealed}
+                                />
 
                                 {(textSegment as any).translation_cn && (
-                                    <div className="mt-6 pt-4 border-t border-dashed border-border/50">
-                                        <p className="text-sm text-muted-foreground/80 leading-relaxed italic">
+                                    <div className="text-center">
+                                        <p className="text-sm text-muted-foreground/80 leading-relaxed italic font-serif">
                                             " {(textSegment as any).translation_cn} "
                                         </p>
                                     </div>
                                 )}
-                            </Card>
+                            </div>
                         )}
 
                         {/* Interaction */}
@@ -183,6 +182,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                                 key={index} // Reset state on change
                                 task={interactSegment.task}
                                 onComplete={handleComplete}
+                                onAnswer={(isCorrect) => setIsRevealed(true)}
                             />
                         )}
                     </div>

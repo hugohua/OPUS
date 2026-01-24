@@ -18,9 +18,10 @@ interface InteractionTask {
 interface InteractionZoneProps {
     task: InteractionTask;
     onComplete: (isCorrect: boolean) => void;
+    onAnswer?: (isCorrect: boolean) => void;
 }
 
-export function InteractionZone({ task, onComplete }: InteractionZoneProps) {
+export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneProps) {
     const [selected, setSelected] = useState<string | null>(null);
     const [submitted, setSubmitted] = useState(false);
 
@@ -37,6 +38,11 @@ export function InteractionZone({ task, onComplete }: InteractionZoneProps) {
         // User wants "Safety". Maybe immediate show result.
         // Call parent after short delay?
         const isCorrect = option === task.answer_key;
+
+        // Notify parent immediately for visual reveal
+        if (onAnswer) {
+            onAnswer(isCorrect);
+        }
 
         // Trigger callback after visual feedback (e.g. 1s)
         setTimeout(() => {

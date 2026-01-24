@@ -15,6 +15,7 @@ export const GetBriefingSchema = z.object({
     mode: SessionModeSchema.default('SYNTAX'),
     limit: z.number().int().min(1).max(50).default(10),
     excludeVocabIds: z.array(z.number().int()).default([]),
+    forceRefresh: z.boolean().optional().default(false),
 });
 
 // FSRS 评分: 1=Again(重来), 2=Hard(困难), 3=Good(良好), 4=Easy(简单)

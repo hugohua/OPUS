@@ -42,7 +42,31 @@ async function main() {
         fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
         console.log(`✅ [UserProgress] 已备份 ${progress.length} 条记录到 ${progressPath}`);
 
-        console.log('\n🎉 备份完成！');
+        // 3. Backup User
+        // const users = await prisma.user.findMany();
+        // const userPath = path.join(backupDir, `user-${timestamp}.json`);
+        // fs.writeFileSync(userPath, JSON.stringify(users, null, 2));
+        // console.log(`✅ [User] 已备份 ${users.length} 条记录到 ${userPath}`);
+
+        // 4. Backup Article
+        // const articles = await prisma.article.findMany();
+        // const articlePath = path.join(backupDir, `article-${timestamp}.json`);
+        // fs.writeFileSync(articlePath, JSON.stringify(articles, null, 2));
+        // console.log(`✅ [Article] 已备份 ${articles.length} 条记录到 ${articlePath}`);
+
+        // // 5. Backup ArticleVocab
+        // const articleVocabs = await prisma.articleVocab.findMany();
+        // const articleVocabPath = path.join(backupDir, `articleVocab-${timestamp}.json`);
+        // fs.writeFileSync(articleVocabPath, JSON.stringify(articleVocabs, null, 2));
+        // console.log(`✅ [ArticleVocab] 已备份 ${articleVocabs.length} 条记录到 ${articleVocabPath}`);
+
+        // // 6. Backup InvitationCode
+        // const invitationCodes = await prisma.invitationCode.findMany();
+        // const invitationCodePath = path.join(backupDir, `invitationCode-${timestamp}.json`);
+        // fs.writeFileSync(invitationCodePath, JSON.stringify(invitationCodes, null, 2));
+        // console.log(`✅ [InvitationCode] 已备份 ${invitationCodes.length} 条记录到 ${invitationCodePath}`);
+
+        console.log('\n🎉 所有表备份完成！');
 
     } catch (error) {
         console.error('❌ 备份失败:', error);
