@@ -24,7 +24,7 @@ export type SessionState = {
     lastUpdated: number;
 }
 
-const STORAGE_PREFIX = 'opus_session_v1_';
+const STORAGE_PREFIX = 'opus_session_v2_';
 const EXPIRE_MS = 24 * 60 * 60 * 1000; // 24 Hours
 
 /**
