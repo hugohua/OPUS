@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
+import { Header } from '@/components/ui/header';
 
 interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
@@ -48,9 +49,13 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
+    const [dataSource, setDataSource] = useState<string | null>(null);
 
     // Track loaded VocabIDs to exclude them in next fetch
     const loadedVocabIds = useRef<Set<number>>(new Set());
+
+    // [Time-Based Grading] Response Timer
+    const startTime = useRef<number>(Date.now());
 
     // --- 1. 挂载时：恢复状态 or 初始加载 ---
     useEffect(() => {
@@ -105,6 +110,12 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                 const newItems = res.data;
                 initVocabSet(newItems);
                 setQueue(newItems);
+                // 保存数据来源
+                console.log('🔍 API Response meta:', res.meta); // 调试日志
+                if (res.meta?.source) {
+                    console.log('🔍 Setting dataSource to:', res.meta.source); // 调试日志
+                    setDataSource(res.meta.source);
+                }
             } else {
                 toast.error('加载训练数据失败');
             }
@@ -122,6 +133,8 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     useEffect(() => {
         setStatus("idle");
         setSelectedOption(null);
+        // Reset Timer
+        startTime.current = Date.now();
     }, [index]);
 
     // --- 懒加载逻辑 ---
@@ -164,9 +177,41 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const handleComplete = async (isCorrect: boolean) => {
         const vocabId = (currentDrill.meta as any).vocabId || 0;
         const grade = isCorrect ? 3 : 1;
+        const duration = Date.now() - startTime.current;
+        const isRetry = (currentDrill.meta as any).isRetry;
 
         // 静默记录结果
-        recordOutcome({ userId, vocabId, grade, mode }).catch(() => { });
+        recordOutcome({
+            userId,
+            vocabId,
+            grade,
+            mode,
+            duration,
+            isRetry
+        }).catch(() => { });
+
+        // [Session Loop] 错题闭环逻辑
+        if (!isCorrect) {
+            // 1. Clone Current Drill
+            const retryDrill = JSON.parse(JSON.stringify(currentDrill)) as BriefingPayload;
+
+            // 2. Mark as Retry
+            if (!retryDrill.meta) retryDrill.meta = {} as any;
+            (retryDrill.meta as any).isRetry = true;
+
+            // 3. Insert into Queue (Expansion)
+            // Insert at current + 5, or end of queue if length < 5
+            const insertIndex = Math.min(queue.length, index + 5);
+
+            setQueue(prev => {
+                const next = [...prev];
+                next.splice(insertIndex, 0, retryDrill);
+                return next;
+            });
+
+            // Optional: Toast feedback for "Review later"
+            // toast.info('Missed! Added to review queue.', { duration: 1500 });
+        }
 
         // 进入下一题
         if (index < queue.length - 1) {
@@ -237,29 +282,33 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     return (
         <div className="dark:bg-zinc-950 bg-zinc-50 relative h-screen w-full overflow-hidden font-sans antialiased flex flex-col transition-colors duration-300">
 
-            {/* 环境光效 */}
-            <div className="pointer-events-none absolute top-0 left-0 h-[600px] w-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/40 via-transparent to-transparent dark:from-indigo-900/20 dark:via-transparent dark:to-transparent z-0" />
+            {/* Background Glow Removed */}
 
-            {/* Header */}
-            <header className="relative z-10 flex items-center justify-between px-4 h-16 shrink-0">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/5">
-                    <ArrowLeft className="w-6 h-6" />
-                </Button>
-                <div className="flex-1 mx-8 flex flex-col items-center">
-                    <div className="h-1 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-violet-500 rounded-full transition-all duration-500"
-                            style={{ width: `${((index + 1) / queue.length) * 100}%` }}
-                        />
-                    </div>
-                    <span className="mt-2 font-mono text-[10px] text-zinc-400 dark:text-zinc-500 tracking-widest uppercase">
-                        {mode} DRILL {countDisplay.toString().padStart(2, '0')}
+            {/* 降级模式提示 */}
+            {dataSource === 'deterministic' && (
+                <div className="relative z-10 flex items-center justify-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-500/20">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                        简化模式 · AI 正在后台生成更丰富的内容
                     </span>
                 </div>
-                <Button variant="ghost" size="icon" disabled className="text-zinc-400 opacity-50">
-                    <Loader2 className={cn("w-6 h-6", isLoadingMore && "animate-spin opacity-100")} />
-                </Button>
-            </header>
+            )}
+
+            {/* Header */}
+            <Header
+                variant="drill"
+                progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
+                stepLabel={`${mode} DRILL ${countDisplay.toString().padStart(2, '0')}`}
+                onBack={() => router.push('/dashboard')}
+                rightAction={
+                    isLoadingMore && (
+                        <div className="w-10 h-10 flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+                        </div>
+                    )
+                }
+                className="shrink-0"
+            />
 
             {/* 主舞台 */}
             <main className="relative z-10 flex-1 flex flex-col items-center justify-start pt-12 md:pt-24 px-4 min-h-0 overflow-y-auto pb-4">

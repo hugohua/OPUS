@@ -29,6 +29,7 @@ export interface BriefingPayload {
         sys_prompt_version: string;
         vocabId?: number; // Needed to track progress
         target_word?: string;
+        source?: string; // Track origin (cache, deterministic, llm)
     };
     segments: BriefingSegment[];
 }

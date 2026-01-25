@@ -4,17 +4,17 @@ import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { maskPhrase } from '@/lib/blitz';
-import type { BlitzBatchItem } from '@/actions/blitz-session';
+import type { BlitzItem } from '@/lib/validations/blitz';
 
 export type BlitzCardState = 'LOCKED' | 'REVEALED' | 'GRADING';
 
 interface BlitzCardProps {
-    item: BlitzBatchItem;
+    item: BlitzItem;
     state: BlitzCardState;
 }
 
 export function BlitzCard({ item, state }: BlitzCardProps) {
-    const segments = useMemo(() => maskPhrase(item.phrase, item.target), [item]);
+    const segments = useMemo(() => maskPhrase(item.context.text, item.word), [item]);
 
     const isRevealed = state === 'REVEALED' || state === 'GRADING';
 
@@ -80,7 +80,7 @@ export function BlitzCard({ item, state }: BlitzCardProps) {
                             className="text-center space-y-3"
                         >
                             <div className="text-xl text-slate-600 dark:text-slate-400 font-medium">
-                                {item.trans}
+                                {item.context.translation}
                             </div>
                             <div className="flex items-center justify-center gap-2">
                                 <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">

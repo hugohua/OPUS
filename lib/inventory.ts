@@ -1,0 +1,177 @@
+import { redis as connection } from '@/lib/queue/connection';
+import { BriefingPayload, SessionMode } from '@/types/briefing';
+import { createLogger } from '@/lib/logger';
+import { inventoryQueue } from '@/lib/queue';
+
+const log = createLogger('lib:inventory');
+
+// Redis Key Generator
+const keys = {
+    drillList: (userId: string, mode: string, vocabId: number | string) =>
+        `user:${userId}:mode:${mode}:vocab:${vocabId}:drills`,
+    replenishBuffer: 'buffer:replenish_drills',
+    stats: (userId: string) => `user:${userId}:inventory:stats`,
+};
+
+/**
+ * 核心库存模块 (Schedule-Driven)
+ * 负责管理单词颗粒度的弹药库
+ */
+export const inventory = {
+    /**
+     * 将生成的 Drill 推入库存
+     */
+    async pushDrill(userId: string, mode: string, vocabId: number | string, drill: BriefingPayload) {
+        const key = keys.drillList(userId, mode, vocabId);
+
+        // Multi-exec for atomicity
+        const pipeline = connection.pipeline();
+        pipeline.rpush(key, JSON.stringify(drill));
+        pipeline.hincrby(keys.stats(userId), mode, 1);
+        await pipeline.exec();
+
+        log.info({ userId, mode, vocabId }, 'Drill pushed to inventory');
+    },
+
+    /**
+     * 消费一个 Drill (原子操作)
+     * Side Effect: 如果库存水位低 (<2)，触发后台补充
+     */
+    async popDrill(userId: string, mode: string, vocabId: number | string): Promise<BriefingPayload | null> {
+        const key = keys.drillList(userId, mode, vocabId);
+
+        // 1. Pop content
+        const results = await connection.multi()
+            .lpop(key)
+            .exec();
+
+        const data = results?.[0]?.[1] as string | null;
+
+        // If we popped something, decrement stats
+        if (data) {
+            await connection.hincrby(keys.stats(userId), mode, -1);
+        }
+
+        // 2. Check remaining length (Async check)
+        this.checkAndTriggerReplenish(userId, mode, vocabId).catch(err => {
+            log.error({ error: err.message, userId, mode, vocabId }, 'Failed to trigger replenish');
+        });
+
+        if (!data) return null;
+        return JSON.parse(data);
+    },
+
+    /**
+     * 检查库存水位并触发补充
+     */
+    async checkAndTriggerReplenish(userId: string, mode: string, vocabId: number | string) {
+        const key = keys.drillList(userId, mode, vocabId);
+        const len = await connection.llen(key);
+
+        if (len < 2) {
+            log.info({ userId, mode, vocabId, len }, '📉 Low inventory detected. Buffering for replenishment.');
+            // Add to buffer for Batch Aggregation (Plan C)
+            await this.addToBuffer(userId, mode, vocabId);
+
+            // Trigger check immediately
+            await this.checkBufferAndFlush();
+        }
+    },
+
+    /**
+     * 将 缺货ID 加入缓冲区
+     * Format: "userId:mode:vocabId"
+     */
+    async addToBuffer(userId: string, mode: string, vocabId: number | string) {
+        const item = `${userId}:${mode}:${vocabId}`;
+        await connection.sadd(keys.replenishBuffer, item);
+    },
+
+    /**
+     * 检查缓冲区并 Flush (如满足阈值)
+     */
+    async checkBufferAndFlush() {
+        const count = await connection.scard(keys.replenishBuffer);
+
+        // Threshold = 5
+        if (count >= 5) {
+            await this.flushBuffer();
+        }
+    },
+
+    /**
+     * 强制 Flush 缓冲区 (生成 Batch Job)
+     */
+    async flushBuffer() {
+        // Pop 10 items to process
+        const items = await connection.spop(keys.replenishBuffer, 10);
+        if (items.length === 0) return;
+
+        // Group by User + Mode
+        const groupedJobs: Record<string, number[]> = {};
+
+        for (const item of items) {
+            const parts = item.split(':');
+            // item is uid:mode:vid. But mode might contain chars?
+            // Safer parsing: 
+            // format: userId:mode:vocabId. 
+            // userId is cuid (string), mode is enum, vocabId is int.
+
+            if (parts.length < 3) continue;
+
+            const vocabId = parseInt(parts.pop()!);
+            const mode = parts.pop()!;
+            const userId = parts.join(':'); // remaining part is userId
+
+            const jobKey = `${userId}:${mode}`;
+
+            if (!groupedJobs[jobKey]) groupedJobs[jobKey] = [];
+            groupedJobs[jobKey].push(vocabId);
+        }
+
+        // Enqueue Batch Jobs (Plan C)
+        for (const [key, vids] of Object.entries(groupedJobs)) {
+            const [uid, mode] = key.split(':');
+
+            await inventoryQueue.add('replenish_batch', {
+                userId: uid,
+                mode: mode as any, // Type cast for job data
+                vocabIds: vids
+            }, {
+                priority: 5 // Low priority for Plan C
+            });
+
+            log.info({ userId: uid, mode, count: vids.length }, '📦 Batch replenishment job enqueued');
+        }
+    },
+
+    /**
+     * 触发急救任务 (Plan B)
+     */
+    async triggerEmergency(userId: string, mode: string, vocabId: number | string) {
+        await inventoryQueue.add('replenish_one', {
+            userId,
+            mode: mode as SessionMode,
+            vocabId
+        }, {
+            priority: 1 // High Priority
+        });
+        log.info({ userId, mode, vocabId }, '🚑 Emergency replenishment triggered');
+    },
+
+    /**
+     * 获取库存统计
+     */
+    async getInventoryStats(userId: string) {
+        const raw = await connection.hgetall(keys.stats(userId));
+
+        // Convert string values to numbers
+        return {
+            SYNTAX: parseInt(raw.SYNTAX || '0'),
+            CHUNKING: parseInt(raw.CHUNKING || '0'),
+            NUANCE: parseInt(raw.NUANCE || '0'),
+            BLITZ: parseInt(raw.BLITZ || '0'),
+            total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
+        };
+    }
+};

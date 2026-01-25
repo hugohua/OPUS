@@ -129,8 +129,7 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
             <div className="flex-1 flex flex-col justify-center pb-32"> {/* pb-32 for Zone C space */}
                 <BlitzCard
                     item={currentItem}
-                    isRevealed={isRevealed}
-                    onReveal={handleReveal}
+                    state={isRevealed ? 'REVEALED' : 'LOCKED'}
                     key={currentItem.id} // Key to trigger animation on change
                 />
             </div>

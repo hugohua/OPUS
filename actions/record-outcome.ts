@@ -69,12 +69,39 @@ export async function recordOutcome(
         // 4. Calculate Next Schedule
         const scheduling_cards = scheduler.repeat(card, now);
 
-        const rating = grade as Rating; // 1 | 2 | 3 | 4
+        let finalGrade = grade;
+
+        // [Implicit Grading Logic]
+        // Only adjust if passed (Grade >= 3) and not manually "Easy" (unless verified)
+        // If Grade is 1 (Fail), we respect it regardless of time.
+        if (grade >= 3 && input.duration) {
+            if (input.isRetry) {
+                // [Retry Cap]
+                // If this is a retry within the same session, cap at Good (3).
+                // Never allow Easy (4) for immediate corrections to prevent stability overestimation.
+                finalGrade = 3;
+                log.info({ userId, vocabId, duration: input.duration }, 'Retry Cap applied: Forced Grade 3');
+            } else {
+                // [Time-Based Grading]
+                if (input.duration < 1500) {
+                    finalGrade = 4; // Easy (< 1.5s)
+                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Easy (< 1.5s)');
+                } else if (input.duration > 5000) {
+                    finalGrade = 2; // Hard (> 5s)
+                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Hard (> 5s)');
+                } else {
+                    finalGrade = 3; // Good (1.5s - 5s)
+                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Good (Normal)');
+                }
+            }
+        }
+
+        const rating = finalGrade as Rating; // 1 | 2 | 3 | 4
         // Cast to any because ts-fsrs types might be tricky with index access
         const result = (scheduling_cards as any)[rating];
 
         if (!result) {
-            throw new Error('Invalid FSRS Grade calculation');
+            throw new Error(`Invalid FSRS Grade calculation for rating: ${rating}`);
         }
 
         const newCard = result.card;

@@ -62,3 +62,28 @@ export async function checkCacheStatus(userId: string, mode: string, threshold =
     });
     return count < threshold;
 }
+
+/**
+ * 获取缓存数量
+ */
+export async function getCacheCount(userId: string, mode: string) {
+    return db.drillCache.count({
+        where: {
+            userId,
+            mode,
+            isConsumed: false,
+            expiresAt: { gt: new Date() },
+        }
+    });
+}
+
+/**
+ * 缓存上限配置（测试友好配置：Limit = 批次数）
+ * 1 批 = 10 题
+ */
+export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
+    SYNTAX: 5,      // 5 batches = 50 drills
+    CHUNKING: 5,    // 5 batches = 50 drills
+    NUANCE: 3,      // 3 batches = 30 drills
+    BLITZ: 3,       // 3 batches = 30 drills
+};

@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  opus-db:
+    image: ankane/pgvector:latest
+    container_name: opus-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: opus
+    ports:
+      - "5432:5432"
+    volumes:
+      # 这里引用下面定义的外部卷
+      - opus_data:/var/lib/postgresql/data
+
+  opus-redis:
+    image: redis:7-alpine
+    container_name: opus-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - opus_redis_data:/data
+    command: redis-server --appendonly yes
+
+  opus-worker:
+    image: node:20-alpine
+    container_name: opus-worker
+    working_dir: /app
+    volumes:
+      - .:/app # 挂载项目根目录，支持热更新
+    command: npx tsx --watch workers/index.ts
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
+      - REDIS_URL=redis://opus-redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - AI_MODEL_NAME=${AI_MODEL_NAME}
+      - ETL_API_KEY=${ETL_API_KEY}
+      - ETL_BASE_URL=${ETL_BASE_URL}
+      - AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}
+    depends_on:
+      - opus-db
+      - opus-redis
+
+volumes:
+  # 🔥 关键：告诉 Compose 这个卷是外面已经建好的
+  opus_data:
+    external: true
+  # Redis 卷是新的，可以由 Compose 管理
+  opus_redis_data:

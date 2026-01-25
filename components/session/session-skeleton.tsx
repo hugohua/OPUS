@@ -16,11 +16,10 @@ export function SessionSkeleton({ mode = "SYNTAX" }: SessionSkeletonProps) {
     return (
         <div className="dark:bg-zinc-950 bg-zinc-50 relative h-screen w-full overflow-hidden font-sans antialiased flex flex-col transition-colors duration-300">
 
-            {/* 环境光效（与实际页面一致） */}
-            <div className="pointer-events-none absolute top-0 left-0 h-[600px] w-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/40 via-transparent to-transparent dark:from-indigo-900/20 dark:via-transparent dark:to-transparent z-0" />
+            {/* Background Glow Removed */}
 
             {/* Header 骨架 */}
-            <header className="relative z-10 flex items-center justify-between px-4 h-16 shrink-0">
+            <header className="relative z-10 flex items-center justify-between px-4 h-14 shrink-0">
                 {/* 返回按钮骨架 */}
                 <div className="w-10 h-10 rounded-lg bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
 

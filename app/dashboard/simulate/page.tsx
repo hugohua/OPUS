@@ -83,6 +83,8 @@ const MODES: ModeConfig[] = [
 import { useEffect } from 'react';
 import { prefetchDrills } from '@/actions/prefetch-drills';
 
+import { Header } from '@/components/ui/header';
+
 export default function SimulatePage() {
     // ⚡️ Trigger Prefetch on Mount
     useEffect(() => {
@@ -91,48 +93,54 @@ export default function SimulatePage() {
     }, []);
 
     return (
-        <div className="p-6 space-y-6 pb-24">
-            {/* Header */}
-            <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight">模拟训练</h1>
-                <p className="text-muted-foreground">选择你的训练模拟课目。</p>
-            </div>
+        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 relative overflow-hidden">
+            {/* Background Glow Removed */}
 
-            {/* Grid */}
-            <div className="grid gap-4">
-                {MODES.map((mode) => {
-                    const Icon = mode.icon;
-                    return (
-                        <Link key={mode.id} href={mode.href}>
-                            <Card className={cn(modeCardVariants({ mode: mode.id }))}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("p-2 rounded-lg bg-background/50 backdrop-blur-sm", mode.colorClass)}>
-                                            <Icon className="w-5 h-5 stroke-2" />
+            {/* Header */}
+            <Header variant="default" title="模拟训练" className="sticky top-0" />
+
+            {/* Content */}
+            <div className="p-6 space-y-4 relative z-10">
+                <div className="space-y-1 mb-6">
+                    <p className="text-muted-foreground">选择你的训练模拟课目。</p>
+                </div>
+
+                {/* Grid */}
+                <div className="grid gap-4">
+                    {MODES.map((mode) => {
+                        const Icon = mode.icon;
+                        return (
+                            <Link key={mode.id} href={mode.href}>
+                                <Card className={cn(modeCardVariants({ mode: mode.id }))}>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn("p-2 rounded-lg bg-background/50 backdrop-blur-sm", mode.colorClass)}>
+                                                <Icon className="w-5 h-5 stroke-2" />
+                                            </div>
+                                            <h2 className="font-semibold text-lg">{mode.title}</h2>
                                         </div>
-                                        <h2 className="font-semibold text-lg">{mode.title}</h2>
-                                    </div>
-                                    {mode.backlog > 0 && (
-                                        <Badge variant="destructive" className="animate-pulse">
-                                            {mode.backlog} 个待复习
+                                        {mode.backlog > 0 && (
+                                            <Badge variant="destructive" className="animate-pulse">
+                                                {mode.backlog} 个待复习
+                                            </Badge>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                            {mode.desc}
+                                        </p>
+                                    </CardContent>
+                                    <CardFooter className="pt-0 flex gap-2">
+                                        <Badge variant="outline" className="text-xs font-normal">
+                                            规模: {mode.batchSize}
                                         </Badge>
-                                    )}
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        {mode.desc}
-                                    </p>
-                                </CardContent>
-                                <CardFooter className="pt-0 flex gap-2">
-                                    <Badge variant="outline" className="text-xs font-normal">
-                                        规模: {mode.batchSize}
-                                    </Badge>
-                                    {/* Level Indicator? */}
-                                </CardFooter>
-                            </Card>
-                        </Link>
-                    );
-                })}
+                                        {/* Level Indicator? */}
+                                    </CardFooter>
+                                </Card>
+                            </Link>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

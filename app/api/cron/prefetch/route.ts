@@ -19,11 +19,12 @@ const log = createLogger('api:cron:prefetch');
 const CRON_SECRET = process.env.CRON_SECRET;
 
 // 配置
-const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE'];
+const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
 const BATCH_SIZE_MAP: Record<SessionMode, number> = {
     SYNTAX: 20,
     CHUNKING: 30,
     NUANCE: 50,
+    BLITZ: 10,
 };
 const CACHE_THRESHOLD = 2;
 const ACTIVE_DAYS = 7;

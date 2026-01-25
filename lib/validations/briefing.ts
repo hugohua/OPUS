@@ -31,6 +31,8 @@ export const RecordOutcomeSchema = z.object({
     vocabId: z.number().int().positive(),
     grade: RatingSchema,
     mode: SessionModeSchema,
+    duration: z.number().int().nonnegative().optional(), // 毫秒 (ms)
+    isRetry: z.boolean().optional(), // 是否为会话内重试
 });
 
 export type GetBriefingInput = z.input<typeof GetBriefingSchema>;
@@ -63,6 +65,7 @@ export const BriefingPayloadSchema = z.object({
         target_word: z.string().optional(),
         sender: z.string().optional(),
         level: z.number().optional(),
+        isRetry: z.boolean().optional(), // 前端扩展状态：重试标记
     }),
     segments: z.array(DrillSegmentSchema),
 });

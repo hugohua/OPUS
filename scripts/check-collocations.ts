@@ -3,7 +3,7 @@
  * Check Collocations Data Structure
  * Usage: npx tsx scripts/check-collocations.ts
  */
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@/generated/prisma/client';
 
 
 const prisma = new PrismaClient();

@@ -16,7 +16,7 @@
  *      npx tsx scripts/data-patch-collocations.ts --dry-run
  * 
  *   4. Sample Export (导出 JSON 样本):
- *      npx tsx scripts/data-patch-collocations.ts --sample=5 --output=sample.json
+ *      npx tsx scripts/data-patch-collocations.ts --sample=5 --output=output/sample.json
  */
 
 try { process.loadEnvFile(); } catch (e) { }
@@ -38,27 +38,50 @@ Your task is to generate high-quality, strictly structured JSON data for vocabul
 </system_role>
 
 <intelligence_logic>
-1. Target: Generate 2 collocations typical of TOEIC test materials.
-2. Domain Priority:
+1. Target: 
+   Generate 2 collocations typical of TOEIC test materials.
+
+2. Lexical Filter:
+   - Skip function words such as articles, prepositions, conjunctions, and auxiliaries.
+   - Only generate collocations for content words (nouns, verbs, adjectives, adverbs).
+
+3. Domain Priority:
    a) Corporate, Office, Business Communication, HR, Finance, Logistics.
    b) Use General English only if business collocations are rare.
-3. Collocation Style:
+
+4. Collocation Style:
    - Formal and neutral tone.
    - Avoid slang, idioms, and spoken fillers.
-4. Structure Preference:
+   - Avoid metaphors and figurative language.
+   - Do not generate emotional or subjective phrases.
+
+5. Corporate Anchor Bias:
+   - Prefer collocations containing corporate entities such as company, department, employee, customer, policy, contract, report, budget, schedule.
+
+6. Structure Preference:
    - Verb + Noun (e.g., conduct a survey)
    - Adjective + Noun (e.g., annual report)
    - Noun + Noun (e.g., customer feedback)
    - Business prepositional phrases (e.g., in accordance with policy)
-5. Infinitive Rule:
+   - Avoid pure grammatical patterns (e.g., "be about to") without lexical content.
+
+7. Infinitive Rule:
    - Allow "to + verb" if it forms a common business structure (e.g., plan to expand).
    - Avoid standalone infinitives without context.
-6. Sense Control:
-   - Use definition_cn to disambiguate meanings.
-7. Translation:
-   - Chinese translation must preserve business nuance.
-</intelligence_logic>
 
+8. Sense Control:
+   - Use definition_cn to disambiguate meanings.
+   - Do NOT mix different senses of the same word.
+
+9. Sensitive Domain Filter:
+   - Avoid political, ethical, religious, sexual, or medical sensitive topics unrelated to corporate context.
+
+10. Translation:
+   - Chinese translation must preserve business nuance and remain concise.
+
+11. Output Ordering:
+   - Sort collocations by typicality in TOEIC corporate context (most typical first).
+</intelligence_logic>
 
 
 <few_shot_examples>
@@ -109,7 +132,7 @@ const PatchOutputSchema = z.object({
 });
 
 // --- Configuration ---
-let BATCH_SIZE = 10; // Default, can be overridden by --sample
+let BATCH_SIZE = 30; // Default, can be overridden by --sample
 const BATCH_INTERVAL_MS = 2000;
 const MAX_RETRIES = 3;
 
@@ -120,7 +143,7 @@ async function sleep(ms: number) {
 
 // --- Fetch words needing patch ---
 async function fetchNextBatch() {
-    // Select words where collocations is NULL or empty JSON array '[]'
+    // 只处理 CORE 商务核心词
     const words = await prisma.$queryRaw<Array<{
         id: number;
         word: string;
@@ -131,6 +154,8 @@ async function fetchNextBatch() {
         FROM "Vocab"
         WHERE 
            (collocations IS NULL OR jsonb_array_length(collocations) = 0)
+           AND is_toeic_core = true
+           AND priority = 'CORE'
         ORDER BY word ASC
         LIMIT ${BATCH_SIZE}
     `;

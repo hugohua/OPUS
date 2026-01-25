@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BlitzCard, type BlitzCardState } from '@/components/blitz/blitz-card';
 import { InteractionZone } from '@/components/blitz/interaction-zone';
-import { getBlitzBatch, type BlitzBatchItem } from '@/actions/blitz-session';
+import { getBlitzBatch } from '@/actions/blitz-session';
+import { BlitzItem } from '@/lib/validations/blitz';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -13,7 +14,7 @@ interface BlitzSessionProps {
 }
 
 export function BlitzSession({ userId }: BlitzSessionProps) {
-    const [queue, setQueue] = useState<BlitzBatchItem[]>([]);
+    const [queue, setQueue] = useState<BlitzItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [cardState, setCardState] = useState<BlitzCardState>('LOCKED');
     const [loading, setLoading] = useState(true);

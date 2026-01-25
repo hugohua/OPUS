@@ -51,6 +51,8 @@ trigger: always_on
 │   └── site.ts
 ├── lib/                   # 工具库
 │   ├── db.ts              # Prisma Client Singleton
+│   ├── inventory.ts       # [V2.0] Redis Drill Inventory
+│   ├── queue/             # [V2.0] BullMQ Wrapper & Aggregator
 │   ├── utils.ts           # Shadcn Utils
 │   ├── safe-json.ts       # [Phase 0] Zod Safe Parsers
 │   ├── prompts/           # [Phase 1] LLM Prompts (drill.ts)
@@ -205,3 +207,35 @@ logs/
 ## 10. Anti-Spec（禁止功能）
 - **连胜/排行榜/计时模式/复习堆积/过度游戏化**  
 - 所有禁止内容在任何请求下都不可实现，除非 PRD 明确允许  
+
+---
+
+## 11. AI Infrastructure & Zero-Wait Protocol (v2.0)
+
+### A. 核心哲学：Schedule Driven & Decoupling
+系统架构从 "生产驱动" 升级为 "调度驱动"，核心是将 **内容 (Inventory)** 与 **时间 (Schedule)** 解耦。
+- **Inventory (Redis)**: 存放针对特定单词的通用 "子弹" (Drills)。子弹不带时间戳，随时可用。
+- **Schedule (FSRS)**: 决定 "何时" 复习 "哪个" 单词。
+- **Consumption**: 用户请求 -> 询问 FSRS (Who) -> 从 Redis 取子弹 (Content)。
+
+### B. Redis 数据结构规范
+必须细化到 **Vocab** 粒度，同时保留 **Mode** 维度以支持不同题型。
+- **Key Schema**: `user:{userId}:mode:{mode}:vocab:{vocabId}:drills` -> `List<DrillJson>`
+- **Operation**: `LPOP` (消费), `RPUSH` (生产)。保证 FIFO。
+- **Replenishment**: 消费后若剩余库存 < 2，触发低优先级后台补充任务。
+
+### C. 流量与故障转移 (Failover)
+1.  **FSRS 优先**: 总是先查 DB 获取 `next_review_at <= NOW` 的单词。
+2.  **Redis 命中**: 从对应 Key 获取 Drill。
+3.  **Cache Miss 策略**:
+    - **Plan A (降级)**: 使用 `deterministic-drill` 生成规则兜底数据 (Zero-Wait)。
+    - **Plan B (急救)**: 触发高优先级 BullMQ 任务 (`priority: high`)。
+
+### D. LLM Failover 标准 (Worker)
+- **配置**: 通过 `AI_PROVIDER_ORDER` 环境变量控制顺序。
+- **接口**: 新增厂商必须实现标准接口，配置需遵循：
+  - `[PROVIDER]_API_KEY`
+  - `[PROVIDER]_BASE_URL`
+  - `[PROVIDER]_MODEL_NAME`
+  - `[PROVIDER]_HTTPS_PROXY` (如需)
+
