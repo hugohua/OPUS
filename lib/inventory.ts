@@ -299,5 +299,47 @@ export const inventory = {
         });
 
         return counts;
+    },
+
+    /**
+     * [V2.0] 获取所有 Drill Type 的库存统计 (Scan based)
+     */
+    async getInventoryStatsV2(userId: string): Promise<Record<DrillType, number>> {
+        // Pattern: inventory:{userId}:vocab:{vocabId}:{drillType}
+        const pattern = `inventory:${userId}:vocab:*:*`;
+        let cursor = '0';
+        const drillTypeCounts: Record<DrillType, number> = {
+            'S_V_O': 0,
+            'VISUAL_TRAP': 0,
+            'PART5_CLOZE': 0,
+            'AUDIO_RESPONSE': 0,
+            'PARAPHRASE_ID': 0
+        };
+
+        const batchSize = 100;
+
+        do {
+            const reply = await connection.scan(cursor, 'MATCH', pattern, 'COUNT', batchSize);
+            cursor = reply[0];
+            const keys = reply[1];
+
+            if (keys.length > 0) {
+                const pipeline = connection.pipeline();
+                keys.forEach(k => pipeline.llen(k));
+                const lengths = await pipeline.exec();
+
+                keys.forEach((key, index) => {
+                    const parts = key.split(':');
+                    const drillType = parts[parts.length - 1] as DrillType;
+                    const len = lengths?.[index]?.[1] as number || 0;
+
+                    if (drillTypeCounts[drillType] !== undefined) {
+                        drillTypeCounts[drillType] += len;
+                    }
+                });
+            }
+        } while (cursor !== '0');
+
+        return drillTypeCounts;
     }
 };

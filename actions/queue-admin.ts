@@ -59,13 +59,31 @@ export async function getCacheStats(): Promise<{
     NUANCE: number;
     BLITZ: number;
     total: number;
+    details?: Record<string, number>; // [V2] 详细 Drill Type 统计
 }> {
     try {
         const session = await import('@/auth').then(m => m.auth());
         if (!session?.user?.id) return { SYNTAX: 0, CHUNKING: 0, NUANCE: 0, BLITZ: 0, total: 0 };
 
         const { inventory } = await import('@/lib/inventory');
-        return await inventory.getInventoryStats(session.user.id);
+
+        // [V2] Use SCAN-based stats
+        const v2Stats = await inventory.getInventoryStatsV2(session.user.id);
+
+        // Map to V1 (Legacy Mode)
+        // S_V_O -> SYNTAX
+        // VISUAL_TRAP -> SYNTAX (or custom)
+
+        const total = Object.values(v2Stats).reduce((a, b) => a + b, 0);
+
+        return {
+            SYNTAX: (v2Stats['S_V_O'] || 0) + (v2Stats['VISUAL_TRAP'] || 0) + (v2Stats['PART5_CLOZE'] || 0),
+            CHUNKING: 0,
+            NUANCE: 0,
+            BLITZ: 0,
+            total,
+            details: v2Stats
+        };
     } catch (error) {
         console.error('getCacheStats error:', error);
         return { SYNTAX: 0, CHUNKING: 0, NUANCE: 0, BLITZ: 0, total: 0 };

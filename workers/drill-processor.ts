@@ -125,12 +125,15 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     sys_prompt_version: 'v2.8-schedule',
                     vocabId: candidate.vocabId,
                     target_word: candidate.word,
-                    source: 'llm_v2'
+                    source: 'llm_v2',
+                    drillType: 'S_V_O' // [V2] 当前 Prompt 仅支持 S_V_O
                 },
                 segments: rawDrill.segments,
             };
 
-            await inventory.pushDrill(userId, mode, candidate.vocabId, payload);
+            // [Fix] V2: 使用 pushDrillV2 写入分频道库存
+            const drillType = 'S_V_O';
+            await inventory.pushDrillV2(userId, candidate.vocabId, drillType, payload);
             successCount++;
         }
 

@@ -116,8 +116,28 @@ INPUT DATA:
 ${JSON.stringify(inputs, null, 2)}
 `.trim();
 
+  // 覆盖 OUTPUT FORMAT 为 Batch 模式
+  const batchSystemPrompt = DRILL_SYSTEM_PROMPT.replace(
+    '# OUTPUT FORMAT (JSON ONLY)',
+    `# BATCH OUTPUT FORMAT (JSON ONLY)
+Return an object with a "drills" array.
+    
+{
+  "drills": [
+    {
+      "meta": { "format": "chat", "sender": "System", "level": 0 },
+      "segments": [...]
+    },
+    {
+       "meta": ...,
+       "segments": ...
+    }
+  ]
+}`
+  );
+
   return {
-    system: DRILL_SYSTEM_PROMPT + "\n\nIMPORTANT: Output an object with a 'drills' array containing the cards.",
+    system: batchSystemPrompt + "\n\nCRITICAL: You must generate a drill for EACH input item. Array length must match input length.",
     user: userPrompt
   };
 }
