@@ -75,11 +75,66 @@ log.info({ providers: process.env.AI_PROVIDER_ORDER || 'aliyun,openrouter' }, 'L
 process.on('SIGTERM', async () => {
     log.info('收到 SIGTERM，正在关闭 Worker...');
     await drillWorker.close();
+    await settlerWorker.close();
     process.exit(0);
 });
 
 process.on('SIGINT', async () => {
     log.info('收到 SIGINT，正在关闭 Worker...');
     await drillWorker.close();
+    await settlerWorker.close();
     process.exit(0);
 });
+
+// ============================================
+// [V2.0 New] Session Settler Worker (CRON)
+// ============================================
+import { Queue } from 'bullmq';
+import { processSettlerJob } from './session-settler';
+
+// 创建 Queue (用于 Repeat Jobs)
+const settlerQueue = new Queue('session-settler', { connection: redis });
+
+// 添加 Repeatable Job (每分钟)
+(async () => {
+    // 先清理旧的 Repeat Job
+    const repeatableJobs = await settlerQueue.getRepeatableJobs();
+    for (const job of repeatableJobs) {
+        await settlerQueue.removeRepeatableByKey(job.key);
+    }
+
+    // 添加新的 Repeat Job
+    await settlerQueue.add(
+        'settle',
+        {},
+        {
+            repeat: {
+                pattern: '* * * * *' // 每分钟
+            }
+        }
+    );
+    log.info('📅 Session Settler CRON 已配置 (每分钟)');
+})();
+
+// Worker 实例
+const settlerWorker = new Worker(
+    'session-settler',
+    async () => {
+        return processSettlerJob();
+    },
+    {
+        connection: redis,
+        concurrency: 1,
+    }
+);
+
+settlerWorker.on('completed', (job, result) => {
+    log.info({ jobId: job.id, result }, '✅ Settler Job 完成');
+});
+
+settlerWorker.on('failed', (job, err) => {
+    log.error({ jobId: job?.id, error: err.message }, '❌ Settler Job 失败');
+});
+
+log.info('🚀 Session Settler Worker 已启动');
+

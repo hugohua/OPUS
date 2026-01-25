@@ -1,5 +1,5 @@
 import { redis as connection } from '@/lib/queue/connection';
-import { BriefingPayload, SessionMode } from '@/types/briefing';
+import { BriefingPayload, SessionMode, DrillType } from '@/types/briefing';
 import { createLogger } from '@/lib/logger';
 import { inventoryQueue } from '@/lib/queue';
 
@@ -7,8 +7,19 @@ const log = createLogger('lib:inventory');
 
 // Redis Key Generator
 const keys = {
+    /**
+     * @deprecated 旧版 key (按 mode 分组)，后续删除
+     */
     drillList: (userId: string, mode: string, vocabId: number | string) =>
         `user:${userId}:mode:${mode}:vocab:${vocabId}:drills`,
+
+    /**
+     * [V2.0 New] 按题型分频道存储
+     * inventory:{userId}:vocab:{vocabId}:{drillType}
+     */
+    drillTypeList: (userId: string, vocabId: number | string, drillType: DrillType) =>
+        `inventory:${userId}:vocab:${vocabId}:${drillType}`,
+
     replenishBuffer: 'buffer:replenish_drills',
     stats: (userId: string) => `user:${userId}:inventory:stats`,
 };
@@ -214,6 +225,77 @@ export const inventory = {
             // result is [error, result]
             const count = result && result[0] === null ? (result[1] as number) : 0;
             counts[vid] = count;
+        });
+
+        return counts;
+    },
+
+    // ============================================
+    // [V2.0 New] 分频道题型库存 API
+    // ============================================
+
+    /**
+     * [V2.0] 推入指定题型的 Drill
+     */
+    async pushDrillV2(userId: string, vocabId: number, drillType: DrillType, drill: BriefingPayload) {
+        const key = keys.drillTypeList(userId, vocabId, drillType);
+        await connection.rpush(key, JSON.stringify(drill));
+        log.info({ userId, vocabId, drillType }, '[V2] Drill pushed to inventory');
+    },
+
+    /**
+     * [V2.0] 消费指定题型的 Drill
+     */
+    async popDrillV2(userId: string, vocabId: number, drillType: DrillType): Promise<BriefingPayload | null> {
+        const key = keys.drillTypeList(userId, vocabId, drillType);
+        const data = await connection.lpop(key);
+        if (!data) return null;
+        return JSON.parse(data);
+    },
+
+    /**
+     * [V2.0] 获取单词所有题型的库存数量
+     */
+    async getInventoryCountsByType(userId: string, vocabId: number): Promise<Record<DrillType, number>> {
+        const drillTypes: DrillType[] = ['S_V_O', 'VISUAL_TRAP', 'PART5_CLOZE'];
+        const pipeline = connection.pipeline();
+
+        drillTypes.forEach((dt) => {
+            pipeline.llen(keys.drillTypeList(userId, vocabId, dt));
+        });
+
+        const results = await pipeline.exec();
+        const counts: Partial<Record<DrillType, number>> = {};
+
+        drillTypes.forEach((dt, index) => {
+            const result = results?.[index];
+            counts[dt] = result && result[0] === null ? (result[1] as number) : 0;
+        });
+
+        return counts as Record<DrillType, number>;
+    },
+
+    /**
+     * [V2.0] 批量获取多个单词的指定题型库存
+     */
+    async getInventoryCountsByTypeV2(
+        userId: string,
+        vocabIds: number[],
+        drillType: DrillType
+    ): Promise<Record<number, number>> {
+        if (vocabIds.length === 0) return {};
+
+        const pipeline = connection.pipeline();
+        vocabIds.forEach((vid) => {
+            pipeline.llen(keys.drillTypeList(userId, vid, drillType));
+        });
+
+        const results = await pipeline.exec();
+        const counts: Record<number, number> = {};
+
+        vocabIds.forEach((vid, index) => {
+            const result = results?.[index];
+            counts[vid] = result && result[0] === null ? (result[1] as number) : 0;
         });
 
         return counts;

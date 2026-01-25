@@ -183,4 +183,58 @@ describe('inventory', () => {
             });
         });
     });
+
+    // ============================================
+    // [V2.0 New] 分频道题型库存测试
+    // ============================================
+    describe('V2 DrillType API', () => {
+        it('pushDrillV2 应按题型存储', async () => {
+            (mockRedis.rpush as any) = vi.fn().mockResolvedValue(1);
+
+            await inventory.pushDrillV2('user1', 123, 'S_V_O', { some: 'drill' } as any);
+
+            expect(mockRedis.rpush).toHaveBeenCalledWith(
+                'inventory:user1:vocab:123:S_V_O',
+                JSON.stringify({ some: 'drill' })
+            );
+        });
+
+        it('popDrillV2 应从指定题型取出', async () => {
+            const mockDrill = { meta: { drillType: 'VISUAL_TRAP' } };
+            (mockRedis.lpop as any) = vi.fn().mockResolvedValue(JSON.stringify(mockDrill));
+
+            const result = await inventory.popDrillV2('user1', 123, 'VISUAL_TRAP');
+
+            expect(mockRedis.lpop).toHaveBeenCalledWith('inventory:user1:vocab:123:VISUAL_TRAP');
+            expect(result).toEqual(mockDrill);
+        });
+
+        it('popDrillV2 库存空时返回 null', async () => {
+            (mockRedis.lpop as any) = vi.fn().mockResolvedValue(null);
+
+            const result = await inventory.popDrillV2('user1', 123, 'PART5_CLOZE');
+
+            expect(result).toBeNull();
+        });
+
+        it('getInventoryCountsByType 应返回各题型计数', async () => {
+            const pipelineMock = {
+                llen: vi.fn().mockReturnThis(),
+                exec: vi.fn().mockResolvedValue([
+                    [null, 3],  // S_V_O
+                    [null, 2],  // VISUAL_TRAP
+                    [null, 0],  // PART5_CLOZE
+                ])
+            };
+            (mockRedis.pipeline as any).mockReturnValue(pipelineMock);
+
+            const counts = await inventory.getInventoryCountsByType('user1', 123);
+
+            expect(counts).toEqual({
+                S_V_O: 3,
+                VISUAL_TRAP: 2,
+                PART5_CLOZE: 0
+            });
+        });
+    });
 });

@@ -9,7 +9,7 @@ Your goal is to build a "Pocket Workplace Simulator" that is both visually stunn
 # 🧠 Knowledge Base (The "Twin Brains")
 Before acting, you MUST read and cross-reference these two documents:
 
-1.  **Visual Logic:** 👉 **@.agent/rules/ui-rules.md**
+1.  **Visual Logic:** 👉 **@docs/ui-rules.md**
     * *Usage:* Use this for Tailwind classes, Colors, Typography, CVA patterns, and Animations.
     * *Critical:* Adhere to the "Anti-Noise" text color rules (Neutral headers).
 
