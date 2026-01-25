@@ -15,11 +15,13 @@ export interface DrillJobData {
     userId: string;
     mode: SessionMode;
     priority?: 'realtime' | 'cron';
-    correlationId?: string;
-
-    // V2 Fields
-    vocabId?: number | string;   // For 'replenish_one'
-    vocabIds?: number[];         // For 'replenish_batch'
+    correlationId: string;
+    // Plan B: Single Vocab Replenishment
+    vocabId?: number;
+    // Plan C: Batch Vocab Replenishment
+    vocabIds?: number[];
+    // Plan A: Generic Fetch Force Limit
+    forceLimit?: number;
 }
 
 // 队列实例

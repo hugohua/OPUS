@@ -32,10 +32,10 @@ export function EditorialDrill({ content, answer, status, selected, translation,
 
     // Render only the card content
     return (
-        <div className="w-full max-w-md rounded-3xl border border-zinc-200 dark:border-white/15 bg-white/80 dark:bg-zinc-900/60 shadow-xl backdrop-blur-xl overflow-hidden flex flex-col min-h-[300px]">
+        <div className="w-full max-w-md flex flex-col min-h-[200px]">
 
             {/* RICH TEXT FLOW AREA */}
-            <div className="p-8 flex flex-col items-start justify-center text-left flex-1">
+            <div className="flex flex-col items-start justify-center text-left flex-1">
 
                 <div className="font-serif text-xl md:text-2xl leading-[2.5rem] text-zinc-800 dark:text-zinc-300 w-full break-words">
                     {segments.map((seg, i) => {

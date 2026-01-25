@@ -64,6 +64,14 @@
 * **In-Session Requeue**: 立即将错题插入当前 Session 队列末尾（或 5 题后）。
 * **目标**: 今日错题必须在今日 Session 内至少做对一次。
 
+### 2.3 Level 0 策略: 无限流 (Infinite Scroll)
+
+* **Old Logic**: 固定做完 20 题结束 (Session Batch)。
+* **New Logic**: **无限流 (Infinite Scroll)**。
+  * **No Cap**: 不再强制中断心流，用户可随时退出。
+  * **Pre-fetch**: 当剩余题目 < 10 时，自动拉取下一组 (Batch=10)，确保 Zero-Wait 体验。
+  * **Rationale**: 模拟 TikTok 体验，降低“开始学习”的心理门槛。
+
 ---
 
 ## 3. 五维记忆系统 (5-Dimensional Memory - TOEIC Adapted)

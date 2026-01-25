@@ -8,12 +8,15 @@ import { getBlitzBatch } from '@/actions/blitz-session';
 import { BlitzItem } from '@/lib/validations/blitz';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { UniversalCard } from '@/components/drill/universal-card';
 
 interface BlitzSessionProps {
     userId: string;
 }
 
 export function BlitzSession({ userId }: BlitzSessionProps) {
+    const router = useRouter();
     const [queue, setQueue] = useState<BlitzItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [cardState, setCardState] = useState<BlitzCardState>('LOCKED');
@@ -110,28 +113,23 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     const currentItem = queue[currentIndex];
 
     return (
-        <div className="relative min-h-screen w-full max-w-lg mx-auto overflow-hidden bg-background">
-            {/* Progress Bar */}
-            <div className="fixed top-0 left-0 w-full h-1 bg-slate-100 z-50">
-                <motion.div
-                    className="h-full bg-indigo-500"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${((currentIndex) / queue.length) * 100}%` }}
-                />
-            </div>
-
-            <div className="pt-12 px-4">
-                <BlitzCard
-                    item={currentItem}
+        <UniversalCard
+            variant="violet"
+            category="DAILY BLITZ"
+            progress={queue.length > 0 ? ((currentIndex) / queue.length) * 100 : 0}
+            onExit={() => router.push('/dashboard')}
+            footer={
+                <InteractionZone
                     state={cardState}
+                    onReveal={handleReveal}
+                    onGrade={handleGrade}
                 />
-            </div>
-
-            <InteractionZone
+            }
+        >
+            <BlitzCard
+                item={currentItem}
                 state={cardState}
-                onReveal={handleReveal}
-                onGrade={handleGrade}
             />
-        </div>
+        </UniversalCard>
     );
 }

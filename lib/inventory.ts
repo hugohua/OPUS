@@ -135,8 +135,9 @@ export const inventory = {
 
             await inventoryQueue.add('replenish_batch', {
                 userId: uid,
-                mode: mode as any, // Type cast for job data
-                vocabIds: vids
+                mode: mode as SessionMode,
+                vocabIds: vids,
+                correlationId: `batch-replenish-${Date.now()}`
             }, {
                 priority: 5 // Low priority for Plan C
             });
@@ -152,11 +153,30 @@ export const inventory = {
         await inventoryQueue.add('replenish_one', {
             userId,
             mode: mode as SessionMode,
-            vocabId
+            vocabId: Number(vocabId),
+            correlationId: `emergency-${vocabId}-${Date.now()}`
         }, {
             priority: 1 // High Priority
         });
         log.info({ userId, mode, vocabId }, '🚑 Emergency replenishment triggered');
+    },
+
+    /**
+     * 触发批量急救任务 (Plan B in Batch)
+     * 用于冷启动时，一次性补充多个缺货单词，避免发送多个单独的急救包
+     */
+    async triggerBatchEmergency(userId: string, mode: string, vocabIds: number[]) {
+        if (vocabIds.length === 0) return;
+
+        await inventoryQueue.add('replenish_batch', {
+            userId,
+            mode: mode as SessionMode,
+            vocabIds,
+            correlationId: `batch-emergency-${Date.now()}`
+        }, {
+            priority: 1 // High Priority (Same as Emergency)
+        });
+        log.info({ userId, mode, count: vocabIds.length }, '🚑📦 Batch Emergency replenishment triggered');
     },
 
     /**
@@ -173,5 +193,29 @@ export const inventory = {
             BLITZ: parseInt(raw.BLITZ || '0'),
             total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
         };
+    },
+    /**
+     * getInventoryCounts
+     * 批量获取指定单词的库存数量
+     */
+    async getInventoryCounts(userId: string, mode: string, vocabIds: number[]): Promise<Record<number, number>> {
+        if (vocabIds.length === 0) return {};
+
+        const pipeline = connection.pipeline();
+        vocabIds.forEach((vid) => {
+            pipeline.llen(keys.drillList(userId, mode, vid));
+        });
+
+        const results = await pipeline.exec();
+        const counts: Record<number, number> = {};
+
+        vocabIds.forEach((vid, index) => {
+            const result = results?.[index];
+            // result is [error, result]
+            const count = result && result[0] === null ? (result[1] as number) : 0;
+            counts[vid] = count;
+        });
+
+        return counts;
     }
 };

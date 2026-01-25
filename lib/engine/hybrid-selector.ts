@@ -1,7 +1,5 @@
-import { PrismaClient } from '../../generated/prisma/client';
+import { db as prisma } from '@/lib/db';
 import { logger } from "@/lib/logger";
-
-const prisma = new PrismaClient();
 
 // Queue Configuration
 const QUEUE_CONFIG = {

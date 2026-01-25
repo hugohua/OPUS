@@ -54,6 +54,7 @@ export async function getNextDrillBatch(
 
         // Step 2: Consumption (Ask Redis "Content?")
         const drills: BriefingPayload[] = [];
+        const missedVocabIds: number[] = [];
 
         for (const candidate of candidates) {
             let drill: BriefingPayload | null = null;
@@ -67,7 +68,7 @@ export async function getNextDrillBatch(
                 log.error({ error: e, candidate }, 'Redis pop failed');
             }
 
-            // 2.2 Handle Miss (Plan A + Plan B)
+            // 2.2 Handle Miss (Plan A + Plan B/C)
             if (!drill) {
                 // Plan A: Zero-Wait Deterministic Fallback
                 drill = buildSimpleDrill({
@@ -78,10 +79,8 @@ export async function getNextDrillBatch(
                 }, mode);
                 source = 'deterministic_fallback';
 
-                // Plan B: Emergency Replenishment (High Priority)
-                inventory.triggerEmergency(userId, mode, candidate.vocabId).catch(err => {
-                    log.warn({ error: err.message, vocabId: candidate.vocabId }, 'Emergency trigger failed');
-                });
+                // Collect for Plan B (Batch Emergency)
+                missedVocabIds.push(candidate.vocabId);
             }
 
             // Append metadata
@@ -93,6 +92,13 @@ export async function getNextDrillBatch(
                 };
                 drills.push(drill);
             }
+        }
+
+        // Fire Batch Emergency if needed (Request-Level Aggregation)
+        if (missedVocabIds.length > 0) {
+            inventory.triggerBatchEmergency(userId, mode, missedVocabIds).catch(err => {
+                log.warn({ error: err.message, count: missedVocabIds.length }, 'Batch Emergency trigger failed');
+            });
         }
 
         return {

@@ -68,86 +68,106 @@ async function main() {
 
     try {
         for (const table of tables) {
-            const latestFile = getLatestFile(table.prefix);
-            if (!latestFile) {
-                console.log(`⚠️ 跳过 ${table.name}: 找不到以 ${table.prefix} 开头的备份文件`);
-                continue;
-            }
-
-            const filePath = path.join(backupDir, latestFile);
-            console.log(`\n🔄 正在处理表: ${table.name} (文件: ${latestFile})...`);
-            const rawData = fs.readFileSync(filePath, 'utf-8');
-            const data = JSON.parse(rawData);
-
-            if (!Array.isArray(data) || data.length === 0) {
-                console.log(`   - 备份数据为空，跳过。`);
-                continue;
-            }
-
-            // Clean & Fix data for main branch compatibility
-            const cleanData = data.map((item: any) => {
-                const { embedding, ...rest } = item;
-
-                // Field Fixes for branch compatibility
-                if (table.name === 'User') {
-                    if (!rest.password) rest.password = '$2b$10$YourDefaultBcryptHashHere'; // Should be a valid hash
-                    if (!rest.updatedAt) rest.updatedAt = new Date();
-                    if (!rest.timezone) rest.timezone = 'Asia/Shanghai';
+            try {
+                const latestFile = getLatestFile(table.prefix);
+                if (!latestFile) {
+                    console.log(`⚠️ 跳过 ${table.name}: 找不到以 ${table.prefix} 开头的备份文件`);
+                    continue;
                 }
 
+                const filePath = path.join(backupDir, latestFile);
+                console.log(`\n🔄 正在处理表: ${table.name} (文件: ${latestFile})...`);
+                const rawData = fs.readFileSync(filePath, 'utf-8');
+                const data = JSON.parse(rawData);
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    console.log(`   - 备份数据为空，跳过。`);
+                    continue;
+                }
+
+                // Clean & Fix data for main branch compatibility
+                const cleanData = data.map((item: any) => {
+                    const { embedding, ...rest } = item;
+
+                    // Field Fixes for branch compatibility
+                    if (table.name === 'User') {
+                        if (!rest.password) rest.password = '$2b$10$YourDefaultBcryptHashHere'; // Should be a valid hash
+                        if (!rest.updatedAt) rest.updatedAt = new Date();
+                        if (!rest.timezone) rest.timezone = 'Asia/Shanghai';
+                    }
+
+                    if (table.name === 'Vocab') {
+                        if (rest.frequency_score === undefined) rest.frequency_score = 0;
+                        if (rest.learningPriority === undefined) rest.learningPriority = 0;
+                    }
+
+                    if (table.name === 'UserProgress') {
+                        // FSRS v5 compatibility - Remove old fields
+                        delete (rest as any).easeFactor;
+
+                        // Fix Foreign Key - Map old userId to current adminUser.id
+                        rest.userId = (adminUser as any).id;
+
+                        if (rest.stability === undefined) rest.stability = 0;
+                        if (rest.difficulty === undefined) rest.difficulty = 0;
+                        if (rest.reps === undefined) rest.reps = 0;
+                        if (rest.lapses === undefined) rest.lapses = 0;
+                        if (rest.state === undefined) rest.state = 0;
+                    }
+
+                    return rest;
+                });
+
+                console.log(`   - 正在清空表...`);
+                // Use deleteMany in try/catch to avoid breaking constraints if other tables depend on it
+                try {
+                    await table.prisma.deleteMany({});
+                } catch (e: any) {
+                    console.warn(`   ⚠️ 清空表失败 (可能存在FK约束): ${e.message?.split('\n')[0]}`);
+                    // If we can't delete, we might not be able to insert easily.
+                    // But usually for restore we want fresh starts.
+                }
+
+                console.log(`   - 正在插入 ${cleanData.length} 条记录...`);
+                const batchSize = 500;
+                let successCount = 0;
+                for (let i = 0; i < cleanData.length; i += batchSize) {
+                    const batch = cleanData.slice(i, i + batchSize);
+                    try {
+                        await table.prisma.createMany({
+                            data: batch,
+                            skipDuplicates: true
+                        });
+                        successCount += batch.length;
+                    } catch (e: any) {
+                        console.error(`   ❌ 批次插入失败: ${e.message?.split('\n')[0]}`);
+                    }
+                }
+
+                // Sync sequence for ID (only for tables with BigInt/Int autoincrement PK)
                 if (table.name === 'Vocab') {
-                    if (rest.frequency_score === undefined) rest.frequency_score = 0;
-                    if (rest.learningPriority === undefined) rest.learningPriority = 0;
+                    const maxIdResult = await prisma.vocab.findFirst({
+                        orderBy: { id: 'desc' },
+                        select: { id: true }
+                    });
+                    if (maxIdResult) {
+                        try {
+                            await prisma.$queryRawUnsafe(`SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxIdResult.id})`);
+                        } catch (e) { console.warn('   ⚠️ 序列同步失败 (可忽略)'); }
+                    }
                 }
 
-                if (table.name === 'UserProgress') {
-                    // FSRS v5 compatibility - Remove old fields
-                    delete (rest as any).easeFactor;
-
-                    // Fix Foreign Key - Map old userId to current adminUser.id
-                    rest.userId = (adminUser as any).id;
-
-                    if (rest.stability === undefined) rest.stability = 0;
-                    if (rest.difficulty === undefined) rest.difficulty = 0;
-                    if (rest.reps === undefined) rest.reps = 0;
-                    if (rest.lapses === undefined) rest.lapses = 0;
-                    if (rest.state === undefined) rest.state = 0;
-                }
-
-                return rest;
-            });
-
-            console.log(`   - 正在清空表...`);
-            await table.prisma.deleteMany({});
-
-            console.log(`   - 正在插入 ${cleanData.length} 条记录...`);
-            const batchSize = 500;
-            for (let i = 0; i < cleanData.length; i += batchSize) {
-                const batch = cleanData.slice(i, i + batchSize);
-                await table.prisma.createMany({
-                    data: batch,
-                    skipDuplicates: true
-                });
+                console.log(`✅ ${table.name} 恢复完成 (成功: ${successCount}/${cleanData.length})`);
+            } catch (tableError) {
+                console.error(`❌ ${table.name} 表恢复严重失败:`, tableError);
+                console.log(`⚠️ 继续尝试下一个表...`);
             }
-
-            // Sync sequence for ID (only for tables with BigInt/Int autoincrement PK)
-            if (table.name === 'Vocab') {
-                const maxIdResult = await prisma.vocab.findFirst({
-                    orderBy: { id: 'desc' },
-                    select: { id: true }
-                });
-                if (maxIdResult) {
-                    await prisma.$queryRawUnsafe(`SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxIdResult.id})`);
-                }
-            }
-
-            console.log(`✅ ${table.name} 恢复完成`);
         }
 
-        console.log('\n🎉 所有表数据恢复成功！');
+        console.log('\n🎉 恢复流程结束');
 
-    } catch (error) {
-        console.error('❌ 恢复失败:', error);
+    } catch (globalError) {
+        console.error('❌ 全局恢复失败:', globalError);
     } finally {
         await prisma.$disconnect();
     }

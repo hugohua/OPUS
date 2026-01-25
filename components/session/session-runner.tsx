@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
-import { Header } from '@/components/ui/header';
+import { UniversalCard } from '@/components/drill/universal-card';
 
 interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
@@ -29,7 +29,7 @@ interface SessionRunnerProps {
     mode: SessionMode;
 }
 
-const LOAD_THRESHOLD = 5; // 剩余 5 张时触发加载更多
+const LOAD_THRESHOLD = 10; // 剩余 10 张时触发加载更多
 const BATCH_LIMIT = 10;   // 每批加载数量
 
 export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {
@@ -229,7 +229,14 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         if (!answerKey) return;
 
         setSelectedOption(option);
-        const isCorrect = option === answerKey;
+
+        // Robust comparison: Trim + Lowercase
+        const normalize = (s: string) => s.trim().toLowerCase();
+        const isCorrect = normalize(option) === normalize(answerKey);
+
+        // Debug Log
+        console.log(`[Grading] Selected: "${option}" | Key: "${answerKey}" | Match: ${isCorrect}`);
+
         setStatus(isCorrect ? "correct" : "wrong");
     };
 
@@ -279,41 +286,92 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
     if (!currentDrill) return <SessionSkeleton mode={mode} />;
 
-    return (
-        <div className="dark:bg-zinc-950 bg-zinc-50 relative h-screen w-full overflow-hidden font-sans antialiased flex flex-col transition-colors duration-300">
+    if (!currentDrill) return <SessionSkeleton mode={mode} />;
 
-            {/* Background Glow Removed */}
+    // Map mode to color variant
+    const variantMap: Record<string, "violet" | "emerald" | "amber" | "rose" | "blue" | "pink"> = {
+        SYNTAX: "emerald",
+        CHUNKING: "blue",
+        NUANCE: "pink",
+        BLITZ: "violet",
+        AUDIO: "amber",
+        READING: "emerald",
+        VISUAL: "pink"
+    };
 
-            {/* 降级模式提示 */}
-            {dataSource === 'deterministic' && (
-                <div className="relative z-10 flex items-center justify-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-500/20">
-                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                        简化模式 · AI 正在后台生成更丰富的内容
-                    </span>
-                </div>
+    const variant = variantMap[mode] || "violet";
+
+    // Footer Content (Buttons)
+    const FooterContent = (
+        <div className="w-full flex flex-col items-center justify-end">
+            {status === "idle" && (
+                <p className="text-center text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-6">Select the best option</p>
             )}
 
-            {/* Header */}
-            <Header
-                variant="drill"
-                progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
-                stepLabel={`${mode} DRILL ${countDisplay.toString().padStart(2, '0')}`}
-                onBack={() => router.push('/dashboard')}
-                rightAction={
-                    isLoadingMore && (
-                        <div className="w-10 h-10 flex items-center justify-center">
-                            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
-                        </div>
-                    )
-                }
-                className="shrink-0"
-            />
+            <div className="w-full grid grid-cols-2 gap-4 h-48">
+                {status === "idle" ? (
+                    // Options Grid
+                    interactSegment?.task?.options?.map((opt, idx) => {
+                        const indexLabel = String.fromCharCode(65 + idx); // A, B, C...
+                        return (
+                            <button
+                                key={opt}
+                                onClick={() => handleOptionSelect(opt)}
+                                className="group relative h-full w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] shadow-sm hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-3"
+                            >
+                                <span className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-xs font-mono text-zinc-400 flex items-center justify-center group-hover:border-emerald-200 group-hover:text-emerald-600 transition-colors">
+                                    {indexLabel}
+                                </span>
+                                <span className="font-serif text-xl md:text-2xl font-medium text-zinc-800 dark:text-zinc-200">
+                                    {opt}
+                                </span>
+                            </button>
+                        );
+                    })
+                ) : (
+                    // Next Button (Full Width)
+                    <div className="col-span-2 flex items-center justify-center h-full">
+                        <Button
+                            onClick={handleNextDrill}
+                            className={cn(
+                                "w-full h-20 text-xl font-semibold text-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-[2rem]",
+                                variant === 'violet' ? "bg-violet-600 hover:bg-violet-500 shadow-violet-900/20" :
+                                    variant === 'emerald' ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20" :
+                                        variant === 'blue' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/20" :
+                                            "bg-zinc-900 text-white hover:bg-zinc-800"
+                            )}
+                        >
+                            Next Challenge <ArrowLeft className="w-6 h-6 ml-2 rotate-180" />
+                        </Button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
-            {/* 主舞台 */}
-            <main className="relative z-10 flex-1 flex flex-col items-center justify-start pt-12 md:pt-24 px-4 min-h-0 overflow-y-auto pb-4">
+    return (
+        <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full">
+            {/* Fallback/Loading Layer if needed, but UniversalCard handles the main shell */}
+
+            <UniversalCard
+                variant={variant}
+                category={`${mode} DRILL`}
+                progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
+                onExit={() => router.push('/dashboard')}
+                footer={FooterContent}
+            >
+                {/* Body Content */}
                 {textSegment && interactSegment && (
-                    <>
+                    <div className="w-full">
+                        {/* DataSource Indicator */}
+                        {dataSource === 'deterministic' && (
+                            <div className="mb-6 flex justify-center">
+                                <span className="inline-flex items-center rounded-md bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-inset ring-amber-400/20">
+                                    Offline Backup
+                                </span>
+                            </div>
+                        )}
+
                         <EditorialDrill
                             content={textSegment.content_markdown || ""}
                             translation={(textSegment as any).translation_cn}
@@ -322,37 +380,16 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                             status={status}
                             selected={selectedOption}
                         />
-                        {/* 提示 */}
+
+                        {/* Prompt */}
                         {status === "idle" && (
-                            <p className="mt-6 font-mono text-[10px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                                Fill in the missing verb
+                            <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
+                                Select the best option
                             </p>
                         )}
-                    </>
+                    </div>
                 )}
-            </main>
-
-            {/* Footer */}
-            <footer className="relative z-20 w-full px-5 pb-[100px] pt-4 shrink-0 flex items-center gap-4 transition-all duration-300 ease-in-out min-h-[140px] items-end">
-                {status === "idle" ? (
-                    interactSegment?.task?.options?.map((opt) => (
-                        <Button
-                            key={opt}
-                            onClick={() => handleOptionSelect(opt)}
-                            className="flex-1 h-14 text-lg font-serif border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all duration-200 active:scale-[0.98] shadow-sm"
-                        >
-                            {opt}
-                        </Button>
-                    ))
-                ) : (
-                    <Button
-                        onClick={handleNextDrill}
-                        className="w-full h-14 text-lg font-semibold bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20 animate-in fade-in slide-in-from-bottom-4 duration-300"
-                    >
-                        下一题 <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
-                    </Button>
-                )}
-            </footer>
+            </UniversalCard>
         </div>
     );
 }

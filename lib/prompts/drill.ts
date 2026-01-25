@@ -59,8 +59,9 @@ Generate a "Drill Card" JSON for the Target Word, integrating Context Words.
 4. **Interaction (CRITICAL)**:
    - **Choice Rule**: EXACTLY two options (Correct Form vs Word-Family Distractor).
    - **Dimension**: MUST be "V" (Visual Audit).
-   - **Scope Rule**: The distractor MUST be from the same word family as the Target Word.
-  Do NOT reference any other words.
+   - **Scope Rule**: The distractor MUST be from the same word family as the Target Word. Do NOT reference any other words.
+   - **INTEGRITY RULE (CRITICAL)**: 'answer_key' MUST be an EXACT string match to one of the 'options'. INVALID: options=["give", "given"], key="gave".
+   - **Bad Example**: options=["go", "went"], key="gone" (FAIL).
    - **Explanation Logic (Chinese)**: 
      - **Goal**: Explain syntax logic AND refute the distractor.
      - **Format**: Follow the strict template below. DO NOT improvise.

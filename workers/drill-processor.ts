@@ -10,6 +10,7 @@ import { inventory } from '@/lib/inventory';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
+import { safeParse } from '@/lib/ai/utils';
 
 const log = logger.child({ module: 'drill-processor' });
 
@@ -48,19 +49,15 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             // Plan B: Single Emergency Replenishment
             candidates = await fetchSpecificCandidates(userId, [Number(vocabId)]);
         } else {
-            // Legacy V1: Generic Fetch (Deprecate soon, but keep for fallback)
-            // But V2 plan focuses on Schedule-Driven. 
-            // If explicit params missing, maybe we shouldn't run?
-            // Let's keep specific fallback logic if needed, or just return.
-            // For now, let's assume if no explicit IDs, we skip or use V1 legacy if you insist. 
-            // Since we upgraded everything, let's be strict.
-            if (job.name === 'replenish_one' || job.name === 'replenish_batch') {
-                log.warn('Job missing vocabId(s), skipping');
-                return { success: false, reason: 'missing_ids' };
+            // [Fix] V2 Generic Fetch (Schedule-Driven)
+            // If job type is 'generate-*', we should fetch the next due items from DB.
+            if (job.name.startsWith('generate-')) {
+                const limit = job.data.forceLimit || 10;
+                candidates = await fetchDueCandidates(userId, mode, limit);
+            } else {
+                log.warn({ jobName: job.name }, 'Unknown job type or missing IDs');
+                return { success: false, reason: 'legacy_not_supported_v2' };
             }
-            // V1 Fallback (to support legacy jobs if any lingering in queue)
-            // candidates = await fetchCandidates_Legacy(userId, 10, mode);
-            return { success: false, reason: 'legacy_not_supported_v2' };
         }
 
         if (candidates.length === 0) {
@@ -91,25 +88,26 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         // ============================================
         // 3. 解析 & 验证
         // ============================================
-        const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
-        let parsedData;
+        // ============================================
+        // 3. 解析 & 验证
+        // ============================================
+        let resultData;
         try {
-            parsedData = JSON.parse(cleanJson);
+            // [Safe Parse] 使用 lib/ai/utils 提供的安全解析
+            resultData = safeParse(text, BatchDrillOutputSchema, {
+                model: provider,
+                systemPrompt: system,
+                userPrompt: user
+            });
         } catch (e) {
-            log.error({ correlationId, text: text.slice(0, 500) }, 'JSON 解析失败');
-            throw new Error('AI response was not valid JSON');
-        }
-
-        const result = BatchDrillOutputSchema.safeParse(parsedData);
-        if (!result.success) {
-            log.error({ correlationId, errors: result.error }, 'Schema 验证失败');
-            throw new Error('AI response did not match schema');
+            // safeParse 内部已记录 logAIError，这里只需rethrow中断流程
+            throw new Error('AI response parsing failed');
         }
 
         // ============================================
         // 4. 保存到 V2 Inventory (Redis)
         // ============================================
-        const generatedDrills = result.data.drills;
+        const generatedDrills = resultData.drills;
         let successCount = 0;
 
         for (let i = 0; i < generatedDrills.length; i++) {
@@ -184,4 +182,76 @@ async function getContextWords(targetWord: string): Promise<string[]> {
     LIMIT 3;
   `;
     return candidates.map((c) => c.word);
+}
+
+// [New] Fetch vocabularies that are due for review or new
+async function fetchDueCandidates(userId: string, mode: SessionMode, limit: number): Promise<DrillCandidate[]> {
+    // [Fix: Race Condition] Fetch extra buffer to account for filtered items
+    const bufferLimit = limit * 2;
+
+    // 1. Try fetching "Due" reviews first
+    const dueItems = await db.userProgress.findMany({
+        where: {
+            userId,
+            next_review_at: { lte: new Date() },
+            // Filter by mode relevance if needed, for now all vocabs can be any mode
+        },
+        orderBy: { next_review_at: 'asc' },
+        take: bufferLimit, // Fetch more than needed
+        include: { vocab: true }
+    });
+
+    let candidates = dueItems.map(p => mapToCandidate(p.vocab));
+
+    // 2. If not enough, fetch New items (Learning Priority)
+    if (candidates.length < bufferLimit) {
+        const remaining = bufferLimit - candidates.length;
+
+        // Exclude already learned
+        const learnedIds = await db.userProgress.findMany({
+            where: { userId },
+            select: { vocabId: true }
+        }).then(items => items.map(i => i.vocabId));
+
+        const newItems = await db.vocab.findMany({
+            where: {
+                id: { notIn: learnedIds },
+                // [Optional] frequency_score filter?
+            },
+            take: remaining,
+            orderBy: { learningPriority: 'desc' } // Core words first
+        });
+
+        candidates = [...candidates, ...newItems.map(mapToCandidate)];
+    }
+
+    // 3. [Critical Fix] Filter out candidates that already have inventory
+    // This prevents multiple concurrent jobs from generating drills for the same word
+    if (candidates.length > 0) {
+        const vocabIds = candidates.map(c => c.vocabId);
+        const inventoryCounts = await inventory.getInventoryCounts(userId, mode, vocabIds);
+
+        // Filter: Keep only if inventory < 2
+        // If inventory is high (e.g. 5), it means another job just populated it.
+        const filtered = candidates.filter(c => {
+            const count = inventoryCounts[c.vocabId] || 0;
+            if (count >= 2) {
+                // Determine if we should log every skip? Maybe too noisy.
+                return false;
+            }
+            return true;
+        });
+
+        if (filtered.length < candidates.length) {
+            log.info(
+                { userId, mode, filtered: candidates.length - filtered.length },
+                '⚠️ Race Condition Avoided: Skipped candidates with existing inventory'
+            );
+        }
+
+        candidates = filtered;
+    }
+
+    // 4. Return top N
+    return candidates.slice(0, limit);
 }

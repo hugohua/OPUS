@@ -51,8 +51,6 @@ trigger: always_on
 │   └── site.ts
 ├── lib/                   # 工具库
 │   ├── db.ts              # Prisma Client Singleton
-│   ├── inventory.ts       # [V2.0] Redis Drill Inventory
-│   ├── queue/             # [V2.0] BullMQ Wrapper & Aggregator
 │   ├── utils.ts           # Shadcn Utils
 │   ├── safe-json.ts       # [Phase 0] Zod Safe Parsers
 │   ├── prompts/           # [Phase 1] LLM Prompts (drill.ts)
@@ -142,7 +140,7 @@ logs/
 - 测试文件与模块共置 `__tests__/`
 
 ### B. Tier 1: 数据完整性
-- 100% 覆盖 `lib/validations/*.ts`  
+- 100% 覆盖 `lib/**/*.ts`  
 - 单元测试必须覆盖：
   1. Happy Path  
   2. Edge Case  
@@ -219,8 +217,8 @@ logs/
 - **Consumption**: 用户请求 -> 询问 FSRS (Who) -> 从 Redis 取子弹 (Content)。
 
 ### B. Redis 数据结构规范
-必须细化到 **Vocab** 粒度，同时保留 **Mode** 维度以支持不同题型。
-- **Key Schema**: `user:{userId}:mode:{mode}:vocab:{vocabId}:drills` -> `List<DrillJson>`
+必须细化到 **Vocab** 粒度，而非由 Mode 笼统管理。
+- **Key Schema**: `user:{userId}:vocab:{vocabId}:drills` -> `List<DrillJson>`
 - **Operation**: `LPOP` (消费), `RPUSH` (生产)。保证 FIFO。
 - **Replenishment**: 消费后若剩余库存 < 2，触发低优先级后台补充任务。
 
@@ -238,4 +236,3 @@ logs/
   - `[PROVIDER]_BASE_URL`
   - `[PROVIDER]_MODEL_NAME`
   - `[PROVIDER]_HTTPS_PROXY` (如需)
-

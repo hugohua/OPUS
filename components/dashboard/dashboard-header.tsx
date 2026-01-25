@@ -14,23 +14,22 @@ export function DashboardHeader() {
 
     return (
         <header className="relative z-10 flex items-center justify-between px-6 pt-14 pb-4">
-            {/* Brand Identity */}
+            {/* Left: Welcome & Slogan */}
             <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">Opus.</h1>
-                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 tracking-wide mt-1 uppercase min-h-[1.5em]">
-                    {date ? format(date, "EEE, MMM d") : <span className="opacity-0">Loading...</span>}
-                </p>
+                <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    Welcome back, <span className="text-violet-600 dark:text-violet-400">Hugo</span>
+                </h1>
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Let's keep the momentum.</p>
             </div>
 
-            {/* Right Actions */}
-            <div className="flex gap-3">
-                <ThemeToggle className="flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-foreground active:scale-95 transition-transform" />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+                <ThemeToggle className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" />
 
-                {/* Commute Mode Action */}
-                <button className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm active:scale-95 transition-all">
-                    <span className="absolute inset-0 rounded-full border border-violet-500/30 opacity-0 group-hover:opacity-100 animate-pulse transition-opacity" />
-                    <Waves className="w-5 h-5 text-violet-600 dark:text-violet-400 stroke-[1.5px]" />
-                </button>
+                <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-1.5 rounded-full shadow-sm">
+                    <span className="text-orange-500 text-sm">🔥</span>
+                    <span className="text-sm font-bold font-mono text-zinc-900 dark:text-zinc-100">12</span>
+                </div>
             </div>
         </header>
     );

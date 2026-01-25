@@ -41,8 +41,8 @@ export function repairJson(content: string): string {
  */
 export function recoverTruncatedJson(content: string): { recovered: string; itemsDropped: number } | null {
     try {
-        // 查找 "items": [ 的位置
-        const itemsMatch = content.match(/"items"\s*:\s*\[/);
+        // 查找 "items": [ 或 "drills": [ 的位置
+        const itemsMatch = content.match(/"(items|drills)"\s*:\s*\[/);
         if (!itemsMatch || itemsMatch.index === undefined) {
             return null;
         }

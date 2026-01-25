@@ -56,7 +56,7 @@ function TopicCard({ title, icon: Icon, status, preview }: TopicCardProps) {
 
 export function ContextEngine() {
     return (
-        <section className="relative z-10 px-5 mt-9 space-y-4">
+        <section className="relative z-10 mt-9 space-y-4">
             <div className="flex items-center justify-between pl-1">
                 <div className="flex items-center gap-2">
                     <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Context Engine</h2>
