@@ -48,6 +48,7 @@ services:
 volumes:
   # 🔥 关键：告诉 Compose 这个卷是外面已经建好的
   opus_data:
-    external: true
-  # Redis 卷是新的，可以由 Compose 管理
+    # external: true
+    # Redis 卷是新的，可以由 Compose 管理
+
   opus_redis_data:

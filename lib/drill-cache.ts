@@ -86,4 +86,8 @@ export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
     CHUNKING: 5,    // 5 batches = 50 drills
     NUANCE: 3,      // 3 batches = 30 drills
     BLITZ: 3,       // 3 batches = 30 drills
+    PHRASE: 5,
+    AUDIO: 5,
+    READING: 5,
+    VISUAL: 5,
 };

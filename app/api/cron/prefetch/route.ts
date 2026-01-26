@@ -25,6 +25,10 @@ const BATCH_SIZE_MAP: Record<SessionMode, number> = {
     CHUNKING: 30,
     NUANCE: 50,
     BLITZ: 10,
+    PHRASE: 20,
+    AUDIO: 20,
+    READING: 20,
+    VISUAL: 20,
 };
 const CACHE_THRESHOLD = 2;
 const ACTIVE_DAYS = 7;

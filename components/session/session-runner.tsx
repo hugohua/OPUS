@@ -14,6 +14,7 @@ import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { EditorialDrill } from "@/components/briefing/editorial-drill";
 import { SessionSkeleton } from "@/components/session/session-skeleton";
 import { BlitzSession } from "@/components/session/blitz-session";
+import { PhraseCard } from "@/components/briefing/phrase-card";
 import { recordOutcome } from '@/actions/record-outcome';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
@@ -174,9 +175,20 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const textSegment = currentDrill?.segments.find(s => s.type === 'text');
     const interactSegment = currentDrill?.segments.find(s => s.type === 'interaction');
 
-    const handleComplete = async (isCorrect: boolean) => {
+    const handleComplete = async (result: boolean | number) => {
         const vocabId = (currentDrill.meta as any).vocabId || 0;
-        const grade = isCorrect ? 3 : 1;
+
+        let grade = 1;
+        let isCorrect = false;
+
+        if (typeof result === 'number') {
+            grade = result;
+            isCorrect = grade >= 3;
+        } else {
+            isCorrect = result;
+            grade = isCorrect ? 3 : 1;
+        }
+
         const duration = Date.now() - startTime.current;
         const isRetry = (currentDrill.meta as any).isRetry;
 
@@ -184,7 +196,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         recordOutcome({
             userId,
             vocabId,
-            grade,
+            grade: grade as any,
             mode,
             duration,
             isRetry
@@ -300,6 +312,73 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     };
 
     const variant = variantMap[mode] || "violet";
+    const isPhraseMode = mode === 'PHRASE';
+
+    const PhraseFooter = status === 'idle' ? (
+        <div className="w-full flex items-center justify-center pb-12">
+            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] animate-pulse">
+                Tap anywhere to reveal
+            </p>
+            {/* Invisible large click area handled by parent, or just a button here if needed. 
+                Snippet implies "How well did you know this?" appears AFTER reveal.
+                But user needs to REVEAL first.
+                Let's use a transparent overlay or a button. To match the snippet, the footer is empty initially?
+                Actually, let's keep the "Show Answer" button for clarity, or make it minimal.
+            */}
+            <Button
+                onClick={() => setStatus('correct')}
+                variant="ghost"
+                className="absolute inset-0 w-full h-full z-10 opacity-0 cursor-default"
+            >
+                Reveal
+            </Button>
+        </div>
+    ) : (
+        <div className="w-full shrink-0 pb-12">
+            <div className="text-center mb-6">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] animate-pulse">
+                    How well did you know this?
+                </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full max-w-lg mx-auto">
+                {/* 1. Forgot */}
+                <button
+                    onClick={() => handleComplete(1)}
+                    className="group flex flex-col items-center gap-2"
+                >
+                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-rose-500/50 group-hover:bg-rose-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg">
+                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-rose-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2h4" /><path d="M12 14v-4" /><path d="M4 13a8 8 0 0 1 8-7 8 8 0 1 1 0 16v-1a7 7 0 0 0-7-7h-.72" /></svg>
+                    </div>
+                    <span className="text-xs font-bold text-zinc-500 group-hover:text-rose-400 uppercase tracking-wider">Forgot</span>
+                </button>
+
+                {/* 2. Hazy (Blurry) */}
+                <button
+                    onClick={() => handleComplete(2)}
+                    className="group flex flex-col items-center gap-2"
+                >
+                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-amber-500/50 group-hover:bg-amber-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg">
+                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-amber-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 12c0-4.4 3.6-8 8-8 1.2 0 2.4.3 3.4.8" /><path d="M18.4 6.6a9 9 0 0 1 3.6 5.4c0 4.4-3.6 8-8 8-1.2 0-2.4-.3-3.4-.8" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+                    </div>
+                    <span className="text-xs font-bold text-zinc-500 group-hover:text-amber-400 uppercase tracking-wider">Hazy</span>
+                </button>
+
+                {/* 3. Know */}
+                <button
+                    onClick={() => handleComplete(3)}
+                    className="group flex flex-col items-center gap-2"
+                >
+                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-emerald-500/50 group-hover:bg-emerald-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-emerald-900/20">
+                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-emerald-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 6 9 17l-5-5" /></svg>
+                    </div>
+                    <span className="text-xs font-bold text-zinc-500 group-hover:text-emerald-400 uppercase tracking-wider">Know</span>
+                </button>
+            </div>
+        </div>
+    );
+
+    // --- Standard Mode Footer (2x2 Grid) ---
 
     // Footer Content (Buttons)
     const FooterContent = (
@@ -349,47 +428,66 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         </div>
     );
 
+    // Choose Footer based on mode
+    const ActiveFooter = isPhraseMode ? PhraseFooter : FooterContent;
+
     return (
-        <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full">
+        <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
+            {/* Dark Mode Ambient Glow */}
+            <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none z-0" />
+
             {/* Fallback/Loading Layer if needed, but UniversalCard handles the main shell */}
+            <div className="relative z-10 h-full">
 
-            <UniversalCard
-                variant={variant}
-                category={`${mode} DRILL`}
-                progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
-                onExit={() => router.push('/dashboard')}
-                footer={FooterContent}
-            >
-                {/* Body Content */}
-                {textSegment && interactSegment && (
-                    <div className="w-full">
-                        {/* DataSource Indicator */}
-                        {dataSource === 'deterministic' && (
-                            <div className="mb-6 flex justify-center">
-                                <span className="inline-flex items-center rounded-md bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-inset ring-amber-400/20">
-                                    Offline Backup
-                                </span>
-                            </div>
-                        )}
+                <UniversalCard
+                    variant={variant}
+                    category={`${mode} DRILL`}
+                    progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
+                    onExit={() => router.push('/dashboard')}
+                    footer={ActiveFooter}
+                >
+                    {/* Body Content */}
+                    {textSegment && interactSegment && (
+                        <div className="w-full">
+                            {/* DataSource Indicator */}
+                            {dataSource === 'deterministic' && (
+                                <div className="mb-6 flex justify-center">
+                                    <span className="inline-flex items-center rounded-md bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-inset ring-amber-400/20">
+                                        Offline Backup
+                                    </span>
+                                </div>
+                            )}
 
-                        <EditorialDrill
-                            content={textSegment.content_markdown || ""}
-                            translation={(textSegment as any).translation_cn}
-                            explanation={(interactSegment.task as any).explanation_markdown}
-                            answer={interactSegment.task?.answer_key || ""}
-                            status={status}
-                            selected={selectedOption}
-                        />
+                            {isPhraseMode ? (
+                                <PhraseCard
+                                    phraseMarkdown={textSegment.content_markdown || ""}
+                                    translation={(textSegment as any).translation_cn || ""}
+                                    wordDefinition={(interactSegment.task as any).explanation_markdown?.split('\n')[0] || ""} // Extract first line definition
+                                    status={status as any} // Cast status "correct"->"revealed" logic handled in component
+                                    phonetic={(interactSegment.task as any).explanation_markdown?.match(/\[(.*?)\]/)?.[0] || ""}
+                                    partOfSpeech={(interactSegment.task as any).explanation_markdown?.split(']')[1]?.trim() || ""}
+                                />
+                            ) : (
+                                <EditorialDrill
+                                    content={textSegment.content_markdown || ""}
+                                    translation={(textSegment as any).translation_cn}
+                                    explanation={(interactSegment.task as any).explanation_markdown}
+                                    answer={interactSegment.task?.answer_key || ""}
+                                    status={status}
+                                    selected={selectedOption}
+                                />
+                            )}
 
-                        {/* Prompt */}
-                        {status === "idle" && (
-                            <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
-                                Select the best option
-                            </p>
-                        )}
-                    </div>
-                )}
-            </UniversalCard>
+                            {/* Prompt */}
+                            {!isPhraseMode && status === "idle" && (
+                                <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
+                                    Select the best option
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </UniversalCard>
+            </div>
         </div>
     );
 }

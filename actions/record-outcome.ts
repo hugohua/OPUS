@@ -6,6 +6,8 @@ import { createLogger } from '@/lib/logger';
 import { ActionState } from '@/types/action';
 import { RecordOutcomeSchema, RecordOutcomeInput } from '@/lib/validations/briefing';
 import { fsrs, Card, State, Rating } from 'ts-fsrs';
+import { calculateImplicitGrade } from '@/lib/algorithm/grading';
+import { calculateMasteryScore } from '@/lib/algorithm/mastery';
 
 const log = createLogger('actions:record-outcome');
 
@@ -71,29 +73,9 @@ export async function recordOutcome(
 
         let finalGrade = grade;
 
-        // [Implicit Grading Logic]
-        // Only adjust if passed (Grade >= 3) and not manually "Easy" (unless verified)
-        // If Grade is 1 (Fail), we respect it regardless of time.
+        // [Implicit Grading Logic] (Shared Algorithm)
         if (grade >= 3 && input.duration) {
-            if (input.isRetry) {
-                // [Retry Cap]
-                // If this is a retry within the same session, cap at Good (3).
-                // Never allow Easy (4) for immediate corrections to prevent stability overestimation.
-                finalGrade = 3;
-                log.info({ userId, vocabId, duration: input.duration }, 'Retry Cap applied: Forced Grade 3');
-            } else {
-                // [Time-Based Grading]
-                if (input.duration < 1500) {
-                    finalGrade = 4; // Easy (< 1.5s)
-                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Easy (< 1.5s)');
-                } else if (input.duration > 5000) {
-                    finalGrade = 2; // Hard (> 5s)
-                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Hard (> 5s)');
-                } else {
-                    finalGrade = 3; // Good (1.5s - 5s)
-                    log.info({ userId, vocabId, duration: input.duration }, 'Implicit Grading: Good (Normal)');
-                }
-            }
+            finalGrade = calculateImplicitGrade(grade, input.duration, !!input.isRetry, mode) as any;
         }
 
         const rating = finalGrade as Rating; // 1 | 2 | 3 | 4
@@ -106,20 +88,42 @@ export async function recordOutcome(
 
         const newCard = result.card;
 
-        // 5. Update Game Score (V-Dim)
-        let vScoreChange = 0;
-        if (grade >= 3) vScoreChange = 1;
-        else vScoreChange = -1;
+        // 5. Update Dimension Score (Targeted Update)
+        // V: Syntax/Spelling (Default)
+        // C: Phrase/Context (New)
+        // Other dims to be implemented
+        let dimUpdate: any = {};
+        const scoreChange = grade >= 3 ? 5 : -5;
 
-        let currentVScore = progress?.dim_v_score || 0;
-        // Scale 0-100, +5/-5 per action
-        let newVScore = Math.max(0, Math.min(100, currentVScore + (vScoreChange * 5)));
+        // Fetch current scores to calculate new ones locally (for mastery calculation)
+        const currentScores = {
+            dim_v_score: progress?.dim_v_score || 0,
+            dim_c_score: progress?.dim_c_score || 0,
+            dim_a_score: progress?.dim_a_score || 0,
+            dim_m_score: progress?.dim_m_score || 0,
+            dim_x_score: progress?.dim_x_score || 0
+        };
 
-        // 6. DB Upsert
+        if (mode === 'PHRASE') {
+            const newScore = Math.max(0, Math.min(100, currentScores.dim_c_score + scoreChange));
+            dimUpdate.dim_c_score = newScore;
+            currentScores.dim_c_score = newScore;
+        } else {
+            // Default to V (Syntax/Form)
+            const newScore = Math.max(0, Math.min(100, currentScores.dim_v_score + scoreChange));
+            dimUpdate.dim_v_score = newScore;
+            currentScores.dim_v_score = newScore;
+        }
+
+        // 6. Calculate Mastery Score
+        const masteryScore = calculateMasteryScore(currentScores);
+
+        // 7. DB Upsert
         const updated = await prisma.userProgress.upsert({
             where: { userId_vocabId: { userId, vocabId } },
             update: {
-                dim_v_score: newVScore,
+                ...dimUpdate,
+                masteryScore,
                 stability: newCard.stability,
                 difficulty: newCard.difficulty,
                 reps: newCard.reps,
@@ -132,7 +136,8 @@ export async function recordOutcome(
             create: {
                 userId,
                 vocabId,
-                dim_v_score: newVScore,
+                ...dimUpdate, // Set initial dim score
+                masteryScore,
                 stability: newCard.stability,
                 difficulty: newCard.difficulty,
                 reps: newCard.reps,

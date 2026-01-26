@@ -57,7 +57,11 @@ async function triggerBackgroundGeneration(userId: string, mode: SessionMode) {
         'SYNTAX': 20,
         'CHUNKING': 30,
         'NUANCE': 50,
-        'BLITZ': 10
+        'BLITZ': 10,
+        'PHRASE': 20,
+        'AUDIO': 20,
+        'READING': 20,
+        'VISUAL': 20
     };
 
     try {

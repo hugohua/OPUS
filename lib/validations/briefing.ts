@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ']);
+export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO', 'READING', 'VISUAL', 'PHRASE']);
 
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 

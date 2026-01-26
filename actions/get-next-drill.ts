@@ -8,6 +8,7 @@ import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
 import { inventory } from '@/lib/inventory';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
+import { buildPhraseDrill } from '@/lib/templates/phrase-drill';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -60,12 +61,21 @@ export async function getNextDrillBatch(
             let drill: BriefingPayload | null = null;
             let source = 'unknown';
 
-            // 2.1 Try Pop from Inventory
-            try {
-                drill = await inventory.popDrill(userId, mode, candidate.vocabId);
-                if (drill) source = 'cache_v2';
-            } catch (e) {
-                log.error({ error: e, candidate }, 'Redis pop failed');
+            // 2.1 Fast Path for STATIC content (e.g. PHRASE)
+            if (mode === 'PHRASE') {
+                const phraseDrill = buildPhraseDrill(candidate as any); // Cast to Vocab (subset)
+                if (phraseDrill) {
+                    drill = phraseDrill;
+                    source = 'fast_path_db';
+                }
+            } else {
+                // 2.2 Standard Path: Try Pop from Inventory
+                try {
+                    drill = await inventory.popDrill(userId, mode, candidate.vocabId);
+                    if (drill) source = 'cache_v2';
+                } catch (e) {
+                    log.error({ error: e, candidate }, 'Redis pop failed');
+                }
             }
 
             // 2.2 Handle Miss (Plan A + Plan B/C)

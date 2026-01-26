@@ -57,7 +57,11 @@ export async function enqueueDrillGeneration(
         SYNTAX: 20,     // 20/10 = 2 batches
         CHUNKING: 30,   // 30/10 = 3 batches
         NUANCE: 50,     // 50/10 = 5 batches
-        BLITZ: 10       // 10/10 = 1 batch
+        BLITZ: 10,      // 10/10 = 1 batch
+        PHRASE: 20,
+        AUDIO: 20,
+        READING: 20,
+        VISUAL: 20
     };
 
     const targetCount = MODE_TARGET_COUNT[mode] || 20;
