@@ -68,9 +68,10 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         // ============================================
         // 2. 准备 Prompt 输入 & 调用 LLM
         // ============================================
+
         const promptInputs = await Promise.all(
             candidates.map(async (c) => {
-                const contextWords = await getContextWords(c.word);
+                const contextWords = await getContextWords(userId, c.vocabId, c.word);
                 return {
                     targetWord: c.word,
                     meaning: c.definition_cn || '暂无释义',
@@ -85,9 +86,6 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
         log.info({ correlationId, provider }, 'LLM 生成完成');
 
-        // ============================================
-        // 3. 解析 & 验证
-        // ============================================
         // ============================================
         // 3. 解析 & 验证
         // ============================================
@@ -172,16 +170,84 @@ function mapToCandidate(v: any): DrillCandidate {
     };
 }
 
-async function getContextWords(targetWord: string): Promise<string[]> {
-    const candidates = await db.$queryRaw<Array<{ word: string }>>`
-    SELECT word 
-    FROM "Vocab"
-    WHERE word != ${targetWord}
-      AND CHAR_LENGTH(word) > 3
-    ORDER BY RANDOM()
-    LIMIT 3;
-  `;
-    return candidates.map((c) => c.word);
+/**
+ * 获取上下文单词 (The "N" in "1+N")
+ * 策略 (Hybrid):
+ * 1. 尝试从 UserProgress (Learning/Review) 中找语义相关的 (Vector Search)
+ * 2. 如果不足 3 个，从 Global Vocab 中找语义相关的 (Vector Search)
+ * 3. 兜底：随机选择
+ */
+async function getContextWords(userId: string, targetVocabId: number, targetWord: string): Promise<string[]> {
+    const desiredCount = 3;
+    let candidates: string[] = [];
+
+    try {
+        // 0. Check if target has embedding
+        // Note: Prisma QueryRaw is needed for vector ops
+        const hasEmbedding = await db.$queryRaw<{ exists: boolean }[]>`
+            SELECT EXISTS (
+                SELECT 1 FROM "Vocab" 
+                WHERE id = ${targetVocabId} AND embedding IS NOT NULL
+            );
+        `;
+
+        if (hasEmbedding[0]?.exists) {
+            // Strategy 1: Vector Search in User Review Queue
+            // reinforcing known words in new contexts
+            const reviewMatches = await db.$queryRaw<{ word: string }[]>`
+                SELECT v.word
+                FROM "UserProgress" up
+                JOIN "Vocab" v ON up."vocabId" = v.id
+                WHERE up."userId" = ${userId}
+                  AND up.status IN ('LEARNING', 'REVIEW')
+                  AND v.id != ${targetVocabId}
+                  AND v.embedding IS NOT NULL
+                ORDER BY v.embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocabId})
+                LIMIT ${desiredCount};
+            `;
+
+            candidates.push(...reviewMatches.map(c => c.word));
+
+            // Strategy 2: Vector Search in Global Vocab (if needed)
+            if (candidates.length < desiredCount) {
+                const limit = desiredCount - candidates.length;
+                const globalMatches = await db.$queryRaw<{ word: string }[]>`
+                    SELECT word
+                    FROM "Vocab"
+                    WHERE id != ${targetVocabId}
+                      AND embedding IS NOT NULL
+                      AND word NOT IN (${candidates.length > 0 ? candidates : ''})
+                    ORDER BY embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocabId})
+                    LIMIT ${limit};
+                `;
+                candidates.push(...globalMatches.map(c => c.word));
+            }
+
+            // Log success if vector search worked
+            if (candidates.length > 0) {
+                // log.debug({ targetWord, candidates, count: candidates.length }, 'Context words found via Vector');
+            }
+        }
+    } catch (e) {
+        log.warn({ error: String(e), targetWord }, 'Vector search failed, falling back to random');
+    }
+
+    // Strategy 3: Random Fallback (if vector search failed or returned 0)
+    if (candidates.length < desiredCount) {
+        const remaining = desiredCount - candidates.length;
+        const randoms = await db.$queryRaw<Array<{ word: string }>>`
+            SELECT word 
+            FROM "Vocab"
+            WHERE word != ${targetWord}
+              AND CHAR_LENGTH(word) > 3
+              ${candidates.length > 0 ? `AND word NOT IN (${candidates.join(',')})` : ''} 
+            ORDER BY RANDOM()
+            LIMIT ${remaining};
+        `;
+        candidates.push(...randoms.map((c) => c.word));
+    }
+
+    return candidates.slice(0, desiredCount);
 }
 
 // [New] Fetch vocabularies that are due for review or new
