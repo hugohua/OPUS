@@ -99,3 +99,47 @@ export function getAIModel(scenario: AIScenario = 'default') {
         modelName
     };
 }
+
+/**
+ * 获取 Embedding 模型实例
+ */
+export function getEmbeddingModel(scenario: AIScenario = 'default') {
+    let apiKey = process.env.OPENAI_API_KEY;
+    let baseURL = process.env.OPENAI_BASE_URL;
+    // 阿里云 DashScope text-embedding-v4 (1536维) 是目前的默认选择
+    let modelName = process.env.EMBEDDING_MODEL_NAME || 'text-embedding-v4';
+    let proxyUrl: string | undefined = undefined;
+
+    // ETL 场景专用配置 (如果未来有独立的 Embedding ETL Key)
+    if (scenario === 'etl') {
+        const etlKey = process.env.ETL_API_KEY;
+        const etlBase = process.env.ETL_BASE_URL;
+        // 允许 ETL 覆盖 Embedding 模型
+        const etlModel = process.env.ETL_EMBEDDING_MODEL_NAME;
+        const etlProxy = process.env.ETL_HTTPS_PROXY;
+
+        if (etlKey) apiKey = etlKey;
+        if (etlBase) baseURL = etlBase;
+        if (etlModel) modelName = etlModel;
+
+        if (etlProxy !== undefined) {
+            proxyUrl = etlProxy;
+        }
+    }
+
+    const proxyFetch = createProxyFetch(proxyUrl);
+
+    // 针对 DashScope/OpenAI 兼容接口
+    const openai = createOpenAI({
+        apiKey,
+        baseURL,
+        ...(proxyFetch && { fetch: proxyFetch }),
+    });
+
+    return {
+        // ai-sdk 的 embedding 接口
+        // 显式指定 1536 维，适配 text-embedding-v4 的多维特性
+        model: openai.embedding(modelName, { dimensions: 1536 } as any),
+        modelName
+    };
+}

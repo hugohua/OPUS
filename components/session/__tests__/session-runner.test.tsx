@@ -94,12 +94,6 @@ describe('SessionRunner Infinite Scroll', () => {
         // Screen should show first card
         expect(screen.getByTestId('universal-card')).toBeTruthy();
 
-        // Advance index 1 -> 2 (Remaining 11 -> 10)
-        // SessionRunner UI: Footer has buttons.
-        // We need to click "Next" or "Know" depending on mode.
-        // Mode is SYNTAX (Standard). Footer has Options A/B.
-        // Clicking Option triggers `handleOptionSelect` -> sets status -> shows Next button.
-
         // Helper to advance one slide
         const advanceSlide = async () => {
             // Click Option A (Correct)
@@ -144,19 +138,10 @@ describe('SessionRunner Infinite Scroll', () => {
         const optB = screen.getByText('Option B');
         fireEvent.click(optB);
 
-        // Advance to next (Next Button should appear even if wrong, showing feedback)
-        // Wait, SessionRunner logic: `setStatus(isCorrect ? "correct" : "wrong")`.
-        // If wrong, Next button appears?
-        // `FooterContent` shows Next Button if `status !== idle`. Yes.
-
         const nextBtn = await screen.findByText(/Next Challenge/i);
         fireEvent.click(nextBtn);
 
         // Verification:
-        // Since we cannot inspect state directly, we verify behavior or side-effects?
-        // We can verify if "Next Challenge" appeared implies complete.
-        // We can check if `recordOutcome` was called with grade 1.
-
         expect(recordOutcome).toHaveBeenCalledWith(expect.objectContaining({
             userId: 'u2',
             grade: 1,
@@ -173,6 +158,42 @@ describe('SessionRunner Infinite Scroll', () => {
             const card = screen.getByTestId('universal-card');
             const progress = parseFloat(card.getAttribute('data-progress') || '0');
             expect(progress).toBeCloseTo(33.33, 1);
+        });
+    });
+
+    it('should update progress bar correctly during progression and expansion', async () => {
+        // Setup: 10 drills
+        const initialDrills = createDrills(10);
+
+        // Mock getNextDrillBatch to return 10 more items when called
+        (getNextDrillBatch as any).mockResolvedValue({
+            status: 'success',
+            data: createDrills(10, 200) // 10 new items
+        });
+
+        render(<SessionRunner userId="u3" mode="SYNTAX" initialPayload={initialDrills} />);
+
+        const card = screen.getByTestId('universal-card');
+
+        // 1. Initial State
+        // Infinite Scroll triggers immediately on mount (10 <= 10).
+        // Queue expands to 20.
+        // Progress 1(0+1)/20 = 5%. (Assuming effect ran).
+
+        // 2. Advance one slide (Correct Answer) -> Index 1
+        const optA = screen.getAllByText('Option A')[0];
+        fireEvent.click(optA);
+        const nextBtn = await screen.findByText(/Next Challenge/i);
+        fireEvent.click(nextBtn);
+
+        // Wait for index update
+        await waitFor(() => {
+            const progress = parseFloat(card.getAttribute('data-progress') || '0');
+            // Infinite Scroll triggers immediately on mount (10 <= 10).
+            // Queue expands to 20.
+            // Index 1 (2nd item).
+            // Progress = 2 / 20 = 10%.
+            expect(progress).toBeCloseTo(10, 1);
         });
     });
 });

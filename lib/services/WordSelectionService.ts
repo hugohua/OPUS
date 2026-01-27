@@ -1,4 +1,4 @@
-import 'server-only';
+// import 'server-only';
 import { prisma } from '@/lib/db';
 import { PrismaClient, Vocab, UserProgress } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
@@ -72,44 +72,112 @@ export class WordSelectionService {
     }
 
     /**
-     * 选择复习词 (Context)
+     * 选择复习词 (Context) - Hybrid Mode (Vector First -> Tag Fallback)
      * 
      * 规则：
-     * 1. 与 Target 共享至少一个 scenario
-     * 2. 用户正在学习中 (status = LEARNING/REVIEW)
-     * 3. 排除 Target 自身
-     * 4. 按 dueDate 升序排序 (优先复习到期的)
+     * 1. 优先使用 Vector Search (Cosine Distance) 寻找语义相关的复习词
+     * 2. 如果向量数据不足或匹配太少，自动回退到 Tag 匹配
+     * 3. 始终限制在用户正在学习 (LEARNING/REVIEW) 的词范围内
+     * 4. 排除 Target 自身
      */
     async selectContextWords(
         targetVocab: Vocab,
         count: number = 5
     ): Promise<Vocab[]> {
-        const targetScenarios = targetVocab.scenarios;
-
         log.info({
             targetWord: targetVocab.word,
-            targetScenarios,
             requestedCount: count,
-        }, 'Selecting context words');
+        }, 'Selecting context words (Hybrid)');
 
-        if (targetScenarios.length === 0) {
-            log.warn({ targetWord: targetVocab.word }, 'Target has no scenarios, cannot select context');
+        let contextWords: Vocab[] = [];
+
+        // 1. 尝试 Vector Search
+        // 前提: Target 必须有向量数据 (目前通过 raw query 检查或由上层保证，这里简单以此判断)
+        //由于 Prisma 类型定义可能没包含 embedding (Unsupported), 我们尝试直接查
+        try {
+            contextWords = await this.selectContextWordsByVector(targetVocab, count);
+
+            if (contextWords.length > 0) {
+                log.info({
+                    strategy: 'VECTOR',
+                    count: contextWords.length,
+                    words: contextWords.map(w => w.word)
+                }, 'Context selected via Vector');
+            }
+        } catch (error) {
+            log.warn({ error: String(error) }, 'Vector search failed, falling back to Tag');
+        }
+
+        // 2. 如果 Vector 结果不足，使用 Tag 补齐 (Fallback)
+        if (contextWords.length < count) {
+            const remainingCount = count - contextWords.length;
+            log.info({ remainingCount }, 'Filling remaining slots with Tag strategy');
+
+            const existingIds = contextWords.map(w => w.id);
+            const tagWords = await this.selectContextWordsByTag(targetVocab, remainingCount, existingIds);
+
+            contextWords.push(...tagWords);
+        }
+
+        return contextWords;
+    }
+
+    /**
+     * 策略 A: 向量检索 (Cosine Distance)
+     */
+    private async selectContextWordsByVector(
+        targetVocab: Vocab,
+        count: number
+    ): Promise<Vocab[]> {
+        // 1. 检查 Target 是否有向量 (需要一次查询确认，或者直接在 queryRaw 中处理)
+        // 为了简单，我们直接执行 Query，如果 Target 无向量，Distance 计算会失败或为空
+
+        // 2. 执行向量搜索
+        // 查找范围: UserProgress (LEARNING/REVIEW) JOIN Vocab
+        // 排序: Cosine Distance (embedding <=> target_embedding)
+        const vectorResults = await prisma.$queryRaw<Vocab[]>`
+            SELECT v.*
+            FROM "UserProgress" up
+            JOIN "Vocab" v ON up."vocabId" = v.id
+            WHERE up."userId" = ${this.userId}
+              AND up.status IN ('LEARNING', 'REVIEW')
+              AND v.id != ${targetVocab.id}
+              AND v.embedding IS NOT NULL
+              AND (SELECT embedding FROM "Vocab" WHERE id = ${targetVocab.id}) IS NOT NULL
+            ORDER BY v.embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocab.id})
+            LIMIT ${count};
+        `;
+
+        if (!vectorResults || vectorResults.length === 0) {
             return [];
         }
 
-        // 获取用户正在学习的词汇进度
+        return vectorResults;
+    }
+
+    /**
+     * 策略 B: 标签匹配 (Legacy Tag Matching)
+     */
+    private async selectContextWordsByTag(
+        targetVocab: Vocab,
+        count: number,
+        excludeIds: number[] = []
+    ): Promise<Vocab[]> {
+        const targetScenarios = targetVocab.scenarios;
+        if (targetScenarios.length === 0) return [];
+
         const learningProgress = await prisma.userProgress.findMany({
             where: {
                 userId: this.userId,
                 status: { in: ['LEARNING', 'REVIEW'] },
-                vocabId: { not: targetVocab.id },
+                vocabId: { notIn: [targetVocab.id, ...excludeIds] },
             },
             include: { vocab: true },
+            // Tag 模式下优先复习 Due 的，增加随机性
             orderBy: { dueDate: 'asc' },
         });
 
-        // 筛选共享 scenario 的词汇
-        const contextWords = learningProgress
+        const matched = learningProgress
             .filter(p => {
                 const vocabScenarios = p.vocab.scenarios;
                 return vocabScenarios.some(s => targetScenarios.includes(s));
@@ -117,48 +185,7 @@ export class WordSelectionService {
             .slice(0, count)
             .map(p => p.vocab);
 
-        log.info({
-            contextWords: contextWords.map(w => w.word),
-            foundCount: contextWords.length,
-        }, 'Context words selected');
-
-        // 如果复习词不足，尝试降级策略：选择同 CEFR 等级的词汇
-        if (contextWords.length < 1) {
-            log.info('Fallback: selecting words by CEFR level');
-            const fallbackWords = await this.selectFallbackContextWords(
-                targetVocab,
-                count - contextWords.length
-            );
-            contextWords.push(...fallbackWords);
-        }
-
-        return contextWords;
-    }
-
-    /**
-     * 降级策略：选择同 CEFR 等级的词汇
-     */
-    private async selectFallbackContextWords(
-        targetVocab: Vocab,
-        count: number
-    ): Promise<Vocab[]> {
-        const fallbackWords = await prisma.vocab.findMany({
-            where: {
-                id: { not: targetVocab.id },
-                cefrLevel: targetVocab.cefrLevel,
-                learningPriority: { gte: 60 },
-                scenarios: { isEmpty: false },
-            },
-            take: count,
-            orderBy: { abceed_level: 'asc' },
-        });
-
-        log.info({
-            fallbackWords: fallbackWords.map(w => w.word),
-            cefrLevel: targetVocab.cefrLevel,
-        }, 'Fallback context words selected');
-
-        return fallbackWords;
+        return matched;
     }
 
     /**
