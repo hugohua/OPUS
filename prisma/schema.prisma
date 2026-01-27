@@ -104,6 +104,8 @@ model UserProgress {
   dim_m_score    Int       @default(0)  // M: Decision
   dim_x_score    Int       @default(0)  // X: Logic
   dim_a_score    Int       @default(0)  // A: Audio
+  
+  masteryScore   Int       @default(0)  // 综合分
 
   // [V1.2 New] SRS 调度系统
   next_review_at DateTime?              // 下次复习时间

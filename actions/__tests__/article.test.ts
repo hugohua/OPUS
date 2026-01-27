@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateDailyArticleAction } from '../article';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
 
 // Mock Dependencies
-vi.mock('@/lib/prisma', async () => {
+vi.mock('@/lib/db', async () => {
     const { mockDeep } = await import('vitest-mock-extended');
     return {
-        prisma: mockDeep()
+        prisma: mockDeep(),
+        db: mockDeep()
     };
 });
 

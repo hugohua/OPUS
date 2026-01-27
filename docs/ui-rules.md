@@ -226,3 +226,36 @@ Before outputting code, verify:
 3. [ ] **Backlog:** Is the "Warning" state implemented using `amber` border and badge?
 4. [ ] **Thumb Zone:** Is the Magic Paste button `h-16` and floating?
 5. [ ] **Typography:** Is `font-serif` used for the Article Preview text?
+
+---
+
+## 9. Drill Page Architecture (Unified Framework)
+
+All training sessions (Drill, Blitz, Phrase, etc.) MUST use the unified **Universal Card** framework to ensure consistency.
+
+### A. The Shell: `UniversalCard`
+* **File:** `components/drill/universal-card.tsx`
+* **Purpose:** Provides the standard UI frame (Header, Progress Bar, Exit Button, Footer Container).
+* **Usage:** WRAP your specific drill content inside this component.
+
+```tsx
+<UniversalCard
+    variant="violet" // 'violet' | 'emerald' | 'amber' | ...
+    category="SYNTAX DRILL"
+    progress={50} // 0-100
+    onExit={() => router.push('/dashboard')}
+    footer={<YourInteractionButtons />}
+>
+    <YourStimulusContent />
+</UniversalCard>
+```
+
+### B. The Controller: `SessionRunner`
+* **File:** `components/session/session-runner.tsx` (for standard modes) or `blitz-session.tsx` (for Blitz)
+* **Purpose:** Manages state (queue, scoring, FSRS logic) and feeds data into `UniversalCard`.
+* **Rule:** NEVER implement a new page structure from scratch. Always perform the "Stimulus + Interaction" dichotomy within the Universal Card.
+
+### C. Layout Slots
+1. **Header (Auto):** Managed by UniversalCard. Includes Progress Bar & Close Button.
+2. **Main (Slot):** The "Stimulus" (Question/Sentence). Vertically centered.
+3. **Footer (Slot):** The "Interaction" (Options/Buttons). Pinned to bottom `safe-area`.

@@ -252,4 +252,30 @@ describe('Drill Processor', () => {
             'user-race-test', 'SYNTAX', 302, expect.anything()
         );
     });
+
+    it('should handle total LLM failure gracefully (Job Failure)', async () => {
+        // Mock DB to return some candidates
+        (db.vocab.findMany as any).mockResolvedValue([{
+            id: 999,
+            word: 'failure',
+            definition_cn: '失败',
+            word_family: {}
+        }]);
+
+        // Mock LLM Failure
+        (generateWithFailover as any).mockRejectedValue(new Error('All providers failed'));
+
+        const job = {
+            name: 'generate-SYNTAX',
+            data: {
+                userId: 'user-fail',
+                mode: 'SYNTAX',
+                correlationId: 'test-fail',
+                vocabIds: [999]
+            }
+        } as any;
+
+        // Execute: Should throw to let BullMQ handle retry
+        await expect(processDrillJob(job)).rejects.toThrow('All providers failed');
+    });
 });

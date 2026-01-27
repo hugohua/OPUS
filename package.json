@@ -69,6 +69,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.0.9",
     "@types/node-fetch": "^2.6.13",

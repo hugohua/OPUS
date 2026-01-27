@@ -21,6 +21,7 @@ interface DrillCandidate {
     priority_level: number;
     frequency_score: number;
     commonExample: string | null;
+    collocations?: any;
 }
 
 // --- Main Action ---
@@ -226,6 +227,7 @@ function mapToCandidate(v: any, priority: number): DrillCandidate {
         word_family: v.word_family,
         priority_level: priority,
         frequency_score: v.frequency_score,
-        commonExample: v.commonExample
+        commonExample: v.commonExample,
+        collocations: v.collocations
     };
 }
