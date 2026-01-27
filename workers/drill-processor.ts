@@ -3,6 +3,7 @@
  */
 import { Job } from 'bullmq';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { DrillJobData } from '@/lib/queue/inventory-queue';
 import { generateWithFailover } from './llm-failover';
 import { getDrillBatchPrompt } from '@/lib/prompts/drill';
@@ -68,7 +69,6 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         // ============================================
         // 2. 准备 Prompt 输入 & 调用 LLM
         // ============================================
-
         const promptInputs = await Promise.all(
             candidates.map(async (c) => {
                 const contextWords = await getContextWords(userId, c.vocabId, c.word);
@@ -183,7 +183,6 @@ async function getContextWords(userId: string, targetVocabId: number, targetWord
 
     try {
         // 0. Check if target has embedding
-        // Note: Prisma QueryRaw is needed for vector ops
         const hasEmbedding = await db.$queryRaw<{ exists: boolean }[]>`
             SELECT EXISTS (
                 SELECT 1 FROM "Vocab" 
@@ -191,7 +190,8 @@ async function getContextWords(userId: string, targetVocabId: number, targetWord
             );
         `;
 
-        if (hasEmbedding[0]?.exists) {
+        // Note: db.$queryRaw returns an array of objects.
+        if (hasEmbedding?.[0]?.exists) {
             // Strategy 1: Vector Search in User Review Queue
             // reinforcing known words in new contexts
             const reviewMatches = await db.$queryRaw<{ word: string }[]>`
@@ -206,26 +206,31 @@ async function getContextWords(userId: string, targetVocabId: number, targetWord
                 LIMIT ${desiredCount};
             `;
 
-            candidates.push(...reviewMatches.map(c => c.word));
+            if (Array.isArray(reviewMatches)) {
+                candidates.push(...reviewMatches.map(c => c.word));
+            }
 
             // Strategy 2: Vector Search in Global Vocab (if needed)
             if (candidates.length < desiredCount) {
                 const limit = desiredCount - candidates.length;
+
+                const exclusion = candidates.length > 0
+                    ? Prisma.sql`AND word NOT IN (${Prisma.join(candidates)})`
+                    : Prisma.empty;
+
                 const globalMatches = await db.$queryRaw<{ word: string }[]>`
                     SELECT word
                     FROM "Vocab"
                     WHERE id != ${targetVocabId}
                       AND embedding IS NOT NULL
-                      AND word NOT IN (${candidates.length > 0 ? candidates : ''})
+                      ${exclusion}
                     ORDER BY embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocabId})
                     LIMIT ${limit};
                 `;
-                candidates.push(...globalMatches.map(c => c.word));
-            }
 
-            // Log success if vector search worked
-            if (candidates.length > 0) {
-                // log.debug({ targetWord, candidates, count: candidates.length }, 'Context words found via Vector');
+                if (Array.isArray(globalMatches)) {
+                    candidates.push(...globalMatches.map(c => c.word));
+                }
             }
         }
     } catch (e) {
@@ -235,16 +240,24 @@ async function getContextWords(userId: string, targetVocabId: number, targetWord
     // Strategy 3: Random Fallback (if vector search failed or returned 0)
     if (candidates.length < desiredCount) {
         const remaining = desiredCount - candidates.length;
+
+        const exclusion = candidates.length > 0
+            ? Prisma.sql`AND word NOT IN (${Prisma.join(candidates)})`
+            : Prisma.empty;
+
         const randoms = await db.$queryRaw<Array<{ word: string }>>`
             SELECT word 
             FROM "Vocab"
             WHERE word != ${targetWord}
               AND CHAR_LENGTH(word) > 3
-              ${candidates.length > 0 ? `AND word NOT IN (${candidates.join(',')})` : ''} 
+              ${exclusion} 
             ORDER BY RANDOM()
             LIMIT ${remaining};
         `;
-        candidates.push(...randoms.map((c) => c.word));
+
+        if (Array.isArray(randoms)) {
+            candidates.push(...randoms.map((c) => c.word));
+        }
     }
 
     return candidates.slice(0, desiredCount);
