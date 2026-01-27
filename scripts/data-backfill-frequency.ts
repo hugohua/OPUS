@@ -13,7 +13,7 @@
  *   npx tsx scripts/data-backfill-frequency.ts
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from "@/lib/logger";
 
 // Load env

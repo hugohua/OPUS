@@ -1,6 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
-import { Vocab, UserProgress } from '@/generated/prisma/client';
+import { PrismaClient, Vocab, UserProgress } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('word-selection');

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateImplicitGrade } from '../grading';
 import { calculateMasteryScore } from '../mastery';
 import { buildPhraseDrill } from '@/lib/templates/phrase-drill';
-import { Vocab } from '@/generated/prisma/client';
+import { Vocab } from '@prisma/client';
 
 // Mock Vocab Data
 const mockVocab: Vocab = {

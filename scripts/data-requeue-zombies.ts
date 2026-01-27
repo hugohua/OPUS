@@ -10,7 +10,7 @@
 
 try { process.loadEnvFile(); } catch (e) { }
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -55,7 +55,7 @@ async function main() {
 }
 
 // Helper for DbNull check
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '@prisma/client';
 
 main()
     .catch(e => console.error(e))

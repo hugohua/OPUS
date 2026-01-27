@@ -2,7 +2,7 @@
 
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@/generated/prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 import { BlitzItem } from '@/lib/validations/blitz';
 

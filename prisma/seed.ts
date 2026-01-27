@@ -1,6 +1,6 @@
 try { process.loadEnvFile(); } catch { }
 
-import { PrismaClient } from '../generated/prisma/client'
+import { PrismaClient } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()

@@ -8,7 +8,7 @@
  * 4. 检查是否有 "僵尸" 数据
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { State } from 'ts-fsrs';
 
 // Load environment variables

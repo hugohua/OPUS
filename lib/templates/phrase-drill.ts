@@ -1,5 +1,5 @@
 import { BriefingPayload } from '@/types/briefing';
-import { Vocab } from '@/generated/prisma/client';
+import { Vocab } from '@prisma/client';
 
 /**
  * 构建 Phrase Mode (Flashcard) 的 Drill Payload

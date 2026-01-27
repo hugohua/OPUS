@@ -1,4 +1,4 @@
-import { UserProgress } from '@/generated/prisma/client';
+import { UserProgress } from '@prisma/client';
 
 /**
  * 综合分 (Mastery Score) 计算引擎

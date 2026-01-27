@@ -9,7 +9,7 @@
  *   npx tsx scripts/db-count.ts
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 // Load env
 try {

@@ -29,7 +29,7 @@
 
 try { process.loadEnvFile(); } catch (e) { }
 
-import { Prisma, PrismaClient } from '../generated/prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import fs from 'fs/promises';

@@ -9,7 +9,7 @@ import { ActionState } from '@/types';
 import { GenerateArticleInputSchema } from '@/lib/validations/article';
 import { GeneratedArticle } from '@/types/article';
 import { createLogger } from '@/lib/logger';
-import { VocabRole } from '@/generated/prisma/client';
+import { Article, ArticleVocab, Vocab, VocabRole } from '@prisma/client';
 
 const log = createLogger('action:article');
 

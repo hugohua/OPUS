@@ -10,7 +10,7 @@
  *   npx tsx scripts/test-engine.ts
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { HybridSelector } from '../lib/engine/hybrid-selector';
 import { logger } from "@/lib/logger";
 

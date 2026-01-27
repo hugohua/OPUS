@@ -10,7 +10,7 @@
  */
 try { process.loadEnvFile(); } catch (e) { }
 
-import { Prisma, PrismaClient } from '../generated/prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 
 // --- Zod Schemas for Validation (Inline for stability) ---

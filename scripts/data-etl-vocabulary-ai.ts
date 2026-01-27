@@ -32,7 +32,7 @@
  *   - AI_MODEL_NAME: 模型名称 (默认 qwen-plus)
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { VocabularyAIService } from '../lib/ai/VocabularyAIService';
 import { calculatePriority } from '../lib/ai/utils';
 import { createLogger } from '../lib/logger';

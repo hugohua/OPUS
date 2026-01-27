@@ -13,7 +13,7 @@
  *   2. 可在 main() 函数中修改 words 数组以验证不同单词
  */
 
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

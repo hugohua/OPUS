@@ -22,7 +22,7 @@
 try { process.loadEnvFile(); } catch (e) { }
 
 import fs from 'fs/promises';
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { generateText } from 'ai';
 import { getAIModel } from '../lib/ai/client';
 import { z } from 'zod';

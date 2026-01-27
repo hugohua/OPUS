@@ -20,7 +20,7 @@
  *   HTTPS_PROXY (可选)
  */
 
-import { PrismaClient, Vocab } from '../generated/prisma/client';
+import { PrismaClient, Vocab } from '@prisma/client';
 import { createOpenAI } from '@ai-sdk/openai';
 import { embedMany } from 'ai';
 import { createLogger } from '../lib/logger';
