@@ -23,7 +23,7 @@ async function main() {
     // 2. Create Initial Admin User (Hugo)
     const userEmail = '13964332@qq.com'
     const userName = 'Hugo'
-    const rawPassword = '13964332'
+    const rawPassword = '123456'
     const hashedPassword = await bcrypt.hash(rawPassword, 10)
 
     const adminUser = await prisma.user.upsert({
@@ -35,7 +35,7 @@ async function main() {
         create: {
             email: userEmail,
             name: userName,
-            password: hashedPassword, // 13964332
+            password: hashedPassword, // 123456
             invitedByCode: genesisCode.code,
             settings: {},
         },

@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
+import { TTSButton } from "@/components/tts/tts-button";
+
 interface EditorialDrillProps {
     content: string; // "<s>Subject</s> <v>Gap</v> <o>Object</o>"
     answer: string;
@@ -30,12 +32,39 @@ export function EditorialDrill({ content, answer, status, selected, translation,
         }).filter(p => p.text.trim() !== ""); // Filter empty splits
     }, [content]);
 
+    // TTS Text: Strip tags and replace Gap with Answer (if revealed) or "blank"
+    // Actually, asking TTS to read "blank" might be weird. 
+    // Let's read the full sentence with the CORRECT answer for learning reinforcement, 
+    // or just the raw sentence structure.
+    // For learning, hearing the correct sentence is best.
+    const cleanText = useMemo(() => {
+        // Simple strip tags first
+        let text = content.replace(/<\/?([svo])>/g, "");
+        // If there is a "gap" logic (handled by parent logic usually), we assume content has the structure.
+        // Wait, content usually has the *Question*. But for TTS we want the full sentence.
+        // If content has "___", we should replace it with answer if revealed.
+        // But EditorialDrill content usually has the full text wrapped in tags, e.g. "<s>I</s> <v>am</v> <o>here</o>".
+        // The <v> part IS the answer/gap content usually?
+        // Let's check PRD or logic.
+        // <v>Gap</v> -> In the UI logic below (line 61), it renders a Gap line.
+        // So `seg.text` inside <v> IS the answer text?
+        // Line 82: `status === "correct" ? answer : selected`
+        // Wait, if content passes the text to be hidden in <v>...</v>, then seg.text IS the hidden text.
+        // So `content.replace(...)` gives the full correct sentence.
+        return text;
+    }, [content]);
+
     // Render only the card content
     return (
         <div className="w-full max-w-md flex flex-col min-h-[200px]">
 
             {/* RICH TEXT FLOW AREA */}
             <div className="flex flex-col items-start justify-center text-left flex-1">
+
+                {/* TTS Control - Top Right */}
+                <div className="w-full flex justify-end mb-2">
+                    <TTSButton text={cleanText} />
+                </div>
 
                 <div className="font-serif text-xl md:text-2xl leading-[2.5rem] text-zinc-800 dark:text-zinc-300 w-full break-words">
                     {segments.map((seg, i) => {

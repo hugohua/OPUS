@@ -25,10 +25,10 @@ const drillWorker = new Worker<DrillJobData>(
     },
     {
         connection: redis,
-        concurrency: 1, // 单并发，避免 LLM 速率限制
+        concurrency: 3, // 提升并发度，加快缓存补充速度
         limiter: {
-            max: 2,
-            duration: 60000, // 每分钟最多 2 个任务
+            max: 10, // 提升速率限制：每分钟最多 10 个任务
+            duration: 60000,
         },
     }
 );

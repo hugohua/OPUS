@@ -12,6 +12,7 @@
 
 import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
+import { redis } from '@/lib/queue/connection';
 
 const log = createLogger('lib:omps-core');
 
@@ -56,19 +57,39 @@ const DEFAULT_CONFIG: OMPSConfig = {
  * @param limit 需要的总数量
  * @param config 可选配置 (覆盖默认比例)
  * @param excludeIds 排除的词汇 ID 列表
+ * @param mode 可选的 Session 模式，用于库存优先策略
  */
 export async function fetchOMPSCandidates(
     userId: string,
     limit: number,
     config?: Partial<OMPSConfig>,
-    excludeIds: number[] = []
+    excludeIds: number[] = [],
+    mode?: string
 ): Promise<OMPSCandidate[]> {
     const cfg = { ...DEFAULT_CONFIG, ...config };
 
-    // --- Phase 1: 宏观调度 (70/30) ---
-    const reviewQuota = Math.floor(limit * cfg.reviewRatio);
+    // --- Phase 0: 库存优先策略 (Inventory-First) ---
+    let hotCandidates: OMPSCandidate[] = [];
+    if (mode) {
+        hotCandidates = await getInventoryBackedWords(userId, mode, limit, excludeIds);
+        if (hotCandidates.length >= limit) {
+            log.info({
+                userId,
+                mode,
+                hotCount: hotCandidates.length,
+                limit
+            }, '✅ 全部从库存获取');
+            return shuffle(hotCandidates);
+        }
+    }
 
-    const excludeFilter = excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {};
+    // --- Phase 1: 宏观调度 (70/30) ---
+    const remaining = limit - hotCandidates.length;
+    const reviewQuota = Math.floor(remaining * cfg.reviewRatio);
+
+    const hotVocabIds = hotCandidates.map(c => c.vocabId);
+    const allExcludeIds = [...excludeIds, ...hotVocabIds];
+    const excludeFilter = allExcludeIds.length > 0 ? { id: { notIn: allExcludeIds } } : {};
 
     // 1. 获取到期复习词 (Debt)
     const reviews = await prisma.userProgress.findMany({
@@ -86,27 +107,30 @@ export async function fetchOMPSCandidates(
     const reviewsMapped = reviews.map(r => mapToCandidate(r.vocab, 2, 'REVIEW', r));
 
     // 计算剩余名额
-    const slotsFilled = reviewsMapped.length;
+    const slotsFilled = hotCandidates.length + reviewsMapped.length;
     const slotsRemaining = limit - slotsFilled;
 
     // --- Phase 2: 微观采样 (分层新词) ---
     let newWordsMapped: OMPSCandidate[] = [];
 
     if (slotsRemaining > 0) {
+        const reviewVocabIds = reviewsMapped.map(r => r.vocabId);
         newWordsMapped = await getStratifiedNewWords(
             userId,
             slotsRemaining,
-            excludeIds,
+            [...allExcludeIds, ...reviewVocabIds],
             cfg.posFilter
         );
     }
 
     // --- Phase 3: 整合 + 洗牌 ---
-    const finalBatch = [...reviewsMapped, ...newWordsMapped];
+    const finalBatch = [...hotCandidates, ...reviewsMapped, ...newWordsMapped];
 
     log.info({
         userId,
+        mode,
         limit,
+        hotCount: hotCandidates.length,
         reviewCount: reviewsMapped.length,
         newCount: newWordsMapped.length
     }, 'OMPS candidates fetched');
@@ -214,6 +238,103 @@ export async function fetchNewBucket(
     });
 
     return words.map(w => mapToCandidate(w, 3, 'NEW'));
+}
+
+// ============================================
+// 库存优先：getInventoryBackedWords
+// ============================================
+
+/**
+ * 获取 Redis 中已有库存的单词
+ * 优先级：复习词 > 新词
+ */
+async function getInventoryBackedWords(
+    userId: string,
+    mode: string,
+    limit: number,
+    excludeIds: number[]
+): Promise<OMPSCandidate[]> {
+    try {
+        // 1. 扫描 Redis，找到所有有库存的 vocabId
+        const pattern = `user:${userId}:mode:${mode}:vocab:*:drills`;
+        const keys = await redis.keys(pattern);
+
+        if (keys.length === 0) return [];
+
+        // 2. 提取 vocabId
+        const vocabIds = keys
+            .map(key => {
+                const match = key.match(/vocab:(\d+):drills$/);
+                return match ? parseInt(match[1]) : null;
+            })
+            .filter((id): id is number => id !== null && !excludeIds.includes(id));
+
+        if (vocabIds.length === 0) return [];
+
+        // 3. 批量检查库存数量（只保留 > 0 的）
+        const pipeline = redis.pipeline();
+        vocabIds.forEach(id => {
+            pipeline.llen(`user:${userId}:mode:${mode}:vocab:${id}:drills`);
+        });
+        const results = await pipeline.exec();
+
+        // 4. 过滤出有库存的
+        const availableIds = vocabIds.filter((id, idx) => {
+            const len = results?.[idx]?.[1] as number;
+            return len > 0;
+        });
+
+        if (availableIds.length === 0) return [];
+
+        // 5. 从数据库获取完整信息（包括 FSRS 状态）
+        const vocabs = await prisma.vocab.findMany({
+            where: { id: { in: availableIds } },
+            include: {
+                progress: {
+                    where: { userId },
+                    take: 1
+                }
+            }
+        });
+
+        // 6. 分类：复习词（REVIEW）vs 新词（NEW）
+        const candidates: OMPSCandidate[] = [];
+
+        for (const v of vocabs) {
+            const prog = v.progress[0];
+
+            // [Fix] 重复出现问题
+            // 如果是复习词，必须检查 next_review_at 是否已到期
+            // 因为 Redis 可能还有库存，但单词其实刚才已经在 Session 中复习过了（next_review_at 更新到了未来）
+            if (prog && ['LEARNING', 'REVIEW'].includes(prog.status)) {
+                // 如果未到期，跳过（即使有库存）
+                if (prog.next_review_at && prog.next_review_at > new Date()) {
+                    continue;
+                }
+                candidates.push(mapToCandidate(v, 2, 'REVIEW', prog));
+            } else {
+                candidates.push(mapToCandidate(v, 3, 'NEW'));
+            }
+        }
+
+        // 7. 优先返回复习词，然后是新词
+        candidates.sort((a, b) => {
+            if (a.type === 'REVIEW' && b.type === 'NEW') return -1;
+            if (a.type === 'NEW' && b.type === 'REVIEW') return 1;
+            // 复习词按到期时间排序
+            if (a.type === 'REVIEW' && b.type === 'REVIEW') {
+                const aTime = (a.reviewData as any)?.next_review_at?.getTime() || 0;
+                const bTime = (b.reviewData as any)?.next_review_at?.getTime() || 0;
+                return aTime - bTime;
+            }
+            return 0;
+        });
+
+        return candidates.slice(0, limit);
+    } catch (error) {
+        log.error({ error, userId, mode }, 'Failed to fetch inventory-backed words');
+        return [];
+    }
 }
 
 // ============================================

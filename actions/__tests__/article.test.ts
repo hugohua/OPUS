@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateDailyArticleAction } from '../article';
 import { prisma } from '@/lib/db';
-import { mockDeep, mockReset } from 'vitest-mock-extended';
+import { mockDeep, mockReset, DeepMockProxy } from 'vitest-mock-extended';
+import { PrismaClient } from '@prisma/client';
 
 // Mock Dependencies
 vi.mock('@/lib/db', async () => {
@@ -38,7 +39,7 @@ vi.mock('next/cache', () => ({
     revalidatePath: vi.fn()
 }));
 
-const mockPrisma = prisma as unknown as ReturnType<typeof mockDeep>;
+const mockPrisma = prisma as unknown as DeepMockProxy<PrismaClient>;
 
 describe('generateDailyArticleAction', () => {
     beforeEach(() => {
@@ -74,7 +75,7 @@ describe('generateDailyArticleAction', () => {
         mockGenerateArticle.mockResolvedValue(mockArticle);
 
         // Prisma Transaction Mock
-        mockPrisma.$transaction.mockImplementation(async (callback) => {
+        mockPrisma.$transaction.mockImplementation(async (callback: any) => {
             return callback(mockPrisma);
         });
 

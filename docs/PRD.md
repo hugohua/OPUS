@@ -81,7 +81,7 @@
 | 维度 | 定义 (TOEIC Adapted) | 题型代号 | 技术实现 |
 | --- | --- | --- | --- |
 | **1. 境 (Context)** | Part 5 语法/词义辨析 | `PART5_CLOZE` | LLM 生成挖空句，Python 生成词性干扰项。 |
-| **2. 音 (Audio)** | Part 2 听音选义 | `AUDIO_RESPONSE` | Python Service (TTS) 生成音频流，前端无文本展示。 |
+| **2. 音 (Audio)** | Part 2 听音选义 | `AUDIO_RESPONSE` | **Python FastAPI TTS Service** (阿里云 DashScope `qwen3-tts-flash`)，MD5 Hash 缓存，Docker 部署，音频文件共享至 `public/audio/`。 |
 | **3. 形 (Visual)** | 形似词/易混词找茬 | `VISUAL_TRAP` | Python (`Levenshtein`) 计算编辑距离，生成干扰项 (e.g. Adapt vs Adopt)。 |
 | **4. 义 (Meaning)** | 快速语义映射 | `S_V_O` | Redis 快速存取，中英互译基础题。 |
 | **5. 理 (Logic)** | 同义/近义替换 | `PARAPHRASE_ID` | pgvector 向量搜索相似词。 |

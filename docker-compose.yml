@@ -45,10 +45,25 @@ services:
       - opus-db
       - opus-redis
 
+  opus-tts:
+    build: ./python_tts_service
+    container_name: opus-tts
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+    volumes:
+      - ./public/audio:/app/audio # 共享音频目录到 Next.js public 目录
+    depends_on:
+      - opus-db
+      - opus-redis
+
 volumes:
   # 🔥 关键：告诉 Compose 这个卷是外面已经建好的
   opus_data:
-    # external: true
+    external: true
     # Redis 卷是新的，可以由 Compose 管理
 
   opus_redis_data:

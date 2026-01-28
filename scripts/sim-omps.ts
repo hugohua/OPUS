@@ -1,5 +1,5 @@
 
-import { prism } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { parseArgs } from 'util';
 

@@ -34,6 +34,19 @@ vi.mock('@/lib/db', () => {
 
 import { db as prisma } from '@/lib/db';
 
+// 模拟 ioredis
+vi.mock('@/lib/queue/connection', () => {
+    const mockRedis = {
+        keys: vi.fn(),
+        pipeline: vi.fn(),
+    };
+    return {
+        redis: mockRedis
+    };
+});
+
+import { redis } from '@/lib/queue/connection';
+
 // ============================================
 // 测试数据工厂
 // ============================================
@@ -381,6 +394,101 @@ describe('Suite D: Integration', () => {
         const allIds = [...batch1Ids, ...batch2.map(c => c.vocabId)];
         const uniqueIds = new Set(allIds);
         expect(uniqueIds.size).toBe(allIds.length);
+    });
+
+});
+
+// ============================================
+// Suite E: Inventory First Strategy (库存优先 + 去重)
+// ============================================
+
+describe('Suite E: Inventory First Strategy', () => {
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // 默认 Redis 没数据
+        (redis.keys as any).mockResolvedValue([]);
+    });
+
+    it('E1: 库存有词但未到期 -> 应过滤并返回空 (或走后续逻辑)', async () => {
+        const vocabId = 101;
+        const MODE = 'SYNTAX';
+
+        // 1. Mock Redis 返回有库存
+        (redis.keys as any).mockResolvedValue([`user:${MOCK_USER_ID}:mode:${MODE}:vocab:${vocabId}:drills`]);
+        const mockPipeline = {
+            llen: vi.fn(),
+            exec: vi.fn().mockResolvedValue([[null, 5]]) // 库存充足
+        };
+        (redis.pipeline as any).mockReturnValue(mockPipeline);
+
+        // 2. Mock DB 返回该词是 REVIEW 状态且未到期
+        // 关键修复：确保 findMany 返回的是包含 progress 数组的 vocab 对象
+        const nextDay = new Date(Date.now() + 86400000);
+        const vocab1 = createVocab(vocabId);
+        const prog1 = createProgress(vocabId, nextDay, 'REVIEW');
+        (vocab1 as any).progress = [prog1];
+
+        (prisma.vocab.findMany as any).mockResolvedValue([vocab1]);
+
+        // 3. 同时让普通查询返回空，确保如果我们过滤了库存，结果就是空（方便验证）
+        (prisma.userProgress.findMany as any).mockResolvedValue([]);
+
+        // 执行
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
+
+        // 验证：应该被过滤掉，因为未到期
+        const target = result.find(c => c.vocabId === vocabId);
+        expect(target).toBeUndefined();
+    });
+
+    it('E2: 库存有词且已到期 -> 应该选中', async () => {
+        const vocabId = 102;
+        const MODE = 'SYNTAX';
+
+        (redis.keys as any).mockResolvedValue([`user:${MOCK_USER_ID}:mode:${MODE}:vocab:${vocabId}:drills`]);
+        const mockPipeline = {
+            llen: vi.fn(),
+            exec: vi.fn().mockResolvedValue([[null, 5]])
+        };
+        (redis.pipeline as any).mockReturnValue(mockPipeline);
+
+        // 已到期
+        const past = new Date(Date.now() - 3600);
+        const vocab2 = createVocab(vocabId);
+        const prog2 = createProgress(vocabId, past, 'REVIEW');
+        (vocab2 as any).progress = [prog2];
+
+        (prisma.vocab.findMany as any).mockResolvedValue([vocab2]);
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
+
+        const target = result.find(c => c.vocabId === vocabId);
+        expect(target).toBeDefined();
+        expect(target?.type).toBe('REVIEW');
+    });
+
+    it('E3: 库存里的新词 -> 应该选中', async () => {
+        const vocabId = 201;
+        const MODE = 'SYNTAX';
+
+        (redis.keys as any).mockResolvedValue([`user:${MOCK_USER_ID}:mode:${MODE}:vocab:${vocabId}:drills`]);
+        const mockPipeline = {
+            llen: vi.fn(),
+            exec: vi.fn().mockResolvedValue([[null, 5]])
+        };
+        (redis.pipeline as any).mockReturnValue(mockPipeline);
+
+        // 新词 (无 progress)
+        const vocab = createVocab(vocabId);
+        (vocab as any).progress = []; // 无进度
+        (prisma.vocab.findMany as any).mockResolvedValue([vocab]);
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
+
+        const target = result.find(c => c.vocabId === vocabId);
+        expect(target).toBeDefined();
+        expect(target?.type).toBe('NEW');
     });
 
 });

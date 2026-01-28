@@ -36,15 +36,24 @@ This skill acts as an index for the project's documentation. When you are asked 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
 - **Redis Inventory**: `docs/dev-notes/redis-inventory-schema.md` (Zero-Wait caching layer)
+- **缓存与选词架构**: `docs/dev-notes/cache-hit-rate-optimization.md` (**必读**：生产端/消费端协作、OMPS 统一选词、库存优先策略)
 - **Phrase Mode**: `docs/dev-notes/technical-spec-phrase-mode.md` (Phrase Blitz specific specs)
 
 ### 4. Infrastructure & Testing
 - **Testing**: `docs/dev-notes/TESTING.md` (Vitest setup, mocking rules)
 - **Auth**: `docs/dev-notes/auth-system-and-infrastructure.md` (NextAuth/Clerk logic)
 
+### 5. Text-to-Speech (TTS)
+- **Architecture**: `docs/dev-notes/tts-architecture.md` (Service boundaries, Edge-TTS, caching strategy)
+- **Setup**: `docs/dev-notes/tts-quickstart.md` (How to run the Python service & Docker)
+- **Frontend Hook**: `hooks/use-tts.ts` (React interface for playback)
+
 ## 🚦 Decision Routing
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
 - **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
+- **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.
+- **If 发现缓存命中率低 / 大量兜底数据** -> 阅读 `cache-hit-rate-optimization.md` 排查选词逻辑是否一致.
+- **If modifying Audio/Playback** -> Read `tts-architecture.md` (Architecture) AND `use-tts.ts` (Implementation).
 - **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
 - **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.

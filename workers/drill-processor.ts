@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { DrillJobData } from '@/lib/queue/inventory-queue';
+import { Vocab } from '@prisma/client';
 import { generateWithFailover } from './llm-failover';
 import { getDrillBatchPrompt } from '@/lib/prompts/drill';
 import { inventory } from '@/lib/inventory';
@@ -148,7 +149,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 interface DrillCandidate {
     vocabId: number;
     word: string;
-    definition_cn: string;
+    definition_cn: string | null;
     word_family: any;
 }
 
@@ -162,7 +163,7 @@ async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Prom
     return vocabs.map(mapToCandidate);
 }
 
-function mapToCandidate(v: any): DrillCandidate {
+function mapToCandidate(v: Vocab): DrillCandidate {
     return {
         vocabId: v.id,
         word: v.word,
@@ -195,74 +196,57 @@ async function getContextWords(userId: string, targetVocabId: number, targetWord
     }
 }
 
-// [New] Fetch vocabularies that are due for review or new
+/**
+ * 获取需要预生成的候选词
+ * [重构] 现在直接使用 OMPS 选词逻辑，确保生产和消费使用相同的策略
+ */
 async function fetchDueCandidates(userId: string, mode: SessionMode, limit: number): Promise<DrillCandidate[]> {
-    // [Fix: Race Condition] Fetch extra buffer to account for filtered items
-    const bufferLimit = limit * 2;
+    // 导入 OMPS 选词引擎
+    const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
 
-    // 1. Try fetching "Due" reviews first
-    const dueItems = await db.userProgress.findMany({
-        where: {
-            userId,
-            next_review_at: { lte: new Date() },
-            // Filter by mode relevance if needed, for now all vocabs can be any mode
-        },
-        orderBy: { next_review_at: 'asc' },
-        take: bufferLimit, // Fetch more than needed
-        include: { vocab: true }
+    // 配置词性过滤（与 get-next-drill.ts 保持一致）
+    let posFilter: string[] | undefined;
+    if (mode === 'SYNTAX') {
+        posFilter = ['v', 'n', 'v.', 'n.', 'vi', 'vt', 'vi.', 'vt.', 'noun', 'verb', '名詞', '動詞'];
+    }
+
+    // 1. 使用 OMPS 获取候选词（与消费侧逻辑完全一致）
+    const bufferLimit = limit * 2; // 获取2倍数量，用于过滤
+    const ompsCandidates = await fetchOMPSCandidates(
+        userId,
+        bufferLimit,
+        { posFilter },
+        [] // excludeIds
+    );
+
+    if (ompsCandidates.length === 0) {
+        return [];
+    }
+
+    // 2. 过滤出库存不足的单词（避免重复生成）
+    const vocabIds = ompsCandidates.map(c => c.vocabId);
+    const inventoryCounts = await inventory.getInventoryCounts(userId, mode, vocabIds);
+
+    const needsGeneration = ompsCandidates.filter(c => {
+        const count = inventoryCounts[c.vocabId] || 0;
+        return count < 2; // 库存 < 2 才需要生成
     });
 
-    let candidates = dueItems.map(p => mapToCandidate(p.vocab));
-
-    // 2. If not enough, fetch New items (Learning Priority)
-    if (candidates.length < bufferLimit) {
-        const remaining = bufferLimit - candidates.length;
-
-        // Exclude already learned
-        const learnedIds = await db.userProgress.findMany({
-            where: { userId },
-            select: { vocabId: true }
-        }).then(items => items.map(i => i.vocabId));
-
-        const newItems = await db.vocab.findMany({
-            where: {
-                id: { notIn: learnedIds },
-                // [Optional] frequency_score filter?
-            },
-            take: remaining,
-            orderBy: { learningPriority: 'desc' } // Core words first
-        });
-
-        candidates = [...candidates, ...newItems.map(mapToCandidate)];
+    if (needsGeneration.length < ompsCandidates.length) {
+        log.info(
+            { userId, mode, skipped: ompsCandidates.length - needsGeneration.length },
+            '✅ 跳过已有库存的单词'
+        );
     }
 
-    // 3. [Critical Fix] Filter out candidates that already have inventory
-    // This prevents multiple concurrent jobs from generating drills for the same word
-    if (candidates.length > 0) {
-        const vocabIds = candidates.map(c => c.vocabId);
-        const inventoryCounts = await inventory.getInventoryCounts(userId, mode, vocabIds);
+    // 3. 转换为 DrillCandidate 格式
+    const candidates = needsGeneration.map(omps => ({
+        vocabId: omps.vocabId,
+        word: omps.word,
+        definition_cn: omps.definition_cn,
+        word_family: omps.word_family,
+    }));
 
-        // Filter: Keep only if inventory < 2
-        // If inventory is high (e.g. 5), it means another job just populated it.
-        const filtered = candidates.filter(c => {
-            const count = inventoryCounts[c.vocabId] || 0;
-            if (count >= 2) {
-                // Determine if we should log every skip? Maybe too noisy.
-                return false;
-            }
-            return true;
-        });
-
-        if (filtered.length < candidates.length) {
-            log.info(
-                { userId, mode, filtered: candidates.length - filtered.length },
-                '⚠️ Race Condition Avoided: Skipped candidates with existing inventory'
-            );
-        }
-
-        candidates = filtered;
-    }
-
-    // 4. Return top N
+    // 4. 返回指定数量
     return candidates.slice(0, limit);
 }

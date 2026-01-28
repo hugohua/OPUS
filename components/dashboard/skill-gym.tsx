@@ -1,50 +1,60 @@
 "use client";
 
 import {
-    Puzzle, // Grammar 
-    Eye,    // Visual
-    Ear,    // Listening
-    Zap     // Speed
+    Puzzle,     // Syntax
+    Link2,      // Chunking
+    Target,     // Nuance
+    Zap,        // Blitz
+    BookOpen    // Phrase
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const SKILLS = [
     {
-        id: "grammar",
-        name: "Grammar",
-        desc: "Part 5 Focus",
+        id: "syntax",
+        name: "Syntax",
+        desc: "Grammar & Structure",
         icon: Puzzle,
-        color: "text-blue-400",
-        bg: "bg-blue-500/10",
-        href: "/dashboard/session/syntax?mode=grammar"
-    },
-    {
-        id: "visual",
-        name: "Visual Traps",
-        desc: "Discrimination",
-        icon: Eye,
-        color: "text-pink-400",
-        bg: "bg-pink-500/10",
-        href: "/dashboard/session/visual"
-    },
-    {
-        id: "listening",
-        name: "Listening",
-        desc: "Part 2 Reflex",
-        icon: Ear,
-        color: "text-amber-400",
-        bg: "bg-amber-500/10",
-        href: "/dashboard/session/audio"
-    },
-    {
-        id: "speed",
-        name: "Speed Read",
-        desc: "WPM Training",
-        icon: Zap,
         color: "text-emerald-400",
         bg: "bg-emerald-500/10",
-        href: "/dashboard/session/reading"
+        href: "/dashboard/session/SYNTAX"
+    },
+    {
+        id: "chunking",
+        name: "Chunking",
+        desc: "Sense Groups",
+        icon: Link2,
+        color: "text-blue-400",
+        bg: "bg-blue-500/10",
+        href: "/dashboard/session/CHUNKING"
+    },
+    {
+        id: "nuance",
+        name: "Nuance",
+        desc: "Tones & Precision",
+        icon: Target,
+        color: "text-violet-400",
+        bg: "bg-violet-500/10",
+        href: "/dashboard/session/NUANCE"
+    },
+    {
+        id: "blitz",
+        name: "Blitz",
+        desc: "Rapid Fire",
+        icon: Zap,
+        color: "text-amber-400",
+        bg: "bg-amber-500/10",
+        href: "/dashboard/session/BLITZ"
+    },
+    {
+        id: "phrase",
+        name: "Phrase",
+        desc: "Collocations",
+        icon: BookOpen,
+        color: "text-pink-400",
+        bg: "bg-pink-500/10",
+        href: "/dashboard/session/PHRASE"
     }
 ];
 
@@ -65,7 +75,7 @@ export function SkillGym() {
                                 skill.bg,
                                 skill.color
                             )}>
-                                <skill.icon className="w-4 h-4" strokeWidth={2} />
+                                <skill.icon className="w-4 h-4" strokeWidth={1.5} />
                             </div>
                             <div className="font-medium text-sm text-zinc-900 dark:text-zinc-200">{skill.name}</div>
                             <div className="text-[10px] text-zinc-500 mt-0.5">{skill.desc}</div>

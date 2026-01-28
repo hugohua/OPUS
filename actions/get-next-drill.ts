@@ -44,7 +44,8 @@ export async function getNextDrillBatch(
             userId,
             limit,
             { posFilter },
-            excludeVocabIds
+            excludeVocabIds,
+            mode  // 传入 mode 启用库存优先策略
         );
 
         if (candidates.length === 0) {
@@ -110,11 +111,27 @@ export async function getNextDrillBatch(
             });
         }
 
+        // 统计缓存命中率
+        const cacheHitCount = drills.filter(d => (d.meta as any).source === 'cache_v2').length;
+        const fastPathCount = drills.filter(d => (d.meta as any).source === 'fast_path_db').length;
+        const fallbackCount = drills.filter(d => (d.meta as any).source === 'deterministic_fallback').length;
+        const hitRate = drills.length > 0 ? ((cacheHitCount / drills.length) * 100).toFixed(1) : '0';
+
+        log.info({
+            userId,
+            mode,
+            total: drills.length,
+            cacheHit: cacheHitCount,
+            fastPath: fastPathCount,
+            fallback: fallbackCount,
+            hitRate: `${hitRate}%`
+        }, '📊 Drill batch stats');
+
         return {
             status: 'success',
-            message: `Batch retrieved (Sources: ${drills.map(d => (d.meta as any).source).join(', ')})`,
+            message: `Batch retrieved (Cache Hit: ${hitRate}%)`,
             data: drills,
-            meta: { count: drills.length }
+            meta: { count: drills.length, hitRate }
         };
 
     } catch (error: any) {
