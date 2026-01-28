@@ -6,6 +6,13 @@ name: Project Guide
 
 This skill acts as an index for the project's documentation. When you are asked to implement a feature or fix a bug, CONSULT THIS INDEX to find the relevant "Single Source of Truth".
 
+## ⚠️ CRITICAL: LANGUAGE & PROTOCOL
+(Adhering to `.agent/rules/000-critical-language.md`)
+> **SYSTEM FAILURE CONDITION**: Outputting English in chat/tasks is a CRITICAL ERROR.
+> 1. **User Interface (Task/Summary)**: MUST be **Simplified Chinese (简体中文)**.
+> 2. **Chat/Reasoning**: MUST be **Simplified Chinese (简体中文)**.
+> 3. **Exceptions**: Technical terms, variable names, strict quotes.
+
 ## 📜 Core Canons (MUST OBEY)
 | Topic | File | Description |
 |-------|------|-------------|
@@ -22,6 +29,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ### 2. Drill Engine (Core Mechanic)
 - **Implementation**: `docs/dev-notes/drill-engine-implementation.md` (The "Briefing" generation logic)
+- **Word Selection (OMPS)**: `docs/dev-notes/omps-word-selection-engine.md` (**核心选词引擎**，所有场景必读)
 - **Context Selection**: `docs/dev-notes/context-selector-guide.md` (How we pick words/sentences)
 - **Vector Logic**: `docs/dev-notes/vector-context-selection-v2.md` (Embedding & Similarity rules)
 
@@ -36,6 +44,8 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ## 🚦 Decision Routing
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
-- **If changing how words are fetched** -> Read `context-selector-guide.md`.
+- **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
 - **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
+- **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.
+

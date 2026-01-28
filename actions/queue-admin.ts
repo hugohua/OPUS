@@ -117,20 +117,26 @@ export async function handleClearQueue(): Promise<ActionState> {
 
 /**
  * 手动触发生成
+ * [Fix] 使用 Redis 库存检查替代 Postgres
  */
 export async function handleTriggerGeneration(
     userId: string,
     mode: SessionMode
 ): Promise<ActionState> {
     try {
-        // 0. Pre-check: 检查库存是否充足
-        const count = await getCacheCount(userId, mode);
-        const limit = CACHE_LIMIT_MAP[mode] || 20;
+        // 0. Pre-check: 检查 Redis 库存是否充足
+        const { inventory } = await import('@/lib/inventory');
+        const stats = await inventory.getInventoryStats(userId);
+        const currentCount = (stats as Record<string, number>)[mode] || 0;
 
-        if (count >= limit) {
+        // CACHE_LIMIT_MAP 是批次数 (如 5)，每批 10 题，所以阈值 = limit * 10
+        const batchLimit = CACHE_LIMIT_MAP[mode] || 5;
+        const drillThreshold = batchLimit * 10;
+
+        if (currentCount >= drillThreshold) {
             return {
-                status: 'success', // 也可以用 'error' 如果想标红，但这里是"无需操作"的成功
-                message: `库存充足 (${count * 10}题), 无需生成`
+                status: 'success',
+                message: `库存充足 (${currentCount}题 >= ${drillThreshold}题阈值), 无需生成`
             };
         }
 
@@ -138,7 +144,7 @@ export async function handleTriggerGeneration(
         revalidatePath('/dashboard/admin/queue');
         return {
             status: 'success',
-            message: `${jobs.length} 个任务已入队`,
+            message: `${jobs.length} 个任务已入队 (当前库存: ${currentCount}题)`,
             data: { jobIds: jobs.map(j => j.id) }
         };
     } catch (error) {

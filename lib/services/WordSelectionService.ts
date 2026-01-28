@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { PrismaClient, Vocab, UserProgress } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
 import { ContextSelector } from '@/lib/ai/context-selector';
+import { fetchOMPSCandidates } from '@/lib/services/omps-core';
 
 const log = createLogger('word-selection');
 
@@ -12,9 +13,9 @@ const TEST_USER_ID = 'test-user-1';
 /**
  * 选词服务
  * 
- * 实现 "1+N" 选词逻辑：
- * - 1 个 Target (新词)
- * - N 个 Context (复习词，与 Target 共享 scenario)
+ * 实现 \"1+N\" 选词逻辑：
+ * - 1 个 Target (通过 OMPS 策略选择)
+ * - N 个 Context (复习词，与 Target 语义相关)
  */
 export class WordSelectionService {
     private userId: string;
@@ -24,49 +25,36 @@ export class WordSelectionService {
     }
 
     /**
-     * 选择目标新词 (Target)
+     * 选择目标词 (Target)
      * 
-     * 规则：
-     * 1. learningPriority >= 60 (Core/Support 词汇)
-     * 2. 用户未学习过 (无 UserProgress 或 status = NEW)
-     * 3. 必须有 scenarios 标签
-     * 4. 按优先级降序 + abceed_level 升序排序
+     * 规则：使用 OMPS 策略选择 1 个候选词
+     * - 70% 概率选择到期复习词
+     * - 30% 概率选择分层采样新词 (20% 简单 / 60% 核心 / 20% 困难)
      */
     async selectTargetWord(): Promise<Vocab | null> {
-        log.info({ userId: this.userId }, 'Selecting target word');
+        log.info({ userId: this.userId }, 'Selecting target word via OMPS');
 
-        // 获取用户已学习的词汇 ID
-        const learnedVocabIds = await prisma.userProgress.findMany({
-            where: {
-                userId: this.userId,
-                status: { not: 'NEW' },
-            },
-            select: { vocabId: true },
-        });
+        // 使用 OMPS 获取 1 个候选词
+        const candidates = await fetchOMPSCandidates(this.userId, 1);
 
-        const excludeIds = learnedVocabIds.map(p => p.vocabId);
+        if (candidates.length === 0) {
+            log.warn({ userId: this.userId }, 'No suitable target word found via OMPS');
+            return null;
+        }
 
-        // 查询符合条件的新词
-        const targetWord = await prisma.vocab.findFirst({
-            where: {
-                learningPriority: { gte: 60 },
-                id: { notIn: excludeIds.length > 0 ? excludeIds : undefined },
-                scenarios: { isEmpty: false },
-            },
-            orderBy: [
-                { learningPriority: 'desc' },
-                { abceed_level: 'asc' },
-            ],
+        const candidate = candidates[0];
+
+        // 获取完整的 Vocab 记录
+        const targetWord = await prisma.vocab.findUnique({
+            where: { id: candidate.vocabId }
         });
 
         if (targetWord) {
             log.info({
                 targetWord: targetWord.word,
-                priority: targetWord.learningPriority,
-                scenarios: targetWord.scenarios,
-            }, 'Target word selected');
-        } else {
-            log.warn({ userId: this.userId }, 'No suitable target word found');
+                type: candidate.type,
+                vocabId: candidate.vocabId,
+            }, 'Target word selected via OMPS');
         }
 
         return targetWord;

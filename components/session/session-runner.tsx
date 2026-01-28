@@ -51,6 +51,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [dataSource, setDataSource] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true); // Prevent infinite loop if no more items
 
     // Track loaded VocabIDs to exclude them in next fetch
     const loadedVocabIds = useRef<Set<number>>(new Set());
@@ -143,7 +144,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         if (isInitialLoading) return; // 初始加载完成后才启用
 
         const remaining = queue.length - index;
-        if (remaining <= LOAD_THRESHOLD && !isLoadingMore) {
+        if (remaining <= LOAD_THRESHOLD && !isLoadingMore && hasMore) {
             loadMore();
         }
     }, [index, queue.length, isLoadingMore, isInitialLoading]);
@@ -164,6 +165,8 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                 initVocabSet(newItems);
                 setQueue(prev => [...prev, ...newItems]);
                 toast.success('新弹药已就位！', { duration: 1000 });
+            } else {
+                setHasMore(false); // No more items returned
             }
         } catch (e) {
             // 静默失败
