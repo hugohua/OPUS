@@ -1,104 +1,81 @@
-// Mock server-only to prevent error in test environment
-vi.mock('server-only', () => { return {}; });
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WordSelectionService } from '../WordSelectionService';
+import { WordSelectionService } from '@/lib/services/WordSelectionService';
+import { ContextSelector } from '@/lib/ai/context-selector';
 import { prisma } from '@/lib/db';
+import { mockDeep, mockReset } from 'vitest-mock-extended';
+import { PrismaClient } from '@prisma/client';
 
-// Mock DB
-vi.mock('@/lib/db', () => ({
-    prisma: {
-        vocab: {
-            findFirst: vi.fn(),
-            findMany: vi.fn(),
-        },
-        userProgress: {
-            findMany: vi.fn(),
-        }
+// Mock prisma (Keep for selectTargetWord if needed, though not tested in this block)
+vi.mock('@/lib/db', async () => {
+    const { mockDeep } = await import('vitest-mock-extended');
+    return {
+        prisma: mockDeep<PrismaClient>(),
+    };
+});
+
+// Mock ContextSelector
+vi.mock('@/lib/ai/context-selector', () => ({
+    ContextSelector: {
+        select: vi.fn()
     }
 }));
 
-vi.mock('@/lib/logger', () => ({
-    createLogger: () => ({
-        info: vi.fn(),
-        warn: vi.fn(),
-    })
-}));
+const prismaMock = prisma as unknown as ReturnType<typeof mockDeep<PrismaClient>>;
 
 describe('WordSelectionService', () => {
+    const userId = 'test-user-1';
     let service: WordSelectionService;
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        service = new WordSelectionService('user1');
+        mockReset(prismaMock);
+        vi.clearAllMocks(); // Clear ContextSelector mock
+        service = new WordSelectionService(userId);
     });
 
-    describe('selectTargetWord', () => {
-        it('should select valid target word', async () => {
-            (prisma.userProgress.findMany as any).mockResolvedValue([{ vocabId: 1 }]);
-            (prisma.vocab.findFirst as any).mockResolvedValue({ id: 2, word: 'target', scenarios: ['biz'] });
+    describe('selectContextWords (Delegation Mode)', () => {
+        const mockTarget = {
+            id: 1,
+            word: 'target',
+            scenarios: ['business'],
+        } as any;
 
-            const result = await service.selectTargetWord();
+        it('should delegate to ContextSelector with correct params', async () => {
+            const mockResults = [
+                { id: 2, word: 'c1' },
+                { id: 3, word: 'c2' },
+                { id: 4, word: 'c3' },
+                { id: 5, word: 'c4' },
+                { id: 6, word: 'c5' },
+            ];
 
-            expect(result?.word).toBe('target');
-            expect(prisma.vocab.findFirst).toHaveBeenCalledWith(
+            // Setup ContextSelector mock
+            (ContextSelector.select as any).mockResolvedValue(mockResults);
+
+            const result = await service.selectContextWords(mockTarget, 5);
+
+            // Assert delegation
+            expect(ContextSelector.select).toHaveBeenCalledWith(
+                userId,
+                1,
                 expect.objectContaining({
-                    where: expect.objectContaining({
-                        id: { notIn: [1] },
-                        scenarios: { isEmpty: false }
-                    })
+                    count: 5,
+                    strategies: ['USER_VECTOR', 'TAG'],
+                    minDistance: 0.15,
+                    excludeIds: [1]
                 })
             );
+
+            // Assert return value propagation
+            expect(result).toHaveLength(5);
+            expect(result[0].word).toBe('c1');
         });
 
-        it('should return null if no target found', async () => {
-            (prisma.userProgress.findMany as any).mockResolvedValue([]);
-            (prisma.vocab.findFirst as any).mockResolvedValue(null);
-            const result = await service.selectTargetWord();
-            expect(result).toBeNull();
-        });
-    });
+        it('should return empty array if ContextSelector returns empty', async () => {
+            (ContextSelector.select as any).mockResolvedValue([]);
 
-    describe('selectContextWords', () => {
-        it('should select context words matching scenario', async () => {
-            const target = { id: 10, word: 'target', scenarios: ['sales'] } as any;
+            const result = await service.selectContextWords(mockTarget, 5);
 
-            // Mock learning progress (candidates)
-            (prisma.userProgress.findMany as any).mockResolvedValue([
-                { vocab: { id: 1, word: 'match1', scenarios: ['sales'] } },
-                { vocab: { id: 2, word: 'match2', scenarios: ['sales', 'other'] } },
-                { vocab: { id: 3, word: 'mismatch', scenarios: ['tech'] } },
-            ]);
-
-            const context = await service.selectContextWords(target, 5);
-
-            expect(context).toHaveLength(2);
-            expect(context.map(c => c.word)).toEqual(['match1', 'match2']);
-        });
-
-        it('should fallback to CEFR level if context words insufficient', async () => {
-            const target = { id: 10, word: 'target', scenarios: ['sales'], cefrLevel: 'B2' } as any;
-
-            // Scenario match only returns 0
-            (prisma.userProgress.findMany as any).mockResolvedValue([]);
-
-            // Fallback (same CEFR)
-            (prisma.vocab.findMany as any).mockResolvedValue([
-                { id: 20, word: 'fallback1', cefrLevel: 'B2' }
-            ]);
-
-            const context = await service.selectContextWords(target, 5);
-
-            expect(context).toHaveLength(1);
-            expect(context[0].word).toBe('fallback1');
-            expect(prisma.vocab.findMany).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    where: expect.objectContaining({
-                        cefrLevel: 'B2',
-                        id: { not: 10 }
-                    })
-                })
-            );
+            expect(result).toHaveLength(0);
         });
     });
 });

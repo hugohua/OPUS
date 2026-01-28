@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
 import { safeParse } from '@/lib/ai/utils';
+import { ContextSelector } from '@/lib/ai/context-selector';
 
 const log = logger.child({ module: 'drill-processor' });
 
@@ -178,89 +179,20 @@ function mapToCandidate(v: any): DrillCandidate {
  * 3. 兜底：随机选择
  */
 async function getContextWords(userId: string, targetVocabId: number, targetWord: string): Promise<string[]> {
-    const desiredCount = 3;
-    let candidates: string[] = [];
-
     try {
-        // 0. Check if target has embedding
-        const hasEmbedding = await db.$queryRaw<{ exists: boolean }[]>`
-            SELECT EXISTS (
-                SELECT 1 FROM "Vocab" 
-                WHERE id = ${targetVocabId} AND embedding IS NOT NULL
-            );
-        `;
+        const selectorResult = await ContextSelector.select(userId, targetVocabId, {
+            count: 3,
+            strategies: ['USER_VECTOR', 'GLOBAL_VECTOR', 'RANDOM'],
+            minDistance: 0.15,
+            maxDistance: 0.5,
+            excludeIds: [targetVocabId]
+        });
 
-        // Note: db.$queryRaw returns an array of objects.
-        if (hasEmbedding?.[0]?.exists) {
-            // Strategy 1: Vector Search in User Review Queue
-            // reinforcing known words in new contexts
-            const reviewMatches = await db.$queryRaw<{ word: string }[]>`
-                SELECT v.word
-                FROM "UserProgress" up
-                JOIN "Vocab" v ON up."vocabId" = v.id
-                WHERE up."userId" = ${userId}
-                  AND up.status IN ('LEARNING', 'REVIEW')
-                  AND v.id != ${targetVocabId}
-                  AND v.embedding IS NOT NULL
-                ORDER BY v.embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocabId})
-                LIMIT ${desiredCount};
-            `;
-
-            if (Array.isArray(reviewMatches)) {
-                candidates.push(...reviewMatches.map(c => c.word));
-            }
-
-            // Strategy 2: Vector Search in Global Vocab (if needed)
-            if (candidates.length < desiredCount) {
-                const limit = desiredCount - candidates.length;
-
-                const exclusion = candidates.length > 0
-                    ? Prisma.sql`AND word NOT IN (${Prisma.join(candidates)})`
-                    : Prisma.empty;
-
-                const globalMatches = await db.$queryRaw<{ word: string }[]>`
-                    SELECT word
-                    FROM "Vocab"
-                    WHERE id != ${targetVocabId}
-                      AND embedding IS NOT NULL
-                      ${exclusion}
-                    ORDER BY embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocabId})
-                    LIMIT ${limit};
-                `;
-
-                if (Array.isArray(globalMatches)) {
-                    candidates.push(...globalMatches.map(c => c.word));
-                }
-            }
-        }
+        return selectorResult.map(v => v.word);
     } catch (e) {
-        log.warn({ error: String(e), targetWord }, 'Vector search failed, falling back to random');
+        log.error({ error: String(e), targetWord }, 'ContextSelector failed, returning empty');
+        return [];
     }
-
-    // Strategy 3: Random Fallback (if vector search failed or returned 0)
-    if (candidates.length < desiredCount) {
-        const remaining = desiredCount - candidates.length;
-
-        const exclusion = candidates.length > 0
-            ? Prisma.sql`AND word NOT IN (${Prisma.join(candidates)})`
-            : Prisma.empty;
-
-        const randoms = await db.$queryRaw<Array<{ word: string }>>`
-            SELECT word 
-            FROM "Vocab"
-            WHERE word != ${targetWord}
-              AND CHAR_LENGTH(word) > 3
-              ${exclusion} 
-            ORDER BY RANDOM()
-            LIMIT ${remaining};
-        `;
-
-        if (Array.isArray(randoms)) {
-            candidates.push(...randoms.map((c) => c.word));
-        }
-    }
-
-    return candidates.slice(0, desiredCount);
 }
 
 // [New] Fetch vocabularies that are due for review or new

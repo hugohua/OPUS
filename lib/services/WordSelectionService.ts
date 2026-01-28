@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/db';
 import { PrismaClient, Vocab, UserProgress } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
+import { ContextSelector } from '@/lib/ai/context-selector';
 
 const log = createLogger('word-selection');
 
@@ -72,13 +73,8 @@ export class WordSelectionService {
     }
 
     /**
-     * 选择复习词 (Context) - Hybrid Mode (Vector First -> Tag Fallback)
-     * 
-     * 规则：
-     * 1. 优先使用 Vector Search (Cosine Distance) 寻找语义相关的复习词
-     * 2. 如果向量数据不足或匹配太少，自动回退到 Tag 匹配
-     * 3. 始终限制在用户正在学习 (LEARNING/REVIEW) 的词范围内
-     * 4. 排除 Target 自身
+     * 选择复习词 (Context) - Delegated to ContextSelector
+     * 策略: [USER_VECTOR, TAG] (前台模式：User Vector 优先，Tag 兜底，不开 Global Vector 以提升速度)
      */
     async selectContextWords(
         targetVocab: Vocab,
@@ -87,105 +83,27 @@ export class WordSelectionService {
         log.info({
             targetWord: targetVocab.word,
             requestedCount: count,
-        }, 'Selecting context words (Hybrid)');
+        }, 'Selecting context words (via ContextSelector)');
 
-        let contextWords: Vocab[] = [];
+        // 使用 ContextSelector (Shared Capability)
+        // 策略: USER_VECTOR -> TAG (Goldilocks Zone applied by default in Vector)
+        const contextWords = await ContextSelector.select(this.userId, targetVocab.id, {
+            count,
+            strategies: ['USER_VECTOR', 'TAG'],
+            minDistance: 0.15,
+            maxDistance: 0.5,
+            excludeIds: [targetVocab.id]
+        });
 
-        // 1. 尝试 Vector Search
-        // 前提: Target 必须有向量数据 (目前通过 raw query 检查或由上层保证，这里简单以此判断)
-        //由于 Prisma 类型定义可能没包含 embedding (Unsupported), 我们尝试直接查
-        try {
-            contextWords = await this.selectContextWordsByVector(targetVocab, count);
-
-            if (contextWords.length > 0) {
-                log.info({
-                    strategy: 'VECTOR',
-                    count: contextWords.length,
-                    words: contextWords.map(w => w.word)
-                }, 'Context selected via Vector');
-            }
-        } catch (error) {
-            log.warn({ error: String(error) }, 'Vector search failed, falling back to Tag');
-        }
-
-        // 2. 如果 Vector 结果不足，使用 Tag 补齐 (Fallback)
-        if (contextWords.length < count) {
-            const remainingCount = count - contextWords.length;
-            log.info({ remainingCount }, 'Filling remaining slots with Tag strategy');
-
-            const existingIds = contextWords.map(w => w.id);
-            const tagWords = await this.selectContextWordsByTag(targetVocab, remainingCount, existingIds);
-
-            contextWords.push(...tagWords);
+        // 记录日志，保持原有风格
+        if (contextWords.length > 0) {
+            log.info({
+                count: contextWords.length,
+                words: contextWords.map(w => w.word)
+            }, 'Context selected via ContextSelector');
         }
 
         return contextWords;
-    }
-
-    /**
-     * 策略 A: 向量检索 (Cosine Distance)
-     */
-    private async selectContextWordsByVector(
-        targetVocab: Vocab,
-        count: number
-    ): Promise<Vocab[]> {
-        // 1. 检查 Target 是否有向量 (需要一次查询确认，或者直接在 queryRaw 中处理)
-        // 为了简单，我们直接执行 Query，如果 Target 无向量，Distance 计算会失败或为空
-
-        // 2. 执行向量搜索
-        // 查找范围: UserProgress (LEARNING/REVIEW) JOIN Vocab
-        // 排序: Cosine Distance (embedding <=> target_embedding)
-        const vectorResults = await prisma.$queryRaw<Vocab[]>`
-            SELECT v.*
-            FROM "UserProgress" up
-            JOIN "Vocab" v ON up."vocabId" = v.id
-            WHERE up."userId" = ${this.userId}
-              AND up.status IN ('LEARNING', 'REVIEW')
-              AND v.id != ${targetVocab.id}
-              AND v.embedding IS NOT NULL
-              AND (SELECT embedding FROM "Vocab" WHERE id = ${targetVocab.id}) IS NOT NULL
-            ORDER BY v.embedding <=> (SELECT embedding FROM "Vocab" WHERE id = ${targetVocab.id})
-            LIMIT ${count};
-        `;
-
-        if (!vectorResults || vectorResults.length === 0) {
-            return [];
-        }
-
-        return vectorResults;
-    }
-
-    /**
-     * 策略 B: 标签匹配 (Legacy Tag Matching)
-     */
-    private async selectContextWordsByTag(
-        targetVocab: Vocab,
-        count: number,
-        excludeIds: number[] = []
-    ): Promise<Vocab[]> {
-        const targetScenarios = targetVocab.scenarios;
-        if (targetScenarios.length === 0) return [];
-
-        const learningProgress = await prisma.userProgress.findMany({
-            where: {
-                userId: this.userId,
-                status: { in: ['LEARNING', 'REVIEW'] },
-                vocabId: { notIn: [targetVocab.id, ...excludeIds] },
-            },
-            include: { vocab: true },
-            // Tag 模式下优先复习 Due 的，增加随机性
-            orderBy: { dueDate: 'asc' },
-        });
-
-        const matched = learningProgress
-            .filter(p => {
-                const vocabScenarios = p.vocab.scenarios;
-                return vocabScenarios.some(s => targetScenarios.includes(s));
-            })
-            .slice(0, count)
-            .map(p => p.vocab);
-
-        return matched;
     }
 
     /**

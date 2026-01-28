@@ -139,7 +139,7 @@ export function getEmbeddingModel(scenario: AIScenario = 'default') {
     return {
         // ai-sdk 的 embedding 接口
         // 显式指定 1536 维，适配 text-embedding-v4 的多维特性
-        model: openai.embedding(modelName, { dimensions: 1536 } as any),
+        model: (openai.embedding as any)(modelName, { dimensions: 1536 }),
         modelName
     };
 }
