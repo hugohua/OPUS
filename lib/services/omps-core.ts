@@ -59,6 +59,28 @@ const DEFAULT_CONFIG: OMPSConfig = {
  * @param excludeIds 排除的词汇 ID 列表
  * @param mode 可选的 Session 模式，用于库存优先策略
  */
+// --- Helper: Mode to Track Mapping (Shared Logic) ---
+function mapModeToTrack(mode?: string): string {
+    if (!mode) return 'VISUAL'; // Default
+    // L0: Syntax/Visual -> VISUAL
+    if (['SYNTAX', 'VISUAL', 'BLITZ', 'PHRASE'].includes(mode)) return 'VISUAL';
+    // L1: Audio -> AUDIO
+    if (['AUDIO', 'CHUNKING'].includes(mode)) return 'AUDIO';
+    // L2: Context -> CONTEXT
+    if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
+
+    return 'VISUAL';
+}
+
+/**
+ * 获取符合 OMPS 策略的候选词列表
+ * 
+ * @param userId 用户 ID
+ * @param limit 需要的总数量
+ * @param config 可选配置 (覆盖默认比例)
+ * @param excludeIds 排除的词汇 ID 列表
+ * @param mode 必选的 Session 模式，用于确定轨道 (Track) 和库存优先策略
+ */
 export async function fetchOMPSCandidates(
     userId: string,
     limit: number,
@@ -67,6 +89,7 @@ export async function fetchOMPSCandidates(
     mode?: string
 ): Promise<OMPSCandidate[]> {
     const cfg = { ...DEFAULT_CONFIG, ...config };
+    const currentTrack = mapModeToTrack(mode); // Determine Track
 
     // --- Phase 0: 库存优先策略 (Inventory-First) ---
     let hotCandidates: OMPSCandidate[] = [];
@@ -91,10 +114,11 @@ export async function fetchOMPSCandidates(
     const allExcludeIds = [...excludeIds, ...hotVocabIds];
     const excludeFilter = allExcludeIds.length > 0 ? { id: { notIn: allExcludeIds } } : {};
 
-    // 1. 获取到期复习词 (Debt)
+    // 1. 获取到期复习词 (Debt) - [Fix] Multi-Track Filtering
     const reviews = await prisma.userProgress.findMany({
         where: {
             userId,
+            track: currentTrack, // 🔥 Critical: Only fetch for current track
             status: { in: ['LEARNING', 'REVIEW'] },
             next_review_at: { lte: new Date() },
             vocab: { ...excludeFilter }
@@ -115,11 +139,25 @@ export async function fetchOMPSCandidates(
 
     if (slotsRemaining > 0) {
         const reviewVocabIds = reviewsMapped.map(r => r.vocabId);
+        // Note: New words don't strictly have a "track" yet until they are "learned".
+        // But we filter out words the user has *already* started on this track?
+        // Actually, fetchNewBucket checks `progress: { none: { userId } }` which means "User has NO progress on this word ANYWHERE".
+        // This logic is slightly flawed for Multi-Track: User might have learned it in Visual, but it's "New" for Audio?
+        // Requirement: "New Acquisition" usually means "Totally New Word". 
+        // If we want "Cross-Track New" (e.g. learn Audio for known Visual word), that's a different logic.
+        // For now, let's stick to "Totally New" to avoid complexity, or update fetchNewBucket to check `track`.
+
         newWordsMapped = await getStratifiedNewWords(
             userId,
             slotsRemaining,
             [...allExcludeIds, ...reviewVocabIds],
-            cfg.posFilter
+            cfg.posFilter,
+            currentTrack // Pass track to exclude *only* words learned on *this* track? 
+            // Or keep global "new"?
+            // PRD says "Level 0 starts at Level 0". 
+            // Level 1 starts with known words.
+            // So this logic depends on Mode.
+            // For simplicity in Phase 1, we keep "New means New to User (Global)" or adjust fetchNewBucket.
         );
     }
 
@@ -129,6 +167,7 @@ export async function fetchOMPSCandidates(
     log.info({
         userId,
         mode,
+        track: currentTrack,
         limit,
         hotCount: hotCandidates.length,
         reviewCount: reviewsMapped.length,
@@ -146,12 +185,13 @@ export async function getStratifiedNewWords(
     userId: string,
     count: number,
     excludeIds: number[],
-    posFilter?: string[]
+    posFilter?: string[],
+    track?: string // [New]
 ): Promise<OMPSCandidate[]> {
 
     // 数量太少时直接走 Core
     if (count <= 1) {
-        return fetchNewBucket(userId, 'CORE', count, excludeIds, posFilter);
+        return fetchNewBucket(userId, 'CORE', count, excludeIds, posFilter, track);
     }
 
     // 目标比例：Simple 20% | Core 60% | Hard 20%
@@ -161,9 +201,9 @@ export async function getStratifiedNewWords(
 
     // 并行查询
     const [simple, core, hard] = await Promise.all([
-        fetchNewBucket(userId, 'SIMPLE', simpleCount, excludeIds, posFilter),
-        fetchNewBucket(userId, 'CORE', coreCount, excludeIds, posFilter),
-        fetchNewBucket(userId, 'HARD', hardCount, excludeIds, posFilter)
+        fetchNewBucket(userId, 'SIMPLE', simpleCount, excludeIds, posFilter, track),
+        fetchNewBucket(userId, 'CORE', coreCount, excludeIds, posFilter, track),
+        fetchNewBucket(userId, 'HARD', hardCount, excludeIds, posFilter, track)
     ]);
 
     // 兜底：如果 Simple/Hard 不足，用 Core 补位
@@ -172,7 +212,7 @@ export async function getStratifiedNewWords(
     if (result.length < count) {
         const gap = count - result.length;
         const currentIds = result.map(x => x.vocabId).concat(excludeIds);
-        const extra = await fetchNewBucket(userId, 'CORE', gap, currentIds, posFilter);
+        const extra = await fetchNewBucket(userId, 'CORE', gap, currentIds, posFilter, track);
         result.push(...extra);
     }
 
@@ -180,7 +220,7 @@ export async function getStratifiedNewWords(
     if (result.length < count) {
         const gap = count - result.length;
         const currentIds = result.map(x => x.vocabId).concat(excludeIds);
-        const fallback = await fetchNewBucket(userId, 'FALLBACK', gap, currentIds, posFilter);
+        const fallback = await fetchNewBucket(userId, 'FALLBACK', gap, currentIds, posFilter, track);
         result.push(...fallback);
     }
 
@@ -196,7 +236,8 @@ export async function fetchNewBucket(
     bucket: 'SIMPLE' | 'CORE' | 'HARD' | 'FALLBACK',
     limit: number,
     excludeIds: number[],
-    posFilter?: string[]
+    posFilter?: string[],
+    track?: string // [New]
 ): Promise<OMPSCandidate[]> {
     if (limit <= 0) return [];
 
@@ -287,11 +328,14 @@ async function getInventoryBackedWords(
         if (availableIds.length === 0) return [];
 
         // 5. 从数据库获取完整信息（包括 FSRS 状态）
+        // [Fix] 必须只获取当前 Track 的进度，否则可能误读 Audio 进度为 Visual
+        const currentTrack = mapModeToTrack(mode); // Shared logic helper
+
         const vocabs = await prisma.vocab.findMany({
             where: { id: { in: availableIds } },
             include: {
                 progress: {
-                    where: { userId },
+                    where: { userId, track: currentTrack },
                     take: 1
                 }
             }

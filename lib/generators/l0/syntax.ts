@@ -1,30 +1,33 @@
 /**
- * Drill Prompt 模块
- * 功能：生成 Level 0 特训提示词 (SYSTEM + USER Prompt)
+ * Generator: L0 / Syntax (Core S-V-O)
+ * 对应旧版: lib/prompts/drill.ts
  * 
- * 输出格式遵循 BriefingPayload 规范 (SYSTEM_PROMPT.md L118-143)
+ * 功能：生成 Level 0 特训提示词 (SYSTEM + USER Prompt)
+ * 输出格式遵循 BriefingPayload 规范
  */
+
+import { BriefingPayload } from "@/types/briefing";
 
 // ============================================
 // Types
 // ============================================
 
-export interface DrillContext {
-  /** 目标词汇 */
-  targetWord: string;
-  /** 核心释义 */
-  meaning: string;
-  /** 复习词汇列表 (1+N 规则中的 N) */
-  contextWords: string[];
-  /** 词族变体 { v: "reject", n: "rejection" } */
-  wordFamily: Record<string, string>;
+export interface SyntaxGeneratorInput {
+    /** 目标词汇 */
+    targetWord: string;
+    /** 核心释义 */
+    meaning: string;
+    /** 复习词汇列表 (1+N 规则中的 N) */
+    contextWords: string[];
+    /** 词族变体 { v: "reject", n: "rejection" } */
+    wordFamily: Record<string, string>;
 }
 
 // ============================================
 // SYSTEM Prompt (固定)
 // ============================================
 
-export const DRILL_SYSTEM_PROMPT = `
+export const L0_SYNTAX_SYSTEM_PROMPT = `
 # ROLE
 You are the "Briefing Engine" for Opus, serving Level 0 Learners (Rehab Phase).
 
@@ -98,8 +101,8 @@ Generate a "Drill Card" JSON for the Target Word, integrating Context Words.
 // USER Prompt (动态生成)
 // ============================================
 
-export function getDrillUserPrompt(context: DrillContext): string {
-  return `# INPUT DATA
+export function getL0SyntaxUserPrompt(context: SyntaxGeneratorInput): string {
+    return `# INPUT DATA
 Target Word (The "1"): "${context.targetWord}"
 Core Meaning: "${context.meaning}"
 Context Words (The "N" - Try to use): ${JSON.stringify(context.contextWords)}
@@ -108,16 +111,16 @@ Available Word Family: ${JSON.stringify(context.wordFamily)}
 GENERATE DRILL CARD JSON NOW.`;
 }
 
-export function getDrillBatchPrompt(inputs: DrillContext[]) {
-  const userPrompt = `
+export function getL0SyntaxBatchPrompt(inputs: SyntaxGeneratorInput[]) {
+    const userPrompt = `
 GENERATE ${inputs.length} DRILL CARDS.
 
 INPUT DATA:
 ${JSON.stringify(inputs, null, 2)}
 `.trim();
 
-  return {
-    system: DRILL_SYSTEM_PROMPT + "\n\nIMPORTANT: Output an object with a 'drills' array containing the cards.",
-    user: userPrompt
-  };
+    return {
+        system: L0_SYNTAX_SYSTEM_PROMPT + "\n\nIMPORTANT: Output an object with a 'drills' array containing the cards.",
+        user: userPrompt
+    };
 }

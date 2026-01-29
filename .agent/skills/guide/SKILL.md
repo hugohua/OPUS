@@ -35,8 +35,9 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
+- **Phase 2 Architecture**: `docs/dev-notes/phase2-architecture-summary.md` (**New Standard**: Multi-Track & Zero-Wait)
 - **Redis Inventory**: `docs/dev-notes/redis-inventory-schema.md` (Zero-Wait caching layer)
-- **缓存与选词架构**: `docs/dev-notes/cache-hit-rate-optimization.md` (**必读**：生产端/消费端协作、OMPS 统一选词、库存优先策略)
+- **缓存与选词架构**: `docs/dev-notes/cache-hit-rate-optimization.md` (生产消费协作)
 - **Phrase Mode**: `docs/dev-notes/technical-spec-phrase-mode.md` (Phrase Blitz specific specs)
 
 ### 4. Infrastructure & Testing

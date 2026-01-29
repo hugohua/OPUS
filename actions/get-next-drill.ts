@@ -16,7 +16,6 @@ import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
 import { inventory } from '@/lib/inventory';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
-import { buildPhraseDrill } from '@/lib/templates/phrase-drill';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
 
 const log = createLogger('actions:get-next-drill');
@@ -64,21 +63,13 @@ export async function getNextDrillBatch(
             let drill: BriefingPayload | null = null;
             let source = 'unknown';
 
-            // 3.1 Phrase 模式快速路径
-            if (mode === 'PHRASE') {
-                const phraseDrill = buildPhraseDrill(candidate as any);
-                if (phraseDrill) {
-                    drill = phraseDrill;
-                    source = 'fast_path_db';
-                }
-            } else {
-                // 3.2 标准路径：Redis 缓存
-                try {
-                    drill = await inventory.popDrill(userId, mode, candidate.vocabId);
-                    if (drill) source = 'cache_v2';
-                } catch (e) {
-                    log.error({ error: e, candidate }, 'Redis pop failed');
-                }
+            // 3.2 标准路径：Redis 缓存 (Unified Zero-Wait)
+            try {
+                // All modes (SYNTAX, PHRASE, BLITZ, AUDIO, etc.) try cache first
+                drill = await inventory.popDrill(userId, mode, candidate.vocabId);
+                if (drill) source = 'cache_v2';
+            } catch (e) {
+                log.error({ error: e, candidate }, 'Redis pop failed');
             }
 
             // 3.3 缓存未命中 -> 确定性兜底
@@ -126,6 +117,16 @@ export async function getNextDrillBatch(
             fallback: fallbackCount,
             hitRate: `${hitRate}%`
         }, '📊 Drill batch stats');
+
+        if (drills.length > 0) {
+            const preview = drills[0];
+            const interaction = preview.segments.find((s: any) => s.type === 'interaction');
+            log.info({
+                firstDrillWord: preview.meta.target_word || 'unknown',
+                source: (preview.meta as any).source,
+                question: (interaction?.task as any)?.question_markdown || 'N/A'
+            }, '👀 Drill Content Preview');
+        }
 
         return {
             status: 'success',

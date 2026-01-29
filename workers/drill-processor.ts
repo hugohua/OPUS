@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import { DrillJobData } from '@/lib/queue/inventory-queue';
 import { Vocab } from '@prisma/client';
 import { generateWithFailover } from './llm-failover';
-import { getDrillBatchPrompt } from '@/lib/prompts/drill';
+// import { getDrillBatchPrompt } from '@/lib/prompts/drill'; // Legacy removed
 import { inventory } from '@/lib/inventory';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -37,7 +37,13 @@ const BatchDrillOutputSchema = z.object({
 export async function processDrillJob(job: Job<DrillJobData>) {
     const { userId, mode, correlationId, vocabId, vocabIds } = job.data;
 
-    log.info({ correlationId, userId, mode, jobType: job.name, vocabId, vocabCount: vocabIds?.length }, '开始处理 Drill 生成任务');
+    log.info({
+        correlationId,
+        userId,
+        mode,
+        jobName: job.name,
+        vocabIds: vocabIds?.length
+    }, '🔄 [Worker] 收到任务 (Job Received)');
 
     try {
         // ============================================
@@ -47,44 +53,76 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
         if (vocabIds && vocabIds.length > 0) {
             // Plan C: Batch Replenishment
+            log.info({ count: vocabIds.length }, '👉 策略: Plan C (Batch IDs)');
             candidates = await fetchSpecificCandidates(userId, vocabIds);
         } else if (vocabId) {
             // Plan B: Single Emergency Replenishment
+            log.info({ vocabId }, '👉 策略: Plan B (Single ID)');
             candidates = await fetchSpecificCandidates(userId, [Number(vocabId)]);
         } else {
             // [Fix] V2 Generic Fetch (Schedule-Driven)
-            // If job type is 'generate-*', we should fetch the next due items from DB.
             if (job.name.startsWith('generate-')) {
+                log.info({ mode }, '👉 策略: V2 Generic Fetch (Scheduled)');
                 const limit = job.data.forceLimit || 10;
                 candidates = await fetchDueCandidates(userId, mode, limit);
             } else {
-                log.warn({ jobName: job.name }, 'Unknown job type or missing IDs');
+                log.warn({ jobName: job.name }, '❌ 未知任务类型，跳过');
                 return { success: false, reason: 'legacy_not_supported_v2' };
             }
         }
 
         if (candidates.length === 0) {
-            log.warn({ correlationId }, '没有可用的词汇候选');
+            log.warn({ correlationId }, '⚠️ 无可用候选词 (Candidates Empty)');
             return { success: false, reason: 'no_candidates' };
         }
+
+        log.info({ count: candidates.length }, '✅ 锁定候选词 (Candidates Locked)');
 
         // ============================================
         // 2. 准备 Prompt 输入 & 调用 LLM
         // ============================================
-        const promptInputs = await Promise.all(
-            candidates.map(async (c) => {
-                const contextWords = await getContextWords(userId, c.vocabId, c.word);
-                return {
-                    targetWord: c.word,
-                    meaning: c.definition_cn || '暂无释义',
-                    contextWords,
-                    wordFamily: (c.word_family as Record<string, string>) || { v: c.word },
-                };
-            })
-        );
+        // ============================================
+        // 2. 准备 Prompt 输入 & 调用 LLM
+        // ============================================
 
-        const { system, user } = getDrillBatchPrompt(promptInputs);
-        const { text, provider } = await generateWithFailover(system, user);
+        // [Refactor] Dynamic Generator Routing
+        let systemPrompt = '';
+        let userPrompt = '';
+
+        switch (mode) {
+            case 'SYNTAX': {
+                const { getL0SyntaxBatchPrompt } = await import('@/lib/generators/l0/syntax');
+                const inputs = await Promise.all(candidates.map(c => mapToSyntaxInput(userId, c)));
+                const p = getL0SyntaxBatchPrompt(inputs);
+                systemPrompt = p.system;
+                userPrompt = p.user;
+                break;
+            }
+            case 'BLITZ': {
+                const { getL0BlitzBatchPrompt } = await import('@/lib/generators/l0/blitz');
+                const inputs = candidates.map(c => ({
+                    targetWord: c.word,
+                    meaning: c.definition_cn || '',
+                    collocations: [] // TODO: Fetch collocations
+                }));
+                const p = getL0BlitzBatchPrompt(inputs);
+                systemPrompt = p.system;
+                userPrompt = p.user;
+                break;
+            }
+            // ... Add cases for PHRASE, CHUNKING, CONTEXT, NUANCE
+            default: {
+                // Fallback to legacy or error
+                log.warn({ mode }, 'No generator found for mode, using legacy Syntax');
+                const { getL0SyntaxBatchPrompt } = await import('@/lib/generators/l0/syntax');
+                const inputs = await Promise.all(candidates.map(c => mapToSyntaxInput(userId, c)));
+                const p = getL0SyntaxBatchPrompt(inputs);
+                systemPrompt = p.system;
+                userPrompt = p.user;
+            }
+        }
+
+        const { text, provider } = await generateWithFailover(systemPrompt, userPrompt);
 
         log.info({ correlationId, provider }, 'LLM 生成完成');
 
@@ -96,8 +134,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             // [Safe Parse] 使用 lib/ai/utils 提供的安全解析
             resultData = safeParse(text, BatchDrillOutputSchema, {
                 model: provider,
-                systemPrompt: system,
-                userPrompt: user
+                systemPrompt: systemPrompt,
+                userPrompt: userPrompt
             });
         } catch (e) {
             // safeParse 内部已记录 logAIError，这里只需rethrow中断流程
@@ -216,7 +254,8 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         userId,
         bufferLimit,
         { posFilter },
-        [] // excludeIds
+        [], // excludeIds
+        mode // [Fix] Pass mode to determine track
     );
 
     if (ompsCandidates.length === 0) {
@@ -249,4 +288,16 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
 
     // 4. 返回指定数量
     return candidates.slice(0, limit);
+}
+
+// --- Helper: Input Mappers ---
+
+async function mapToSyntaxInput(userId: string, c: DrillCandidate) {
+    const contextWords = await getContextWords(userId, c.vocabId, c.word);
+    return {
+        targetWord: c.word,
+        meaning: c.definition_cn || '暂无释义',
+        contextWords,
+        wordFamily: (c.word_family as Record<string, string>) || { v: c.word },
+    };
 }

@@ -34,7 +34,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import fs from 'fs/promises';
 import path from 'path';
-import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/prompts/vocabulary';
+import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/generators/etl/vocabulary';
 import { VocabularyResultSchema } from '@/lib/validations/ai';
 import { z } from 'zod';
 

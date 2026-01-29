@@ -1,16 +1,16 @@
 /**
- * Get Blitz Session Action
- * 功能：
- *   获取极速跟读模式 (Phrase Blitz) 的复习队列
- * 逻辑：
- *   1. 筛选: userId, status=[LEARNING, REVIEW], next_review_at <= NOW (只复习到期的)
- *   2. 排序: 
- *      - 第一优先级: 热度 (frequency_score DESC) -> "生存优先"
- *      - 第二优先级: 逾期时间 (next_review_at ASC)
- *   3. 构造:
- *      - 随机选取 Collocation
- *      - 生成 Mask (Case Insensitive)
- */
+* Get Blitz Session Action
+* 功能：
+*   获取极速跟读模式 (Phrase Blitz) 的复习队列
+* 逻辑：
+*   1. 筛选: userId, status=[LEARNING, REVIEW], next_review_at <= NOW (只复习到期的)
+*   2. 排序: 
+*      - 第一优先级: 热度 (frequency_score DESC) -> "生存优先"
+*      - 第二优先级: 逾期时间 (next_review_at ASC)
+*   3. 构造:
+*      - 随机选取 Collocation
+*      - 生成 Mask (Case Insensitive)
+*/
 'use server';
 
 import { auth } from '@/auth';
@@ -37,6 +37,7 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
         const candidates = await prisma.userProgress.findMany({
             where: {
                 userId,
+                track: 'VISUAL', // [Fix] Blitz is essentially a Visual/Syntax drill
                 status: {
                     in: ['LEARNING', 'REVIEW', 'NEW'] // 排除 MASTERED
                 },

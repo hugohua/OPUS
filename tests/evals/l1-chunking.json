@@ -1,0 +1,77 @@
+[
+    {
+        "id": "l1_chunk_001",
+        "description": "Short simple sentence",
+        "input": {
+            "sentence": "The manager approved the budget.",
+            "targetWord": "approved"
+        },
+        "criteria": {
+            "minChunks": 1,
+            "maxChunks": 2,
+            "requiredTags": [
+                "<chunk>"
+            ]
+        }
+    },
+    {
+        "id": "l1_chunk_002",
+        "description": "Compound sentence with 'but'",
+        "input": {
+            "sentence": "We finished the draft on time but the client requested further changes.",
+            "targetWord": "requested"
+        },
+        "criteria": {
+            "minChunks": 2,
+            "maxChunks": 4,
+            "requiredTags": [
+                "<chunk>"
+            ]
+        }
+    },
+    {
+        "id": "l1_chunk_003",
+        "description": "Complex office scenario",
+        "input": {
+            "sentence": "Although the presentation was successful, some board members expressed concerns regarding the proposed expansion strategy.",
+            "targetWord": "expressed"
+        },
+        "criteria": {
+            "minChunks": 3,
+            "maxChunks": 5,
+            "requiredTags": [
+                "<chunk>"
+            ]
+        }
+    },
+    {
+        "id": "l1_chunk_004",
+        "description": "Sentence with multiple modifiers",
+        "input": {
+            "sentence": "The recently implementation of the new software policy has significantly improved our team's productivity.",
+            "targetWord": "improved"
+        },
+        "criteria": {
+            "minChunks": 2,
+            "maxChunks": 4,
+            "requiredTags": [
+                "<chunk>"
+            ]
+        }
+    },
+    {
+        "id": "l1_chunk_005",
+        "description": "Business email snippet",
+        "input": {
+            "sentence": "Please let me know your availability for a brief meeting to discuss the upcoming marketing campaign next Tuesday.",
+            "targetWord": "discuss"
+        },
+        "criteria": {
+            "minChunks": 3,
+            "maxChunks": 6,
+            "requiredTags": [
+                "<chunk>"
+            ]
+        }
+    }
+]

@@ -16,21 +16,39 @@ const scheduler = fsrs({
     // Default parameters (optional, can tune later)
 });
 
+// --- Helper: Mode to Track Mapping ---
+function mapModeToTrack(mode: string): string {
+    // L0: Syntax/Visual -> VISUAL
+    if (['SYNTAX', 'VISUAL', 'BLITZ', 'PHRASE'].includes(mode)) return 'VISUAL';
+    // L1: Audio -> AUDIO
+    if (['AUDIO', 'CHUNKING'].includes(mode)) return 'AUDIO';
+    // L2: Context -> CONTEXT
+    if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
+
+    // Default fallback
+    return 'VISUAL';
+}
+
 export async function recordOutcome(
     input: RecordOutcomeInput
 ): Promise<ActionState<any>> {
     try {
         // 1. Validate Input
         const { userId, vocabId, grade, mode } = RecordOutcomeSchema.parse(input);
-        log.info({ userId, vocabId, grade }, 'Recording outcome');
+        const track = mapModeToTrack(mode); // Determine Track
 
-        // 2. Fetch Current Progress
+        log.info({ userId, vocabId, grade, mode, track }, 'Recording outcome (Multi-Track)');
+
+        // 2. Fetch Current Progress (Track-Specific)
+        // We use the composite unique key: userId_vocabId_track
         const progress = await prisma.userProgress.findUnique({
-            where: { userId_vocabId: { userId, vocabId } },
+            where: {
+                userId_vocabId_track: { userId, vocabId, track }
+            },
         });
 
         if (!progress) {
-            log.info('Creating new UserProgress entry');
+            log.info('Creating new UserProgress entry for track ' + track);
         }
 
         // 3. Construct FSRS Card
@@ -91,7 +109,8 @@ export async function recordOutcome(
         // 5. Update Dimension Score (Targeted Update)
         // V: Syntax/Spelling (Default)
         // C: Phrase/Context (New)
-        // Other dims to be implemented
+        // A: Audio (L1)
+        // X: Context (L2)
         let dimUpdate: any = {};
         const scoreChange = grade >= 3 ? 5 : -5;
 
@@ -104,26 +123,39 @@ export async function recordOutcome(
             dim_x_score: progress?.dim_x_score || 0
         };
 
-        if (mode === 'PHRASE') {
-            const newScore = Math.max(0, Math.min(100, currentScores.dim_c_score + scoreChange));
-            dimUpdate.dim_c_score = newScore;
-            currentScores.dim_c_score = newScore;
+        if (track === 'AUDIO') {
+            const newScore = Math.max(0, Math.min(100, currentScores.dim_a_score + scoreChange));
+            dimUpdate.dim_a_score = newScore;
+            currentScores.dim_a_score = newScore;
+        } else if (track === 'CONTEXT') {
+            const newScore = Math.max(0, Math.min(100, currentScores.dim_x_score + scoreChange));
+            dimUpdate.dim_x_score = newScore;
+            currentScores.dim_x_score = newScore;
         } else {
-            // Default to V (Syntax/Form)
-            const newScore = Math.max(0, Math.min(100, currentScores.dim_v_score + scoreChange));
-            dimUpdate.dim_v_score = newScore;
-            currentScores.dim_v_score = newScore;
+            // VISUAL (Syntax / Phrase)
+            if (mode === 'PHRASE') {
+                const newScore = Math.max(0, Math.min(100, currentScores.dim_c_score + scoreChange));
+                dimUpdate.dim_c_score = newScore;
+                currentScores.dim_c_score = newScore;
+            } else {
+                const newScore = Math.max(0, Math.min(100, currentScores.dim_v_score + scoreChange));
+                dimUpdate.dim_v_score = newScore;
+                currentScores.dim_v_score = newScore;
+            }
         }
 
         // 6. Calculate Mastery Score
         const masteryScore = calculateMasteryScore(currentScores);
 
-        // 7. DB Upsert
+        // 7. DB Upsert (Track Specific)
         const updated = await prisma.userProgress.upsert({
-            where: { userId_vocabId: { userId, vocabId } },
+            where: {
+                userId_vocabId_track: { userId, vocabId, track }
+            },
             update: {
                 ...dimUpdate,
                 masteryScore,
+                track, // Ensure track is set
                 stability: newCard.stability,
                 difficulty: newCard.difficulty,
                 reps: newCard.reps,
@@ -136,7 +168,8 @@ export async function recordOutcome(
             create: {
                 userId,
                 vocabId,
-                ...dimUpdate, // Set initial dim score
+                track, // New Field
+                ...dimUpdate,
                 masteryScore,
                 stability: newCard.stability,
                 difficulty: newCard.difficulty,

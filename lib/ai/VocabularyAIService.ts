@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { VocabularyResultSchema } from '@/lib/validations/ai';
 import type { VocabularyInput, VocabularyResult } from '@/types/ai';
-import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/prompts/vocabulary';
+import { VOCABULARY_ENRICHMENT_PROMPT } from '@/lib/generators/etl/vocabulary';
 import { safeParse } from './utils';
 import { createLogger, logAIError } from '@/lib/logger';
 import { getAIModel } from './client';

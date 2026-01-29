@@ -27,7 +27,7 @@ interface BlitzSessionProps {
 
 export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
     const router = useRouter();
-    const { speak, cancel } = useTTS();
+    const { play, stop } = useTTS();
 
     // Game State
     const [items, setItems] = useState<BlitzItem[]>(initialData.items);
@@ -61,14 +61,14 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
     const handleReveal = () => {
         setIsRevealed(true);
         if (currentItem) {
-            speak(currentItem.context.text);
+            play({ text: currentItem.context.text });
         }
     };
 
     const handleRate = async (rating: 1 | 3) => {
         if (!currentItem || isSubmitting) return;
         setIsSubmitting(true);
-        cancel(); // Stop audio
+        stop(); // Stop audio
 
         // Optimistic UI Update: Move to next immediately
         const nextIndex = currentIndex + 1;

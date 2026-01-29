@@ -1,6 +1,3 @@
----
-trigger: always_on
----
 
 # OPUS LLM TECHNICAL SPEC (Execution-Ready Version)
 
@@ -53,7 +50,7 @@ trigger: always_on
 │   ├── db.ts              # Prisma Client Singleton
 │   ├── utils.ts           # Shadcn Utils
 │   ├── safe-json.ts       # [Phase 0] Zod Safe Parsers
-│   ├── prompts/           # [Phase 1] LLM Prompts (drill.ts)
+│   ├── generators/        # [Phase 2] LLM Generators (L0/L1/L2/ETL)
 │   └── validations/       # Zod Schemas
 ├── prisma/                # DB 模型与种子数据
 │   ├── schema.prisma
@@ -78,6 +75,10 @@ trigger: always_on
 1. **Schema First**：先定义 Prisma 模型 & Zod Schema  
 2. **Feature-by-Feature**：完整实现单功能模块：DB → Server Action → UI → Page  
 3. **Config Driven**：菜单、选项等全部在 `config/` 配置，禁止硬编码
+4. **验证账号**：
+   - Email: `13964332@qq.com`
+   - Pass: `123456`
+   - 使用 `scripts/restore-user.ts` 可快速重置此环境。
 
 ---
 
@@ -210,14 +211,15 @@ logs/
 
 ## 11. AI Infrastructure & Zero-Wait Protocol (v2.0)
 
-### A. 核心哲学：Schedule Driven & Decoupling
+### A. 核心哲学：Multi-Track & Schedule Driven
 系统架构从 "生产驱动" 升级为 "调度驱动"，核心是将 **内容 (Inventory)** 与 **时间 (Schedule)** 解耦。
-- **Inventory (Redis)**: 存放针对特定单词的通用 "子弹" (Drills)。子弹不带时间戳，随时可用。
+- **Tracks (Multi-Track)**: 核心升级。VISUAL (L0), AUDIO (L1), CONTEXT (L2)。
+- **Inventory (Redis)**: `user:{uid}:vocab:{vid}:drills`。
 - **Schedule (FSRS)**: 决定 "何时" 复习 "哪个" 单词。
 - **Consumption**: 用户请求 -> 询问 FSRS (Who) -> 从 Redis 取子弹 (Content)。
 
 ### B. Redis 数据结构规范
-必须细化到 **Vocab** 粒度，而非由 Mode 笼统管理。
+必须细化到 **Vocab** 粒度。
 - **Key Schema**: `user:{userId}:vocab:{vocabId}:drills` -> `List<DrillJson>`
 - **Operation**: `LPOP` (消费), `RPUSH` (生产)。保证 FIFO。
 - **Replenishment**: 消费后若剩余库存 < 2，触发低优先级后台补充任务。

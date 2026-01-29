@@ -3,7 +3,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { GeneratedArticleSchema } from '@/lib/validations/article';
 import type { ArticleGenerationInput, GeneratedArticle } from '@/types/article';
-import { ARTICLE_GENERATION_PROMPT } from '@/lib/prompts/article';
+import { ARTICLE_GENERATION_PROMPT } from '@/lib/generators/etl/article';
 import { safeParse } from './utils';
 import { createLogger, logAIError } from '@/lib/logger';
 

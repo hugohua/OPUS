@@ -7,6 +7,8 @@ const log = createLogger('lib:inventory');
 
 // Redis Key Generator
 const keys = {
+    // Redis Key 必须保持 Mode 粒度，因为不同 Mode 生成的内容结构不同
+    // e.g., SYNTAX vs BLITZ vs AUDIO
     drillList: (userId: string, mode: string, vocabId: number | string) =>
         `user:${userId}:mode:${mode}:vocab:${vocabId}:drills`,
     replenishBuffer: 'buffer:replenish_drills',

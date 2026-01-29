@@ -109,13 +109,24 @@ model UserProgress {
 
   // [V1.2 New] SRS 调度系统
   next_review_at DateTime?              // 下次复习时间
+  // Multi-Track FSRS Support
+  // 枚举值: "VISUAL" (L0/Syntax), "AUDIO" (L1/Audio), "CONTEXT" (L2/Context)
+  track          String    @default("VISUAL")
+
   user      User     @relation(fields: [userId], references: [id])
   vocab     Vocab    @relation(fields: [vocabId], references: [id])
 
-  @@unique([userId, vocabId])
+  // [Breaking Change] 复合主键变更
+  // 本条记录唯一性由 (用户 + 词 + 轨道) 决定
+  // Explicitly map the name to ensure Prisma Client generates the expected input type
+  @@unique([userId, vocabId, track], name: "userId_vocabId_track")
+  
   @@index([userId, dueDate])
   @@index([userId, dim_v_score])      // [V1.2] 抢救队列核心索引
   @@index([userId, next_review_at])   // [V1.2] 复习队列核心索引
+  
+  // 方便 OMPS 快速查找某轨道下的到期词
+  @@index([userId, track, next_review_at])
 }
 
 model Article {
@@ -163,7 +174,7 @@ model User {
   // 1. 极简账号信息
   // 对于同事/朋友，Email 是唯一的 ID
   email         String    @unique
-  password      String    // bcrypt hash
+  password      String?    // [Fix] Add password field
   name          String?   // 显示名称
   
   // 2. 邀请码关联 (可选，用于记录是谁邀请的，或者使用了哪个码)
