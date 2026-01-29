@@ -17,3 +17,6 @@ backups
 python_tts_service2
 public/audio
 tts_venv/
+tts_venv
+reports/
+.DS_Store

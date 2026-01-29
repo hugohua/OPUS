@@ -1,0 +1,202 @@
+[
+    {
+        "id": "l0_syn_verb_approve",
+        "description": "Basic S-V-O with Past Tense Verb",
+        "input": {
+            "targetWord": "approved",
+            "meaning": "officially agree to or accept as satisfactory",
+            "contextWords": [
+                "budget",
+                "manager"
+            ],
+            "wordFamily": {
+                "v": "approve",
+                "n": "approval"
+            }
+        },
+        "criteria": {
+            "focus": "Verb Form",
+            "distractorType": "Noun vs Verb"
+        }
+    },
+    {
+        "id": "l0_syn_noun_proposal",
+        "description": "Object position with Noun target",
+        "input": {
+            "targetWord": "proposal",
+            "meaning": "a plan or suggestion",
+            "contextWords": [
+                "client",
+                "new"
+            ],
+            "wordFamily": {
+                "v": "propose",
+                "n": "proposal"
+            }
+        },
+        "criteria": {
+            "focus": "Noun Form",
+            "distractorType": "Verb vs Noun"
+        }
+    },
+    {
+        "id": "l0_syn_adj_efficient",
+        "description": "Adjective modifying Object",
+        "input": {
+            "targetWord": "efficient",
+            "meaning": "achieving maximum productivity with minimum wasted effort",
+            "contextWords": [
+                "system",
+                "team"
+            ],
+            "wordFamily": {
+                "adj": "efficient",
+                "n": "efficiency"
+            }
+        },
+        "criteria": {
+            "focus": "Adjective Form",
+            "distractorType": "Adjective vs Noun"
+        }
+    },
+    {
+        "id": "l0_syn_verb_confirm",
+        "description": "Verb in Present Perfect context (implied by 'has')",
+        "input": {
+            "targetWord": "confirmed",
+            "meaning": "establish the truth or correctness of something",
+            "contextWords": [
+                "meeting",
+                "director"
+            ],
+            "wordFamily": {
+                "v": "confirm",
+                "n": "confirmation"
+            }
+        },
+        "criteria": {
+            "focus": "Participle Form",
+            "distractorType": "Base vs Participle"
+        }
+    },
+    {
+        "id": "l0_syn_noun_delivery",
+        "description": "Subject position with Noun target",
+        "input": {
+            "targetWord": "delivery",
+            "meaning": "the action of delivering letters, packages, or ordered goods",
+            "contextWords": [
+                "late",
+                "package"
+            ],
+            "wordFamily": {
+                "v": "deliver",
+                "n": "delivery"
+            }
+        },
+        "criteria": {
+            "focus": "Noun Form",
+            "distractorType": "Verb vs Noun"
+        }
+    },
+    {
+        "id": "l0_syn_verb_reject",
+        "description": "Past Tense Action",
+        "input": {
+            "targetWord": "rejected",
+            "meaning": "dismiss as inadequate, inappropriate, or not to one's taste",
+            "contextWords": [
+                "application",
+                "committee"
+            ],
+            "wordFamily": {
+                "v": "reject",
+                "n": "rejection"
+            }
+        },
+        "criteria": {
+            "focus": "Verb Form",
+            "distractorType": "Noun vs Verb"
+        }
+    },
+    {
+        "id": "l0_syn_noun_extension",
+        "description": "Object position with Noun",
+        "input": {
+            "targetWord": "extension",
+            "meaning": "an addition that increases the area, influence, operation, or contents of something",
+            "contextWords": [
+                "contract",
+                "signed"
+            ],
+            "wordFamily": {
+                "v": "extend",
+                "n": "extension"
+            }
+        },
+        "criteria": {
+            "focus": "Noun Form",
+            "distractorType": "Verb vs Noun"
+        }
+    },
+    {
+        "id": "l0_syn_adj_financial",
+        "description": "Adjective modifying Subject",
+        "input": {
+            "targetWord": "financial",
+            "meaning": "relating to finance",
+            "contextWords": [
+                "report",
+                "quarterly"
+            ],
+            "wordFamily": {
+                "adj": "financial",
+                "n": "finance"
+            }
+        },
+        "criteria": {
+            "focus": "Adjective Form",
+            "distractorType": "Noun vs Adjective"
+        }
+    },
+    {
+        "id": "l0_syn_verb_notify",
+        "description": "Verb with Object",
+        "input": {
+            "targetWord": "notified",
+            "meaning": "inform (someone) of something, typically in a formal or official manner",
+            "contextWords": [
+                "staff",
+                "changes"
+            ],
+            "wordFamily": {
+                "v": "notify",
+                "n": "notification"
+            }
+        },
+        "criteria": {
+            "focus": "Verb Form",
+            "distractorType": "Noun vs Verb"
+        }
+    },
+    {
+        "id": "l0_syn_noun_assistance",
+        "description": "Object position abstract noun",
+        "input": {
+            "targetWord": "assistance",
+            "meaning": "the action of helping someone with a job or task",
+            "contextWords": [
+                "requested",
+                "technical"
+            ],
+            "wordFamily": {
+                "v": "assist",
+                "n": "assistance"
+            }
+        },
+        "criteria": {
+            "focus": "Noun Form",
+            "distractorType": "Verb vs Noun"
+        }
+    }
+]
