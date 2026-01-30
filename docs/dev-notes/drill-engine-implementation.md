@@ -28,6 +28,20 @@
     - 句法标记 (`<s>`, `<v>`, `<o>`) 用于 UI 高亮。
     - 通过 Zod Schema 强制执行 JSON 输出。
 
+### 2.4 FSRS 智能路由 (Smart Dispatch)
+> 更新于 V2.1 (2026-01-30)
+
+为了解决 L0 生成器单一化问题，实现了基于 FSRS 状态的**主要路由逻辑**：
+
+- **Stage 1 (Foundation)**:
+    - 条件: `New` 或 `Stability < 7` (基础期)
+    - 路由: **Syntax Generator** (S-V-O 结构，侧重句法与词性陷阱)
+- **Stage 2 (Mastery)**:
+    - 条件: `Stability >= 7` (进阶期)
+    - 路由: **Blitz Generator** (搭配词/形近词，侧重语义深度)
+
+此逻辑在 `drill-processor.ts` 中通过并行 `Promise.all` 执行，支持混合批次处理。
+
 ## 3. 功能特性：懒加载 (无限列表)
 
 为了支持长时间会话而无需漫长的初始等待，我们实现了懒加载模式。

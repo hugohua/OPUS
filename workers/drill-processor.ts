@@ -79,53 +79,92 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         log.info({ count: candidates.length }, '✅ 锁定候选词 (Candidates Locked)');
 
         // ============================================
-        // 2. 准备 Prompt 输入 & 调用 LLM
-        // ============================================
-        // ============================================
-        // 2. 准备 Prompt 输入 & 调用 LLM
+        // 2. 智能路由 & 分组生成 (Smart Dispatch)
         // ============================================
 
-        // [Refactor] Dynamic Generator Routing
-        let systemPrompt = '';
-        let userPrompt = '';
+        const syntaxGroup: DrillCandidate[] = [];
+        const blitzGroup: DrillCandidate[] = [];
+        const phraseGroup: DrillCandidate[] = []; // Reserved for AUDIO mappings if needed
 
-        switch (mode) {
-            case 'SYNTAX': {
+        // Routing Logic
+        if (mode === 'SYNTAX') {
+            for (const c of candidates) {
+                // FSRS Rule: 
+                // Stage 1 (New) -> Syntax (S-V-O)
+                // Stage 2 (Review < 7d) -> Syntax (POS Trap)
+                // Stage 3 (Review >= 7d) -> Blitz (Collocations / Visual Trap)
+
+                const isReview = c.type === 'REVIEW';
+                const stability = c.reviewData?.stability || 0;
+
+                if (!isReview || stability < 7) {
+                    syntaxGroup.push(c);
+                } else {
+                    blitzGroup.push(c);
+                }
+            }
+            log.info({
+                total: candidates.length,
+                syntaxParams: syntaxGroup.length,
+                blitzParams: blitzGroup.length
+            }, '🔀 [Smart Dispatch] Grouped candidates based on FSRS');
+        } else {
+            // Fallback / Other Modes
+            if (mode === 'BLITZ') {
+                blitzGroup.push(...candidates);
+            } else if (mode === 'PHRASE' || mode === 'AUDIO') {
+                phraseGroup.push(...candidates);
+            } else {
+                // Default fallback to Syntax
+                syntaxGroup.push(...candidates);
+            }
+        }
+
+        // ============================================
+        // 3. 执行生成 (Parallel Execution)
+        // ============================================
+
+        const generatedDrills: any[] = [];
+        let primaryProvider = 'unknown';
+
+        const tasks: Promise<void>[] = [];
+
+        // --- Task A: Process Syntax Group ---
+        if (syntaxGroup.length > 0) {
+            tasks.push((async () => {
                 const { getL0SyntaxBatchPrompt } = await import('@/lib/generators/l0/syntax');
-                const inputs = await Promise.all(candidates.map(c => mapToSyntaxInput(userId, c)));
+                const inputs = await Promise.all(syntaxGroup.map(c => mapToSyntaxInput(userId, c)));
                 const p = getL0SyntaxBatchPrompt(inputs);
-                systemPrompt = p.system;
-                userPrompt = p.user;
-                break;
-            }
-            case 'PHRASE': {
-                const { getL0PhraseBatchPrompt } = await import('@/lib/generators/l0/phrase');
-                // Use context words as modifiers (1+N)
-                const inputs = await Promise.all(candidates.map(async c => {
-                    // Fallback logic: if no collocations, search for context words
-                    // But Phrase generator prefers simple modifiers.
-                    // Let's use getContextWords which fetches related words.
-                    const modifiers = await getContextWords(userId, c.vocabId, c.word);
-                    return {
-                        targetWord: c.word,
-                        meaning: c.definition_cn || '暂无释义',
-                        modifiers: modifiers.length > 0 ? modifiers : ['frequently', 'highly', 'effectively'] // Generic fallback
-                    };
-                }));
-                const p = getL0PhraseBatchPrompt(inputs);
-                systemPrompt = p.system;
-                userPrompt = p.user;
-                break;
-            }
-            case 'BLITZ': {
+
+                const { text, provider } = await generateWithFailover(p.system, p.user);
+                primaryProvider = provider;
+
+                const result = safeParse(text, BatchDrillOutputSchema, {
+                    model: provider,
+                    systemPrompt: p.system,
+                    userPrompt: p.user
+                });
+
+                // Map results back to candidates 
+                // Assumes LLM respects order. Drill output is array.
+                result.drills.forEach((drill, idx) => {
+                    // Safety check index
+                    if (idx < syntaxGroup.length) {
+                        generatedDrills.push({ drill, candidate: syntaxGroup[idx] });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Syntax group')));
+        }
+
+        // --- Task B: Process Blitz Group ---
+        if (blitzGroup.length > 0) {
+            tasks.push((async () => {
                 const { getL0BlitzBatchPrompt } = await import('@/lib/generators/l0/blitz');
-                const inputs = candidates.map(c => {
-                    // Extract collocations string[] from JSON
+                const inputs = blitzGroup.map(c => {
                     let collys: string[] = [];
                     if (Array.isArray(c.collocations)) {
                         collys = c.collocations.map((item: any) => typeof item === 'string' ? item : item.text).filter(Boolean);
                     }
-
                     return {
                         targetWord: c.word,
                         meaning: c.definition_cn || '',
@@ -133,54 +172,64 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     };
                 });
                 const p = getL0BlitzBatchPrompt(inputs);
-                systemPrompt = p.system;
-                userPrompt = p.user;
-                break;
-            }
-            // ... Add cases for PHRASE, CHUNKING, CONTEXT, NUANCE
-            default: {
-                // Fallback to legacy or error
-                log.warn({ mode }, 'No generator found for mode, using legacy Syntax');
-                const { getL0SyntaxBatchPrompt } = await import('@/lib/generators/l0/syntax');
-                const inputs = await Promise.all(candidates.map(c => mapToSyntaxInput(userId, c)));
-                const p = getL0SyntaxBatchPrompt(inputs);
-                systemPrompt = p.system;
-                userPrompt = p.user;
-            }
+
+                const { text, provider } = await generateWithFailover(p.system, p.user);
+
+                const result = safeParse(text, BatchDrillOutputSchema, {
+                    model: provider,
+                    systemPrompt: p.system,
+                    userPrompt: p.user
+                });
+
+                result.drills.forEach((drill, idx) => {
+                    if (idx < blitzGroup.length) {
+                        generatedDrills.push({ drill, candidate: blitzGroup[idx] });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Blitz group')));
         }
 
-        const { text, provider } = await generateWithFailover(systemPrompt, userPrompt);
+        // --- Task C: Process Phrase Group (if any) ---
+        if (phraseGroup.length > 0) {
+            tasks.push((async () => {
+                const { getL0PhraseBatchPrompt } = await import('@/lib/generators/l0/phrase');
+                const inputs = await Promise.all(phraseGroup.map(async c => {
+                    const modifiers = await getContextWords(userId, c.vocabId, c.word);
+                    return {
+                        targetWord: c.word,
+                        meaning: c.definition_cn || '暂无释义',
+                        modifiers: modifiers.length > 0 ? modifiers : ['frequently', 'highly', 'effectively']
+                    };
+                }));
+                const p = getL0PhraseBatchPrompt(inputs);
 
-        log.info({ correlationId, provider }, 'LLM 生成完成');
+                const { text, provider } = await generateWithFailover(p.system, p.user);
 
-        // ============================================
-        // 3. 解析 & 验证
-        // ============================================
-        let resultData;
-        try {
-            // [Safe Parse] 使用 lib/ai/utils 提供的安全解析
-            resultData = safeParse(text, BatchDrillOutputSchema, {
-                model: provider,
-                systemPrompt: systemPrompt,
-                userPrompt: userPrompt
-            });
-        } catch (e) {
-            // safeParse 内部已记录 logAIError，这里只需rethrow中断流程
-            throw new Error('AI response parsing failed');
+                const result = safeParse(text, BatchDrillOutputSchema, {
+                    model: provider,
+                    systemPrompt: p.system,
+                    userPrompt: p.user
+                });
+
+                result.drills.forEach((drill, idx) => {
+                    if (idx < phraseGroup.length) {
+                        generatedDrills.push({ drill, candidate: phraseGroup[idx] });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Phrase group')));
         }
+
+        await Promise.all(tasks);
+
+        log.info({ generatedCount: generatedDrills.length }, '✅ LLM 生成完成 (All Groups)');
 
         // ============================================
         // 4. 保存到 V2 Inventory (Redis)
         // ============================================
-        const generatedDrills = resultData.drills;
         let successCount = 0;
 
-        for (let i = 0; i < generatedDrills.length; i++) {
-            const rawDrill = generatedDrills[i];
-            const candidate = candidates[i];
-
-            // Safety check: alignment
-            if (!candidate) continue;
+        for (const item of generatedDrills) {
+            const { drill: rawDrill, candidate } = item;
 
             const payload: BriefingPayload = {
                 meta: {
@@ -201,7 +250,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
         log.info({ correlationId, successCount }, 'Drill V2 入库完成');
 
-        return { success: true, count: successCount, provider };
+        return { success: true, count: successCount, provider: primaryProvider };
 
     } catch (error) {
         log.error({ correlationId, error: (error as Error).message }, 'Drill 生成失败');
@@ -217,15 +266,14 @@ interface DrillCandidate {
     definition_cn: string | null;
     word_family: any;
     collocations?: any;
+    type?: 'NEW' | 'REVIEW'; // [Smart Dispatch] Added
+    reviewData?: any;        // [Smart Dispatch] Added
 }
 
 async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Promise<DrillCandidate[]> {
     const vocabs = await db.vocab.findMany({
         where: { id: { in: vocabIds } }
     });
-
-    // Maintain order same as input IDs? 
-    // Not strictly necessary for batch gen, but mapToCandidate is needed.
     return vocabs.map(mapToCandidate);
 }
 
@@ -236,6 +284,8 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         definition_cn: v.definition_cn,
         word_family: v.word_family,
         collocations: v.collocations,
+        type: 'NEW', // Default for manual fetch
+        reviewData: null
     };
 }
 
@@ -314,6 +364,8 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         definition_cn: omps.definition_cn,
         word_family: omps.word_family,
         collocations: omps.collocations,
+        type: omps.type, // [Smart Dispatch] Pass type
+        reviewData: omps.reviewData // [Smart Dispatch] Pass FSRS data
     }));
 
     // 4. 返回指定数量

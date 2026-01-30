@@ -161,7 +161,10 @@ For each Target Word, select the MATCHING formula below and fill the slots.
     <distractor_logic>
         Options: [ "Distractor", "Final_Target_Word" ]
         Rules:
-        1. **Adverb Conversion Case**: If Target was converted (e.g. abroad -> overseas), DO NOT use the original word (abroad) as a distractor if it fits grammatically. Use a look-alike (e.g., "aboard") or a Noun instead.
+        1. **Adverb Conversion Case**: 
+          - IF Target was converted (e.g. abroad -> overseas), CHECK if the original word fits grammatically (e.g. "is abroad" is valid).
+          - IF VALID: **BANNED**. Do NOT use the original word as a distractor. Use a look-alike (e.g., "oversee") or a Noun form instead.
+          - IF INVALID: You may use it.
         2. **Special Ban**: DO NOT use "abroad", "home", "here", "there" as distractors for Adjective targets, as they can validly follow "be".
         3. Word Family (Priority): "able" (Adj) vs "ability" (Noun).
         4. Visual Look-alike: "abroad" vs "aboard".

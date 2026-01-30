@@ -35,5 +35,17 @@ Connect the "lego blocks" (Python TTS, Vector Search, Client).
     - [ ] Update `actions/get-next-drill.ts` to dispatch to L0/L1/L2 generators based on mode.
 
 ## Phase 4: Verification
-- [ ] **Unit Tests**: Verify `omps-core` returns correct track-specific candidates.
 - [ ] **Integration Test**: Run a full L1 (Audio) session flow.
+
+## Phase 5: Backlog (Deferred Items)
+Tasks deferred from Drill Processor V2 Refactor (Smart Dispatch).
+
+- [ ] **L1/L2 Generator Mapping**:
+    - [ ] Explicitly map `AUDIO` mode to `Phrase` generator (with Audio hints).
+    - [ ] Map `CHUNKING` mode to `Context` generator.
+- [ ] **MIX Mode Aggregation**:
+    - [ ] Implement parallel fetching from L0, L1, and L2 pools.
+    - [ ] Define mixing ratio (e.g., 4:3:3).
+- [ ] **Dashboard Link Fixes**:
+    - [ ] Fix `Daily Blitz` card link to `/session/mix` (or correct implementation).
+    - [ ] Update `Skill Gym` links (`Speed Run` -> `SYNTAX`, `Audio Gym` -> `AUDIO`).
