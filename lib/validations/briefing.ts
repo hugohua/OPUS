@@ -40,6 +40,22 @@ export type RecordOutcomeInput = z.infer<typeof RecordOutcomeSchema>;
 
 // --- Briefing Content Schemas ---
 
+// 选项 Schema: 支持字符串或对象
+const OptionItemSchema = z.object({
+    id: z.string().optional(),
+    text: z.string(),
+    is_correct: z.boolean().optional(),
+    type: z.string().optional()
+});
+
+// 解析 Schema: 支持对象结构
+const ExplanationSchema = z.object({
+    title: z.string().optional(),
+    content: z.string().optional(), // 用于 Blitz 等
+    correct_logic: z.string().optional(), // 用于 Phrase 等
+    trap_analysis: z.array(z.string()).optional()
+});
+
 export const DrillSegmentSchema = z.object({
     type: z.enum(['text', 'interaction']),
     content_markdown: z.string().optional(),
@@ -49,9 +65,18 @@ export const DrillSegmentSchema = z.object({
     task: z.object({
         style: z.enum(['swipe_card', 'bubble_select']),
         question_markdown: z.string(),
-        options: z.array(z.string()),
+
+        // Options: 支持 string[] 或 object[]
+        options: z.union([
+            z.array(z.string()),
+            z.array(OptionItemSchema)
+        ]),
+
         answer_key: z.string(),
+
+        // Explanation: 支持 markdown 字符串 (legacy) 或 结构化对象 (v2)
         explanation_markdown: z.string().optional(),
+        explanation: ExplanationSchema.optional(),
     }).optional(),
 });
 
@@ -66,6 +91,7 @@ export const BriefingPayloadSchema = z.object({
         sender: z.string().optional(),
         level: z.number().optional(),
         isRetry: z.boolean().optional(), // 前端扩展状态：重试标记
+        nuance_goal: z.string().optional(), // PHRASE 模式的语义目标
     }),
     segments: z.array(DrillSegmentSchema),
 });

@@ -15,9 +15,10 @@ export interface BriefingSegment {
     task?: {
         style: InteractionStyle;
         question_markdown: string;
-        options: string[];
+        options: string[] | any[]; // Support string[] or complex object[]
         answer_key: string;
         explanation_markdown?: string;
+        explanation?: any; // Support rich explanation structure
     };
 }
 

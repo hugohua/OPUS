@@ -204,6 +204,11 @@ Example 1 (Verb):
   "drills": [
     {
       "input_index": 0,
+      "meta": {
+        "mode": "SYNTAX",
+        "format": "chat",
+        "target_word": "approved"
+      },
       "segments": [
         {
           "type": "text",
@@ -232,6 +237,11 @@ Example 2 (Adjective):
   "drills": [
     {
       "input_index": 1,
+      "meta": {
+        "mode": "SYNTAX",
+        "format": "chat",
+        "target_word": "accurate"
+      },
       "segments": [
         {
           "type": "text",

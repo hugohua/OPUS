@@ -178,6 +178,17 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const textSegment = currentDrill?.segments.find(s => s.type === 'text');
     const interactSegment = currentDrill?.segments.find(s => s.type === 'interaction');
 
+    // [Compatibility] Handle rich explanation object -> string for legacy components
+    const task = interactSegment?.task as any;
+    let explanationMarkdown = task?.explanation_markdown || "";
+
+    if (!explanationMarkdown && task?.explanation) {
+        // Reconstruct markdown from rich object (Phrase/Blitz style)
+        const e = task.explanation;
+        const traps = Array.isArray(e.trap_analysis) ? e.trap_analysis.join('\n') : "";
+        explanationMarkdown = `## ${e.title || "Note"}\n\n${e.correct_logic || e.content || ""}\n\n${traps}`;
+    }
+
     const handleComplete = async (result: boolean | number) => {
         const vocabId = (currentDrill.meta as any).vocabId || 0;
 
@@ -393,19 +404,23 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
             <div className="w-full grid grid-cols-2 gap-4 h-48">
                 {status === "idle" ? (
                     // Options Grid
-                    interactSegment?.task?.options?.map((opt, idx) => {
+                    interactSegment?.task?.options?.map((opt: any, idx) => {
                         const indexLabel = String.fromCharCode(65 + idx); // A, B, C...
+                        // Handle both string and object options
+                        const optionText = typeof opt === 'string' ? opt : opt.text;
+                        const optionKey = typeof opt === 'string' ? opt : opt.text; // Use text as key for now
+
                         return (
                             <button
-                                key={opt}
-                                onClick={() => handleOptionSelect(opt)}
+                                key={idx} // Use index as key to be safe with objects
+                                onClick={() => handleOptionSelect(optionKey)}
                                 className="group relative h-full w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] shadow-sm hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-3"
                             >
                                 <span className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-xs font-mono text-zinc-400 flex items-center justify-center group-hover:border-emerald-200 group-hover:text-emerald-600 transition-colors">
                                     {indexLabel}
                                 </span>
                                 <span className="font-serif text-xl md:text-2xl font-medium text-zinc-800 dark:text-zinc-200">
-                                    {opt}
+                                    {optionText}
                                 </span>
                             </button>
                         );
@@ -465,16 +480,16 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                                 <PhraseCard
                                     phraseMarkdown={textSegment.content_markdown || ""}
                                     translation={(textSegment as any).translation_cn || ""}
-                                    wordDefinition={(interactSegment.task as any).explanation_markdown?.split('\n')[0] || ""} // Extract first line definition
+                                    wordDefinition={explanationMarkdown?.split('\n')[0] || ""} // Extract first line definition
                                     status={status as any} // Cast status "correct"->"revealed" logic handled in component
-                                    phonetic={(interactSegment.task as any).explanation_markdown?.match(/\[(.*?)\]/)?.[0] || ""}
-                                    partOfSpeech={(interactSegment.task as any).explanation_markdown?.split(']')[1]?.trim() || ""}
+                                    phonetic={explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
+                                    partOfSpeech={explanationMarkdown?.split(']')[1]?.trim() || ""}
                                 />
                             ) : (
                                 <EditorialDrill
                                     content={textSegment.content_markdown || ""}
                                     translation={(textSegment as any).translation_cn}
-                                    explanation={(interactSegment.task as any).explanation_markdown}
+                                    explanation={explanationMarkdown}
                                     answer={interactSegment.task?.answer_key || ""}
                                     status={status}
                                     selected={selectedOption}

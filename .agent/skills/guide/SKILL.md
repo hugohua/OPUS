@@ -29,6 +29,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ### 2. Drill Engine (Core Mechanic)
 - **Implementation**: `docs/dev-notes/drill-engine-implementation.md` (The "Briefing" generation logic)
+- **Prompt Structure**: `docs/dev-notes/prompt-structure-v2.md` (**Standard V2 Output Specification**, 包含 Rich Option/Explanation 定义)
 - **Word Selection (OMPS)**: `docs/dev-notes/omps-word-selection-engine.md` (**核心选词引擎**，所有场景必读)
 - **Context Selection**: `docs/dev-notes/context-selector-guide.md` (How we pick words/sentences)
 - **Vector Logic**: `docs/dev-notes/vector-context-selection-v2.md` (Embedding & Similarity rules)

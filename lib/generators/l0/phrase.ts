@@ -18,6 +18,7 @@
 
 export interface PhraseGeneratorInput {
     targetWord: string;
+    meaning?: string;
     modifiers: string[];
 }
 
@@ -88,8 +89,8 @@ For EACH item in the input list:
 </question_stem_logic>
 
 <distractor_engine>
-Generate 4 Options (A, B, C, D) based on strict logic.
-*Note: Shuffle the position in final presentation, but keep IDs logic-bound for generation.*
+    Generate 4 Options (A, B, C, D) based on strict logic.
+    *Note: Shuffle the position in final presentation, but keep IDs logic-bound for generation.*
 
     <option_types>
     - **A (Correct)**: The valid, morphologically correct Modifier.
@@ -145,26 +146,43 @@ Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
 {
   "drills": [
     {
-      "drill_type": "PHRASE_BUILDER",
-      "core_word": "\${TargetWord}",
-      "core_pos": "\${POS_of_Target}",
-      "nuance_goal": "\${Nuance_String}",
-      "question_stem": "________ \${TargetWord}" (OR "\${TargetWord} ________"),
-      "options": [
-        { "id": "A", "text": "\${Correct_Word}", "is_correct": true, "type": "Correct" },
-        { "id": "B", "text": "\${POS_Trap_Word}", "is_correct": false, "type": "POS_Trap" },
-        { "id": "C", "text": "\${Visual_Trap_Word}", "is_correct": false, "type": "Visual_Trap" },
-        { "id": "D", "text": "\${Semantic_Trap_Word}", "is_correct": false, "type": "Semantic_Trap" }
-      ],
-      "explanation": {
-        "title": "💡 Logic Check: \${Structure_Name_CN}",
-        "correct_logic": "**Formula**: \`\${Needed_POS_CN}\` + \`\${Core_POS_CN}\`\\n**Why**: \${Reasoning_Why_A_Is_Right_CN}",
-        "trap_analysis": [
-          "**Why not B?** \\"\${Option_B_Text}\\" 是\${Wrong_POS_CN}。这里需要\${Needed_POS_CN}。",
-          "**Why not C?** 看仔细！\\"\${Option_C_Text}\\" 意为“\${Meaning_C_CN}”，拼写易混。",
-          "**Why not D?** 语法虽对，但语意不符。\\"\${Option_D_Text}\\" 意为“\${Meaning_D_CN}”。"
-        ]
-      }
+      "meta": {
+        "mode": "PHRASE",
+        "format": "chat",
+        "target_word": "\${TargetWord}",
+        "nuance_goal": "\${Nuance_String}"
+      },
+      "segments": [
+        {
+          "type": "text",
+          "content_markdown": "#### \${TargetWord}",
+          "translation_cn": "\${Meaning_CN_if_provided_or_Generated}"
+        },
+        {
+          "type": "interaction",
+          "dimension": "C",
+          "task": {
+            "style": "bubble_select",
+            "question_markdown": "\${Stem_With_Gap}",
+            "options": [
+              { "id": "A", "text": "\${Correct_Word}", "is_correct": true, "type": "Correct" },
+              { "id": "B", "text": "\${POS_Trap_Word}", "is_correct": false, "type": "POS_Trap" },
+              { "id": "C", "text": "\${Visual_Trap_Word}", "is_correct": false, "type": "Visual_Trap" },
+              { "id": "D", "text": "\${Semantic_Trap_Word}", "is_correct": false, "type": "Semantic_Trap" }
+            ],
+            "answer_key": "\${Correct_Word}",
+            "explanation": {
+              "title": "💡 Logic Check: \${Structure_Name_CN}",
+              "correct_logic": "**Formula**: \`\${Needed_POS_CN}\` + \`\${Core_POS_CN}\`\\n**Why**: \${Reasoning_Why_A_Is_Right_CN}",
+              "trap_analysis": [
+                "**Why not B?**: \\"\${Option_B}\\" 是\${Wrong_POS_CN}。这里需要\${Needed_POS_CN}。",
+                "**Why not C?**: 看仔细！\\"\${Option_C}\\" 意为“\${Meaning_C_CN}”，拼写易混。",
+                "**Why not D?**: 语法虽对，但语意不符。\\"\${Option_D}\\" 意为“\${Meaning_D_CN}”。"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -106,20 +106,42 @@ CRITICAL: Return JSON Only.
 {
   "drills": [
     {
-      "drill_type": "BLITZ",
-      "target_word": "\${TargetWord}",
-      "clue_context": "\${Partner_Word}",
-      "question_stem": "\${Stem_With_Gap}",
-      "options": [
-        { "id": "A", "text": "\${TargetWord}", "is_correct": true, "type": "Correct" },
-        { "id": "B", "text": "\${Visual_Trap}", "is_correct": false, "type": "Visual_Trap" },
-        { "id": "C", "text": "\${Semantic_Trap}", "is_correct": false, "type": "Semantic_Trap" },
-        { "id": "D", "text": "\${POS_Trap}", "is_correct": false, "type": "POS_Trap" }
-      ],
-      "explanation": {
-        "title": "⚡ Blitz Note",
-        "content": "**Formula**: \`\${Word1}\` + \`\${Word2}\`\\n**Why**: 此搭配意为“\${Meaning_Phrase_CN}”。\\n**Traps**:\\n- **B**: \${B_Reason_CN}\\n- **C**: \${C_Reason_CN}\\n- **D**: \${D_Reason_CN}"
-      }
+      "meta": {
+        "mode": "BLITZ",
+        "format": "chat",
+        "target_word": "\${TargetWord}"
+      },
+      "segments": [
+        {
+          "type": "text",
+          "content_markdown": "**\${Partner_Word}**",
+          "translation_cn": "\${Meaning_Phrase_CN}"
+        },
+        {
+          "type": "interaction",
+          "dimension": "V",
+          "task": {
+            "style": "bubble_select",
+            "question_markdown": "\${Stem_With_Gap}",
+            "options": [
+              { "id": "A", "text": "\${TargetWord}", "is_correct": true, "type": "Correct" },
+              { "id": "B", "text": "\${Visual_Trap}", "is_correct": false, "type": "Visual_Trap" },
+              { "id": "C", "text": "\${Semantic_Trap}", "is_correct": false, "type": "Semantic_Trap" },
+              { "id": "D", "text": "\${POS_Trap}", "is_correct": false, "type": "POS_Trap" }
+            ],
+            "answer_key": "\${TargetWord}",
+            "explanation": {
+              "title": "⚡ Blitz Note",
+              "content": "**Formula**: \`\${Word1}\` + \`\${Word2}\`\\n**Why**: 此搭配意为“\${Meaning_Phrase_CN}”。",
+              "trap_analysis": [
+                "**B**: \${B_Reason_CN}",
+                "**C**: \${C_Reason_CN}",
+                "**D**: \${D_Reason_CN}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

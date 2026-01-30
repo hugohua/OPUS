@@ -98,13 +98,40 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 userPrompt = p.user;
                 break;
             }
+            case 'PHRASE': {
+                const { getL0PhraseBatchPrompt } = await import('@/lib/generators/l0/phrase');
+                // Use context words as modifiers (1+N)
+                const inputs = await Promise.all(candidates.map(async c => {
+                    // Fallback logic: if no collocations, search for context words
+                    // But Phrase generator prefers simple modifiers.
+                    // Let's use getContextWords which fetches related words.
+                    const modifiers = await getContextWords(userId, c.vocabId, c.word);
+                    return {
+                        targetWord: c.word,
+                        meaning: c.definition_cn || '暂无释义',
+                        modifiers: modifiers.length > 0 ? modifiers : ['frequently', 'highly', 'effectively'] // Generic fallback
+                    };
+                }));
+                const p = getL0PhraseBatchPrompt(inputs);
+                systemPrompt = p.system;
+                userPrompt = p.user;
+                break;
+            }
             case 'BLITZ': {
                 const { getL0BlitzBatchPrompt } = await import('@/lib/generators/l0/blitz');
-                const inputs = candidates.map(c => ({
-                    targetWord: c.word,
-                    meaning: c.definition_cn || '',
-                    collocations: [] // TODO: Fetch collocations
-                }));
+                const inputs = candidates.map(c => {
+                    // Extract collocations string[] from JSON
+                    let collys: string[] = [];
+                    if (Array.isArray(c.collocations)) {
+                        collys = c.collocations.map((item: any) => typeof item === 'string' ? item : item.text).filter(Boolean);
+                    }
+
+                    return {
+                        targetWord: c.word,
+                        meaning: c.definition_cn || '',
+                        collocations: collys
+                    };
+                });
                 const p = getL0BlitzBatchPrompt(inputs);
                 systemPrompt = p.system;
                 userPrompt = p.user;
@@ -189,6 +216,7 @@ interface DrillCandidate {
     word: string;
     definition_cn: string | null;
     word_family: any;
+    collocations?: any;
 }
 
 async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Promise<DrillCandidate[]> {
@@ -207,6 +235,7 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         word: v.word,
         definition_cn: v.definition_cn,
         word_family: v.word_family,
+        collocations: v.collocations,
     };
 }
 
@@ -284,6 +313,7 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         word: omps.word,
         definition_cn: omps.definition_cn,
         word_family: omps.word_family,
+        collocations: omps.collocations,
     }));
 
     // 4. 返回指定数量
