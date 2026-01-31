@@ -1,0 +1,192 @@
+[
+    {
+        "id": "l0_blitz_marketing_strategy",
+        "description": "marketing + strategy collocation",
+        "input": {
+            "targetWord": "marketing",
+            "meaning": "营销",
+            "collocations": [
+                "marketing strategy",
+                "marketing campaign",
+                "marketing plan"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "strategy"
+        }
+    },
+    {
+        "id": "l0_blitz_business_opportunity",
+        "description": "business + opportunity phrase",
+        "input": {
+            "targetWord": "business",
+            "meaning": "商业",
+            "collocations": [
+                "business opportunity",
+                "business development",
+                "business model"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "opportunity"
+        }
+    },
+    {
+        "id": "l0_blitz_customer_satisfaction",
+        "description": "customer + satisfaction phrase",
+        "input": {
+            "targetWord": "customer",
+            "meaning": "客户",
+            "collocations": [
+                "customer satisfaction",
+                "customer service",
+                "customer loyalty"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "satisfaction"
+        }
+    },
+    {
+        "id": "l0_blitz_financial_analysis",
+        "description": "financial + analysis phrase",
+        "input": {
+            "targetWord": "financial",
+            "meaning": "财务的",
+            "collocations": [
+                "financial analysis",
+                "financial report",
+                "financial statement"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "analysis"
+        }
+    },
+    {
+        "id": "l0_blitz_project_management",
+        "description": "project + management phrase",
+        "input": {
+            "targetWord": "project",
+            "meaning": "项目",
+            "collocations": [
+                "project management",
+                "project plan",
+                "project team"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "management"
+        }
+    },
+    {
+        "id": "l0_blitz_sales_forecast",
+        "description": "sales + forecast phrase",
+        "input": {
+            "targetWord": "sales",
+            "meaning": "销售",
+            "collocations": [
+                "sales forecast",
+                "sales target",
+                "sales revenue"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "forecast"
+        }
+    },
+    {
+        "id": "l0_blitz_competitive_advantage",
+        "description": "competitive + advantage phrase",
+        "input": {
+            "targetWord": "competitive",
+            "meaning": "竞争的",
+            "collocations": [
+                "competitive advantage",
+                "competitive market",
+                "competitive pricing"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "advantage"
+        }
+    },
+    {
+        "id": "l0_blitz_quality_control",
+        "description": "quality + control phrase",
+        "input": {
+            "targetWord": "quality",
+            "meaning": "质量",
+            "collocations": [
+                "quality control",
+                "quality assurance",
+                "quality improvement"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "control"
+        }
+    },
+    {
+        "id": "l0_blitz_budget_allocation",
+        "description": "budget + allocation phrase",
+        "input": {
+            "targetWord": "budget",
+            "meaning": "预算",
+            "collocations": [
+                "budget allocation",
+                "budget plan",
+                "budget constraints"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "allocation"
+        }
+    },
+    {
+        "id": "l0_blitz_performance_review",
+        "description": "performance + review phrase",
+        "input": {
+            "targetWord": "performance",
+            "meaning": "绩效",
+            "collocations": [
+                "performance review",
+                "performance metrics",
+                "performance improvement"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "answerIsTarget": true,
+            "distractorCount": 3,
+            "partnerWord": "review"
+        }
+    }
+]

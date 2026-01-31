@@ -80,7 +80,7 @@ export async function getCacheStats(): Promise<{
 export async function handlePauseQueue(): Promise<ActionState> {
     try {
         await pauseQueue();
-        revalidatePath('/dashboard/admin/queue');
+        revalidatePath('/admin/queue');
         return { status: 'success', message: '队列已暂停' };
     } catch (error) {
         return { status: 'error', message: (error as Error).message };
@@ -93,7 +93,7 @@ export async function handlePauseQueue(): Promise<ActionState> {
 export async function handleResumeQueue(): Promise<ActionState> {
     try {
         await resumeQueue();
-        revalidatePath('/dashboard/admin/queue');
+        revalidatePath('/admin/queue');
         return { status: 'success', message: '队列已恢复' };
     } catch (error) {
         return { status: 'error', message: (error as Error).message };
@@ -106,7 +106,7 @@ export async function handleResumeQueue(): Promise<ActionState> {
 export async function handleClearQueue(): Promise<ActionState> {
     try {
         await clearQueue();
-        revalidatePath('/dashboard/admin/queue');
+        revalidatePath('/admin/queue');
         return { status: 'success', message: '队列已清空' };
     } catch (error) {
         return { status: 'error', message: (error as Error).message };
@@ -141,7 +141,7 @@ export async function handleTriggerGeneration(
         }
 
         const jobs = await enqueueDrillGeneration(userId, mode, 'realtime');
-        revalidatePath('/dashboard/admin/queue');
+        revalidatePath('/admin/queue');
         return {
             status: 'success',
             message: `${jobs.length} 个任务已入队 (当前库存: ${currentCount}题)`,

@@ -43,6 +43,9 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ### 4. Infrastructure & Testing
 - **Testing**: `docs/dev-notes/TESTING.md` (Vitest setup, mocking rules)
+- **Test Overview**: `docs/dev-notes/test-architecture-overview.md` (**测试全景图**：覆盖地图 + Gap 分析)
+- **Evaluation Matrix**: `docs/dev-notes/evaluation-matrix.md` (**三维评估体系**：Logic / Quality / Stability)
+- **L0 Quality Assurance**: `docs/dev-notes/TESTING.md` (包含 Schema 校验、规则断言逻辑、LLM 评分基线)
 - **Auth**: `docs/dev-notes/auth-system-and-infrastructure.md` (NextAuth/Clerk logic)
 
 ### 5. Text-to-Speech (TTS)
@@ -58,5 +61,6 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If modifying Audio/Playback** -> Read `tts-architecture.md` (Architecture) AND `use-tts.ts` (Implementation).
 - **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
+- **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).
 - **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.
 

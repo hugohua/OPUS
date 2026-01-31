@@ -55,3 +55,17 @@ The following critical paths have been verified via automated tests:
 1.  **Mocking**: Use `vi.mock` aggressively for DB (`prisma`) and Server Actions when testing Components.
 2.  **Environment**: Frontend tests require `/** @vitest-environment jsdom */` directive.
 3.  **Isolation**: Ensure `vi.clearAllMocks()` is called in `beforeEach`.
+
+## 7. L0 Scenario Verification (Phase 4)
+
+To verify the quality and correctness of L0 prompts (SYNTAX, PHRASE, BLITZ), use the following commands:
+
+| Command | Description |
+| :--- | :--- |
+| `npm run test:l0` | Run L0 Schema and Rule Assertion tests |
+| `npm run eval:l0` | Run LLM evaluation and generate summary report |
+| `npm run verify:l0` | **One-Click Regression**: Run both tests and evaluation |
+
+### Acceptance Criteria
+- **Unit Tests**: 0 failures (Schema + Rules)
+- **LLM Eval**: Avg Score ≥ 7.0 (Check reports/baseline-l0-summary-*.md)

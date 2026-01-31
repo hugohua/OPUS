@@ -1,53 +1,3 @@
-/**
- * LLM Prompt 评估运行脚本 (Evaluation Runner)
- * 
- * [功能描述]
- * 用于评估 L0-L2 Prompt 质量的统一 CLI 工具。
- * 支持 "Golden Set" (回归测试) 和 "Wild Set" (动态测试) 两种模式。
- * 
- * [使用模式 Usage Modes]
- * 
- * 1. 🟢 静态模式 STATIC MODE (Golden Set) - 默认
- *    用于【回归测试】。确保已知的经典 Case 不会劣化。
- *    > npx tsx scripts/eval-prompts.ts --mode L0_SYNTAX --judge ets-auditor
- *    > npx tsx scripts/eval-prompts.ts --mode L0_PHRASE --judge ets-auditor
- *    > npx tsx scripts/eval-prompts.ts --mode L0_BLITZ --judge ets-auditor
- * 
- * 2. 🟠 动态模式 DYNAMIC MODE (Wild Set) - 使用 "--source db"
- *    用于【覆盖率测试】。随机从数据库抽取 10 条数据，测试 Prompt 对未知数据的鲁棒性。
- *    > npx tsx scripts/eval-prompts.ts --mode L0_SYNTAX --source db --judge ets-auditor
- * 
- * 3. 🔵 汇总模式 SUMMARY MODE (Meta-Analysis)
- *    用于【生成分析报告】。在运行单项评估通过后，生成跨场景的执行摘要 (使用 ETL_MODEL)。
- *    > npx tsx scripts/eval-prompts.ts --summary
- * 
- * 4. 🟣 对比模式 COMPARISON MODE (A/B Test)
- *    对比当前模型 (AI_MODEL_NAME) 与 候选模型 (ETL_MODEL_NAME) 的表现。
- *    > npx tsx scripts/eval-prompts.ts --mode L0_SYNTAX --compare --judge ets-auditor
- * 
- * [最佳实践 Best Practices]
- * - CI/CD Pipeline: 每日运行 🟢 静态模式。
- * - 发版前 (Pre-Release): 运行 🟠 动态模式 (Wild Set) 捕捉边界情况。
- * - Prompt 重构优化: 运行 🔵 汇总模式 获取可执行的优化建议。
- */
-
-import 'dotenv/config';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { generateWithFailover } from '../workers/llm-failover';
-import { JUDGE_PROMPTS } from '../lib/generators/judges';
-
-// ES Module compatibility
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ----------------------------------------------------------------------------
-// Types & Constants
-// ----------------------------------------------------------------------------
-
-
-
 interface EvalRecord {
     id: string;
     description: string;
@@ -91,7 +41,7 @@ async function main() {
         process.exit(1);
     }
 
-    console.log(`\n🚀 Starting Evaluation: [${mode}] ${compare ? '(Multi-Model Comparison)' : ''}`);
+    console.log(`\n🚀 Starting Evaluation: [${ mode }] ${ compare ? '(Multi-Model Comparison)' : '' } `);
 
     // 1. Load Dataset
     let testCases: any[] = [];
@@ -102,15 +52,15 @@ async function main() {
         testCases = await fetchTestCasesFromDB(mode);
     } else {
         console.log('📂 Source: Local JSON File');
-        const datasetPath = path.resolve(process.cwd(), `tests/evals/${mode.toLowerCase().replace(/_/g, '-')}.json`);
+        const datasetPath = path.resolve(process.cwd(), `tests / evals / ${ mode.toLowerCase().replace(/_/g, '-') }.json`);
         if (!fs.existsSync(datasetPath)) {
-            console.error(`❌ Dataset not found at: ${datasetPath}`);
+            console.error(`�?Dataset not found at: ${ datasetPath } `);
             process.exit(1);
         }
         testCases = JSON.parse(fs.readFileSync(datasetPath, 'utf8'));
     }
 
-    console.log(`Dataset size: ${testCases.length} cases`);
+    console.log(`Dataset size: ${ testCases.length } cases`);
 
     // 2. Resolve Generator
     const generator = await getGenerator(mode);
@@ -124,9 +74,9 @@ async function main() {
 
     // A. Primary Model Phase
     const primaryModelName = process.env.AI_MODEL_NAME || 'aliyun';
-    console.log(`[Primary] Calling ${primaryModelName} with ${inputs.length} items...`);
+    console.log(`[Primary] Calling ${ primaryModelName } with ${ inputs.length } items...`);
     const primaryOutputs = await runBatchModel(primaryModelName, prompt, inputs.length);
-    console.log(`[Primary] Received ${primaryOutputs.length} valid items.`);
+    console.log(`[Primary] Received ${ primaryOutputs.length } valid items.`);
 
     // B. Secondary Model Phase (Optional)
     let secondaryOutputs: any[] = [];
@@ -135,10 +85,10 @@ async function main() {
     if (compare) {
         const originalOrder = process.env.AI_PROVIDER_ORDER;
         process.env.AI_PROVIDER_ORDER = 'openrouter';
-        console.log(`[Secondary] Calling ${secondaryModelName} with ${inputs.length} items...`);
+        console.log(`[Secondary] Calling ${ secondaryModelName } with ${ inputs.length } items...`);
 
         secondaryOutputs = await runBatchModel(secondaryModelName, prompt, inputs.length);
-        console.log(`[Secondary] Received ${secondaryOutputs.length} valid items.`);
+        console.log(`[Secondary] Received ${ secondaryOutputs.length } valid items.`);
 
         process.env.AI_PROVIDER_ORDER = originalOrder;
     }
@@ -151,8 +101,8 @@ async function main() {
         const testCase = testCases[i];
 
         // For DB items, id might be number, ensure string
-        const caseId = testCase.id ? String(testCase.id) : `db_case_${i + 1}`;
-        const description = testCase.description || `DB Word: ${testCase.input.targetWord || 'Unknown'}`;
+        const caseId = testCase.id ? String(testCase.id) : `db_case_${ i + 1 } `;
+        const description = testCase.description || `DB Word: ${ testCase.input.targetWord || 'Unknown' } `;
 
         const record: EvalRecord = {
             id: caseId,
@@ -161,7 +111,7 @@ async function main() {
             primary: { model: primaryModelName, text: '', structureOk: false }
         };
 
-        process.stdout.write(`Evaluating ${caseId}... `);
+        process.stdout.write(`Evaluating ${ caseId }... `);
 
         // Map Primary Result
         const pOut = primaryOutputs[i];
@@ -261,74 +211,13 @@ async function fetchTestCasesFromDB(mode: string): Promise<any[]> {
                 }
 
                 return {
-                    id: `db_${w.word}`,
-                    description: `[DB] ${w.word} (${w.definition_cn || 'No Def'})`,
+                    id: `db_${ w.word } `,
+                    description: `[DB] ${ w.word } (${ w.definition_cn || 'No Def' })`,
                     input: {
                         targetWord: w.word,
                         meaning: w.definition_cn || (w.definitions as any)?.business_cn || "Unknown",
                         contextWords: contextWords,
                         wordFamily: wf
-                    }
-                };
-            });
-        }
-
-        if (mode === 'L0_PHRASE') {
-            // Fetch words with Collocations
-            const validWords = await prisma.vocab.findMany({
-                where: {
-                    is_toeic_core: true,
-                    // Ensure we have collocations to make phrases
-                    collocations: { not: [] as any }
-                },
-                take: 50,
-                orderBy: { frequency_score: 'desc' }
-            });
-
-            const selected = validWords.sort(() => 0.5 - Math.random()).slice(0, 10);
-
-            return selected.map(w => {
-                let collocations: string[] = [];
-                try {
-                    const cols = w.collocations as any[];
-                    // Pick collocations that contain the target word
-                    collocations = cols.map(c => c.text).filter(t => t.toLowerCase().includes(w.word.toLowerCase())).slice(0, 2);
-                } catch { }
-
-                if (collocations.length === 0) collocations = [`make ${w.word}`]; // Fallback
-
-                return {
-                    id: `db_phrase_${w.word}`,
-                    description: `[DB] Phrase for ${w.word}`,
-                    input: {
-                        targetWord: w.word,
-                        modifiers: collocations
-                    }
-                };
-            });
-        }
-
-        if (mode === 'L0_BLITZ') {
-            const validWords = await prisma.vocab.findMany({
-                where: { is_toeic_core: true },
-                take: 50
-            });
-
-            const selected = validWords.sort(() => 0.5 - Math.random()).slice(0, 10);
-
-            return selected.map(w => {
-                let cols: string[] = [];
-                try {
-                    cols = (w.collocations as any[]).map(c => c.text).slice(0, 3);
-                } catch { }
-
-                return {
-                    id: `db_blitz_${w.word}`,
-                    description: `[DB] Blitz for ${w.word}`,
-                    input: {
-                        targetWord: w.word,
-                        meaning: w.definition_cn || 'Unknown',
-                        collocations: cols
                     }
                 };
             });
@@ -347,8 +236,8 @@ async function fetchTestCasesFromDB(mode: string): Promise<any[]> {
             const selected = validWords.sort(() => 0.5 - Math.random()).slice(0, 5);
 
             return selected.map(w => ({
-                id: `db_chunk_${w.word}`,
-                description: `[DB] Sentence for ${w.word}`,
+                id: `db_chunk_${ w.word } `,
+                description: `[DB] Sentence for ${ w.word }`,
                 input: {
                     sentence: w.commonExample,
                     targetWord: w.word
@@ -356,7 +245,7 @@ async function fetchTestCasesFromDB(mode: string): Promise<any[]> {
             }));
         }
 
-        console.warn(`DB Fetch not implemented for mode: ${mode}`);
+        console.warn(`DB Fetch not implemented for mode: ${ mode } `);
         return [];
 
     } finally {
@@ -375,26 +264,26 @@ async function runBatchModel(modelName: string, prompt: { system: string, user: 
         // Attempt clean JSON parse
         let jsonStr = response.text;
         if (jsonStr.includes('```json')) {
-            jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
         } else if (jsonStr.includes('```')) {
-            jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
-        }
+    jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+}
 
-        const json = JSON.parse(jsonStr);
-        const list = json.drills || json.items || json.cards || [];
+const json = JSON.parse(jsonStr);
+const list = json.drills || json.items || json.cards || [];
 
-        if (!Array.isArray(list)) {
-            console.warn(`[Warn] Response is not an array wrapped in 'drills'/'items':`, jsonStr.slice(0, 100));
-            return [];
-        }
+if (!Array.isArray(list)) {
+    console.warn(`[Warn] Response is not an array wrapped in 'drills'/'items':`, jsonStr.slice(0, 100));
+    return [];
+}
 
-        // Return raw objects
-        return list;
+// Return raw objects
+return list;
 
     } catch (e) {
-        console.error(`[Error] Batch Generation Failed: ${(e as Error).message}`);
-        return [];
-    }
+    console.error(`[Error] Batch Generation Failed: ${(e as Error).message}`);
+    return [];
+}
 }
 
 async function runJudge(content: string, role: string) {
@@ -477,7 +366,7 @@ function generateHTMLReport(mode: string, records: EvalRecord[], stats: any) {
     `;
 
     fs.writeFileSync(filename, htmlContent);
-    console.log(`\n✅ 报告已生成 (HTML): ${filename}`);
+    console.log(`\n�?报告已生�?(HTML): ${filename}`);
 }
 
 function generateMarkdownReport(mode: string, records: EvalRecord[], stats: any) {
@@ -523,7 +412,7 @@ function generateMarkdownReport(mode: string, records: EvalRecord[], stats: any)
         // Comparison Table
         md += `| Dimension | Primary (${r.primary.model}) | Secondary (${r.secondary?.model || 'N/A'}) |\n`;
         md += `|---|---|---|\n`;
-        md += `| **Structure** | ${r.primary.structureOk ? '✅' : '❌'} | ${r.secondary ? (r.secondary.structureOk ? '✅' : '❌') : '-'} |\n`;
+        md += `| **Structure** | ${r.primary.structureOk ? '�? : '�?} | ${r.secondary ? (r.secondary.structureOk ? '�? : '�?) : '-'} |\n`;
         if (r.primary.judge) {
             md += `| **Judge Score** | ${r.primary.judge.score}/10 | ${r.secondary?.judge?.score ?? '-'} |\n`;
             md += `| **Reason** | ${r.primary.judge.reason} | ${r.secondary?.judge?.reason ?? '-'} |\n`;
@@ -540,7 +429,7 @@ function generateMarkdownReport(mode: string, records: EvalRecord[], stats: any)
     });
 
     fs.writeFileSync(filename, md);
-    console.log(`✅ 报告已生成 (MD): ${filename}`);
+    console.log(`�?报告已生�?(MD): ${filename}`);
 }
 
 function generateManualJudgePrompt(mode: string, records: EvalRecord[], systemPrompt: string) {
@@ -612,7 +501,7 @@ Please analyze the "Result" above and provide a structured report covering:
     });
 
     fs.writeFileSync(filename, content);
-    console.log(`✅ 质检 Prompt 已生成: ${filename}`);
+    console.log(`�?质检 Prompt 已生�? ${filename}`);
 }
 
 function calculateStats(records: EvalRecord[]) {
@@ -646,17 +535,17 @@ function renderStats(stats: any) {
             <div class="stat-value" style="color: ${stats.structureRate === 100 ? '#2ea44f' : '#d73a49'}">
                 ${stats.structureRate}%
             </div>
-            <div class="stat-label">结构通过率</div>
+            <div class="stat-label">结构通过�?/div>
         </div>
         <div class="stat-card">
             <div class="stat-value">${stats.avgScore}</div>
-            <div class="stat-label">平均质量分</div>
+            <div class="stat-label">平均质量�?/div>
         </div>
         <div class="stat-card">
             <div class="stat-value">
                 ${stats.qualityRate !== 'N/A' ? `${stats.qualityRate}%` : 'N/A'}
             </div>
-            <div class="stat-label">优良率 (≥7分)</div>
+            <div class="stat-label">优良�?(�?�?</div>
         </div>
     </div>
     `;
@@ -674,7 +563,7 @@ function generateSummarySection(records: EvalRecord[]): string {
 
     return `
     <div class="header">
-        <h2>💡 优化建议汇总</h2>
+        <h2>💡 优化建议汇�?/h2>
         <ul>
             ${suggestions.map(s => `<li>[<strong>${s.id}</strong>] ${s.model}: ${s.text}</li>`).join('')}
         </ul>
@@ -696,7 +585,7 @@ function renderCaseCard(r: EvalRecord): string {
                 <span class="case-id">${r.id}</span>
                 <span class="case-desc">${r.description}</span>
             </div>
-            <div>结构校验: ${r.primary.structureOk ? '✅ 通过' : '❌ 失败'}</div>
+            <div>结构校验: ${r.primary.structureOk ? '�?通过' : '�?失败'}</div>
         </div>
 
         <div style="margin-bottom: 10px;">
@@ -708,7 +597,7 @@ function renderCaseCard(r: EvalRecord): string {
             <thead>
                 <tr>
                     <th>评估维度</th>
-                    <th>主模型 (${r.primary.model})</th>
+                    <th>主模�?(${r.primary.model})</th>
                     ${r.secondary ? `<th>对比模型 (${r.secondary.model})</th>` : ''}
                 </tr>
             </thead>
@@ -731,7 +620,7 @@ function renderCaseCard(r: EvalRecord): string {
             <summary>查看原始输出 JSON</summary>
             <div style="display: grid; grid-template-columns: 1fr ${r.secondary ? '1fr' : ''}; gap: 20px; margin-top: 10px;">
                 <div>
-                    <h4>主模型输出</h4>
+                    <h4>主模型输�?/h4>
                     <pre>${r.primary.text}</pre>
                 </div>
                 ${r.secondary ? `
@@ -844,11 +733,11 @@ async function generateCrossScenarioSummary() {
         }
 
         summaryData.scenarios.push(scenarioData);
-        console.log(`  ✓ Loaded ${scenarioData.reports.length} cases from ${latestFile}`);
+        console.log(`  �?Loaded ${scenarioData.reports.length} cases from ${latestFile}`);
     }
 
     if (summaryData.scenarios.length === 0) {
-        console.error('❌ No reports found! Please run evaluations first.');
+        console.error('�?No reports found! Please run evaluations first.');
         process.exit(1);
     }
 
@@ -878,7 +767,7 @@ Generate a complete Markdown document following the specified format.`;
             summaryMarkdown = summaryMarkdown.split('```')[1].split('```')[0].trim();
         }
     } catch (error) {
-        console.error('❌ Summary generation failed:', error);
+        console.error('�?Summary generation failed:', error);
         process.exit(1);
     }
 
@@ -887,7 +776,7 @@ Generate a complete Markdown document following the specified format.`;
     const outputPath = path.join(reportDir, `baseline-l0-summary-${timestamp}.md`);
     fs.writeFileSync(outputPath, summaryMarkdown, 'utf-8');
 
-    console.log(`\n✅ Summary report generated: ${outputPath}`);
+    console.log(`\n�?Summary report generated: ${outputPath}`);
     console.log(`\n📊 Summary Stats:`);
     summaryData.scenarios.forEach((s: any) => {
         console.log(`  ${s.mode}: ${s.avgScore.toFixed(1)}/10 (${s.structurePass}% structure pass)`);

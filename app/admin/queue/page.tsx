@@ -35,9 +35,7 @@ export default async function QueueDashboardPage() {
     );
 
     return (
-        <div className="dark min-h-screen w-full bg-zinc-950 text-zinc-50 font-sans antialiased relative overflow-hidden">
-            {/* Background Glow Removed */}
-
+        <>
             {/* Smart Frame Header */}
             <Header
                 variant="default"
@@ -63,7 +61,7 @@ export default async function QueueDashboardPage() {
                     <OperationPanel isPaused={status.isPaused} userId={session.user.id} />
                 </Suspense>
             </div>
-        </div>
+        </>
     );
 }
 

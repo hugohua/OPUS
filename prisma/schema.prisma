@@ -226,5 +226,39 @@ model DrillCache {
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+
   @@index([userId, mode, isConsumed])
 }
+
+// ----------------------------------------------------------------------
+// [V5.0] Admin Inspector / AI Audit
+// ----------------------------------------------------------------------
+model DrillAudit {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  // Target Information
+  targetWord String
+  
+  // Context & Input
+  // 推荐格式: "L0:SYNTAX" 或 "L1:AUDIO"
+  contextMode String?
+  
+  // The full drill object
+  payload   Json     
+  
+  // Audit Result
+  status      String // 'GOOD', 'BAD', 'AUDIT', 'PENDING'
+  auditScore  Int?
+  auditReason String?
+  isRedundant Boolean @default(false)
+  
+  // If 'BAD', manual flagging reason
+  flagReason  String?
+
+  // ⚡ 性能优化索引
+  @@index([status])
+  @@index([targetWord])
+  @@index([createdAt])
+}
+

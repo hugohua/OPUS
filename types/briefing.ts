@@ -31,6 +31,8 @@ export interface BriefingPayload {
         vocabId?: number; // Needed to track progress
         target_word?: string;
         source?: string; // Track origin (cache, deterministic, llm)
+        nuance_goal?: string; // PHRASE mode: semantic goal (e.g., "Describe quality")
     };
     segments: BriefingSegment[];
 }
+

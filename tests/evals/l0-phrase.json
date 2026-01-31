@@ -1,0 +1,172 @@
+[
+    {
+        "id": "l0_phrase_make_decision",
+        "description": "make + decision collocation",
+        "input": {
+            "targetWord": "make",
+            "meaning": "生成、执行（决策/计划）",
+            "modifiers": [
+                "decision",
+                "plan"
+            ]
+        },
+        "criteria": {
+            "focus": "Collocation Recognition",
+            "expectedPhrase": "make a decision",
+            "nuanceGoal": "Indicate action"
+        }
+    },
+    {
+        "id": "l0_phrase_competitive_advantage",
+        "description": "competitive + advantage phrase",
+        "input": {
+            "targetWord": "advantage",
+            "meaning": "优势",
+            "modifiers": [
+                "competitive",
+                "significant"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "competitive advantage",
+            "nuanceGoal": "Describe quality"
+        }
+    },
+    {
+        "id": "l0_phrase_develop_strategy",
+        "description": "develop + strategy collocation",
+        "input": {
+            "targetWord": "develop",
+            "meaning": "制定、发展",
+            "modifiers": [
+                "strategy",
+                "plan"
+            ]
+        },
+        "criteria": {
+            "focus": "Verb + Noun Phrase",
+            "expectedPhrase": "develop a strategy",
+            "nuanceGoal": "Indicate creation"
+        }
+    },
+    {
+        "id": "l0_phrase_annual_report",
+        "description": "annual + report phrase",
+        "input": {
+            "targetWord": "report",
+            "meaning": "报告",
+            "modifiers": [
+                "annual",
+                "quarterly"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "annual report",
+            "nuanceGoal": "Specify frequency"
+        }
+    },
+    {
+        "id": "l0_phrase_effective_communication",
+        "description": "effective + communication phrase",
+        "input": {
+            "targetWord": "communication",
+            "meaning": "沟通",
+            "modifiers": [
+                "effective",
+                "clear"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "effective communication",
+            "nuanceGoal": "Describe quality"
+        }
+    },
+    {
+        "id": "l0_phrase_rapid_growth",
+        "description": "rapid + growth phrase",
+        "input": {
+            "targetWord": "growth",
+            "meaning": "增长",
+            "modifiers": [
+                "rapid",
+                "steady"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "rapid growth",
+            "nuanceGoal": "Describe speed"
+        }
+    },
+    {
+        "id": "l0_phrase_submit_proposal",
+        "description": "submit + proposal collocation",
+        "input": {
+            "targetWord": "submit",
+            "meaning": "提交",
+            "modifiers": [
+                "proposal",
+                "application"
+            ]
+        },
+        "criteria": {
+            "focus": "Verb + Noun Phrase",
+            "expectedPhrase": "submit a proposal",
+            "nuanceGoal": "Indicate action"
+        }
+    },
+    {
+        "id": "l0_phrase_financial_statement",
+        "description": "financial + statement phrase",
+        "input": {
+            "targetWord": "statement",
+            "meaning": "报表",
+            "modifiers": [
+                "financial",
+                "income"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "financial statement",
+            "nuanceGoal": "Specify type"
+        }
+    },
+    {
+        "id": "l0_phrase_assess_performance",
+        "description": "assess + performance collocation",
+        "input": {
+            "targetWord": "assess",
+            "meaning": "评估",
+            "modifiers": [
+                "performance",
+                "situation"
+            ]
+        },
+        "criteria": {
+            "focus": "Verb + Noun Phrase",
+            "expectedPhrase": "assess performance",
+            "nuanceGoal": "Indicate evaluation"
+        }
+    },
+    {
+        "id": "l0_phrase_primary_objective",
+        "description": "primary + objective phrase",
+        "input": {
+            "targetWord": "objective",
+            "meaning": "目标",
+            "modifiers": [
+                "primary",
+                "main"
+            ]
+        },
+        "criteria": {
+            "focus": "Adjective + Noun Phrase",
+            "expectedPhrase": "primary objective",
+            "nuanceGoal": "Indicate priority"
+        }
+    }
+]

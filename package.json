@@ -24,7 +24,10 @@
     "queue:enqueue": "npx tsx scripts/enqueue-drill.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:l0": "vitest run l0",
+    "eval:l0": "npx tsx scripts/eval-prompts.ts --mode L0_SYNTAX --judge ets-auditor && npx tsx scripts/eval-prompts.ts --mode L0_PHRASE --judge ets-auditor && npx tsx scripts/eval-prompts.ts --mode L0_BLITZ --judge ets-auditor && npx tsx scripts/eval-prompts.ts --summary",
+    "verify:l0": "npm run test:l0 && npm run eval:l0"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.12",

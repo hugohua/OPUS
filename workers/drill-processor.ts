@@ -3,6 +3,7 @@
  */
 import { Job } from 'bullmq';
 import { db } from '@/lib/db';
+import { redis } from '@/lib/queue/connection';
 import { Prisma } from '@prisma/client';
 import { DrillJobData } from '@/lib/queue/inventory-queue';
 import { Vocab } from '@prisma/client';
@@ -11,11 +12,18 @@ import { generateWithFailover } from './llm-failover';
 import { inventory } from '@/lib/inventory';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
 import { safeParse } from '@/lib/ai/utils';
 import { ContextSelector } from '@/lib/ai/context-selector';
+import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
 
 const log = logger.child({ module: 'drill-processor' });
+
+// --- Pivot 配置 (Retry 逻辑待后续实现) ---
+const PIVOT_CONFIG = {
+    enabled: true, // 启用 Pivot 兜底
+};
 
 // AI 输出 Schema (Reusable)
 const SingleDrillSchema = z.object({
@@ -150,7 +158,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 result.drills.forEach((drill, idx) => {
                     // Safety check index
                     if (idx < syntaxGroup.length) {
-                        generatedDrills.push({ drill, candidate: syntaxGroup[idx] });
+                        generatedDrills.push({
+                            drill,
+                            candidate: syntaxGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
                     }
                 });
             })().catch(err => log.error({ error: err.message }, 'Failed to process Syntax group')));
@@ -183,7 +197,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                 result.drills.forEach((drill, idx) => {
                     if (idx < blitzGroup.length) {
-                        generatedDrills.push({ drill, candidate: blitzGroup[idx] });
+                        generatedDrills.push({
+                            drill,
+                            candidate: blitzGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
                     }
                 });
             })().catch(err => log.error({ error: err.message }, 'Failed to process Blitz group')));
@@ -213,7 +233,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                 result.drills.forEach((drill, idx) => {
                     if (idx < phraseGroup.length) {
-                        generatedDrills.push({ drill, candidate: phraseGroup[idx] });
+                        generatedDrills.push({
+                            drill,
+                            candidate: phraseGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
                     }
                 });
             })().catch(err => log.error({ error: err.message }, 'Failed to process Phrase group')));
@@ -224,14 +250,16 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         log.info({ generatedCount: generatedDrills.length }, '✅ LLM 生成完成 (All Groups)');
 
         // ============================================
-        // 4. 保存到 V2 Inventory (Redis)
+        // 4. 保存到 V2 Inventory (Redis) + L0 Schema 验证
         // ============================================
         let successCount = 0;
+        let pivotCount = 0;
 
         for (const item of generatedDrills) {
             const { drill: rawDrill, candidate } = item;
 
-            const payload: BriefingPayload = {
+            // 构建初始 Payload
+            let payload: BriefingPayload = {
                 meta: {
                     format: rawDrill.meta.format as any,
                     mode: mode,
@@ -244,13 +272,70 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 segments: rawDrill.segments,
             };
 
+            // --- L0 Schema 验证 (Phase 1: Defense Layer) ---
+            const isL0Mode = ['SYNTAX', 'PHRASE', 'BLITZ'].includes(mode);
+
+            if (isL0Mode) {
+                const validation = validateL0Payload(mode as L0Mode, payload);
+
+                if (!validation.success) {
+                    log.warn({
+                        vocabId: candidate.vocabId,
+                        word: candidate.word,
+                        mode,
+                        error: validation.error,
+                        rawPayload: JSON.stringify(validation.rawPayload).slice(0, 500), // 截断日志
+                    }, '⚠️ L0 Schema 验证失败');
+
+                    // Pivot 兜底: 使用安全 Payload
+                    if (PIVOT_CONFIG.enabled) {
+                        payload = createPivotPayload(
+                            mode as L0Mode,
+                            candidate.vocabId,
+                            candidate.word,
+                            'Generation failed, please retry.'
+                        );
+                        pivotCount++;
+                        log.info({ vocabId: candidate.vocabId, word: candidate.word }, '🔄 使用 Pivot 兜底 Payload');
+                    } else {
+                        // 不使用 Pivot 时跳过此条目
+                        log.warn({ vocabId: candidate.vocabId }, '❌ 跳过无效 Payload (Pivot 已禁用)');
+                        continue;
+                    }
+                }
+            }
+
             await inventory.pushDrill(userId, mode, candidate.vocabId, payload);
             successCount++;
+
+            // [Phase 5] Real-time Stream Publish & Persist
+            // Fire and forget - do not block main flow
+            const streamEvent = JSON.stringify({
+                id: `GEN-${crypto.randomUUID().split('-')[0]}`, // Short unique ID
+                timestamp: new Date().toISOString(),
+                payload: payload,
+                status: 'success',
+                debug: {
+                    systemPrompt: item.systemPrompt,
+                    userPrompt: item.userPrompt,
+                    model: item.provider
+                }
+            });
+
+            Promise.all([
+                redis.publish('admin:drill-stream', streamEvent),
+                redis.lpush('admin:drill-history', streamEvent),
+                redis.ltrim('admin:drill-history', 0, 99) // Keep last 100
+            ]).catch(err => log.error({ err }, 'Failed to publish/persist stream event'));
+        }
+
+        if (pivotCount > 0) {
+            log.warn({ correlationId, pivotCount, successCount }, '⚠️ 部分 Drill 使用了 Pivot 兜底');
         }
 
         log.info({ correlationId, successCount }, 'Drill V2 入库完成');
 
-        return { success: true, count: successCount, provider: primaryProvider };
+        return { success: true, count: successCount, pivotCount, provider: primaryProvider };
 
     } catch (error) {
         log.error({ correlationId, error: (error as Error).message }, 'Drill 生成失败');
