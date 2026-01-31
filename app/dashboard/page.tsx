@@ -5,6 +5,7 @@ import { ContextEngine } from "@/components/dashboard/context-engine";
 import { FloatingDock } from "@/components/dashboard/floating-dock";
 import { getDashboardStats } from "@/actions/get-dashboard-stats";
 import { auth } from "@/auth";
+import { FsrsHud } from "@/components/dashboard/fsrs-hud";
 
 export default async function DashboardPage() {
     // We might keep fetching stats for future dynamic updates, though currently cards are static shell.
@@ -20,6 +21,9 @@ export default async function DashboardPage() {
                 {/* 1. Header */}
                 <DashboardHeader user={session?.user} />
 
+                {/* 1.5 FSRS HUD */}
+                <FsrsHud stats={stats.fsrs} />
+
                 {/* 2. Scrollable Body */}
                 <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-8 no-scrollbar">
                     {/* Hero: Daily Blitz */}
@@ -34,7 +38,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* 3. Floating Dock (Restored) */}
-            <FloatingDock />
+            <FloatingDock hasDue={stats.fsrs.due > 0} />
         </main>
     );
 }

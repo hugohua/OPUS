@@ -8,8 +8,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getNextDrillBatch } from '@/actions/get-next-drill';
-import { saveDrillToCache, checkCacheStatus } from '@/lib/drill-cache';
+import { inventory } from '@/lib/inventory'; // [Fix] Use inventory stats directly
+import { enqueueDrillGeneration } from '@/lib/queue/inventory-queue'; // [Fix] Enqueue instead of consume
 import { createLogger } from '@/lib/logger';
 import { SessionMode } from '@/types/briefing';
 
@@ -20,17 +20,17 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 // 配置
 const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
+// [Restored] 之前的设置：不同模式有不同的目标数量
 const BATCH_SIZE_MAP: Record<SessionMode, number> = {
     SYNTAX: 20,
     CHUNKING: 30,
-    NUANCE: 50,
-    BLITZ: 10,
+    NUANCE: 50, // 高消耗模式需要大库存
+    BLITZ: 20,
     PHRASE: 20,
     AUDIO: 20,
     READING: 20,
     VISUAL: 20,
 };
-const CACHE_THRESHOLD = 2;
 const ACTIVE_DAYS = 7;
 
 export async function GET(request: NextRequest) {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    log.info('Cron 任务开始: 预生成 Drill 缓存');
+    log.info('Cron 任务开始: 检查并补充库存 (Producer Mode)');
 
     try {
         // 1. 获取活跃用户
@@ -52,35 +52,45 @@ export async function GET(request: NextRequest) {
         let skipCount = 0;
         let errorCount = 0;
 
-        // 2. 为每个用户补充缓存
+        // 2. 为每个用户检查库存
         for (const user of activeUsers) {
+
+            // 批量获取该用户的所有库存统计 (O(1))
+            let stats;
+            try {
+                stats = await inventory.getInventoryStats(user.id);
+            } catch (e) {
+                log.error({ userId: user.id, error: String(e) }, '无法读取库存统计');
+                errorCount += MODES.length;
+                continue;
+            }
+
             for (const mode of MODES) {
                 try {
-                    const needsRefill = await checkCacheStatus(user.id, mode, CACHE_THRESHOLD);
+                    // 读取 Redis 缓存的实时水位
+                    // stats key e.g. "SYNTAX", "BLITZ"
+                    const currentLevel = stats[mode as keyof typeof stats] || 0;
 
-                    if (!needsRefill) {
-                        skipCount++;
-                        continue;
-                    }
+                    // [Restored Logic] 动态阈值: 使用 Target 的 50% 作为补货线
+                    // e.g. NUANCE Target 50 -> Threshold 25.
+                    // e.g. BLITZ Target 10 -> Threshold 5.
+                    const targetSize = BATCH_SIZE_MAP[mode] || 20;
+                    const threshold = Math.floor(targetSize * 0.5);
 
-                    const result = await getNextDrillBatch({
-                        userId: user.id,
-                        mode,
-                        limit: BATCH_SIZE_MAP[mode],
-                        forceRefresh: true,
-                    });
+                    if (currentLevel < threshold) {
+                        // 水位低 -> 触发补货 (Producer Only)
+                        // 使用 'cron' 优先级，避免阻塞实时请求
+                        await enqueueDrillGeneration(user.id, mode, 'cron');
 
-                    if (result.status === 'success' && result.data) {
-                        await saveDrillToCache(user.id, mode, result.data);
+                        log.info({ userId: user.id, mode, currentLevel, threshold }, '📉 水位低，已触发补货任务');
                         successCount++;
-                        log.info({ userId: user.id, mode }, '缓存生成成功');
                     } else {
-                        errorCount++;
-                        log.error({ userId: user.id, mode, message: result.message }, '生成失败');
+                        // 水位足 -> 跳过
+                        skipCount++;
                     }
 
-                    // 限速
-                    await sleep(500);
+                    // 简单的限速，避免瞬间打爆 Redis/Queue
+                    await sleep(50);
 
                 } catch (error: any) {
                     errorCount++;
@@ -89,13 +99,13 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const stats = { successCount, skipCount, errorCount };
-        log.info(stats, 'Cron 任务完成');
+        const resultStats = { successCount, skipCount, errorCount };
+        log.info(resultStats, 'Cron 任务完成');
 
         return NextResponse.json({
             status: 'success',
-            message: 'Prefetch complete',
-            stats
+            message: 'Inventory check complete',
+            stats: resultStats
         });
 
     } catch (error: any) {

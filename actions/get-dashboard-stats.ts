@@ -16,6 +16,11 @@ export interface DashboardStats {
         count: number;
         status: "ready" | "warning" | "locked";
     };
+    fsrs: {
+        mastered: number;
+        learning: number;
+        due: number;
+    };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -29,6 +34,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 syntax: { count: 0, status: "ready" },
                 chunking: { count: 0, status: "locked" },
                 nuance: { count: 0, status: "locked" },
+                fsrs: { mastered: 0, learning: 0, due: 0 },
             };
         }
 
@@ -67,19 +73,38 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         const syntaxCount = newCount + Math.min(pendingCount, 20); // Cap syntax batch at 20
         const chunkingCount = pendingCount; // Chunking handles the bulk
 
+        // FSRS Stats (Precise)
+        const [mastered, learning, due] = await Promise.all([
+            db.userProgress.count({ where: { userId: user.id, track: 'VISUAL', status: 'MASTERED' } }),
+            db.userProgress.count({ where: { userId: user.id, track: 'VISUAL', status: { in: ['LEARNING', 'REVIEW'] } } }),
+            db.userProgress.count({
+                where: {
+                    userId: user.id,
+                    track: 'VISUAL',
+                    next_review_at: { lte: now },
+                    status: { in: ['LEARNING', 'REVIEW', 'MASTERED'] }
+                }
+            })
+        ]);
+
         return {
             syntax: {
                 count: syntaxCount,
-                status: syntaxCount > 0 ? "ready" : "ready", // Always ready for drills
+                status: syntaxCount > 0 ? "ready" : "ready",
             },
             chunking: {
                 count: chunkingCount,
-                status: chunkingCount > 30 ? "warning" : "ready", // Warn if backlog high
+                status: chunkingCount > 30 ? "warning" : "ready",
             },
             nuance: {
                 count: 0,
-                status: "locked", // Feature flag: locked for now
+                status: "locked",
             },
+            fsrs: {
+                mastered,
+                learning,
+                due
+            }
         };
     } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -87,6 +112,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
             syntax: { count: 0, status: "ready" },
             chunking: { count: 0, status: "locked" },
             nuance: { count: 0, status: "locked" },
+            fsrs: { mastered: 0, learning: 0, due: 0 },
         };
     }
 }

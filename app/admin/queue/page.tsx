@@ -44,7 +44,7 @@ export default async function QueueDashboardPage() {
             />
 
             {/* Main Content (with padding) */}
-            <div className="relative z-10 p-6 md:p-10 space-y-6">
+            <div className="relative z-10 p-4 md:p-10 space-y-6">
 
                 {/* 1. Real-time Metrics (Full Width) */}
                 <Suspense fallback={<CardSkeleton />}>

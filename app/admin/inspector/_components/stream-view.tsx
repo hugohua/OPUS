@@ -7,7 +7,9 @@ import {
     Play,
     Trash2,
     ThumbsUp,
-    ThumbsDown
+    ThumbsDown,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { saveBadCase } from '@/app/actions/inspector';
@@ -47,6 +49,7 @@ export function GeneratorStreamView() {
     const [queue, setQueue] = useState<DrillItem[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isPaused, setIsPaused] = useState(false);
+    const [isInputExpanded, setIsInputExpanded] = useState(false); // Default collapsed on mobile
 
     // Ref for accessing latest pause state in event callback
     const isPausedRef = useRef(isPaused);
@@ -205,10 +208,10 @@ export function GeneratorStreamView() {
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
                 {/* Left List */}
-                <div className="w-80 shrink-0 border-r border-white/5 overflow-y-auto bg-black/20">
+                <div className="w-full h-48 md:w-80 md:h-full shrink-0 border-b md:border-b-0 md:border-r border-white/5 overflow-y-auto bg-black/20">
                     {queue.map((item) => (
                         <div
                             key={item.id}
@@ -254,16 +257,32 @@ export function GeneratorStreamView() {
                     const meta = activeItem.payload?.meta || {};
 
                     return (
-                        <div className="flex-1 overflow-y-auto p-8 flex gap-8 bg-zinc-950/50">
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col md:flex-row gap-4 md:gap-8 bg-zinc-950/50">
 
                             {/* Column 1: Input Context */}
-                            <div className="flex-1 flex flex-col gap-4 min-w-[300px]">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                                    <span className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-400">Input Context</span>
+                            <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[300px]">
+                                <div
+                                    className="flex items-center justify-between cursor-pointer md:cursor-default"
+                                    onClick={() => setIsInputExpanded(!isInputExpanded)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-400">Input Context</span>
+                                    </div>
+                                    <div className="md:hidden text-[10px] items-center gap-1 text-zinc-500 flex">
+                                        {isInputExpanded ? 'Collapse' : 'Expand'}
+                                        {isInputExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    </div>
                                 </div>
 
-                                <div className="w-full bg-zinc-900 rounded-xl border border-white/10 p-4 font-mono text-xs text-zinc-300 leading-relaxed overflow-x-auto">
+                                <div className={cn(
+                                    "w-full bg-zinc-900 rounded-xl border border-white/10 p-4 font-mono text-xs text-zinc-300 leading-relaxed overflow-x-auto transition-all duration-300 ease-in-out",
+                                    !isInputExpanded ? "max-h-[120px] md:max-h-none overflow-hidden relative" : "max-h-none opacity-100"
+                                )}>
+                                    {!isInputExpanded && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-900 to-transparent pointer-events-none md:hidden"></div>
+                                    )}
+
                                     <div className="text-zinc-500">// Meta</div>
                                     <div className="pl-4"><span className="text-violet-400">"id"</span>: <span className="text-emerald-400">"{activeItem.id}"</span></div>
                                     <br />
@@ -292,7 +311,7 @@ export function GeneratorStreamView() {
                             </div>
 
                             {/* Column 2: Rendered Output (Light Mode Preview) */}
-                            <div className="flex-1 flex flex-col gap-4 min-w-[350px]">
+                            <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[350px]">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
