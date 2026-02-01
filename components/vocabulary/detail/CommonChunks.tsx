@@ -30,7 +30,7 @@ export function CommonChunks({ collocations, mainWord }: CommonChunksProps) {
         const parts = phrase.split(new RegExp(`(${word})`, 'gi'));
         return parts.map((part, i) =>
             part.toLowerCase() === word.toLowerCase()
-                ? <span key={i} className="text-violet-400 font-bold group-hover:text-white transition-colors">{part}</span>
+                ? <span key={i} className="text-violet-600 dark:text-violet-400 font-bold group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">{part}</span>
                 : part
         );
     };

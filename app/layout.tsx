@@ -14,6 +14,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
     title: "Opus | AI Contextual Reader",
     description: "Master Business English with AI-driven contextual reading.",
+    icons: {
+        icon: [
+            { url: "/favicon.svg", type: "image/svg+xml" },
+        ],
+    },
 };
 
 export default function RootLayout({

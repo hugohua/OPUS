@@ -8,6 +8,7 @@
  */
 
 import { prisma } from '@/lib/db';
+import { auth } from '@/auth';
 import { generateObject } from 'ai';
 import { getAIModel } from '@/lib/ai/client';
 import { createLogger } from '@/lib/logger';
@@ -21,7 +22,7 @@ import {
     L2_SCENARIOS,
     type L2SentencePayload,
 } from '@/lib/generators/l2/smart-content';
-import { getTTSAudio } from '@/lib/actions/tts-actions';
+import { getTTSAudioCore as getTTSAudio } from '@/lib/tts/service';
 
 const log = createLogger('content-generator');
 
@@ -43,6 +44,13 @@ export async function getOrGenerateL2Context(
     word: string,
     definition?: string
 ): Promise<SmartContentResult> {
+    // 0. Auth 检查
+    const session = await auth();
+    if (!session?.user?.id) {
+        log.warn({ vocabId, word }, 'Unauthorized access attempt');
+        return fallbackResponse(word, definition);
+    }
+
     // 1. 查缓存 (优先返回任意一条已有内容)
     const cached = await prisma.smartContent.findFirst({
         where: { vocabId, type: 'L2_SENTENCE' },
@@ -131,6 +139,12 @@ export async function switchL2Scenario(
     word: string,
     excludeScenario?: string
 ): Promise<SmartContentResult> {
+    // 0. Auth 检查
+    const session = await auth();
+    if (!session?.user?.id) {
+        return fallbackResponse(word);
+    }
+
     // 1. 查询所有已缓存的场景
     const allCached = await prisma.smartContent.findMany({
         where: { vocabId, type: 'L2_SENTENCE' },

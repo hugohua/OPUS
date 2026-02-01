@@ -75,7 +75,7 @@ export function useTTS() {
 
                 if (!res.ok) {
                     const errData = await res.json();
-                    throw new Error(errData.detail?.error || "TTS API Error");
+                    throw new Error(errData.error || errData.detail?.error || "TTS API Error");
                 }
 
                 const data: TTSResponse = await res.json();

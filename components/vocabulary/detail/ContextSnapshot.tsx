@@ -66,19 +66,24 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
         return () => { cancelled = true; };
     }, [vocabId, mainWord, definition]);
 
-    // 音频轮询 (每 2s 检查一次，直到 audioUrl 到位)
+    // 音频轮询 (每 2s 检查一次，最多 30 次 / 60 秒)
+    const [pollCount, setPollCount] = useState(0);
+    const MAX_POLL_ATTEMPTS = 30;
+
     useEffect(() => {
-        if (!content?.id || content.audioUrl) return;
+        if (!content?.id || content.audioUrl || pollCount >= MAX_POLL_ATTEMPTS) return;
 
         const interval = setInterval(async () => {
             const { audioUrl } = await getSmartContentAudio(content.id!);
             if (audioUrl) {
                 setContent(prev => prev ? { ...prev, audioUrl } : null);
+            } else {
+                setPollCount(prev => prev + 1);
             }
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [content?.id, content?.audioUrl]);
+    }, [content?.id, content?.audioUrl, pollCount]);
 
     // 切换场景
     const handleSwitch = useCallback(() => {
@@ -92,6 +97,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                     scenario: result.scenario,
                     audioUrl: result.audioUrl,
                 });
+                setPollCount(0); // 重置轮询计数
             } catch (error) {
                 console.error('Failed to switch scenario:', error);
             }
@@ -159,8 +165,23 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                             <Skeleton className="h-5 w-3/4" />
                         </div>
                     ) : content ? (
-                        <div className="p-4 bg-white/50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-violet-500/30 transition-colors shadow-sm dark:shadow-none">
-                            <div className="flex items-center gap-2 mb-2">
+                        <div className="relative p-4 bg-white/50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-violet-500/30 transition-colors shadow-sm dark:shadow-none">
+                            {/* Compact Play Button (Top-Right) */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => { e.stopPropagation(); handlePlay(); }}
+                                disabled={tts.isLoading}
+                                className="absolute top-2 right-2 rounded-full w-7 h-7 text-zinc-400 hover:bg-violet-100 hover:text-violet-600 dark:hover:bg-violet-900/30 transition-colors"
+                            >
+                                {tts.isLoading ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                )}
+                            </Button>
+
+                            <div className="flex items-center gap-2 mb-2 pr-8">
                                 <span className="px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-500/10 text-[9px] font-bold text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20">
                                     {content.scenario}
                                 </span>
@@ -173,7 +194,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                             </div>
 
                             {/* English Sentence */}
-                            <p className="text-sm text-zinc-700 dark:text-zinc-200 italic leading-relaxed font-serif mb-2">
+                            <p className="text-sm text-zinc-700 dark:text-zinc-200 italic leading-relaxed font-serif mb-1.5">
                                 "{highlightWord(content.text, mainWord)}"
                             </p>
 
@@ -181,22 +202,6 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">
                                 {content.translation}
                             </p>
-
-                            <div className="mt-3 flex justify-end">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => { e.stopPropagation(); handlePlay(); }}
-                                    disabled={tts.isLoading}
-                                    className="rounded-full w-8 h-8 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-violet-500"
-                                >
-                                    {tts.isLoading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Play className="w-4 h-4 fill-current" />
-                                    )}
-                                </Button>
-                            </div>
                         </div>
                     ) : (
                         <div className="p-4 bg-white/50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">

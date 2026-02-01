@@ -25,7 +25,7 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
         redirect("/dashboard/vocabulary");
     }
 
-    const { vocab, progress, weaverWord } = data;
+    const { vocab, progress } = data;
 
     // Default values if no progress
     const stability = progress?.stability ?? 0;
@@ -38,7 +38,13 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
             <div className="absolute top-0 left-0 w-full h-[300px] bg-emerald-500/5 dark:bg-emerald-500/5 blur-[100px] pointer-events-none z-0"></div>
 
             {/* Header */}
-            <StickyHeader stability={stability} isReviewPhase={isReviewPhase} rank={vocab.abceed_rank} />
+            <StickyHeader
+                stability={stability}
+                isReviewPhase={isReviewPhase}
+                rank={vocab.abceed_rank}
+                word={vocab.word}
+                vocabId={vocab.id}
+            />
 
             {/* Main Scrollable Content */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden pt-20 pb-32 px-6 relative z-10 scroll-smooth">
@@ -69,7 +75,7 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
                 {/* L3: Weaver Lab */}
                 <WeaverLab
                     targetWord={vocab.word}
-                    budgetWord={weaverWord?.word || "Budget"}
+                    vocabId={vocab.id}
                 />
 
             </main>

@@ -66,15 +66,25 @@ export function VocabHero({ word, phonetic, definition, rank, derivatives, synon
 
                 {/* Derivatives / Word Family */}
                 {/* Derivatives / Word Family */}
-                {derivatives && Object.keys(derivatives).length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-white/10 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-zinc-500 font-mono text-left">
-                        {Object.entries(derivatives).map(([pos, val]: [string, any]) => (
-                            <div key={pos} className="flex gap-1 truncate">
-                                <span className="font-bold text-zinc-400 dark:text-zinc-600 w-8 shrink-0 text-right">{pos}.</span>
-                                <span className="text-zinc-700 dark:text-zinc-300 truncate" title={String(val)}>{val}</span>
+                {/* Derivatives / Word Family */}
+                {derivatives && (
+                    // Filter out empty values first
+                    (() => {
+                        const validDerivatives = Object.entries(derivatives).filter(([_, val]) => val && String(val).trim() !== '');
+
+                        if (validDerivatives.length === 0) return null;
+
+                        return (
+                            <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-white/10 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-zinc-500 font-mono text-left">
+                                {validDerivatives.map(([pos, val]: [string, any]) => (
+                                    <div key={pos} className="flex gap-1 truncate">
+                                        <span className="font-bold text-zinc-400 dark:text-zinc-600 w-8 shrink-0 text-right">{pos}.</span>
+                                        <span className="text-zinc-700 dark:text-zinc-300 truncate" title={String(val)}>{val}</span>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        );
+                    })()
                 )}
 
                 {/* Thesaurus Bar (Synonyms Only) */}

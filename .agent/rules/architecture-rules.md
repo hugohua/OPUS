@@ -20,6 +20,7 @@
 - 核心原则：
   - “Clean JSX”：逻辑与样式严格分离
   - 前端哑巴，后端大脑：所有难度控制、内容生成、数据处理均在服务端
+  - **Prompt Separation**: 所有 System Prompt 必须抽离为 `lib/generators/` 下的静态常量文件。
   - Cognitive Safety：禁止破坏用户心理安全的功能（参考 Anti-Spec）
 
 ---
@@ -238,3 +239,123 @@ logs/
   - `[PROVIDER]_BASE_URL`
   - `[PROVIDER]_MODEL_NAME`
   - `[PROVIDER]_HTTPS_PROXY` (如需)
+
+---
+
+## 12. SSE 流式处理规范 (Streaming Standard)
+
+### A. 强制使用通用工具
+所有 LLM 流式场景**必须**使用 `lib/streaming/sse.ts` 提供的 `handleOpenAIStream` 工具，**严禁**自行构建流式处理逻辑。
+
+**允许的实现**:
+```typescript
+import { handleOpenAIStream, buildMessages } from '@/lib/streaming/sse';
+
+export async function POST(req: Request) {
+    const messages = buildMessages(userPrompt, systemPrompt);
+    return handleOpenAIStream(messages, {
+        model: "qwen-plus",
+        temperature: 0.7,
+        errorContext: "Feature Name"
+    });
+}
+```
+
+**禁止的实现** ❌:
+```typescript
+// ❌ 禁止手动构建 OpenAI 客户端
+const openai = new OpenAI({...});
+const stream = await openai.chat.completions.create({...});
+
+// ❌ 禁止手动构建 ReadableStream 和 SSE 包装
+const readableStream = new ReadableStream({
+    async start(controller) {
+        for await (const chunk of stream) { /* ... */ }
+    }
+});
+```
+
+### B. SSE 事件格式标准
+所有 SSE 响应必须遵循以下统一格式：
+
+```typescript
+type SSEEvent = 
+    | { type: 'content'; data: string }      // 流式内容片段
+    | { type: 'done' }                       // 流式完成
+    | { type: 'error'; error: string };      // 错误事件
+```
+
+输出示例：
+```
+data: {"type":"content","data":"Hello"}
+
+data: {"type":"content","data":" world"}
+
+data: {"type":"done"}
+```
+
+### C. 环境变量配置
+工具自动读取以下环境变量（优先级从高到低）：
+
+```env
+# DashScope 配置（优先）
+DASHSCOPE_API_KEY=sk-xxx
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+QWEN_MODEL_NAME=qwen-plus
+
+# OpenAI 配置（Fallback）
+OPENAI_API_KEY=sk-xxx
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+### D. 前端集成标准
+前端必须使用标准 SSE 解析逻辑：
+
+```typescript
+const reader = response.body?.getReader();
+const decoder = new TextDecoder();
+let buffer = '';
+
+while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+        if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            
+            switch (data.type) {
+                case 'content': setText(prev => prev + data.data); break;
+                case 'done': setIsLoading(false); break;
+                case 'error': handleError(data.error); break;
+            }
+        }
+    }
+}
+```
+
+### E. 最佳实践
+1. **明确 errorContext**: 便于日志追踪
+   ```typescript
+   errorContext: "WeaverLab Generation"
+   ```
+
+2. **使用 onComplete 做后处理**: 如保存到数据库
+   ```typescript
+   onComplete: async (text) => {
+       await saveToDatabase(text);
+   }
+   ```
+
+3. **避免在流式过程中写数据库**: 使用 `onComplete` 回调
+
+### F. 参考文档
+- **架构文档**: `docs/dev-notes/sse-streaming-architecture.md`
+- **API 参考**: `lib/streaming/README.md`
+- **实际应用**: `app/api/weaver/generate/route.ts`
+
+---

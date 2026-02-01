@@ -60,6 +60,11 @@ class DashScopeTTSService:
         )
         
         try:
+            # Direct passthrough - no mapping needed
+            # Frontend now sends DashScope native voice names directly
+            # Supported voices: Cherry, Serena, Ethan, Kai, Jennifer, Andre, etc.
+            dashscope_voice = voice
+            
             # 语言代码映射 (Standard Locale -> DashScope Format)
             language_map = {
                 "en-US": "English",
@@ -84,7 +89,7 @@ class DashScopeTTSService:
             response = dashscope.MultiModalConversation.call(
                 model=self.model,
                 text=text,
-                voice=voice,
+                voice=dashscope_voice, # Use mapped voice
                 language_type=dashscope_language,  # 使用规范化后的参数
                 stream=True  # 启用流式输出
             )

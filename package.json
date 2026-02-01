@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\"",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\" \"npm run dev:tts\"",
     "dev:web": "next dev",
     "dev:worker": "npx tsx --watch workers/index.ts",
     "dev:tts": "cd python_tts_service && ./start.sh",
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.12",
+    "@ai-sdk/react": "^3.0.68",
     "@bull-board/api": "^6.16.4",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.19.2",
@@ -62,7 +63,7 @@
     "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "node-fetch": "^2.7.0",
-    "openai": "^6.16.0",
+    "openai": "^6.17.0",
     "pino": "^10.2.0",
     "prisma": "^6.19.2",
     "react": "^19.2.3",

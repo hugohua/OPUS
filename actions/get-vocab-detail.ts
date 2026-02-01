@@ -33,22 +33,10 @@ export async function getVocabDetail(identifier: number | string) {
         },
     });
 
-    // Mock/Fetch random word for Weaver Lab (Budget)
-    // Ideally this comes from the user's review queue
-    // For now, let's just pick a random word from the DB that is NOT the current word
-    const randomWord = await prisma.vocab.findFirst({
-        where: {
-            id: { not: vocab.id }, // Use resolved ID
-            // Optional: filter by learningPriority to get "good" words
-            learningPriority: { gte: 60 },
-        },
-        take: 1,
-        skip: Math.floor(Math.random() * 100), // Simple random
-    });
+
 
     return {
         vocab,
         progress,
-        weaverWord: randomWord,
     };
 }

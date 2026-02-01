@@ -54,6 +54,19 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Setup**: `docs/dev-notes/tts-quickstart.md` (How to run the Python service & Docker)
 - **Frontend Hook**: `hooks/use-tts.ts` (React interface for playback)
 
+### 6. SmartContent (AI 内容资产库)
+- **Architecture**: `docs/dev-notes/smart-content-architecture.md` (**New**: 批量预生成策略)
+- **Prompt**: `lib/generators/l2/smart-content.ts` (System/User Prompt 分离)
+- **Server Action**: `actions/content-generator.ts` (Cache-First + Batch Generation)
+- **Use Case**: Word Detail Page 的 ContextSnapshot 模块
+
+### 7. SSE 流式处理 (Universal Streaming Utility)
+- **Architecture**: `docs/dev-notes/sse-streaming-architecture.md` (**Standard**: OpenAI SDK + tuoye 模式)
+- **Core Utility**: `lib/streaming/sse.ts` (统一的 `handleOpenAIStream` 工具)
+- **Usage Guide**: `lib/streaming/README.md` (API 文档、前端集成示例)
+- **Use Case**: WeaverLab (L3 故事生成)、未来的流式交互场景
+
+
 ## 🚦 Decision Routing
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
 - **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
@@ -64,4 +77,5 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
 - **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).
 - **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.
-
+- **If modifying AI 内容生成 (L2 例句等)** -> Read `smart-content-architecture.md` (批量生成策略).
+- **If 实现新的流式 LLM 场景 (如对话、实时生成等)** -> Read `sse-streaming-architecture.md` (标准 SSE 工具) AND `lib/streaming/README.md` (API 使用).

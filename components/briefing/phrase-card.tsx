@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { stripBold, hasBold } from "@/lib/utils/markdown";
 import { useTTS } from "@/hooks/use-tts"; // Re-added for H1 interaction
 import { TTSButton } from "@/components/tts/tts-button";
 
@@ -29,8 +30,8 @@ export function PhraseCard({
         let regex: RegExp;
         let isMarkdown = false;
 
-        // 1. Markdown Check
-        if (/\*\*.*?\*\*/.test(text)) {
+        // 1. Markdown Check (using utility)
+        if (hasBold(text)) {
             regex = /(\*\*.*?\*\*)/g;
             isMarkdown = true;
         }
@@ -117,7 +118,7 @@ export function PhraseCard({
     // Sentence TTS Logic
     const { play: playSentence, isPlaying: isSentencePlaying } = useTTS();
     const handlePlaySentence = () => {
-        const cleanText = phraseMarkdown.replace(/\*\*/g, ""); // Strip markdown
+        const cleanText = stripBold(phraseMarkdown); // Strip markdown using utility
         playSentence({
             text: cleanText,
             // Use defaults (Voice: Cherry, Speed: 1.0)
