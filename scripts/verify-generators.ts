@@ -39,14 +39,18 @@ async function main() {
 
     // 3. Verify L1 Chunking
     console.log('--- [L1 Chunking] ---');
-    const chunkInputs = [{ targetWord: 'test' }];
+    const chunkInputs = [{ targetWord: 'test', sentence: 'This is a test sentence.' }];
     const chunkPrompt = getL1ChunkingBatchPrompt(chunkInputs);
     console.log('System Prompt Valid:', chunkPrompt.system.includes('Rhythm Engine'));
     console.log('✅ L1 Chunking Check Passed\n');
 
     // 4. Verify L2 Context
     console.log('--- [L2 Context] ---');
-    const contextPrompt = getL2ContextBatchPrompt([{ targetWord: 'strategy' }]);
+    const contextPrompt = getL2ContextBatchPrompt([{
+        targetWord: 'strategy',
+        meaning: '策略',
+        contextKeywords: ['business', 'planning']
+    }]);
     console.log('System Prompt Valid:', contextPrompt.system.includes('Logic Engine'));
     console.log('✅ L2 Context Check Passed\n');
 

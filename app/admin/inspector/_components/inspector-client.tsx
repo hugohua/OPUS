@@ -11,29 +11,33 @@ export function InspectorClient() {
     const [activeTab, setActiveTab] = useState<'generator' | 'content'>('generator');
 
     return (
-        <div className="flex flex-col h-screen max-h-screen">
+        <div className="flex flex-col h-screen max-h-screen bg-background">
             {/* Header / Tabs */}
-            <div className="h-14 border-b border-white/10 bg-zinc-900/50 flex items-center px-6 gap-6 sticky top-0 z-50 backdrop-blur-sm">
+            <div className="h-14 border-b border-border bg-background/95 flex items-center px-6 gap-6 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex items-center gap-2 mr-8">
-                    <span className="font-mono font-bold text-violet-400">GOD VIEW</span>
+                    <span className="font-mono font-bold text-violet-500">GOD VIEW</span>
                 </div>
 
                 <button
                     onClick={() => setActiveTab('generator')}
-                    className={`h-full px-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'generator'
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                        }`}
+                    className={cn(
+                        "h-full px-4 text-sm font-medium border-b-2 transition-all",
+                        activeTab === 'generator'
+                            ? "border-violet-500 text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
                 >
                     生成器调试 (Generator)
                 </button>
 
                 <button
                     onClick={() => setActiveTab('content')}
-                    className={`h-full px-4 text-sm font-medium border-b-2 transition-all ${activeTab === 'content'
-                        ? 'border-violet-500 text-white'
-                        : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                        }`}
+                    className={cn(
+                        "h-full px-4 text-sm font-medium border-b-2 transition-all",
+                        activeTab === 'content'
+                            ? "border-violet-500 text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
                 >
                     内容模拟 (Content Sim)
                 </button>
@@ -44,7 +48,7 @@ export function InspectorClient() {
                 {activeTab === 'generator' ? (
                     <GeneratorStreamView />
                 ) : (
-                    <div className="flex-1 flex flex-col bg-black h-full">
+                    <div className="flex-1 flex flex-col bg-background h-full">
                         <ContentSimView />
                     </div>
                 )}
@@ -52,3 +56,5 @@ export function InspectorClient() {
         </div>
     );
 }
+
+import { cn } from '@/lib/utils';

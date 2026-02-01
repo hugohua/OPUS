@@ -1,10 +1,10 @@
 # FastAPI 核心依赖
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-pydantic==2.5.3
+pydantic>=2.5.3
 
 # 阿里云 DashScope SDK
-dashscope==1.19.0
+dashscope==1.25.0
 
 # 音频处理
 pydub==0.25.1
@@ -20,3 +20,6 @@ structlog==24.1.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.26.0
+
+# 环境配置
+python-dotenv==1.0.0

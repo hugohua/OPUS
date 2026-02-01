@@ -18,10 +18,19 @@ const log = createLogger('lib:omps-core');
 
 // --- 类型定义 ---
 
+// [New] Structured Definitions Schema
+export interface VocabDefinitions {
+    business_cn?: string;
+    general_cn?: string;
+    [key: string]: any; // Allow extensibility
+}
+
 export interface OMPSCandidate {
     vocabId: number;
     word: string;
     definition_cn: string;
+    phoneticUk?: string | null;
+    definitions?: VocabDefinitions; // [Fix] Strict typing replacing 'any'
     word_family: any;
     priority_level: number;
     frequency_score: number;
@@ -395,6 +404,8 @@ function mapToCandidate(
         vocabId: v.id,
         word: v.word,
         definition_cn: v.definition_cn,
+        phoneticUk: v.phoneticUk, // [New]
+        definitions: v.definitions, // [New]
         word_family: v.word_family,
         priority_level: priority,
         frequency_score: v.frequency_score,

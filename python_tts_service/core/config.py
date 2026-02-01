@@ -3,13 +3,18 @@
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
+# 加载根目录 .env
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+load_dotenv(_PROJECT_ROOT / ".env")
 
 class Config:
     """TTS 服务配置"""
     
     # 阿里云 DashScope 配置
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    # 优先使用 OPENAI_API_KEY，如果没有则尝试使用 DASHSCOPE_API_KEY
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY", "")
     OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
     
     # TTS 模型配置

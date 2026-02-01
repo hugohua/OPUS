@@ -55,20 +55,46 @@ export async function getQueueStatus() {
  */
 export async function getCacheStats(): Promise<{
     SYNTAX: number;
+    PHRASE: number;
     CHUNKING: number;
+    AUDIO: number;
     NUANCE: number;
-    BLITZ: number;
+    READING: number;
     total: number;
+    targets: {
+        SYNTAX: number;
+        PHRASE: number;
+        CHUNKING: number;
+        AUDIO: number;
+        NUANCE: number;
+        READING: number;
+    };
 }> {
     try {
         const session = await import('@/auth').then(m => m.auth());
-        if (!session?.user?.id) return { SYNTAX: 0, CHUNKING: 0, NUANCE: 0, BLITZ: 0, total: 0 };
+        if (!session?.user?.id) return {
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, total: 0,
+            targets: { SYNTAX: 50, PHRASE: 50, CHUNKING: 50, AUDIO: 50, NUANCE: 30, READING: 50 }
+        };
 
         const { inventory } = await import('@/lib/inventory');
-        return await inventory.getInventoryStats(session.user.id);
+        const stats = await inventory.getInventoryStats(session.user.id);
+
+        // Convert batch limits to drill targets (1 Batch = DRILLS_PER_BATCH Drills)
+        const { DRILLS_PER_BATCH } = await import('@/lib/drill-cache');
+        const targets = Object.keys(CACHE_LIMIT_MAP).reduce((acc, key) => {
+            const mode = key as SessionMode;
+            acc[mode] = (CACHE_LIMIT_MAP[mode] || 5) * DRILLS_PER_BATCH;
+            return acc;
+        }, {} as Record<SessionMode, number>);
+
+        return { ...stats, targets };
     } catch (error) {
         console.error('getCacheStats error:', error);
-        return { SYNTAX: 0, CHUNKING: 0, NUANCE: 0, BLITZ: 0, total: 0 };
+        return {
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, total: 0,
+            targets: { SYNTAX: 50, PHRASE: 50, CHUNKING: 50, AUDIO: 50, NUANCE: 30, READING: 50 }
+        };
     }
 }
 
@@ -126,19 +152,22 @@ export async function handleTriggerGeneration(
     try {
         // 0. Pre-check: 检查 Redis 库存是否充足
         const { inventory } = await import('@/lib/inventory');
-        const stats = await inventory.getInventoryStats(userId);
-        const currentCount = (stats as Record<string, number>)[mode] || 0;
 
-        // CACHE_LIMIT_MAP 是批次数 (如 5)，每批 10 题，所以阈值 = limit * 10
-        const batchLimit = CACHE_LIMIT_MAP[mode] || 5;
-        const drillThreshold = batchLimit * 10;
+        if (await inventory.isFull(userId, mode)) {
+            // Fetch stats only for message
+            const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
+            const currentCount = stats[mode] || 0;
+            const capacity = await inventory.getCapacity(mode);
 
-        if (currentCount >= drillThreshold) {
             return {
                 status: 'success',
-                message: `库存充足 (${currentCount}题 >= ${drillThreshold}题阈值), 无需生成`
+                message: `库存充足 (${currentCount}题 >= ${capacity}题阈值), 无需生成`
             };
         }
+
+        // For message context if proceed
+        const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
+        const currentCount = stats[mode] || 0;
 
         const jobs = await enqueueDrillGeneration(userId, mode, 'realtime');
         revalidatePath('/admin/queue');

@@ -1,88 +1,195 @@
 /**
- * 缓存统计卡片组件
- * 对应参考设计：Cache Inventory
+ * 缓存统计卡片组件 (HUD Ammo Depot Design)
+ * 对应参考设计：Inventory Monitor
  */
 'use client';
 
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import {
+    Wrench,       // L0: Mechanics
+    Activity,     // L1: Rhythm/Flow
+    Brain,        // L2: Cognitive
+    Database,     // Icon
+    MoreHorizontal
+} from 'lucide-react';
 
 interface CacheStatsCardProps {
     stats: {
         SYNTAX: number;
+        PHRASE: number;
         CHUNKING: number;
+        AUDIO: number;
         NUANCE: number;
-        BLITZ: number;
+        READING: number;
         total: number;
+        targets: Record<string, number>;
     };
 }
 
+
+// 模式分组配置
+const MODE_GROUPS = [
+    {
+        level: 'L0',
+        label: 'Foundation',
+        subLabel: 'Syntax & Phrase',
+        color: 'emerald',
+        icon: Wrench,
+        modes: [
+            { key: 'SYNTAX', label: 'Syntax Drill' },
+            { key: 'PHRASE', label: 'Phrase Drill' },
+        ]
+    },
+    {
+        level: 'L1',
+        label: 'Rhythm Flow',
+        subLabel: 'Audio & Chunking',
+        color: 'sky',
+        icon: Activity,
+        modes: [
+            { key: 'CHUNKING', label: 'Chunking' },
+            { key: 'AUDIO', label: 'Audio Drill' },
+        ]
+    },
+    {
+        level: 'L2',
+        label: 'Cognitive',
+        subLabel: 'Nuance & Logic',
+        color: 'violet',
+        icon: Brain,
+        modes: [
+            { key: 'NUANCE', label: 'Nuance Drill' },
+            { key: 'READING', label: 'Reading Drill' },
+        ]
+    }
+];
+
 export function CacheStatsCard({ stats }: CacheStatsCardProps) {
     return (
-        <div className="md:col-span-2 rounded-3xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 shadow-sm">
-            <h3 className="text-xs font-mono font-medium text-zinc-500 uppercase tracking-widest mb-6 flex justify-between items-center">
-                <span>库存缓存 (Inventory)</span>
-                <span className="text-[10px] bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">总计: {stats.total}</span>
-            </h3>
+        <div className="md:col-span-2 rounded-3xl border border-border bg-card/50 backdrop-blur-xl p-5 shadow-sm flex flex-col gap-4">
+            {/* Header */}
+            <div className="flex justify-between items-start">
+                <div>
+                    <h3 className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                        <Database className="w-3 h-3" />
+                        Inventory Monitor
+                    </h3>
+                </div>
+                <div className="text-right">
+                    <div className="text-xl font-mono font-bold text-foreground leading-none">
+                        {stats.total}
+                    </div>
+                </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ModeItem label="Syntax" value={stats.SYNTAX} color="emerald" />
-                <ModeItem label="Chunking" value={stats.CHUNKING} color="sky" />
-                <ModeItem label="Nuance" value={stats.NUANCE} color="violet" />
-                <ModeItem label="Blitz" value={stats.BLITZ} color="amber" />
+            {/* Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                {MODE_GROUPS.map((group) => (
+                    <TrackCard
+                        key={group.level}
+                        group={group}
+                        stats={stats}
+                    />
+                ))}
             </div>
         </div>
     );
 }
 
-function ModeItem({
-    label,
-    value,
-    color,
+function TrackCard({
+    group,
+    stats,
 }: {
-    label: string;
-    value: number;
-    color: 'emerald' | 'sky' | 'violet' | 'amber';
+    group: typeof MODE_GROUPS[0];
+    stats: {
+        targets: Record<string, number>;
+        [key: string]: number | Record<string, number>;
+    };
 }) {
-    const styles = {
+    const colorMap = {
         emerald: {
+            border: 'border-emerald-500/20 group-hover:border-emerald-500/30',
             bg: 'bg-emerald-500/5',
-            border: 'border-emerald-500/20',
-            dot: 'bg-emerald-500',
-            text: 'text-emerald-100',
-            value: 'text-emerald-500'
+            icon: 'text-emerald-500',
+            bar: 'bg-emerald-500',
+            text: 'text-emerald-500',
         },
         sky: {
+            border: 'border-sky-500/20 group-hover:border-sky-500/30',
             bg: 'bg-sky-500/5',
-            border: 'border-sky-500/20',
-            dot: 'bg-sky-500',
-            text: 'text-sky-100',
-            value: 'text-sky-500'
+            icon: 'text-sky-500',
+            bar: 'bg-sky-500',
+            text: 'text-sky-500',
         },
         violet: {
+            border: 'border-violet-500/20 group-hover:border-violet-500/30',
             bg: 'bg-violet-500/5',
-            border: 'border-violet-500/20',
-            dot: 'bg-violet-500',
-            text: 'text-violet-100',
-            value: 'text-zinc-600 dark:text-violet-500' // Modified to follow reference logic but keep visibility
+            icon: 'text-violet-500',
+            bar: 'bg-violet-500',
+            text: 'text-violet-500',
         },
-        amber: {
-            bg: 'bg-amber-500/5',
-            border: 'border-amber-500/20',
-            dot: 'bg-amber-500',
-            text: 'text-amber-100',
-            value: 'text-zinc-600 dark:text-amber-500'
-        }
     };
 
-    const s = styles[color];
+    const style = colorMap[group.color as keyof typeof colorMap];
+    const Icon = group.icon;
 
     return (
-        <div className={cn("flex items-center justify-between p-3 rounded-xl border", s.border, s.bg)}>
-            <div className="flex items-center gap-3">
-                <div className={cn("h-2 w-2 rounded-full", s.dot)}></div>
-                <span className={cn("text-sm font-medium", s.text)}>{label}</span>
+        <div className={cn(
+            "group relative rounded-xl border p-4 transition-all duration-300",
+            style.border,
+            style.bg
+        )}>
+            {/* Track Header */}
+            <div className="flex items-center gap-2 mb-3">
+                <div className={cn("p-1.5 rounded-md bg-background/50 backdrop-blur-sm border shadow-sm", style.border)}>
+                    <Icon className={cn("w-3.5 h-3.5", style.icon)} />
+                </div>
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded border", style.border, style.bg, style.text)}>
+                            {group.level}
+                        </span>
+                        <span className="text-xs font-bold text-foreground">{group.label}</span>
+                    </div>
+                </div>
             </div>
-            <span className={cn("font-mono text-lg font-bold", s.value)}>{value} 道</span>
+
+            {/* Modes List */}
+            <div className="space-y-3">
+                {group.modes.map((mode) => {
+                    const count = (stats[mode.key] as number) || 0;
+                    const target = stats.targets?.[mode.key] || 50;
+                    const percent = Math.min((count / target) * 100, 100);
+
+                    return (
+                        <div key={mode.key} className="space-y-1.5">
+                            <div className="flex justify-between items-end">
+                                <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wide">
+                                    {mode.label}
+                                </span>
+                                <span className="text-xs font-mono font-bold text-foreground">
+                                    {count} <span className="text-[10px] text-muted-foreground font-normal">/ {target}</span>
+                                </span>
+                            </div>
+
+                            {/* Custom Micro Progress Bar */}
+                            <div className="h-1.5 w-full bg-background/50 rounded-full overflow-hidden border border-white/5">
+                                <div
+                                    className={cn("h-full rounded-full transition-all duration-500", style.bar)}
+                                    style={{ width: `${percent}%` }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })
+                }
+            </div>
+
+            {/* Status Dot (Absolute) */}
+            <div className="absolute top-4 right-4 flex gap-1">
+                <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", style.bar)} />
+            </div>
         </div>
     );
 }

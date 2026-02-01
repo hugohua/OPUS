@@ -45,7 +45,9 @@ class CacheManager:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Path:
         """
-        保存音频文件到缓存
+        保存音频文件到缓存 (原子写入)
+        
+        使用临时文件 + os.replace() 策略防止并发写入导致的文件损坏
         
         Args:
             hash_key: 音频 Hash
@@ -55,11 +57,23 @@ class CacheManager:
         Returns:
             Path: 保存的文件路径
         """
-        audio_path = self.get_audio_path(hash_key)
+        import os
         
-        # 保存音频文件
-        with open(audio_path, 'wb') as f:
-            f.write(audio_data)
+        audio_path = self.get_audio_path(hash_key)
+        temp_path = audio_path.with_suffix('.tmp')
+        
+        # 原子写入: 先写临时文件，再重命名
+        try:
+            with open(temp_path, 'wb') as f:
+                f.write(audio_data)
+            
+            # os.replace 是原子操作，要么成功要么失败
+            os.replace(temp_path, audio_path)
+        except Exception as e:
+            # 清理临时文件
+            if temp_path.exists():
+                temp_path.unlink()
+            raise e
         
         # 保存元数据（可选）
         if metadata:

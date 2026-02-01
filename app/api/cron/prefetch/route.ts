@@ -16,21 +16,14 @@ import { SessionMode } from '@/types/briefing';
 const log = createLogger('api:cron:prefetch');
 
 // 验证 Cron 密钥（防止外部调用）
+// 验证 Cron 密钥（防止外部调用）
 const CRON_SECRET = process.env.CRON_SECRET;
 
 // 配置
 const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
-// [Restored] 之前的设置：不同模式有不同的目标数量
-const BATCH_SIZE_MAP: Record<SessionMode, number> = {
-    SYNTAX: 20,
-    CHUNKING: 30,
-    NUANCE: 50, // 高消耗模式需要大库存
-    BLITZ: 20,
-    PHRASE: 20,
-    AUDIO: 20,
-    READING: 20,
-    VISUAL: 20,
-};
+// [Fix] Import shared limits from drill-cache
+import { CACHE_LIMIT_MAP } from '@/lib/drill-cache';
+
 const ACTIVE_DAYS = 7;
 
 export async function GET(request: NextRequest) {
@@ -71,11 +64,12 @@ export async function GET(request: NextRequest) {
                     // stats key e.g. "SYNTAX", "BLITZ"
                     const currentLevel = stats[mode as keyof typeof stats] || 0;
 
-                    // [Restored Logic] 动态阈值: 使用 Target 的 50% 作为补货线
-                    // e.g. NUANCE Target 50 -> Threshold 25.
-                    // e.g. BLITZ Target 10 -> Threshold 5.
-                    const targetSize = BATCH_SIZE_MAP[mode] || 20;
-                    const threshold = Math.floor(targetSize * 0.5);
+                    // [Fix] Use shared CACHE_LIMIT_MAP via inventory.getCapacity
+                    // CACHE_LIMIT_MAP is in Batches (1 Batch = 10 Drills)
+                    const maxDrills = await inventory.getCapacity(mode);
+
+                    // Logic: Replenish when < 50% of capacity
+                    const threshold = Math.floor(maxDrills * 0.5);
 
                     if (currentLevel < threshold) {
                         // 水位低 -> 触发补货 (Producer Only)

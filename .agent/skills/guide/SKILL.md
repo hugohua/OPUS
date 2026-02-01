@@ -49,7 +49,8 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Auth**: `docs/dev-notes/auth-system-and-infrastructure.md` (NextAuth/Clerk logic)
 
 ### 5. Text-to-Speech (TTS)
-- **Architecture**: `docs/dev-notes/tts-architecture.md` (Service boundaries, Edge-TTS, caching strategy)
+- **Architecture**: `docs/dev-notes/tts-architecture.md` (**Updated**: Database Indexed Caching, Python Atomic Write)
+- **DB Indexing**: `docs/dev-notes/tts-db-schema-v6.md` (**New**: `TTSCache` Schema & GC Strategy)
 - **Setup**: `docs/dev-notes/tts-quickstart.md` (How to run the Python service & Docker)
 - **Frontend Hook**: `hooks/use-tts.ts` (React interface for playback)
 

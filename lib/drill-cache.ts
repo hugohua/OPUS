@@ -81,13 +81,21 @@ export async function getCacheCount(userId: string, mode: string) {
  * 缓存上限配置（测试友好配置：Limit = 批次数）
  * 1 批 = 10 题
  */
+/**
+ * 缓存上限配置 (Single Source of Truth)
+ * Keys: SessionMode
+ * Values: Max Batch Count (1 Batch = 10 Drills)
+ * Example: SYNTAX: 5 => 50 Drills Max
+ */
+export const DRILLS_PER_BATCH = 10;
+
 export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
-    SYNTAX: 5,      // 5 batches = 50 drills
-    CHUNKING: 5,    // 5 batches = 50 drills
-    NUANCE: 3,      // 3 batches = 30 drills
-    BLITZ: 3,       // 3 batches = 30 drills
-    PHRASE: 5,
-    AUDIO: 5,
-    READING: 5,
-    VISUAL: 5,
+    SYNTAX: 5,      // 50 drills
+    CHUNKING: 5,    // 50 drills
+    NUANCE: 3,      // 30 drills
+    BLITZ: 3,       // 30 drills
+    PHRASE: 5,      // 50 drills
+    AUDIO: 5,       // 50 drills
+    READING: 5,     // 50 drills
+    VISUAL: 5,      // 50 drills
 };

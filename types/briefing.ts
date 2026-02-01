@@ -10,7 +10,8 @@ export interface BriefingSegment {
     type: "text" | "interaction";
     content_markdown?: string;
     audio_text?: string;
-    translation_cn?: string; // Added translation field
+    translation_cn?: string;
+    phonetic?: string; // [New] Explicit phonetic field
     dimension?: InteractionDimension;
     task?: {
         style: InteractionStyle;

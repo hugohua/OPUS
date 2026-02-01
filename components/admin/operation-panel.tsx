@@ -92,8 +92,8 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
     };
 
     return (
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 shadow-sm flex flex-col justify-between h-full">
-            <h3 className="text-xs font-mono font-medium text-zinc-500 uppercase tracking-widest mb-4">手动触发 (Manual Triggers)</h3>
+        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-xl p-4 shadow-sm flex flex-col gap-4">
+            <h3 className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">手动触发 (Manual Triggers)</h3>
 
             <div className="space-y-3">
                 <TriggerButton
@@ -117,7 +117,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                 />
             </div>
 
-            <div className="mt-6 pt-4 border-t border-zinc-800 flex gap-2">
+            <div className="pt-3 border-t border-border flex gap-2">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <button
@@ -127,16 +127,16 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                             {loading === 'clear' ? '清空中...' : '清空队列'}
                         </button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                         <AlertDialogHeader>
-                            <AlertDialogTitle>确认清空队列？</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-foreground">确认清空队列？</AlertDialogTitle>
+                            <AlertDialogDescription className="text-muted-foreground">
                                 此操作将清除所有等待中和失败的任务。如果您的队列因旧任务积压而堵塞，这很有用。正在处理中的任务不会被中断。
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleClear} className="bg-rose-600 hover:bg-rose-700">
+                            <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                 确认清空
                             </AlertDialogAction>
                         </AlertDialogFooter>
@@ -146,7 +146,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                 <button
                     onClick={handleTogglePause}
                     disabled={loading !== null}
-                    className="flex-1 py-2 text-xs font-medium text-zinc-400 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                    className="flex-1 py-2 text-xs font-medium text-muted-foreground bg-muted rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
                 >
                     {loading === 'pause' ? '...' : isPaused ? '恢复' : '暂停'}
                 </button>
@@ -166,49 +166,30 @@ function TriggerButton({
     onClick: () => void,
     loading: boolean
 }) {
-    const styles = {
-        emerald: "hover:bg-emerald-900/20 hover:border-emerald-500/30 group-hover:text-emerald-400 group-hover:text-emerald-500",
-        sky: "hover:bg-sky-900/20 hover:border-sky-500/30 group-hover:text-sky-400 group-hover:text-sky-500",
-        violet: "hover:bg-violet-900/20 hover:border-violet-500/30 group-hover:text-violet-400 group-hover:text-violet-500",
-        amber: "hover:bg-amber-900/20 hover:border-amber-500/30 group-hover:text-amber-400 group-hover:text-amber-500",
+    // Semantic color mapping
+    const styleMap = {
+        emerald: "hover:bg-emerald-500/10 hover:border-emerald-500/20 text-muted-foreground hover:text-emerald-500",
+        sky: "hover:bg-sky-500/10 hover:border-sky-500/20 text-muted-foreground hover:text-sky-500",
+        violet: "hover:bg-violet-500/10 hover:border-violet-500/20 text-muted-foreground hover:text-violet-500",
+        amber: "hover:bg-amber-500/10 hover:border-amber-500/20 text-muted-foreground hover:text-amber-500",
     };
 
-    // Note: The specific styles from prop need to be applied conditionally
-    // Since we can't dynamic interpolate full classes in Tailwind safely without whitelist, 
-    // we map known colors.
-
-    let btnClass = "bg-zinc-800 border border-transparent transition-all active:scale-[0.98]";
-    let textClass = "text-zinc-300";
-    let iconClass = "text-zinc-600";
-
-    if (color === 'emerald') {
-        btnClass += " hover:bg-emerald-900/20 hover:border-emerald-500/30";
-        textClass += " group-hover:text-emerald-400";
-        iconClass += " group-hover:text-emerald-500";
-    } else if (color === 'sky') {
-        btnClass += " hover:bg-sky-900/20 hover:border-sky-500/30";
-        textClass += " group-hover:text-sky-400";
-        iconClass += " group-hover:text-sky-500";
-    } else if (color === 'violet') {
-        btnClass += " hover:bg-violet-900/20 hover:border-violet-500/30";
-        textClass += " group-hover:text-violet-400";
-        iconClass += " group-hover:text-violet-500";
-    } else {
-        btnClass += " hover:bg-amber-900/20 hover:border-amber-500/30";
-        textClass += " group-hover:text-amber-400";
-        iconClass += " group-hover:text-amber-500";
-    }
+    const activeStyle = styleMap[color] || styleMap.amber;
 
     return (
         <button
             onClick={onClick}
             disabled={loading}
-            className={cn("group w-full flex items-center justify-between p-3 rounded-xl disabled:opacity-50", btnClass)}
+            className={cn(
+                "group w-full flex items-center justify-between p-3 rounded-xl border border-transparent transition-all active:scale-[0.98] bg-muted/50",
+                activeStyle,
+                "disabled:opacity-50 disabled:pointer-events-none"
+            )}
         >
-            <span className={cn("text-sm font-medium", textClass)}>
+            <span className="text-sm font-medium transition-colors">
                 {loading ? '生成中...' : `生成 ${mode.charAt(0) + mode.slice(1).toLowerCase()}`}
             </span>
-            <ArrowRight className={cn("w-4 h-4", iconClass)} />
+            <ArrowRight className="w-4 h-4 transition-colors opacity-70 group-hover:opacity-100" />
         </button>
     )
 }

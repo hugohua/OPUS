@@ -75,10 +75,13 @@ export async function getNextDrillBatch(
             // 3.3 缓存未命中 -> 确定性兜底
             if (!drill) {
                 drill = buildSimpleDrill({
-                    id: candidate.vocabId,
+                    vocabId: candidate.vocabId,
                     word: candidate.word,
                     definition_cn: candidate.definition_cn,
-                    commonExample: candidate.commonExample
+                    definitions: candidate.definitions, // [New]
+                    commonExample: candidate.commonExample,
+                    phoneticUk: candidate.phoneticUk, // [New]
+                    collocations: candidate.collocations // Check collocations
                 }, mode);
                 source = 'deterministic_fallback';
                 missedVocabIds.push(candidate.vocabId);

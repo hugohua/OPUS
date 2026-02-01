@@ -12,6 +12,7 @@ interface UniversalCardProps {
     footer: React.ReactNode;
     className?: string;
     onExit?: () => void;
+    clean?: boolean;
 }
 
 export function UniversalCard({
@@ -21,7 +22,8 @@ export function UniversalCard({
     children,
     footer,
     className,
-    onExit
+    onExit,
+    clean = false
 }: UniversalCardProps) {
 
     // Map variant to colors
@@ -69,10 +71,15 @@ export function UniversalCard({
             {/* 2. MAIN Content (Stimulus Card) */}
             <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 w-full overflow-y-auto no-scrollbar pb-6">
 
-                <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none p-8 flex flex-col items-center min-h-[300px] justify-center relative overflow-hidden">
+                <div className={cn(
+                    "w-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500",
+                    clean
+                        ? "bg-transparent p-0"
+                        : "max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none p-8 min-h-[300px]"
+                )}>
 
                     {/* Category Tag */}
-                    {category && (
+                    {category && !clean && (
                         <div className="mb-8 px-3 py-1 rounded-full border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
                             {category}
                         </div>

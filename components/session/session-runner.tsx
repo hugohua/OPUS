@@ -15,6 +15,7 @@ import { EditorialDrill } from "@/components/briefing/editorial-drill";
 import { SessionSkeleton } from "@/components/session/session-skeleton";
 import { BlitzSession } from "@/components/session/blitz-session";
 import { PhraseCard } from "@/components/briefing/phrase-card";
+import { PhraseFooter } from "@/components/briefing/phrase-footer";
 import { recordOutcome } from '@/actions/record-outcome';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
@@ -241,6 +242,9 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
         // 进入下一题
         if (index < queue.length - 1) {
+            // [Critical] Reset state synchronously to prevent Next Card from rendering with Old Status (Spoiler Fix)
+            setStatus("idle");
+            setSelectedOption(null);
             setIndex(i => i + 1);
         } else {
             // 队列结束 -> 清除 Storage
@@ -328,68 +332,44 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const variant = variantMap[mode] || "violet";
     const isPhraseMode = mode === 'PHRASE';
 
-    const PhraseFooter = status === 'idle' ? (
-        <div className="w-full flex items-center justify-center pb-12">
-            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] animate-pulse">
-                Tap anywhere to reveal
-            </p>
-            {/* Invisible large click area handled by parent, or just a button here if needed. 
-                Snippet implies "How well did you know this?" appears AFTER reveal.
-                But user needs to REVEAL first.
-                Let's use a transparent overlay or a button. To match the snippet, the footer is empty initially?
-                Actually, let's keep the "Show Answer" button for clarity, or make it minimal.
-            */}
-            <Button
-                onClick={() => setStatus('correct')}
-                variant="ghost"
-                className="absolute inset-0 w-full h-full z-10 opacity-0 cursor-default"
-            >
-                Reveal
-            </Button>
-        </div>
-    ) : (
-        <div className="w-full shrink-0 pb-12">
-            <div className="text-center mb-6">
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] animate-pulse">
-                    How well did you know this?
-                </p>
-            </div>
+    // --- Definition Extraction Helper ---
+    // Extract real definition from flexible structure
+    const getDefinition = () => {
+        if (!interactSegment?.task) return "";
+        const task = interactSegment.task as any;
 
-            <div className="grid grid-cols-3 gap-4 w-full max-w-lg mx-auto">
-                {/* 1. Forgot */}
-                <button
-                    onClick={() => handleComplete(1)}
-                    className="group flex flex-col items-center gap-2"
-                >
-                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-rose-500/50 group-hover:bg-rose-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg">
-                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-rose-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2h4" /><path d="M12 14v-4" /><path d="M4 13a8 8 0 0 1 8-7 8 8 0 1 1 0 16v-1a7 7 0 0 0-7-7h-.72" /></svg>
-                    </div>
-                    <span className="text-xs font-bold text-zinc-500 group-hover:text-rose-400 uppercase tracking-wider">Forgot</span>
-                </button>
+        // 1. Try structured definition_cn (if available in rich object)
+        if (task.explanation && typeof task.explanation === 'object') {
+            if (task.explanation.definition_cn) return task.explanation.definition_cn;
+        }
 
-                {/* 2. Hazy (Blurry) */}
-                <button
-                    onClick={() => handleComplete(2)}
-                    className="group flex flex-col items-center gap-2"
-                >
-                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-amber-500/50 group-hover:bg-amber-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg">
-                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-amber-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 12c0-4.4 3.6-8 8-8 1.2 0 2.4.3 3.4.8" /><path d="M18.4 6.6a9 9 0 0 1 3.6 5.4c0 4.4-3.6 8-8 8-1.2 0-2.4-.3-3.4-.8" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
-                    </div>
-                    <span className="text-xs font-bold text-zinc-500 group-hover:text-amber-400 uppercase tracking-wider">Hazy</span>
-                </button>
+        // 2. Fallback: Parse markdown string
+        // Format assumption: `## Title\n\n[pos] Definition\n\n...`
+        if (explanationMarkdown) {
+            const lines = explanationMarkdown.split('\n');
+            // Try to find a line that looks like definition (often line 2 or 3)
+            // Skip title (##)
+            const cleanLines = lines.filter((l: string) => l.trim().length > 0 && !l.startsWith('##'));
+            if (cleanLines.length > 0) return cleanLines[0];
+        }
 
-                {/* 3. Know */}
-                <button
-                    onClick={() => handleComplete(3)}
-                    className="group flex flex-col items-center gap-2"
-                >
-                    <div className="w-full h-20 rounded-2xl bg-zinc-900 border border-zinc-800 group-hover:border-emerald-500/50 group-hover:bg-emerald-900/10 flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-emerald-900/20">
-                        <svg className="w-8 h-8 text-zinc-500 group-hover:text-emerald-500 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 6 9 17l-5-5" /></svg>
-                    </div>
-                    <span className="text-xs font-bold text-zinc-500 group-hover:text-emerald-400 uppercase tracking-wider">Know</span>
-                </button>
-            </div>
-        </div>
+        return "Definition not available";
+    };
+
+    const wordDefinition = getDefinition();
+
+    // Extract POS from definition string if possible: "[v.] xxx" -> "v."
+    const posMatch = wordDefinition.match(/^\[(.*?)\]/);
+    const partOfSpeech = posMatch ? posMatch[1] : "";
+    const cleanDefinition = posMatch ? wordDefinition.replace(/^\[.*?\]\s*/, "") : wordDefinition;
+
+    // Use PhraseFooter component
+    const PhraseFooterComponent = (
+        <PhraseFooter
+            status={status === 'idle' ? 'idle' : 'revealed'}
+            onReveal={() => setStatus('correct')}
+            onGrade={(g) => handleComplete(g)}
+        />
     );
 
     // --- Standard Mode Footer (2x2 Grid) ---
@@ -447,7 +427,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     );
 
     // Choose Footer based on mode
-    const ActiveFooter = isPhraseMode ? PhraseFooter : FooterContent;
+    const ActiveFooter = isPhraseMode ? PhraseFooterComponent : FooterContent;
 
     return (
         <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
@@ -463,6 +443,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                     progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
                     onExit={() => router.push('/dashboard')}
                     footer={ActiveFooter}
+                    clean={false}
                 >
                     {/* Body Content */}
                     {textSegment && interactSegment && (
@@ -478,12 +459,14 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
                             {isPhraseMode ? (
                                 <PhraseCard
+                                    key={index} // Force remount on drill change checks
                                     phraseMarkdown={textSegment.content_markdown || ""}
                                     translation={(textSegment as any).translation_cn || ""}
-                                    wordDefinition={explanationMarkdown?.split('\n')[0] || ""} // Extract first line definition
-                                    status={status as any} // Cast status "correct"->"revealed" logic handled in component
-                                    phonetic={explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
-                                    partOfSpeech={explanationMarkdown?.split(']')[1]?.trim() || ""}
+                                    wordDefinition={cleanDefinition}
+                                    status={status as any}
+                                    phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
+                                    partOfSpeech={partOfSpeech || ""}
+                                    targetWord={currentDrill.meta.target_word}
                                 />
                             ) : (
                                 <EditorialDrill

@@ -111,8 +111,21 @@ class DashScopeTTSService:
             if not audio_buffer:
                 raise DashScopeError("No audio data received from API")
             
-            # 将 bytearray 转为 bytes
-            final_audio = bytes(audio_buffer)
+            # 将 bytearray 转为 bytes (这是原始 PCM 数据)
+            pcm_data = bytes(audio_buffer)
+            
+            # 添加 WAV 头 (DashScope 返回的是 24kHz, 16-bit mono PCM)
+            import wave
+            import io
+            
+            wav_buffer = io.BytesIO()
+            with wave.open(wav_buffer, 'wb') as wav_file:
+                wav_file.setnchannels(1)       # 单声道
+                wav_file.setsampwidth(2)       # 16-bit (2 bytes)
+                wav_file.setframerate(24000)   # 阿里云 TTS 采样率
+                wav_file.writeframes(pcm_data)
+            
+            final_audio = wav_buffer.getvalue()
             
             logger.info(
                 "tts_success",

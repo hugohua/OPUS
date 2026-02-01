@@ -151,11 +151,9 @@ For each Target Word, select the MATCHING formula below and fill the slots.
     </gap_construction_algorithm>
 
     <dimension_logic>
-        Assign "dimension" based on Target Word POS:
-        - If Verb -> "V"
-        - If Noun -> "N"
-        - If Adjective -> "Adj"
-        - If Adverb -> "Adv"
+        CRITICAL: The "dimension" field MUST ALWAYS be "V" (Visual Audit).
+        This is a FIXED value for SYNTAX mode, regardless of the target word's POS.
+        DO NOT use "N", "Adj", or "Adv" - these will cause validation failure.
     </dimension_logic>
 
     <distractor_logic>
@@ -254,7 +252,7 @@ Example 2 (Adjective):
         },
         {
           "type": "interaction",
-          "dimension": "Adj",
+          "dimension": "V",
           "task": {
             "style": "swipe_card",
             "question_markdown": "The output is _______.",

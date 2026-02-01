@@ -160,6 +160,13 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                                 Reset Progress
                             </Button>
                         </div>
+                        <div className="mt-4">
+                            <a href={`/dashboard/vocab/${item.word}`} className="block w-full">
+                                <Button className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg shadow-indigo-500/20 border-0">
+                                    Full Analysis
+                                </Button>
+                            </a>
+                        </div>
                     </DrawerFooter>
                 </div>
             </DrawerContent>

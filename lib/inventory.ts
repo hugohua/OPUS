@@ -190,9 +190,11 @@ export const inventory = {
         // Convert string values to numbers
         return {
             SYNTAX: parseInt(raw.SYNTAX || '0'),
+            PHRASE: parseInt(raw.PHRASE || '0'),
             CHUNKING: parseInt(raw.CHUNKING || '0'),
+            AUDIO: parseInt(raw.AUDIO || '0'),
             NUANCE: parseInt(raw.NUANCE || '0'),
-            BLITZ: parseInt(raw.BLITZ || '0'),
+            READING: parseInt(raw.READING || '0'),
             total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
         };
     },
@@ -219,5 +221,26 @@ export const inventory = {
         });
 
         return counts;
+    },
+
+    /**
+     * 检查库存是否已满 (Single Source of Truth)
+     * @param userId
+     * @param mode
+     */
+    async isFull(userId: string, mode: string): Promise<boolean> {
+        const stats: any = await this.getInventoryStats(userId);
+        const currentCount = stats[mode] || 0;
+        const capacity = await this.getCapacity(mode);
+        return currentCount >= capacity;
+    },
+
+    /**
+     * 获取最大容量 (Drills)
+     */
+    async getCapacity(mode: string): Promise<number> {
+        const { CACHE_LIMIT_MAP, DRILLS_PER_BATCH } = await import('@/lib/drill-cache');
+        // Max Limit = Limit (Batches) * DRILLS_PER_BATCH 
+        return (CACHE_LIMIT_MAP[mode as SessionMode] || 5) * DRILLS_PER_BATCH;
     }
 };

@@ -66,10 +66,36 @@ model Vocab {
   // 关联
   progress         UserProgress[]
   articles         ArticleVocab[]
+  smartContent     SmartContent[]
 
   @@index([learningPriority])
   @@index([scenarios])
   @@index([frequency_score]) // [V1.2] 生存优先排序索引
+}
+
+// SmartContent: AI 生成的可复用内容 (L2 例句、L0 搭配扩展等)
+model SmartContent {
+  id        String   @id @default(uuid())
+  vocabId   Int
+  vocab     Vocab    @relation(fields: [vocabId], references: [id])
+  
+  type      String   // "L2_SENTENCE" | "L0_COLLOCATION"
+  scenario  String   // "Business Email", "Board Meeting"
+  
+  // 核心负载 (Zod 校验后写入)
+  // 结构: { text: string, translation: string }
+  payload   Json
+  
+  // 音频关联 (通过 ttsHash 关联 TTSCache 表的 id)
+  ttsHash   String?  // 关联 TTSCache.id (MD5 Hash)
+  ttsCache  TTSCache? @relation(fields: [ttsHash], references: [id])
+  
+  // 元数据
+  model     String?  // "qwen-plus", "gpt-4o-mini"
+  createdAt DateTime @default(now())
+
+  @@index([vocabId, type])
+  @@index([createdAt])
 }
 
 model UserProgress {
@@ -260,5 +286,41 @@ model DrillAudit {
   @@index([status])
   @@index([targetWord])
   @@index([createdAt])
+}
+
+// ----------------------------------------------------------------------
+// [V6.0] TTS Audio Cache (Database-Indexed Caching)
+// ----------------------------------------------------------------------
+model TTSCache {
+  id         String   @id  // MD5 Hash (text_voice_language_speed)
+  
+  // 生成参数
+  text       String   @db.Text
+  voice      String   @default("Cherry")
+  language   String   @default("en-US")
+  speed      Float    @default(1.0)
+  
+  // 缓存类型 (GC 策略)
+  // 'vocab' - 单词音频 (永久保留)
+  // 'phrase' - 短语音频 (永久保留)
+  // 'temporary' - AI 生成临时句子 (90天清理)
+  cacheType  String   @default("temporary")
+  
+  // 文件存储
+  filePath   String   // 相对路径: "2026/02/01/abc123.wav"
+  url        String   // 对外 URL: "/audio/2026/02/01/abc123.wav"
+  fileSize   Int      // 文件大小 (bytes)
+  
+  // 时间戳
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  
+  // 反向关联
+  smartContent SmartContent[]
+  
+  // 性能索引
+  @@index([lastUsedAt])   // GC 清理用
+  @@index([createdAt])    // Admin 查询用
+  @@index([cacheType])    // 按类型筛选
 }
 

@@ -32,7 +32,7 @@ export function AdminSidebar({ className, children, defaultExpanded = true, ...p
             <aside
                 data-state={expanded ? "expanded" : "collapsed"}
                 className={cn(
-                    "group relative border-r border-white/5 bg-zinc-900/50 flex flex-col transition-all duration-300 ease-in-out",
+                    "group relative border-r border-border bg-muted/30 flex flex-col transition-all duration-300 ease-in-out",
                     expanded ? "w-64" : "w-16",
                     className
                 )}
@@ -42,7 +42,7 @@ export function AdminSidebar({ className, children, defaultExpanded = true, ...p
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute -right-3 top-6 h-6 w-6 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white shadow-md z-50"
+                    className="absolute -right-3 top-6 h-6 w-6 rounded-full border border-border bg-muted text-muted-foreground hover:text-foreground shadow-md z-50"
                     onClick={() => setExpanded(!expanded)}
                 >
                     {expanded ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -105,8 +105,8 @@ export function SidebarItem({ icon, label, active, onClick }: SidebarItemProps) 
                 "w-full flex items-center gap-3 rounded-lg transition-all group relative",
                 expanded ? "px-3 py-2" : "justify-center p-2",
                 active
-                    ? "bg-violet-500/10 text-violet-400 border border-violet-500/20"
-                    : "text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+                    ? "bg-primary/10 text-primary border border-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
         >
             <div className="shrink-0">

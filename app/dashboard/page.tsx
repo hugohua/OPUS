@@ -6,6 +6,7 @@ import { FloatingDock } from "@/components/dashboard/floating-dock";
 import { getDashboardStats } from "@/actions/get-dashboard-stats";
 import { auth } from "@/auth";
 import { FsrsHud } from "@/components/dashboard/fsrs-hud";
+import { FlashcardSection } from "@/components/dashboard/flashcard-section";
 
 export default async function DashboardPage() {
     // We might keep fetching stats for future dynamic updates, though currently cards are static shell.
@@ -28,6 +29,9 @@ export default async function DashboardPage() {
                 <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-8 no-scrollbar">
                     {/* Hero: Daily Blitz */}
                     <DailyBlitzCard />
+
+                    {/* New Module: Flashcards */}
+                    <FlashcardSection />
 
                     {/* Grid: Skill Gym */}
                     <SkillGym />

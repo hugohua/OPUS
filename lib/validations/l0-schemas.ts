@@ -22,7 +22,7 @@ const L0MetaSchema = z.object({
     mode: z.enum(['SYNTAX', 'PHRASE', 'BLITZ']),
     batch_size: z.number().optional(),
     sys_prompt_version: z.string().optional(),
-    vocabId: z.number({ required_error: 'L0 必须包含 vocabId' }),
+    vocabId: z.number(),
     target_word: z.string().min(1, 'L0 必须包含 target_word'),
     source: z.string().optional(),
 });

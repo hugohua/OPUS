@@ -67,6 +67,6 @@ export default async function QueueDashboardPage() {
 
 function CardSkeleton() {
     return (
-        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl p-6 shadow-xl animate-pulse min-h-[200px]" />
+        <div className="rounded-3xl border border-border bg-muted/50 backdrop-blur-xl p-6 shadow-xl animate-pulse min-h-[200px]" />
     );
 }

@@ -71,8 +71,36 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             // [Fix] V2 Generic Fetch (Schedule-Driven)
             if (job.name.startsWith('generate-')) {
                 log.info({ mode }, '👉 策略: V2 Generic Fetch (Scheduled)');
-                const limit = job.data.forceLimit || 10;
-                candidates = await fetchDueCandidates(userId, mode, limit);
+
+                // [Fix] Enforce Inventory Cap (Defense in Depth)
+                // [Fix] Enforce Inventory Cap (Defense in Depth)
+                // Use unified inventory method
+                if (await inventory.isFull(userId, mode)) {
+                    // Logging stats for debugging context
+                    const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
+                    const currentCount = stats[mode] || 0;
+                    const maxDrills = await inventory.getCapacity(mode);
+
+                    log.warn({ userId, mode, currentCount, maxDrills }, '🛑 Inventory Full - Skipping Auto-Generation');
+                    return { success: true, count: 0, reason: 'inventory_full_pre_check' };
+                }
+
+                // Dynamic Limit adjustment
+                // Re-fetch stats or reuse if we want strictly consistent view, but here fetching fresh capacity is safer for race conditions if we were doing more complex logic, 
+                // but actually we just need the numbers for calculation.
+                // To keep it simple and clean:
+                const capacity = await inventory.getCapacity(mode);
+                const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
+                const currentCount = stats[mode] || 0;
+
+                const forceLimit = job.data.forceLimit || 10; // Default force limit is 10 (one batch)
+                const effectiveLimit = Math.min(forceLimit, capacity - currentCount);
+
+                if (effectiveLimit <= 0) {
+                    return { success: true, count: 0, reason: 'inventory_full_effective' };
+                }
+
+                candidates = await fetchDueCandidates(userId, mode, effectiveLimit);
             } else {
                 log.warn({ jobName: job.name }, '❌ 未知任务类型，跳过');
                 return { success: false, reason: 'legacy_not_supported_v2' };

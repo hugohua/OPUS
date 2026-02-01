@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import router as tts_router
+from api.websocket import ws_router
 from core.config import config
 
 # 配置结构化日志
@@ -50,6 +51,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(tts_router, prefix="/tts", tags=["TTS"])
+app.include_router(ws_router, tags=["WebSocket TTS"])
 
 
 @app.on_event("startup")

@@ -78,23 +78,23 @@ export function GlobalAdminSidebar() {
             </div>
 
             {/* Mobile Header (Visible on Mobile) */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-zinc-900/80 backdrop-blur-lg border-b border-white/5 z-50 flex items-center px-4 justify-between">
+            <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-lg border-b border-border z-50 flex items-center px-4 justify-between">
                 <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded bg-violet-600 flex items-center justify-center font-bold text-[10px] text-white">
                         OP
                     </div>
-                    <span className="font-mono font-bold text-sm text-zinc-200">OPUS Admin</span>
+                    <span className="font-mono font-bold text-sm text-foreground">OPUS Admin</span>
                 </div>
 
                 <Drawer>
                     <DrawerTrigger asChild>
-                        <button className="p-2 -mr-2 text-zinc-400 hover:text-white">
+                        <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground">
                             <Menu className="w-6 h-6" />
                         </button>
                     </DrawerTrigger>
-                    <DrawerContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                    <DrawerContent className="bg-background border-border text-foreground">
                         <DrawerHeader>
-                            <DrawerTitle className="text-zinc-100">管理后台导航</DrawerTitle>
+                            <DrawerTitle className="text-foreground">管理后台导航</DrawerTitle>
                         </DrawerHeader>
                         <div className="p-4 space-y-2">
                             {navItems.map(item => (
@@ -104,8 +104,8 @@ export function GlobalAdminSidebar() {
                                     className={cn(
                                         "w-full flex items-center gap-4 p-4 rounded-xl transition-all",
                                         pathname?.startsWith(item.path)
-                                            ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
-                                            : "bg-zinc-800/50 text-zinc-400 active:bg-zinc-800 border border-white/5"
+                                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                            : "bg-muted/50 text-muted-foreground active:bg-muted border border-border"
                                     )}
                                 >
                                     {item.icon}
@@ -113,7 +113,7 @@ export function GlobalAdminSidebar() {
                                 </button>
                             ))}
                         </div>
-                        <DrawerFooter className="border-t border-white/5 pt-4 mt-2">
+                        <DrawerFooter className="border-t border-border pt-4 mt-2">
                             <StatusIndicator mobile />
                         </DrawerFooter>
                     </DrawerContent>

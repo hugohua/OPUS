@@ -33,9 +33,8 @@ export function Header({ variant = 'default', title, className, ...props }: Head
             // Layout
             "relative z-50 flex items-center justify-between h-14 px-4 transition-all w-full",
             // Theme: Light Mode
-            "bg-zinc-50",
-            // Theme: Dark Mode
-            "dark:bg-zinc-950",
+            // Theme
+            "bg-background/80 backdrop-blur-md border-b border-border",
             // Effects
             className
         )}>
@@ -45,8 +44,7 @@ export function Header({ variant = 'default', title, className, ...props }: Head
                 onClick={handleBack}
                 className={cn(
                     "flex items-center justify-center w-10 h-10 -ml-2 rounded-full transition-all active:scale-95",
-                    "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50", // Adjusted hover for zinc-50 bg
-                    "dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10"
+                    "text-muted-foreground hover:text-foreground hover:bg-muted",
                 )}
                 aria-label="Go back"
             >
@@ -57,7 +55,7 @@ export function Header({ variant = 'default', title, className, ...props }: Head
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full max-w-[60%] pointer-events-none">
 
                 {variant === 'default' && title && (
-                    <h1 className="text-sm font-bold tracking-wide text-zinc-900 dark:text-zinc-200">
+                    <h1 className="text-sm font-bold tracking-wide text-foreground">
                         {title}
                     </h1>
                 )}
@@ -66,8 +64,8 @@ export function Header({ variant = 'default', title, className, ...props }: Head
                     <div className="flex flex-col items-center justify-center w-full max-w-[120px] mx-auto">
                         <Progress
                             value={props.progress || 0}
-                            className="h-1 w-full bg-zinc-200 dark:bg-zinc-800"
-                            indicatorClassName="bg-violet-500 dark:shadow-[0_0_8px_rgba(139,92,246,0.6)]"
+                            className="h-1 w-full bg-muted"
+                            indicatorClassName="bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)]"
                         />
                         {props.stepLabel && (
                             <span className="mt-1.5 font-mono text-[9px] tracking-widest uppercase text-zinc-500 dark:text-zinc-500">

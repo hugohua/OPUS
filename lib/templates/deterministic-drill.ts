@@ -78,7 +78,48 @@ async function fetchWordsForDrill(
  * 构建单个简单 Drill
  */
 export function buildSimpleDrill(vocab: any, mode: SessionMode): BriefingPayload {
-    const sentence = vocab.commonExample || `The word "${vocab.word}" means ${vocab.definition_cn || 'unknown'}.`;
+    // 1. 尝试从 Collocations 获取短语 (Phrase Mode 优先)
+    let sentence = vocab.commonExample;
+    let translation = vocab.definition_cn;
+
+    // Check for collocations
+    if (vocab.collocations && Array.isArray(vocab.collocations) && vocab.collocations.length > 0) {
+        // Strategy: Find the first collocation that has BOTH text and translation
+        const candidates = vocab.collocations as any[];
+        const bestCollo = candidates.find(c => c.text && c.trans);
+
+        if (bestCollo) {
+            sentence = bestCollo.text;
+            translation = bestCollo.trans;
+        } else {
+            // Fallback: Use the first one with text, even if no translation (better than nothing for Phrase mode)
+            const textOnly = candidates.find(c => c.text);
+            if (textOnly) {
+                sentence = textOnly.text;
+                // translation remains vocab.definition_cn
+            }
+        }
+    }
+
+    // [New] Construct Rich Definition Logic
+    // If definitions object exists, try to combine business_cn and general_cn
+    let richDefinition = vocab.definition_cn; // Default to simple definition
+
+    if (vocab.definitions && typeof vocab.definitions === 'object') {
+        const defs = vocab.definitions as any;
+        const parts = [];
+        if (defs.business_cn) parts.push(defs.business_cn);
+        if (defs.general_cn && defs.general_cn !== defs.business_cn) parts.push(defs.general_cn);
+
+        if (parts.length > 0) {
+            richDefinition = parts.join('; ');
+        }
+    }
+
+    // Fallback if no sentence found
+    if (!sentence) {
+        sentence = `The word "${vocab.word}" means ${vocab.definition_cn || 'unknown'}.`;
+    }
 
     return {
         meta: {
@@ -94,7 +135,8 @@ export function buildSimpleDrill(vocab: any, mode: SessionMode): BriefingPayload
                 type: 'text',
                 content_markdown: sentence,
                 audio_text: sentence,
-                translation_cn: vocab.definition_cn,
+                translation_cn: translation, // Keeps sentence translation (e.g., "补充食物供应")
+                phonetic: vocab.phoneticUk || vocab.phoneticUs, // [New] Prefer UK, fallback to US
             },
             {
                 type: 'interaction',
@@ -103,8 +145,11 @@ export function buildSimpleDrill(vocab: any, mode: SessionMode): BriefingPayload
                     style: 'swipe_card',
                     question_markdown: `**${vocab.word}** 的意思是？`,
                     options: [vocab.definition_cn || '我认识', '我不认识'],
-                    answer_key: vocab.definition_cn || '我认识',
-                    explanation_markdown: `**${vocab.word}**\n\n${vocab.definition_cn || '暂无释义'}`,
+                    answer_key: richDefinition || '我认识',
+                    explanation_markdown: `**${vocab.word}**\n\n${richDefinition || '暂无释义'}`,
+                    explanation: {
+                        definition_cn: richDefinition || '暂无释义', // Uses rich definition (e.g., "补充; 重新装满")
+                    },
                 },
             },
         ],

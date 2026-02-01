@@ -120,7 +120,7 @@ export async function generateWithFailover(
             }
 
             logger.info({ provider: provider.name, tokens: result.usage }, 'LLM: 调用成功');
-            return { text: result.text, provider: provider.name };
+            return { text: result.text, provider: `${provider.name} (${provider.model})` };
 
         } catch (error) {
             // 清除代理设置
