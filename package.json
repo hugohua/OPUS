@@ -14,7 +14,7 @@
     "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\" \"npm run dev:tts\"",
     "dev:web": "next dev",
     "dev:worker": "npx tsx --watch workers/index.ts",
-    "dev:tts": "cd python_tts_service && ./start.sh",
+    "dev:tts": "npx tsx scripts/start-tts.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

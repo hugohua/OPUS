@@ -38,8 +38,7 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
                 </p>
                 <Button
                     onClick={onReveal}
-                    variant="ghost"
-                    className="w-full max-w-xs h-16 rounded-2xl text-lg font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-all border border-transparent hover:border-zinc-700/50"
+                    className="w-full max-w-xs h-14 rounded-full text-base font-semibold tracking-wide shadow-lg active:scale-95 transition-all bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:scale-105 hover:bg-zinc-800 dark:hover:bg-zinc-200"
                 >
                     Show Answer
                 </Button>

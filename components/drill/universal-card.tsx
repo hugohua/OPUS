@@ -11,6 +11,7 @@ interface UniversalCardProps {
     children: React.ReactNode;
     footer: React.ReactNode;
     className?: string;
+    contentClassName?: string;
     onExit?: () => void;
     clean?: boolean;
 }
@@ -22,6 +23,7 @@ export function UniversalCard({
     children,
     footer,
     className,
+    contentClassName,
     onExit,
     clean = false
 }: UniversalCardProps) {
@@ -75,7 +77,8 @@ export function UniversalCard({
                     "w-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500",
                     clean
                         ? "bg-transparent p-0"
-                        : "max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none p-8 min-h-[300px]"
+                        : "max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none p-8 min-h-[300px]",
+                    contentClassName
                 )}>
 
                     {/* Category Tag */}

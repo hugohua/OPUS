@@ -1,18 +1,22 @@
 'use client';
 
+import { useState, useEffect } from "react";
 import {
     Drawer,
     DrawerContent,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerDescription,
     DrawerFooter,
     DrawerClose,
+    DrawerTitle,
 } from "@/components/ui/drawer";
 import { VocabListItem } from "@/actions/get-vocab-list";
-import { cn } from "@/lib/utils";
-import { Volume2, RefreshCw, X, AlertTriangle, Sparkles as SparklesIcon, TrendingUp, BrainCircuit } from "lucide-react";
+import { getVocabDetail } from "@/actions/get-vocab-detail";
+import { X, Loader2, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+// 复用详情页组件
+import { VocabHero } from "@/components/vocabulary/detail/VocabHero";
+import { CommonChunks } from "@/components/vocabulary/detail/CommonChunks";
 
 interface VocabSheetProps {
     open: boolean;
@@ -20,152 +24,145 @@ interface VocabSheetProps {
     item: VocabListItem | null;
 }
 
+// 详情数据类型
+interface VocabDetailData {
+    vocab: {
+        id: number;
+        word: string;
+        phoneticUs?: string | null;
+        phoneticUk?: string | null;
+        definition_cn: string | null;
+        definitions?: any;
+        abceed_rank?: number | null;
+        word_family?: any;
+        synonyms?: string[];
+        collocations?: any;
+    };
+    progress: any | null;
+}
+
 export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
+    const [detailData, setDetailData] = useState<VocabDetailData | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // 当抽屉打开时获取完整数据
+    useEffect(() => {
+        if (open && item) {
+            setIsLoading(true);
+            setDetailData(null);
+
+            getVocabDetail(item.word)
+                .then((data) => {
+                    if (data) {
+                        setDetailData(data as VocabDetailData);
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch vocab detail:", err);
+                })
+                .finally(() => {
+                    setIsLoading(false);
+                });
+        }
+    }, [open, item]);
+
     if (!item) return null;
 
-    const s = item.fsrs;
-
-    // Safety check for null date
-    const nextReviewDate = s.nextReview ? new Date(s.nextReview).toLocaleDateString() : "Now";
+    const vocab = detailData?.vocab;
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
-            <DrawerContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 border-t max-h-[90vh] focus:outline-none">
-                <div className="mx-auto w-full max-w-md">
-                    {/* Header: Identity */}
-                    <DrawerHeader className="relative border-b border-zinc-100 dark:border-zinc-900 pb-6 pt-6">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <DrawerTitle className="text-3xl font-serif font-bold text-zinc-900 dark:text-white tracking-tight">
-                                        {item.word}
-                                    </DrawerTitle>
-                                    <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-900 text-[10px] font-mono text-zinc-500 border border-zinc-200 dark:border-zinc-800">
-                                        Rank #{item.abceedRank || 'N/A'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-zinc-400">
-                                    {item.phonetic && <span className="font-mono text-sm">/{item.phonetic}/</span>}
-                                    <button className="p-1 rounded-full hover:bg-zinc-800 text-indigo-400 transition-colors">
-                                        <Volume2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <div className="mt-3">
-                                    <p className="text-zinc-600 dark:text-zinc-300 text-sm leading-relaxed">
-                                        {item.definition}
+            <DrawerContent className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 border-t max-h-[90vh] focus:outline-none">
+                {/* 
+                   Fix: DialogContent requires a DialogTitle for accessibility. 
+                   We hide it visually but keep it for screen readers.
+                */}
+                <DrawerTitle className="sr-only">
+                    {item.word} Details
+                </DrawerTitle>
+
+                <div className="mx-auto w-full max-w-md relative">
+                    {/* 关闭按钮 */}
+                    <DrawerClose asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-4 right-4 z-20 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
+                    </DrawerClose>
+
+                    {/* 主内容区域 */}
+                    <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+                        {isLoading ? (
+                            // Loading 骨架屏
+                            <div className="flex flex-col items-center justify-center py-20">
+                                <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
+                                <p className="text-sm text-zinc-500">加载中...</p>
+                            </div>
+                        ) : vocab ? (
+                            // 详情内容
+                            <>
+                                {/* Hero */}
+                                <VocabHero
+                                    word={vocab.word}
+                                    phonetic={vocab.phoneticUs || vocab.phoneticUk}
+                                    definition={vocab.definition_cn}
+                                    definitions={vocab.definitions}
+                                    rank={vocab.abceed_rank}
+                                    derivatives={vocab.word_family}
+                                    synonyms={vocab.synonyms}
+                                />
+
+                                {/* L0: Common Chunks */}
+                                <CommonChunks
+                                    collocations={(vocab.collocations as any) || []}
+                                    mainWord={vocab.word}
+                                />
+
+                                <div className="mx-6 mb-8 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 text-center">
+                                    <p className="text-sm text-indigo-900 dark:text-indigo-200 mb-2 font-medium">
+                                        Want to disable deep memory?
+                                    </p>
+                                    <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                                        Check full context and AI analysis in detail view.
                                     </p>
                                 </div>
+                            </>
+                        ) : (
+                            // 错误状态
+                            <div className="flex flex-col items-center justify-center py-20">
+                                <p className="text-sm text-zinc-500">无法加载单词详情</p>
                             </div>
-                            <DrawerClose asChild>
-                                <Button variant="ghost" size="icon" className="text-zinc-500 hover:text-white -mr-2 -mt-2">
-                                    <X className="w-5 h-5" />
-                                </Button>
-                            </DrawerClose>
-                        </div>
-                    </DrawerHeader>
-
-                    <div className="p-6 space-y-8 overflow-y-auto">
-
-                        {/* Section 1: Memory Diagnostics */}
-                        <section>
-                            <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                <TrendingUp className="w-3 h-3" />
-                                Memory Diagnostics
-                            </h3>
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800/80 text-center">
-                                    <div className="text-[10px] text-zinc-500 uppercase">Stability</div>
-                                    <div className="text-xl font-mono font-bold text-emerald-400">
-                                        {s.stability.toFixed(0)}d
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800/80 text-center">
-                                    <div className="text-[10px] text-zinc-500 uppercase">Difficulty</div>
-                                    <div className="text-xl font-mono font-bold text-zinc-600 dark:text-zinc-300">
-                                        {s.difficulty.toFixed(1)}
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800/80 text-center">
-                                    <div className="text-[10px] text-zinc-500 uppercase">Retention</div>
-                                    <div className="text-xl font-mono font-bold text-indigo-400">
-                                        {s.retention.toFixed(0)}%
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Visual Retention Curve (Mock) */}
-                            <div className="mt-3 h-16 w-full bg-zinc-50 dark:bg-zinc-900/30 rounded-lg border border-zinc-200 dark:border-zinc-800/50 relative overflow-hidden flex items-end">
-                                <svg className="w-full h-full text-emerald-500/10 fill-current" preserveAspectRatio="none" viewBox="0 0 100 100">
-                                    <path d="M0,0 Q30,80 100,90 V100 H0 Z" />
-                                </svg>
-                                <div className="absolute top-2 right-2 text-[9px] font-mono text-zinc-500">
-                                    Next Review: {nextReviewDate}
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Section 2: AI Context Trace */}
-                        <section>
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-xs font-bold text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                                    <BrainCircuit className="w-3 h-3" />
-                                    AI Context Trace
-                                </h3>
-                                <button className="text-[10px] flex items-center gap-1 text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white transition-colors">
-                                    <RefreshCw className="w-3 h-3" />
-                                    Regenerate
-                                </button>
-                            </div>
-
-                            {s.contextSentence ? (
-                                <div className="bg-gradient-to-br from-violet-900/10 to-transparent p-4 rounded-xl border border-violet-500/20 relative">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-violet-500 rounded-l-xl"></div>
-                                    <p className="text-sm text-zinc-700 dark:text-zinc-200 italic leading-relaxed font-serif">
-                                        "{s.contextSentence}"
-                                    </p>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        <span className="text-[9px] font-mono text-zinc-500 bg-white/50 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-violet-200 dark:border-zinc-800">
-                                            Business Context
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-zinc-50 dark:bg-zinc-900/30 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-center">
-                                    <p className="text-xs text-zinc-500 italic">No context generated yet.</p>
-                                </div>
-                            )}
-                        </section>
-
-                        {/* Section 3: Distractor Trap (Only if Leech) */}
-                        {s.isLeech && (
-                            <section>
-                                <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    <AlertTriangle className="w-3 h-3" />
-                                    Distractor Trap
-                                </h3>
-                                <div className="text-xs text-zinc-400 bg-zinc-900/30 p-3 rounded-lg border border-zinc-800">
-                                    Marked as <span className="text-rose-400 font-bold">Leech</span> (High Failure Rate).
-                                </div>
-                            </section>
                         )}
                     </div>
 
                     {/* Footer Actions */}
-                    <DrawerFooter className="border-t border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950 pb-8 pt-4">
-                        <div className="flex gap-3">
-                            <Button variant="outline" className="flex-1 bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                                Suspend Card
-                            </Button>
-                            <Button variant="ghost" className="flex-1 bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white">
-                                Reset Progress
-                            </Button>
-                        </div>
-                        <div className="mt-4">
-                            <a href={`/dashboard/vocab/${item.word}`} className="block w-full">
-                                <Button className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg shadow-indigo-500/20 border-0">
-                                    Full Analysis
+                    <DrawerFooter className="border-t border-zinc-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 pb-8 pt-4">
+
+                        <div className="w-full mb-3">
+                            <Link href={`/dashboard/vocab/${item.word}`} className="block w-full">
+                                <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 group">
+                                    Deep Dive Analysis
+                                    <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                 </Button>
-                            </a>
+                            </Link>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                            >
+                                暂停复习
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                className="flex-1 bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white"
+                            >
+                                重置进度
+                            </Button>
                         </div>
                     </DrawerFooter>
                 </div>

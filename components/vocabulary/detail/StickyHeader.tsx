@@ -99,7 +99,7 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
     return (
         <>
             <header className={cn(
-                "fixed top-0 left-0 w-full z-50 flex items-center justify-between px-4 h-14 transition-colors duration-500",
+                "fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-14 transition-colors duration-500",
                 "bg-white/80 backdrop-blur-md border-b border-zinc-200", // Light mode
                 "dark:bg-zinc-900/60 dark:border-white/15", // Dark mode glassmorphism
                 className

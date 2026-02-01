@@ -109,23 +109,27 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
     };
 
     // ------------------------------------------------------------------
-    // Prefetch Logic (Background Preloading)
+    // Prefetch Logic (Incremental Background Preloading)
     // ------------------------------------------------------------------
-    const prefetchNextItem = async () => {
-        const PREFETCH_COUNT = 5; // Lookahead buffer
+    const PREFETCH_LOOKAHEAD = 5; // Always keep 5 items ahead prefetched
+    const prefetchedIndicesRef = React.useRef<Set<number>>(new Set());
+
+    const prefetchNextItems = async () => {
         const allRequests: Array<Promise<any>> = [];
 
-        // Prefetch next N items
-        for (let offset = 1; offset <= PREFETCH_COUNT; offset++) {
-            const nextIndex = currentIndex + offset;
-            if (nextIndex >= playlist.length) break;
+        // Calculate target range: [currentIndex + 1, currentIndex + PREFETCH_LOOKAHEAD]
+        for (let offset = 1; offset <= PREFETCH_LOOKAHEAD; offset++) {
+            const targetIndex = currentIndex + offset;
 
-            const nextItem = playlist[nextIndex];
+            // Skip if out of range or already prefetched
+            if (targetIndex >= playlist.length) break;
+            if (prefetchedIndicesRef.current.has(targetIndex)) continue;
+
+            const nextItem = playlist[targetIndex];
 
             // Determine which audios to prefetch based on mode
             if (nextItem.mode === 'QUIZ') {
                 // Quiz needs 2 audios: question + answer
-                // 1. Question
                 const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
                 const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || nextItem.speed || 1.0;
 
@@ -139,10 +143,9 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
                             language: 'en-US',
                             speed: qSpeed
                         })
-                    }).catch(() => { }),
+                    }).catch(() => { })
                 );
 
-                // 2. Answer (Use correct voice and its preset speed)
                 const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
                 const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
 
@@ -192,22 +195,28 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
                     }).catch(() => { })
                 );
             }
+
+            // Mark as prefetched BEFORE request completes (optimistic)
+            prefetchedIndicesRef.current.add(targetIndex);
         }
 
         // Fire all requests in parallel (silent fail)
-        await Promise.allSettled(allRequests);
+        if (allRequests.length > 0) {
+            console.log(`[Drive Prefetch] Loading ${allRequests.length} new audio(s) for indices after ${currentIndex}`);
+            await Promise.allSettled(allRequests);
+        }
     };
 
-    // Trigger prefetch when current item starts playing
+    // Trigger prefetch when switching to a new card
     useEffect(() => {
-        if (isPlaying && playbackStage !== 'idle') {
+        if (isPlaying) {
             // Delay prefetch slightly to prioritize current playback
             const timer = setTimeout(() => {
-                prefetchNextItem();
+                prefetchNextItems();
             }, 500); // 500ms delay
             return () => clearTimeout(timer);
         }
-    }, [isPlaying, currentIndex, playbackStage]);
+    }, [currentIndex]); // ✅ 只在切换卡片时触发，避免 playbackStage 变化导致重复加载
 
     // 3. Stage Transition (On TTS End)
     // We listen to tts.status changes. When it goes from 'playing' -> 'idle', and we are isPlaying, move next.

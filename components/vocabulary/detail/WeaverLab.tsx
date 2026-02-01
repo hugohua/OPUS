@@ -154,7 +154,7 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
     // const { story, translation } = extractContent(streamedText); // Moved to derivation
 
     return (
-        <section className="mb-24 px-1">
+        <section className="mb-24 px-6">
             <div className="relative p-[1px] rounded-2xl bg-gradient-to-br from-violet-600/20 to-amber-500/20 group overflow-hidden">
                 <div className="relative bg-white dark:bg-zinc-950 rounded-2xl p-5 min-h-[200px] flex flex-col">
 

@@ -135,7 +135,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
     };
 
     return (
-        <section className="mb-8 px-1">
+        <section className="mb-8 px-6">
             <div className="flex justify-between items-end mb-3 pl-1">
                 <h3 className="text-[10px] font-mono font-bold text-violet-400 uppercase tracking-widest">
                     L2 • Context Snapshot

@@ -9,7 +9,7 @@
  */
 
 import { generateWithFailover } from '../../workers/llm-failover';
-import { createAuditRecord } from '@/lib/actions/audit-actions';
+import { createAuditRecord } from '@/actions/audit-actions';
 import {
     AUDIT_SYSTEM_PROMPT,
     getAuditUserPrompt,

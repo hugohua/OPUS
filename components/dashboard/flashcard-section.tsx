@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers } from "lucide-react";
+import { Layers, Car } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,16 @@ const FLASHCARD_MODES = [
         color: "text-indigo-400",
         bg: "bg-indigo-500/10",
         href: "/dashboard/session/PHRASE"
+    },
+    {
+        id: "drive-mode",
+        name: "Audio Drive",
+        desc: "Passive Listening",
+        sub: "L0 • Audio",
+        icon: Car,
+        color: "text-amber-400",
+        bg: "bg-amber-500/10",
+        href: "/drive"
     }
 ];
 

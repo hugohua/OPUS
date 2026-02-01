@@ -47,13 +47,14 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
             />
 
             {/* Main Scrollable Content */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden pt-20 pb-32 px-6 relative z-10 scroll-smooth">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden pt-20 pb-32 relative z-10 scroll-smooth">
 
                 {/* Hero */}
                 <VocabHero
                     word={vocab.word}
                     phonetic={vocab.phoneticUs || vocab.phoneticUk}
                     definition={vocab.definition_cn} // Using Chinese definition as per request logic
+                    definitions={vocab.definitions}
                     rank={vocab.abceed_rank}
                     derivatives={vocab.word_family}
                     synonyms={vocab.synonyms}

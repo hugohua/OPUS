@@ -10,6 +10,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { EditorialDrill } from "@/components/briefing/editorial-drill";
 import { SessionSkeleton } from "@/components/session/session-skeleton";
@@ -444,6 +445,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                     onExit={() => router.push('/dashboard')}
                     footer={ActiveFooter}
                     clean={false}
+                    contentClassName="h-[60dvh] w-full flex flex-col justify-center"
                 >
                     {/* Body Content */}
                     {textSegment && interactSegment && (
@@ -458,32 +460,52 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                             )}
 
                             {isPhraseMode ? (
-                                <PhraseCard
-                                    key={index} // Force remount on drill change checks
-                                    phraseMarkdown={textSegment.content_markdown || ""}
-                                    translation={(textSegment as any).translation_cn || ""}
-                                    wordDefinition={cleanDefinition}
-                                    status={status as any}
-                                    phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
-                                    partOfSpeech={partOfSpeech || ""}
-                                    targetWord={currentDrill.meta.target_word}
-                                />
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 1.05, y: -10 }}
+                                        transition={{ duration: 0.4 }}
+                                        className="w-full flex-1 flex flex-col items-center justify-center"
+                                    >
+                                        <PhraseCard
+                                            phraseMarkdown={textSegment.content_markdown || ""}
+                                            translation={(textSegment as any).translation_cn || ""}
+                                            wordDefinition={cleanDefinition}
+                                            status={status as any}
+                                            phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
+                                            partOfSpeech={partOfSpeech || ""}
+                                            targetWord={currentDrill.meta.target_word}
+                                        />
+                                    </motion.div>
+                                </AnimatePresence>
                             ) : (
-                                <EditorialDrill
-                                    content={textSegment.content_markdown || ""}
-                                    translation={(textSegment as any).translation_cn}
-                                    explanation={explanationMarkdown}
-                                    answer={interactSegment.task?.answer_key || ""}
-                                    status={status}
-                                    selected={selectedOption}
-                                />
-                            )}
-
-                            {/* Prompt */}
-                            {!isPhraseMode && status === "idle" && (
-                                <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
-                                    Select the best option
-                                </p>
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 1.05, y: -10 }}
+                                        transition={{ duration: 0.4 }}
+                                        className="w-full flex-1 flex flex-col items-center justify-center"
+                                    >
+                                        <EditorialDrill
+                                            content={textSegment.content_markdown || ""}
+                                            translation={(textSegment as any).translation_cn}
+                                            explanation={explanationMarkdown}
+                                            answer={interactSegment.task?.answer_key || ""}
+                                            status={status}
+                                            selected={selectedOption}
+                                        />
+                                        {/* Prompt */}
+                                        {status === "idle" && (
+                                            <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
+                                                Select the best option
+                                            </p>
+                                        )}
+                                    </motion.div>
+                                </AnimatePresence>
                             )}
                         </div>
                     )}
