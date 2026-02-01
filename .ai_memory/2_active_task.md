@@ -10,6 +10,7 @@ Task 1.5: Topic Briefing & Phase 1.5 Features
 - [x] Optimization: 模拟页预加载机制 (Drill Cache + Prefetch)
 - [ ] Task 1.5.1: Magic Paste (语境注入) [P0]
 - [ ] Task 1.5.2: Commute Mode (Audio Playlist & TTS)
+  - [x] Enable TTS service in `dev:all`
 - [x] Task 1.5.3: PRD Update (Topic Briefing) - Doc Integration
 - [ ] Task 1.5.4: Topic Briefing (AI Context Generator) - Implementation
 - [ ] Task 3.2: Rest Card UI (每日休息卡)

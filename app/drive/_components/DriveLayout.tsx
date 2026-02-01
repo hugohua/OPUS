@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTTS } from '@/hooks/use-tts';
-import { DriveItem, DRIVE_VOICE_CONFIG, DriveMode } from '@/actions/drive';
+import { DriveItem, DRIVE_VOICE_CONFIG, DriveMode, DRIVE_VOICE_SPEED_PRESETS, DashScopeVoice } from '@/lib/constants/drive';
 import { DriveHeader } from './DriveHeader';
 import { DriveMain } from './DriveMain';
 import { DriveControls } from './DriveControls';
@@ -95,12 +95,16 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
         }
     };
 
-    const playTTS = (text: string, defaultVoice: string) => {
+    const playTTS = (text: string, voiceOverride?: string) => {
+        const finalVoice = (voiceOverride || currentItem.voice) as DashScopeVoice;
+        // Use preset speed for the voice, fallback to item speed or 1.0
+        const finalSpeed = DRIVE_VOICE_SPEED_PRESETS[finalVoice] || currentItem.speed || 1.0;
+
         tts.play({
             text: text,
-            voice: (currentItem.voice as any) || defaultVoice,
+            voice: finalVoice,
             language: 'en-US',
-            speed: currentItem.speed || 1.0
+            speed: finalSpeed
         });
     };
 
@@ -121,52 +125,69 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
             // Determine which audios to prefetch based on mode
             if (nextItem.mode === 'QUIZ') {
                 // Quiz needs 2 audios: question + answer
+                // 1. Question
+                const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
+                const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || nextItem.speed || 1.0;
+
                 allRequests.push(
                     fetch('/api/tts/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             text: nextItem.word || nextItem.text,
-                            voice: DRIVE_VOICE_CONFIG.QUIZ_QUESTION,
+                            voice: qVoice,
                             language: 'en-US',
-                            speed: nextItem.speed || 1.0
+                            speed: qSpeed
                         })
                     }).catch(() => { }),
+                );
+
+                // 2. Answer (Use correct voice and its preset speed)
+                const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
+                const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
+
+                allRequests.push(
                     fetch('/api/tts/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             text: nextItem.trans,
-                            voice: DRIVE_VOICE_CONFIG.QUIZ_ANSWER,
+                            voice: aVoice,
                             language: 'en-US',
-                            speed: nextItem.speed || 1.0
+                            speed: aSpeed
                         })
                     }).catch(() => { })
                 );
             } else if (nextItem.mode === 'WASH') {
+                const wVoice = DRIVE_VOICE_CONFIG.WASH_PHRASE;
+                const wSpeed = DRIVE_VOICE_SPEED_PRESETS[wVoice] || nextItem.speed || 1.0;
+
                 allRequests.push(
                     fetch('/api/tts/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             text: nextItem.text,
-                            voice: DRIVE_VOICE_CONFIG.WASH_PHRASE,
+                            voice: wVoice,
                             language: 'en-US',
-                            speed: nextItem.speed || 1.0
+                            speed: wSpeed
                         })
                     }).catch(() => { })
                 );
             } else {
                 // STORY
+                const sVoice = DRIVE_VOICE_CONFIG.STORY;
+                const sSpeed = DRIVE_VOICE_SPEED_PRESETS[sVoice] || nextItem.speed || 1.0;
+
                 allRequests.push(
                     fetch('/api/tts/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             text: nextItem.text,
-                            voice: DRIVE_VOICE_CONFIG.STORY,
+                            voice: sVoice,
                             language: 'en-US',
-                            speed: nextItem.speed || 1.0
+                            speed: sSpeed
                         })
                     }).catch(() => { })
                 );

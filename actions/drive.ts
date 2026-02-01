@@ -10,50 +10,7 @@ const DEBUG = process.env.NODE_ENV === 'development';
 // ------------------------------------------------------------------
 // Types
 // ------------------------------------------------------------------
-export type DriveMode = 'QUIZ' | 'WASH' | 'STORY';
-
-export interface DriveItem {
-    id: string;
-    text: string;     // Main text to display (word or sentence)
-    trans: string;    // Main translation
-    phonetic: string;
-
-    // Detailed Metadata
-    word: string;     // The target word
-    pos: string;      // Part of speech
-    meaning: string;  // Core succinct meaning
-    scenarios?: string[]; // 场景标签 (用于聚类)
-    stability?: number;   // FSRS 稳定度 (用于难度分层)
-
-    // Playback Logic
-    mode: DriveMode;
-    audioUrl?: string; // Optional, can be empty for JIT generation
-
-    // Audio Config
-    voice: DashScopeVoice;
-    speed: number;
-}
-
-// DashScope Voice Types (qwen3-tts-flash)
-// Selected subset for Drive Mode optimization
-export type DashScopeVoice =
-    | 'Cherry'    // 芊悦 - 阳光积极 (通用女,最常用)
-    | 'Serena'    // 苏瑶 - 温柔 (答案阶段)
-    | 'Ethan'     // 晨煦 - 阳光活力 (通用男)
-    | 'Kai'       // 凯 - 磁性舒缓 (问题阶段)
-    | 'Jennifer'  // 詹妮弗 - 品牌级美语 (高级场景)
-    | 'Andre'     // 安德雷 - 沉稳自然 (故事模式)
-    | 'Maia'      // 四月 - 知性温柔 (备选)
-    | 'Neil';     // 阿闻 - 新闻主持 (正式场景)
-
-// Voice Configuration Constants (统一配置,避免重复字符串)
-export const DRIVE_VOICE_CONFIG = {
-    WARMUP: 'Ethan',           // 暖身 - 阳光活力
-    QUIZ_QUESTION: 'Kai',      // Quiz 问题 - 磁性舒缓
-    QUIZ_ANSWER: 'Serena',     // Quiz 答案 - 温柔
-    WASH_PHRASE: 'Cherry',     // Wash 短语 - 亲切自然
-    STORY: 'Andre',            // Story 模式 - 沉稳自然
-} as const satisfies Record<string, DashScopeVoice>;
+import { DriveItem, DriveMode, DRIVE_VOICE_CONFIG, DRIVE_VOICE_SPEED_PRESETS } from '@/lib/constants/drive';
 
 // ------------------------------------------------------------------
 // Algorithm: Sandwich (Warmup -> Review -> Break)
@@ -250,7 +207,7 @@ async function fetchBreakChunks(
                 stability: undefined, // WASH mode: no FSRS tracking
                 mode: 'WASH',
                 voice: DRIVE_VOICE_CONFIG.WASH_PHRASE,
-                speed: 1.0
+                speed: DRIVE_VOICE_SPEED_PRESETS[DRIVE_VOICE_CONFIG.WASH_PHRASE] || 1.0 // ✅ 应用语速校准
             });
         }
         if (chunks.length >= limit) break;
@@ -281,7 +238,7 @@ function mapToDriveItem(v: any, mode: DriveMode, context: 'warmup' | 'review'): 
         stability: undefined, // Will be populated from UserProgress if needed
         mode: mode,
         voice: context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION,
-        speed: 1.0
+        speed: DRIVE_VOICE_SPEED_PRESETS[context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION] || 1.0 // ✅ 应用语速校准
     };
 }
 
