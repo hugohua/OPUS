@@ -12,7 +12,7 @@
  * - Socratic Tutor: 选错时弹出引导提示
  */
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useOptimistic, startTransition } from "react";
 import { UniversalCard } from "@/components/drill/universal-card";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X as XIcon, RotateCcw, Lightbulb } from "lucide-react";
@@ -51,6 +51,12 @@ export function ContextDrillCard({
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [showAnswer, setShowAnswer] = useState(false);
 
+    // W2 Fix: Optimistic UI for instant progress feedback
+    const [optimisticProgress, setOptimisticProgress] = useOptimistic(
+        progress,
+        (current, amount: number) => Math.min(100, current + amount)
+    );
+
     // W2 Fix: 使用 useRef + useEffect 确保 drill 切换时 startTime 重置
     const startTimeRef = useRef<number>(Date.now());
     useEffect(() => {
@@ -77,7 +83,7 @@ export function ContextDrillCard({
     // W3: Guard against empty options (LLM failure)
     if (options.length === 0) {
         return (
-            <UniversalCard variant="amber" category="CONTEXT LAB" progress={progress} onExit={onExit} footer={<div />}>
+            <UniversalCard variant="amber" category="CONTEXT LAB" progress={optimisticProgress} onExit={onExit} footer={<div />}>
                 <div className="text-center text-zinc-500 py-8">
                     <p>No options available. Please try again.</p>
                 </div>
@@ -111,7 +117,14 @@ export function ContextDrillCard({
     const handleGrade = (inputGrade: 1 | 3) => {
         const duration = Date.now() - startTimeRef.current;
         const implicitGrade = calculateImplicitGrade(inputGrade, duration, false, 'CONTEXT');
-        onGrade(implicitGrade as 1 | 2 | 3 | 4);
+
+        // Optimistic update: assume 5% progress per card (or whatever the parent logic is roughly)
+        // This gives immediate feedback while the parent processes the onGrade transition
+        startTransition(() => {
+            setOptimisticProgress(5);
+            onGrade(implicitGrade as 1 | 2 | 3 | 4);
+        });
+
         // Reset for next card
         setState("reading");
         setSelectedOption(null);
@@ -268,7 +281,7 @@ export function ContextDrillCard({
         <UniversalCard
             variant="amber"
             category="CONTEXT LAB"
-            progress={progress}
+            progress={optimisticProgress}
             onExit={onExit}
             footer={ZoneB}
         >

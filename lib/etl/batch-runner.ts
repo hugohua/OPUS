@@ -106,10 +106,9 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
     const { jobName, tier, fetchBatch, processBatch, isDryRun = false, isContinuous = false } = options;
     const config = tier === 'paid' ? PAID_TIER_CONFIG : FREE_TIER_CONFIG;
 
-    console.log('='.repeat(60));
-    console.log(`  ETL Job: ${jobName}`);
-    console.log('='.repeat(60));
-    console.log({
+    // Structured Start Log
+    log.info({
+        jobName,
         mode: isDryRun ? 'DRY-RUN' : isContinuous ? 'CONTINUOUS' : 'SINGLE BATCH',
         tier: tier === 'paid' ? 'PAID' : 'FREE',
         config: {
@@ -117,7 +116,7 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
             parallelRequest: config.PARALLEL_REQUESTS,
             interval: `${config.BATCH_INTERVAL_MS / 1000}s`
         }
-    }, 'Starting Job');
+    }, 'Starting ETL Job');
 
     const stats: ProcessingStats = {
         totalProcessed: 0,
@@ -256,13 +255,13 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
 
     // Final Summary
     const totalElapsed = Date.now() - stats.startTime.getTime();
-    console.log('='.repeat(60));
-    console.log(`  Job Complete: ${jobName}`);
-    console.log({
+
+    log.info({
+        jobName,
+        status: 'COMPLETE',
         totalBatches: stats.batchCount,
         totalSuccess: stats.totalSuccess,
         totalFailed: stats.totalFailed,
         duration: formatDuration(totalElapsed)
-    });
-    console.log('='.repeat(60));
+    }, 'ETL Job Complete');
 }

@@ -230,6 +230,8 @@ export async function recordOutcome(
             newStability: newCard.stability,
             scheduledDays: newCard.scheduled_days ?? 0,
             masteryChange: dimUpdate
+        }, {
+            extraTags: explicitTrack && explicitTrack !== inferredTrack ? ['cross_track_review'] : []
         });
 
         return {

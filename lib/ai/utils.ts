@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { logAIError } from '@/lib/logger';
+import { logAIError, aiLogger } from '@/lib/logger';
 
 /**
  * 清理 Markdown 代码块标记
@@ -145,7 +145,7 @@ export function safeParse<T>(content: string, schema: z.ZodSchema<T>, context?: 
         if (recovery && recovery.itemsDropped >= 0) {
             try {
                 const parsed = JSON.parse(recovery.recovered);
-                console.log(`⚠️ JSON 截断恢复: 成功恢复 ${parsed.items?.length || 0} 个 items，丢弃 ${recovery.itemsDropped} 个不完整的`);
+                aiLogger.warn({ recoveredCount: parsed.items?.length || 0, dropped: recovery.itemsDropped }, `⚠️ JSON 截断恢复: 成功恢复 ${parsed.items?.length || 0} 个 items，丢弃 ${recovery.itemsDropped} 个不完整的`);
 
                 if (Array.isArray(parsed)) {
                     return schema.parse({ items: parsed });

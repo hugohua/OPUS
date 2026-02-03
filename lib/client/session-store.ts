@@ -75,7 +75,7 @@ export function loadSession(userId: string, mode: SessionMode): SessionState | n
 
         // Check Expiry
         if (Date.now() - state.lastUpdated > EXPIRE_MS) {
-            console.log('Session storage expired');
+            console.debug('[SessionStore] Expired, clearing:', key);
             localStorage.removeItem(key);
             return null;
         }

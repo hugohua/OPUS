@@ -166,10 +166,14 @@ export function auditFSRSTransition(
         newStability: number;
         scheduledDays: number;
         masteryChange?: any;
+    },
+    options?: {
+        extraTags?: string[];
     }
 ): void {
     // 自动异常标记
-    const auditTags: string[] = [];
+    const auditTags: string[] = options?.extraTags || [];
+
     if (context.grade === 1 && (context.reps ?? 0) > 5) {
         auditTags.push('repeated_failure');
     }
