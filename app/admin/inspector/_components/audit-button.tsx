@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { auditDrillQuality, AuditResult } from '@/app/actions/inspector';
+import { auditDrillQuality, AuditResult } from '@/actions/inspector';
 import { Loader2, Gavel } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';

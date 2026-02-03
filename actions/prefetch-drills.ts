@@ -61,7 +61,8 @@ async function triggerBackgroundGeneration(userId: string, mode: SessionMode) {
         'PHRASE': 20,
         'AUDIO': 20,
         'READING': 20,
-        'VISUAL': 20
+        'VISUAL': 20,
+        'CONTEXT': 20    // [L2] Context Lab
     };
 
     try {

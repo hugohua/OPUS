@@ -14,9 +14,10 @@ import { createLogger } from '@/lib/logger';
 import { ActionState } from '@/types/action';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
+import { auditSessionFallback } from '@/lib/services/audit-service';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -75,7 +76,7 @@ export async function getNextDrillBatch(
             // 3.3 缓存未命中 -> 确定性兜底
             if (!drill) {
                 drill = buildSimpleDrill({
-                    vocabId: candidate.vocabId,
+                    id: candidate.vocabId,
                     word: candidate.word,
                     definition_cn: candidate.definition_cn,
                     definitions: candidate.definitions, // [New]
@@ -85,6 +86,9 @@ export async function getNextDrillBatch(
                 }, mode);
                 source = 'deterministic_fallback';
                 missedVocabIds.push(candidate.vocabId);
+
+                // [Audit] Record cache miss fallback
+                auditSessionFallback(userId, mode, candidate.vocabId, candidate.word);
             }
 
             // 添加元数据

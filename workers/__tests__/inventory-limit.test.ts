@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processDrillJob } from '../drill-processor';
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 import { CACHE_LIMIT_MAP } from '@/lib/drill-cache';
 
 // Mock dependencies

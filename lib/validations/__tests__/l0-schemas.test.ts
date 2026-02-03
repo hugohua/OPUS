@@ -174,6 +174,7 @@ describe('L0PhraseSchema', () => {
 
     it('应拒绝非 bubble_select 样式', () => {
         const payload = createValidPhrasePayload();
+        // @ts-expect-error 故意测试无效样式
         payload.segments[1].task!.style = 'swipe_card';
 
         const result = L0PhraseSchema.safeParse(payload);

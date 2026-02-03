@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { cn } from '@/lib/utils'; // 确保 cn 被导入
 
 import { GeneratorStreamView } from './stream-view';
 import { ContentSimView } from './content-sim';
-
-// interface InspectorClientProps {} // Removed
+import { AuditDashboard } from './audit-dashboard'; // Phase 2
 
 export function InspectorClient() {
-    const [activeTab, setActiveTab] = useState<'generator' | 'content'>('generator');
+    const [activeTab, setActiveTab] = useState<'generator' | 'content' | 'audit'>('generator');
 
     return (
         <div className="flex flex-col h-screen max-h-screen bg-background">
@@ -41,20 +41,32 @@ export function InspectorClient() {
                 >
                     内容模拟 (Content Sim)
                 </button>
+
+                <button
+                    onClick={() => setActiveTab('audit')}
+                    className={cn(
+                        "h-full px-4 text-sm font-medium border-b-2 transition-all",
+                        activeTab === 'audit'
+                            ? "border-violet-500 text-foreground"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    全景审计 (Audit)
+                </button>
             </div>
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-hidden relative">
                 {activeTab === 'generator' ? (
                     <GeneratorStreamView />
-                ) : (
+                ) : activeTab === 'content' ? (
                     <div className="flex-1 flex flex-col bg-background h-full">
                         <ContentSimView />
                     </div>
+                ) : (
+                    <AuditDashboard />
                 )}
             </main>
         </div>
     );
 }
-
-import { cn } from '@/lib/utils';

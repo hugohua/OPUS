@@ -75,9 +75,25 @@ async function fetchWordsForDrill(
 }
 
 /**
+ * Vocab 输入接口 (用于 Drill 构建)
+ * 定义 buildSimpleDrill 函数所需的词汇字段
+ * 注意：collocations/definitions 使用 unknown 以兼容 Prisma JsonValue
+ */
+export interface VocabDrillInput {
+    id: number;
+    word: string;
+    definition_cn?: string | null;
+    commonExample?: string | null;
+    collocations?: unknown; // Prisma JsonValue
+    definitions?: unknown; // Prisma JsonValue
+    phoneticUk?: string | null;
+    phoneticUs?: string | null;
+}
+
+/**
  * 构建单个简单 Drill
  */
-export function buildSimpleDrill(vocab: any, mode: SessionMode): BriefingPayload {
+export function buildSimpleDrill(vocab: VocabDrillInput, mode: SessionMode): BriefingPayload {
     // 1. 尝试从 Collocations 获取短语 (Phrase Mode 优先)
     let sentence = vocab.commonExample;
     let translation = vocab.definition_cn;
@@ -135,8 +151,8 @@ export function buildSimpleDrill(vocab: any, mode: SessionMode): BriefingPayload
                 type: 'text',
                 content_markdown: sentence,
                 audio_text: sentence,
-                translation_cn: translation, // Keeps sentence translation (e.g., "补充食物供应")
-                phonetic: vocab.phoneticUk || vocab.phoneticUs, // [New] Prefer UK, fallback to US
+                translation_cn: translation ?? undefined, // Keeps sentence translation (e.g., "补充食物供应")
+                phonetic: vocab.phoneticUk ?? vocab.phoneticUs ?? undefined, // [New] Prefer UK, fallback to US
             },
             {
                 type: 'interaction',

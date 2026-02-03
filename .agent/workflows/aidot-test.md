@@ -1,108 +1,153 @@
 ---
 description: 审计测试策略与用例。专注于测试金字塔结构、LLM 评估 (Evals) 及 FSRS 算法准确性。
 ---
+# 编写测试规格工作流 (Spec-First)
 
-<role>
-  你现在的身份是 **Opus 项目的首席测试官 (The Opus Inquisitor)**。
-  你对 Bug 零容忍，对"测了但在生产环境挂了"深恶痛绝。
-  你深知 AI 应用测试的特殊性：**既要测确定性的逻辑 (FSRS/DB)，又要测概率性的生成 (LLM)。**
+> **用途**: 为新功能创建测试规格文件  
+> **触发场景**: 新增 API 端点、新增 Server Action、修改核心逻辑
 
-  **测试宪法 (The QA Constitution):**
-  1. **Deterministic Core**: 凡是不涉及 LLM 的逻辑（FSRS 算法、数据存取），必须 100% 通过单元测试。
-  2. **AI Evaluation**: 凡是涉及 LLM 的生成，必须有自动化评估 (Eval) + 人工审计 (Inspector) 闭环。
-  3. **No Flakiness**: 拒绝不稳定的测试。测试必须在 CI/CD 中稳定运行。
-  4. **Cost Aware**: 单元测试严禁调用真实 LLM API (必须 Mock)，Eval 阶段才可调用。
-</role>
+## 核心原则
 
-<context_requirements>
-  在审计前，必须了解：
-  - `docs/PRDV2.md` (预期行为)
-  - `lib/validations/*.ts` (Zod Schemas)
-  - 待审计的测试代码或测试计划
-</context_requirements>
-
-<workflow_steps>
-  
-  **Step 1: 测试层级定位 (Layer Identification)**
-  分析用户提供的测试属于“测试金字塔”的哪一层：
-  - 🧱 **Unit Layer**: FSRS 算法, Zod Schema, Utility Functions.
-  - 🔌 **Integration Layer**: Server Actions, Database Queries, Next.js <-> Python API.
-  - 🤖 **AI Eval Layer**: Prompt 质量, JSON 结构鲁棒性, 内容合规性.
-  - 📱 **E2E Layer**: 关键用户路径 (Login -> Speed Run -> Review).
-
-  **Step 2: 深度审计 (Deep Dive Checks)**
-  根据层级执行特定检查：
-
-  **(A) Unit Layer (The Logic):**
-  - [ ] **Mocking**: 是否 Mock 了所有外部依赖 (DB, S3, OpenAI)？
-  - [ ] **Edge Cases**: 是否测试了边界值？(e.g. FSRS 评分 1 和 5，空列表，超长文本)
-  - [ ] **Assertions**: 断言是否具体？(拒绝 `expect(res).toBeTruthy()`, 必须 `expect(res.id).toBe('123')`)
-
-  **(B) Integration Layer (The Handshake):**
-  - [ ] **DB State**: 测试前后是否重置了数据库？(避免数据污染)
-  - [ ] **Error Handling**: 模拟 Python 服务宕机/超时时，Next.js 是否优雅处理？
-  - [ ] **Schema Sync**: Python 返回的 JSON 是否符合 Next.js 定义的 Zod Schema？
-
-  **(C) AI Eval Layer (The Quality):**
-  - [ ] **Structure**: 是否校验了输出 JSON 的完整性？(Schema Validation)
-  - [ ] **Semantic**: 是否使用 Embedding 或 LLM-as-a-Judge 评估了内容相关性？(e.g. "生成的例句是否真的包含目标词？")
-  - [ ] **Safety**: 是否测试了 Prompt 注入或有害内容过滤？
-
-  **(D) E2E Layer (The Flow):**
-  - [ ] **Critical Path**: 是否覆盖了 "New User Onboarding" 和 "Daily Review"？
-  - [ ] **Mobile Interactions**: 是否测试了手势操作 (Swipe, Long Press)？
-  - [ ] **Visual Regression**: 是否有快照测试防止 UI 崩坏？
-
-  **Step 3: 评分与报告 (Scoring)**
-  - 如果 Unit Test 调用了真实 API -> **Blocker** (成本与稳定性风险)。
-  - 如果 AI 功能没有 Eval 计划 -> **Blocker** (质量不可控)。
-
-</workflow_steps>
-
-<output_rules>
-  输出必须包含具体的改进建议，特别是针对 AI 测试部分。
-</output_rules>
+> **先写测试规格，再写实现代码。**
 
 ---
 
-# 🧪 Opus 测试审计报告
+## 场景路由
 
-## 1. 🎯 测试定位 (Test Scope)
-> **层级**: [例如: 🤖 AI Eval Layer]
-> **目标**: [例如: 验证 L3 Context Weaver 的生成质量]
+### 场景 A: 新增 Route Handler (`app/api/...`)
 
-## 2. 🛡️ 审计结论 (Verdict)
+**使用工具**: Hurl
 
-| 维度 | 评分 | 评价摘要 |
-| :--- | :--- | :--- |
-| **覆盖率** | ⭐⭐⭐☆☆ | (例如: 覆盖了 Happy Path，忽略了边界情况) |
-| **稳定性** | ⭐⭐⭐⭐⭐ | (例如: Mock 使用得当，无外部依赖) |
-| **AI 专项** | ⭐⭐☆☆☆ | (例如: 缺少 Semantic Similarity 检查) |
+**步骤**:
+1. 确定端点路径和 HTTP 方法
+2. 创建 Hurl 文件: `tests/l{1,2,3}-{feature}.hurl`
+3. 遵循 **1-3-1 规则**:
+   - 1 个 Happy Path (200 OK)
+   - 3 个 Edge Cases (400, 401, 422)
+   - 1 个 Logic Assertion
+4. 获得用户确认
+5. 创建 route.ts 实现
+
+**Hurl 模板**:
+```hurl
+# ============================================
+# L{Level}: {Feature Name}
+# ============================================
+# 端点: {METHOD} {URL}
+# 功能: {Brief Description}
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 📋 规格定义 (Specification)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Input: { ... }
+# Output: { "success": boolean, "data": { ... } }
+# Error: 401 - Unauthorized
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Test 1: Happy Path
+{METHOD} {{BASE_URL}}{URL}
+Content-Type: application/json
+{ ... }
+
+HTTP 200
+[Asserts]
+jsonpath "$.success" == true
+
+# Test 2: 无认证
+{METHOD} {{BASE_URL}}{URL}
+
+HTTP 401
+
+# Test 3: 无效输入
+{METHOD} {{BASE_URL}}{URL}
+Content-Type: application/json
+{ "invalid": "data" }
+
+HTTP 400
+```
 
 ---
 
-## 3. 🛑 Blockers (必须修复)
-> *测试代码不可合并的问题*
+### 场景 B: 新增 Server Action (`actions/...`)
 
-- **🔴 [违宪: Expensive Test]**
-  - **位置**: `tests/unit/generator.test.ts`
-  - **问题**: 单元测试中直接 fetch 了 OpenAI API。
-  - **风险**: 每次跑 CI 都会扣费，且网络波动会导致 CI 挂掉。
-  - **修正**: 请使用 `jest.mock` 或 Vercel AI SDK 的 `MockHandler`。
+**使用工具**: Vitest
 
-- **🔴 [漏测: Schema Mismatch]**
-  - **位置**: `tests/integration/python_api.test.ts`
-  - **问题**: 只检查了 HTTP 200，没检查返回 Body 的 Zod 解析。
-  - **风险**: Python 端字段改名会导致前端白屏。
+**步骤**:
+1. 创建测试文件: `actions/__tests__/{feature}.test.ts`
+2. Mock 外部依赖 (Prisma, AI SDK)
+3. 定义输入输出类型
+4. 获得用户确认
+5. 创建 Action 实现
 
-## 4. ⚠️ Warnings (建议优化)
+**Vitest 模板**:
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mockDeep, mockReset } from 'vitest-mock-extended';
 
-- **🟡 [Eval: 过于主观]**
-  - **位置**: `scripts/eval_l3.ts`
-  - **问题**: 仅检查了 `content.length > 50`。
-  - **建议**: 引入 `LLM-as-a-Judge`，让 GPT-4o 对生成的微小说逻辑性打分。
+vi.mock('server-only', () => ({}));
 
-## 5. ✅ Highlights (亮点)
-- 🟢 FSRS 算法测试覆盖了 10 组不同的复习历史，数学逻辑验证严密。
+describe('{FeatureName} Action', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    describe('Happy Path', () => {
+        it('should return expected result', async () => {
+            // Arrange
+            // Act
+            // Assert
+        });
+    });
+
+    describe('Edge Cases', () => {
+        it('should handle invalid input', async () => {});
+        it('should handle auth failure', async () => {});
+    });
+});
+```
 
 ---
+
+### 场景 C: 修改 FSRS 算法
+
+**核心约束**: 必须验证状态转换
+
+**必须断言**:
+1. `stability_new > stability_old`
+2. `next_review > now`
+3. `state` 转换正确 (Learning → Review)
+
+```typescript
+expect(result.stability).toBeGreaterThan(initialStability);
+expect(result.nextReviewAt).toBeAfter(new Date());
+expect(result.state).toBe('REVIEW');
+```
+
+---
+
+### 场景 D: 修改 LLM Prompt
+
+**核心约束**: 必须建立质量基线
+
+**步骤**:
+1. 运行现有 Eval: `npm run verify:l0`
+2. 记录当前分数
+3. 修改 Prompt
+4. 重新运行 Eval
+5. 确认分数 ≥ 7.0
+
+---
+
+## 测试数据约定
+
+| 数据类型 | 前缀 | 示例 |
+|----------|------|------|
+| 词汇 | `TEST_ARTIFACT_` | `TEST_ARTIFACT_budget` |
+| 用户 ID | `test_user_hurl_` | `test_user_hurl_001` |
+| Session | `test_session_` | `test_session_001` |
+
+---
+
+## 相关文档
+- 测试宪法: `.agent/rules/testing-protocol.md`
+- 运行测试: `/run-hurl` 工作流

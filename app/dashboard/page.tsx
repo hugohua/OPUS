@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 import { FsrsHud } from "@/components/dashboard/fsrs-hud";
 import { FlashcardSection } from "@/components/dashboard/flashcard-section";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
     // We might keep fetching stats for future dynamic updates, though currently cards are static shell.
     const stats = await getDashboardStats();

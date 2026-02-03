@@ -4,6 +4,15 @@ Pydantic 数据模型
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
+# 阿里云 DashScope TTS 支持的音色列表
+SUPPORTED_VOICES = [
+    "Cherry", "Serena", "Ethan", "Chelsie", "Momo", "Vivian", "Moon", "Maia", "Kai", 
+    "Nofish", "Bella", "Jennifer", "Ryan", "Katerina", "Aiden", "Eldric Sage", "Mia", 
+    "Mochi", "Bellona", "Vincent", "Bunny", "Neil", "Elias", "Arthur", "Nini", "Ebona", 
+    "Seren", "Pip", "Stella", "Bodega", "Sonrisa", "Alek", "Dolce", "Sohee", "Ono Anna", 
+    "Lenn", "Emilien", "Andre", "Radio Gol", "Jada", "Dylan", "Li", "Marcus", "Roy", 
+    "Peter", "Sunny", "Eric", "Rocky", "Kiki"
+]
 
 class TTSRequest(BaseModel):
     """TTS 生成请求模型"""
@@ -16,7 +25,7 @@ class TTSRequest(BaseModel):
     )
     voice: str = Field(
         default="Cherry",
-        description="声音名称，如 Cherry, Alice, Nancy 等"
+        description="声音名称，如 Cherry, Serena, Ethan 等"
     )
     language: str = Field(
         default="en-US",
@@ -36,6 +45,15 @@ class TTSRequest(BaseModel):
         if not v.strip():
             raise ValueError('Text cannot be empty or whitespace only')
         return v.strip()
+    
+    @field_validator('voice')
+    @classmethod
+    def validate_voice(cls, v: str) -> str:
+        """验证音色是否在支持列表中"""
+        if v not in SUPPORTED_VOICES:
+            supported_list = ", ".join(SUPPORTED_VOICES)
+            raise ValueError(f"Invalid voice '{v}'. Supported voices are: {supported_list}")
+        return v
 
 
 class TTSResponse(BaseModel):

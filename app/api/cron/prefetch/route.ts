@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { inventory } from '@/lib/inventory'; // [Fix] Use inventory stats directly
+import { inventory } from '@/lib/core/inventory'; // [Fix] Use inventory stats directly
 import { enqueueDrillGeneration } from '@/lib/queue/inventory-queue'; // [Fix] Enqueue instead of consume
 import { createLogger } from '@/lib/logger';
 import { SessionMode } from '@/types/briefing';
@@ -20,7 +20,7 @@ const log = createLogger('api:cron:prefetch');
 const CRON_SECRET = process.env.CRON_SECRET;
 
 // 配置
-const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
+const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO'];
 // [Fix] Import shared limits from drill-cache
 import { CACHE_LIMIT_MAP } from '@/lib/drill-cache';
 

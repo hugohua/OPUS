@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 
 from api.models import (
@@ -26,8 +26,7 @@ logger = structlog.get_logger()
 # 创建路由器
 router = APIRouter()
 
-# 并发控制：限制同时处理的 TTS 请求数
-_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUESTS)
+# 并发控制：由 main.py 在 startup 时初始化 app.state.semaphore
 
 
 @router.post(
@@ -40,7 +39,7 @@ _semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUESTS)
     summary="生成 TTS 音频",
     description="生成语音音频，采用 Cache-First 策略"
 )
-async def generate_tts(request: TTSRequest) -> TTSResponse:
+async def generate_tts(request_data: TTSRequest, request: Request) -> TTSResponse:
     """
     生成 TTS 音频
     
@@ -51,22 +50,26 @@ async def generate_tts(request: TTSRequest) -> TTSResponse:
     4. 否则调用 DashScope API 生成
     5. 保存到缓存并返回
     """
-    async with _semaphore:
+    # 获取全局 Semaphore (从 app.state 获取，避免 Windows 事件循环问题)
+    semaphore = request.app.state.semaphore
+
+    async with semaphore:
         try:
             # 1. 生成 Hash
+            logger.info("request_received_in_handler", text=request_data.text)
             audio_hash = generate_audio_hash(
-                text=request.text,
-                voice=request.voice,
-                language=request.language,
-                speed=request.speed
+                text=request_data.text,
+                voice=request_data.voice,
+                language=request_data.language,
+                speed=request_data.speed
             )
             
             logger.info(
                 "tts_generate_request",
                 hash=audio_hash,
-                text_length=len(request.text),
-                voice=request.voice,
-                language=request.language
+                text_length=len(request_data.text),
+                voice=request_data.voice,
+                language=request_data.language
             )
             
             # 2. 检查缓存
@@ -87,10 +90,10 @@ async def generate_tts(request: TTSRequest) -> TTSResponse:
             audio_data = await loop.run_in_executor(
                 None,
                 tts_service.synthesize,
-                request.text,
-                request.voice,
-                request.language,
-                request.speed
+                request_data.text,
+                request_data.voice,
+                request_data.language,
+                request_data.speed
             )
             
             # 4. 保存到缓存
@@ -98,10 +101,10 @@ async def generate_tts(request: TTSRequest) -> TTSResponse:
                 hash_key=audio_hash,
                 audio_data=audio_data,
                 metadata={
-                    "text": request.text,
-                    "voice": request.voice,
-                    "language": request.language,
-                    "speed": request.speed
+                    "text": request_data.text,
+                    "voice": request_data.voice,
+                    "language": request_data.language,
+                    "speed": request_data.speed
                 }
             )
             

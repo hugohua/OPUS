@@ -98,4 +98,5 @@ export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
     AUDIO: 5,       // 50 drills
     READING: 5,     // 50 drills
     VISUAL: 5,      // 50 drills
+    CONTEXT: 3,     // [L2] 30 drills (lower volume, higher quality)
 };

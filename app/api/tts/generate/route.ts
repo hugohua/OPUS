@@ -12,6 +12,14 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
+        // [Validation] 防止无效请求导致 Python 服务挂起
+        if (!body.text || typeof body.text !== 'string') {
+            return NextResponse.json(
+                { success: false, error: 'Missing required field: text' },
+                { status: 400 }
+            );
+        }
+
         // 调用 Server Action (处理 DB 缓存 + Python TTS 生成)
         const result = await getTTSAudioCore({
             text: body.text,

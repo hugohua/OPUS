@@ -11,7 +11,7 @@ export function DailyBlitzCard() {
 
     return (
         <section>
-            <Link href="/dashboard/session/mix">
+            <Link href="/dashboard/session/BLITZ">
                 <div className="relative group cursor-pointer w-full">
                     {/* Ambient Glow (Dark only) - Sunlight Theme */}
                     <div className="hidden dark:block absolute -inset-0.5 bg-gradient-to-r from-yellow-300 to-amber-500 rounded-3xl opacity-60 blur transition duration-1000 group-hover:opacity-100 animate-pulse"></div>

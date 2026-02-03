@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 
-export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO', 'READING', 'VISUAL', 'PHRASE']);
+export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO', 'READING', 'VISUAL', 'PHRASE', 'CONTEXT']);
 
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
@@ -31,6 +31,7 @@ export const RecordOutcomeSchema = z.object({
     vocabId: z.number().int().positive(),
     grade: RatingSchema,
     mode: SessionModeSchema,
+    track: z.enum(['VISUAL', 'AUDIO', 'CONTEXT']).optional(), // [NEW] Explicit track for cross-track reviews
     duration: z.number().int().nonnegative().optional(), // 毫秒 (ms)
     isRetry: z.boolean().optional(), // 是否为会话内重试
 });
@@ -60,6 +61,7 @@ export const DrillSegmentSchema = z.object({
     type: z.enum(['text', 'interaction']),
     content_markdown: z.string().optional(),
     audio_text: z.string().optional(),
+    emotion: z.string().optional(), // [L1] TTS Emotion Tag (e.g. "urgent", "cheerful")
     translation_cn: z.string().optional(),
     dimension: z.string().optional(),
     task: z.object({

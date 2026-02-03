@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processDrillJob } from '../drill-processor';
 import { db } from '@/lib/db';
 import { generateWithFailover } from '../llm-failover';
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 
 // Mocks
 vi.mock('@/lib/db', () => ({

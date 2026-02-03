@@ -28,7 +28,7 @@ export default async function SessionPage(props: PageProps) {
     const userId = session.user.id;
     const modeRaw = params.mode.toUpperCase();
 
-    const validModes = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'PHRASE'];
+    const validModes = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'PHRASE', 'CONTEXT'];
     if (!validModes.includes(modeRaw)) {
         notFound();
     }

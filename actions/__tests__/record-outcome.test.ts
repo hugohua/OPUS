@@ -13,18 +13,50 @@ vi.mock('@/lib/db', async () => {
 });
 vi.mock('server-only', () => ({}));
 
+// [Mock Auth]
+vi.mock('@/auth', () => ({
+    auth: vi.fn(),
+}));
+
+import { auth } from '@/auth';
+
 const mockPrisma = prisma as unknown as DeepMockProxy<PrismaClient>;
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
 describe('recordOutcome', () => {
     beforeEach(() => {
         mockReset(mockPrisma);
         vi.clearAllMocks();
         vi.useFakeTimers();
+
+        // Default: Auth Success with matching ID
+        mockAuth.mockResolvedValue({
+            user: { id: 'cl00000000000000000000000' }
+        });
     });
 
     afterEach(() => {
         vi.useRealTimers();
     });
+
+    // --- Security Checks ---
+    describe('Security', () => {
+        it('should block unauthorized access', async () => {
+            mockAuth.mockResolvedValue(null);
+            const result = await recordOutcome({ userId: 'cl00000000000000000000000', vocabId: 100, grade: 3, mode: 'SYNTAX' });
+            expect(result.status).toBe('error');
+            expect(result.message).toBe('Unauthorized');
+        });
+
+        it('should block vertical privilege escalation (ID Mismatch)', async () => {
+            mockAuth.mockResolvedValue({ user: { id: 'hacker-id' } });
+            const result = await recordOutcome({ userId: 'cl00000000000000000000000', vocabId: 100, grade: 3, mode: 'SYNTAX' });
+            expect(result.status).toBe('error');
+            expect(result.message).toContain('Forbidden');
+        });
+    });
+
+    // --- Functional Tests ---
 
     it('should create new progress if not exists (First Lesson)', async () => {
         mockPrisma.userProgress.findUnique.mockResolvedValue(null);
@@ -84,8 +116,6 @@ describe('recordOutcome', () => {
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             update: expect.objectContaining({
                 dim_v_score: 55, // 50 + 5
-                // status: 'REVIEW' // FSRS will determine logic, hard to predict exact fields without running FSRS logic, but we mocked upsert to just pass.
-                // We verify that upsert WAS called.
             })
         }));
     });
@@ -179,7 +209,7 @@ describe('recordOutcome', () => {
 
     it('should update dim_c_score for PHRASE mode', async () => {
         mockPrisma.userProgress.findUnique.mockResolvedValue({
-            userId: 'u1', vocabId: 100,
+            userId: 'cl00000000000000000000000', vocabId: 100, // Fixed ID
             dim_v_score: 50, dim_c_score: 50,
             state: State.Learning, stability: 0, difficulty: 0, reps: 0, lapses: 0
         } as any);
@@ -203,21 +233,7 @@ describe('recordOutcome', () => {
         mockPrisma.userProgress.findUnique.mockResolvedValue(baseProgress);
         mockPrisma.userProgress.upsert.mockResolvedValue({ ...baseProgress });
 
-        // 1. Slow (> 5s) -> Hard (Grade 2)
-        // Note: Implementation of calculateImplicitGrade might vary, verifying the EFFECT on difficulty/stability or simply that it processed.
-        // It's hard to observe Grade directly from upsert output without spy on FSRS or implicit grade function.
-        // Instead, we can spy on `calculateImplicitGrade` if exported?
-        // Or assumes different stability outcomes?
-        // Actually, let's just trust unit tests for `grading.ts` (if they exist) and here we verify integration.
-        // But we DO verify that SYNTAX mode updates dim_v_score.
-
         await recordOutcome({ userId: 'cl00000000000000000000000', vocabId: 100, grade: 3, mode: 'SYNTAX', duration: 6000 });
-
-        // Duration 6000ms -> Grade 2 (Hard) if logic holds. Grade input '3' is overridden by duration?
-        // PRD says: "Frontend maintains 2-choice (Pass/Fail)". 
-        // Backend overrides based on duration.
-        // If input grade is 3 (Pass), and duration is 6000, it should become 2?
-        // Let's verify.
 
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             update: expect.objectContaining({

@@ -8,7 +8,7 @@
  * 2. auditDrillQuality: AI 自动评审 (使用 quality-auditor Prompt)
  */
 
-import { generateWithFailover } from '../../workers/llm-failover';
+import { generateWithFailover } from '../workers/llm-failover';
 import { createAuditRecord } from '@/actions/audit-actions';
 import {
     AUDIT_SYSTEM_PROMPT,

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BlitzCard, type BlitzCardState } from '@/components/blitz/blitz-card';
 import { InteractionZone } from '@/components/blitz/interaction-zone';
-import { getBlitzBatch } from '@/actions/blitz-session';
+import { getBlitzSession } from '@/actions/get-blitz-session';
+import { recordOutcome } from '@/actions/record-outcome';
 import { BlitzItem } from '@/lib/validations/blitz';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -27,9 +28,9 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     useEffect(() => {
         async function init() {
             setLoading(true);
-            const res = await getBlitzBatch();
-            if (res.status === 'success' && res.data && res.data.length > 0) {
-                setQueue(res.data);
+            const res = await getBlitzSession();
+            if (res.status === 'success' && res.data?.items && res.data.items.length > 0) {
+                setQueue(res.data.items);
             } else {
                 // Handle empty state
             }
@@ -45,11 +46,22 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     };
 
     const handleGrade = async (result: 'pass' | 'fail') => {
+        const currentItem = queue[currentIndex];
+
         // Optimistic update
         setStats(prev => ({ ...prev, [result]: prev[result] + 1 }));
 
-        // TODO: Call server action to record outcome (record-outcome.ts)
-        // For now, we simulate success
+        // [Track Persistence] Record outcome with explicit track from BlitzItem
+        const grade = result === 'pass' ? 3 : 1;
+        recordOutcome({
+            userId,
+            vocabId: currentItem.vocabId,
+            grade: grade as any,
+            mode: 'BLITZ',
+            track: currentItem.track, // [NEW] Pass source track for FSRS integrity
+        }).catch(err => {
+            console.error('Failed to record outcome:', err);
+        });
 
         // Move next
         if (currentIndex < queue.length - 1) {

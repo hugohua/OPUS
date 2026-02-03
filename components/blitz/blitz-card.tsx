@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { maskPhrase } from '@/lib/blitz';
+import { maskPhrase } from '@/lib/core/blitz';
 import type { BlitzItem } from '@/lib/validations/blitz';
 
 export type BlitzCardState = 'LOCKED' | 'REVEALED' | 'GRADING';

@@ -12,7 +12,7 @@
 import 'dotenv/config';
 import { db } from '@/lib/db';
 import { redis } from '@/lib/queue/connection';
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { inventoryQueue } from '@/lib/queue';
 

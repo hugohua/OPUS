@@ -74,6 +74,7 @@ export async function getTTSAudioCore(options: TTSOptions): Promise<TTSResult> {
 
     if (!pyResponse.ok) {
         const errorText = await pyResponse.text();
+        console.error(`TTS Service Error: Status ${pyResponse.status}, Body: ${errorText}`);
         throw new Error(`TTS 生成失败: ${errorText}`);
     }
 

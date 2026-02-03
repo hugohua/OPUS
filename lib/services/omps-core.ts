@@ -13,6 +13,7 @@
 import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { redis } from '@/lib/queue/connection';
+import { auditOMPSSelection } from '@/lib/services/audit-service';
 
 const log = createLogger('lib:omps-core');
 
@@ -38,6 +39,7 @@ export interface OMPSCandidate {
     collocations?: any;
     type: 'REVIEW' | 'NEW';
     reviewData?: any;
+    confusion_audio?: string[]; // [New] L1 Audio
 }
 
 export interface OMPSConfig {
@@ -182,6 +184,21 @@ export async function fetchOMPSCandidates(
         reviewCount: reviewsMapped.length,
         newCount: newWordsMapped.length
     }, 'OMPS candidates fetched');
+
+    // --- [V5.1] Panoramic Audit: Selection Logging ---
+    auditOMPSSelection(userId, {
+        mode,
+        track: currentTrack,
+        limit,
+        excludeCount: excludeIds.length,
+        reviewQuota
+    }, {
+        hotCount: hotCandidates.length,
+        reviewCount: reviewsMapped.length,
+        newCount: newWordsMapped.length,
+        totalSelected: finalBatch.length,
+        selectedIds: finalBatch.slice(0, 20).map(c => c.vocabId)
+    });
 
     return shuffle(finalBatch);
 }
@@ -412,7 +429,8 @@ function mapToCandidate(
         commonExample: v.commonExample,
         collocations: v.collocations,
         type,
-        reviewData
+        reviewData,
+        confusion_audio: v.confusion_audio || []
     };
 }
 

@@ -61,7 +61,8 @@ export async function enqueueDrillGeneration(
         PHRASE: 20,
         AUDIO: 20,
         READING: 20,
-        VISUAL: 20
+        VISUAL: 20,
+        CONTEXT: 20     // [L2] Context Lab
     };
 
     const targetCount = MODE_TARGET_COUNT[mode] || 20;

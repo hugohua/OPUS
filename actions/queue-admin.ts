@@ -77,7 +77,7 @@ export async function getCacheStats(): Promise<{
             targets: { SYNTAX: 50, PHRASE: 50, CHUNKING: 50, AUDIO: 50, NUANCE: 30, READING: 50 }
         };
 
-        const { inventory } = await import('@/lib/inventory');
+        const { inventory } = await import('@/lib/core/inventory');
         const stats = await inventory.getInventoryStats(session.user.id);
 
         // Convert batch limits to drill targets (1 Batch = DRILLS_PER_BATCH Drills)
@@ -151,7 +151,7 @@ export async function handleTriggerGeneration(
 ): Promise<ActionState> {
     try {
         // 0. Pre-check: 检查 Redis 库存是否充足
-        const { inventory } = await import('@/lib/inventory');
+        const { inventory } = await import('@/lib/core/inventory');
 
         if (await inventory.isFull(userId, mode)) {
             // Fetch stats only for message

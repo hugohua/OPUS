@@ -13,14 +13,17 @@ export const GRADING_THRESHOLDS: Record<SessionMode | 'DEFAULT', TimeThresholds>
     // Syntax Mode: Analysis required
     SYNTAX: { easy: 2500, hard: 8000 },
 
+    // Context Mode: Deep reading required (L2)
+    CONTEXT: { easy: 5000, hard: 15000 },
+
     // Default (Fallbacks)
     DEFAULT: { easy: 1500, hard: 5000 },
     CHUNKING: { easy: 1500, hard: 5000 },
     NUANCE: { easy: 1500, hard: 5000 },
     BLITZ: { easy: 1500, hard: 5000 },
-    AUDIO: { easy: 1500, hard: 5000 }, // Placeholder
-    READING: { easy: 1500, hard: 5000 }, // Placeholder
-    VISUAL: { easy: 1500, hard: 5000 }, // Placeholder
+    AUDIO: { easy: 1500, hard: 5000 },
+    READING: { easy: 1500, hard: 5000 },
+    VISUAL: { easy: 1500, hard: 5000 },
 };
 
 /**

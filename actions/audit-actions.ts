@@ -126,3 +126,92 @@ export async function getAuditStats() {
         return { success: false, error: String(error) };
     }
 }
+// ----------------------------------------------------------------------
+// Phase 2: Panoramic Audit Dashboard Actions
+// ----------------------------------------------------------------------
+
+export interface PanoramicStats {
+    selectionCompliance: number; // OMPS 选词合规率 (无 selection_shortage 占比)
+    retentionRate: number;      // FSRS 记忆保留率 (stability增长占比)
+    anomalyCount: number;       // 异常记录总数
+    totalCount: number;         // 总记录数
+    tagsDistribution: { tag: string; count: number }[];
+}
+
+export async function getPanoramicStats(): Promise<PanoramicStats> {
+    const totalCount = await prisma.drillAudit.count();
+
+    // 1. 异常统计
+    const anomalyCount = await prisma.drillAudit.count({
+        where: { auditTags: { isEmpty: false } }
+    });
+
+    // 2. 标签分布
+    const anomalies = await prisma.drillAudit.findMany({
+        where: { auditTags: { isEmpty: false } },
+        select: { auditTags: true }
+    });
+
+    const tagCounts: Record<string, number> = {};
+    for (const r of anomalies) {
+        for (const tag of r.auditTags) {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        }
+    }
+    const tagsDistribution = Object.entries(tagCounts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count);
+
+    // 3. OMPS 合规率 (Review Ignored / Selection Shortage 视为不合规)
+    const ompsTotal = await prisma.drillAudit.count({
+        where: { contextMode: 'OMPS:SELECTION' }
+    });
+    const ompsIssues = tagCounts['selection_shortage'] || 0;
+    const selectionCompliance = ompsTotal > 0
+        ? ((ompsTotal - ompsIssues) / ompsTotal) * 100
+        : 100;
+
+    // 4. FSRS 保留率 (Stability Drop 视为流失/遗忘风险)
+    const fsrsTotal = await prisma.drillAudit.count({
+        where: { contextMode: 'FSRS:TRANSITION' }
+    });
+    const fsrsIssues = tagCounts['stability_drop'] || 0;
+    const retentionRate = fsrsTotal > 0
+        ? ((fsrsTotal - fsrsIssues) / fsrsTotal) * 100
+        : 100;
+
+    return {
+        selectionCompliance: Math.round(selectionCompliance),
+        retentionRate: Math.round(retentionRate),
+        anomalyCount,
+        totalCount,
+        tagsDistribution
+    };
+}
+
+export async function getPanoramicLogs(
+    filter: 'ALL' | 'OMPS' | 'FSRS' | 'LLM' | 'ANOMALY',
+    limit = 50
+) {
+    let where: any = {};
+
+    if (filter === 'OMPS') where.contextMode = { startsWith: 'OMPS:' };
+    else if (filter === 'FSRS') where.contextMode = { startsWith: 'FSRS:' };
+    else if (filter === 'LLM') where.contextMode = { startsWith: 'L' }; // L0, L1, L2
+    else if (filter === 'ANOMALY') where.auditTags = { isEmpty: false };
+
+    return prisma.drillAudit.findMany({
+        where,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            createdAt: true,
+            targetWord: true,
+            contextMode: true,
+            status: true,
+            auditTags: true,
+            payload: true
+        }
+    });
+}

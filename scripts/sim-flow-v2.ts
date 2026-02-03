@@ -12,7 +12,7 @@
  */
 
 import { getNextDrillBatch } from '@/actions/get-next-drill';
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 import { redis } from '@/lib/queue/connection';
 import { SessionMode } from '@/types/briefing';
 

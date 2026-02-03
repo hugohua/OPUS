@@ -11,6 +11,7 @@ export const BlitzItemSchema = z.object({
     vocabId: z.number().int(),
     word: z.string(),
     frequency_score: z.number().int().default(0),
+    track: z.enum(['VISUAL', 'AUDIO', 'CONTEXT']), // [NEW] Source track for FSRS persistence
     context: z.object({
         text: z.string(), // Full sentence
         maskedText: z.string(), // Masked sentence (_______)

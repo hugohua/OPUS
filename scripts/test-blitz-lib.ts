@@ -1,5 +1,5 @@
 
-import { maskPhrase } from '@/lib/blitz';
+import { maskPhrase } from '@/lib/core/blitz';
 
 const cases = [
     { phrase: 'Sign a contract', target: 'contract' },

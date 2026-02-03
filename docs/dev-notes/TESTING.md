@@ -69,3 +69,48 @@ To verify the quality and correctness of L0 prompts (SYNTAX, PHRASE, BLITZ), use
 ### Acceptance Criteria
 - **Unit Tests**: 0 failures (Schema + Rules)
 - **LLM Eval**: Avg Score ≥ 7.0 (Check reports/baseline-l0-summary-*.md)
+
+---
+
+## 8. Hurl API 测试 (Spec-First)
+
+基于 **Spec-First** 原则，所有 Route Handlers 必须先有 Hurl 规格文件。
+
+### 8.1 安装 Hurl
+```bash
+# Windows
+winget install Orange-OpenSource.Hurl --source winget
+
+# macOS
+brew install hurl
+```
+
+### 8.2 运行命令
+
+| 命令 | 说明 |
+|------|------|
+| `hurl --test tests/l1-*.hurl` | 运行 L1 防御层测试 |
+| `hurl --test tests/l2-*.hurl` | 运行 L2 进攻层测试 |
+| `hurl --verbose tests/*.hurl` | 详细调试输出 |
+
+### 8.3 环境配置
+```bash
+# 编辑 tests/hurl.env
+BASE_URL=http://localhost:3000
+CRON_SECRET=your-secret-here
+```
+
+### 8.4 测试层级
+
+| 层级 | 文件 | 覆盖范围 |
+|------|------|----------|
+| **L1** | `l1-*.hurl` | 认证、基础 CRUD |
+| **L2** | `l2-*.hurl` | 业务逻辑、AI 集成 |
+| **L3** | `l3-*.hurl` | SSE 流、跨服务调用 |
+
+### 8.5 测试数据约定
+为防止污染数据库，测试数据使用 `TEST_` 前缀：
+- 词汇: `TEST_abandon`
+- 用户 ID: `test_user_hurl_001`
+
+> 📋 完整规范见 `.agent/rules/testing-protocol.md`

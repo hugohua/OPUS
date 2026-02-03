@@ -22,21 +22,28 @@ export async function getVocabDetail(identifier: number | string) {
         return null;
     }
 
-    // Fetch UserProgress for Track A (Visual) as primary
-    const progress = await prisma.userProgress.findUnique({
+    // [Phase 5] Fetch Multi-Track Progress
+    // We fetch ALL tracks for this user + vocab combination
+    const progressList = await prisma.userProgress.findMany({
         where: {
-            userId_vocabId_track: {
-                userId: session.user.id,
-                vocabId: vocab.id, // Use resolved ID
-                track: "VISUAL",
-            },
+            userId: session.user.id,
+            vocabId: vocab.id,
         },
     });
 
+    // Transform to structured tracks object
+    const tracks = {
+        VISUAL: progressList.find(p => p.track === 'VISUAL') || null,
+        AUDIO: progressList.find(p => p.track === 'AUDIO') || null,
+        CONTEXT: progressList.find(p => p.track === 'CONTEXT') || null,
+    };
 
+    // Backward compatibility for existing UI
+    const progress = tracks.VISUAL;
 
     return {
         vocab,
-        progress,
+        progress, // Legacy support
+        tracks,   // New Multi-Track Data
     };
 }

@@ -1,8 +1,8 @@
-export type SessionMode = "SYNTAX" | "CHUNKING" | "NUANCE" | "BLITZ" | "AUDIO" | "READING" | "VISUAL" | "PHRASE";
+export type SessionMode = "SYNTAX" | "CHUNKING" | "NUANCE" | "BLITZ" | "AUDIO" | "READING" | "VISUAL" | "PHRASE" | "CONTEXT";
 
-export type BriefingFormat = "chat" | "email" | "memo";
+export type BriefingFormat = "chat" | "email" | "memo" | "article";
 
-export type InteractionStyle = "swipe_card" | "bubble_select";
+export type InteractionStyle = "swipe_card" | "bubble_select" | "slot_machine";
 
 export type InteractionDimension = "V" | "C" | "M" | "X" | "A";
 
@@ -20,6 +20,7 @@ export interface BriefingSegment {
         answer_key: string;
         explanation_markdown?: string;
         explanation?: any; // Support rich explanation structure
+        socraticHint?: string; // [L2] Socratic Tutor 引导提示
     };
 }
 

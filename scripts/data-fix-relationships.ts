@@ -219,8 +219,7 @@ async function main() {
                 // Parse
                 const result = safeParse(text, OutputSchema, {
                     model: modelName,
-                    userPrompt: 'Relationship Batch',
-                    context: `Batch ${items.length} words`
+                    userPrompt: `Relationship Batch (${items.length} words)`
                 });
 
                 if (!result || !result.items) {

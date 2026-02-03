@@ -3,9 +3,9 @@
 import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
+import { createLogger } from '@/lib/logger';
 
-// Debug logging control
-const DEBUG = process.env.NODE_ENV === 'development';
+const log = createLogger('actions:drive');
 
 // ------------------------------------------------------------------
 // Types
@@ -22,9 +22,7 @@ export async function generateDrivePlaylist(): Promise<DriveItem[]> {
     }
     const userId = session.user.id;
 
-    if (DEBUG) {
-        console.log(`[Drive] Generating playlist for user ${userId}...`);
-    }
+    log.info({ userId }, 'Generating playlist');
 
 
     // ✅ Transaction: 确保所有查询在同一快照下执行,防止 FSRS 数据中途更新
@@ -53,14 +51,17 @@ export async function generateDrivePlaylist(): Promise<DriveItem[]> {
     // 3. ✨ Opus DJ Shuffle (场景聚类 + 难度穿插)
     const playlist = opusDjShuffle(rawPlaylist);
 
-    if (DEBUG) {
-        console.log(`[Drive] Generated ${playlist.length} items (Warmup:${warmupItems.length}, Review:${reviewItems.length}, Break:${breakItems.length})`);
-        console.log(`[Drive] Mode distribution:`, {
+    log.info({
+        total: playlist.length,
+        warmup: warmupItems.length,
+        review: reviewItems.length,
+        break: breakItems.length,
+        distribution: {
             QUIZ: playlist.filter((i: DriveItem) => i.mode === 'QUIZ').length,
             WASH: playlist.filter((i: DriveItem) => i.mode === 'WASH').length,
             STORY: playlist.filter((i: DriveItem) => i.mode === 'STORY').length
-        });
-    }
+        }
+    }, 'Generated playlist');
 
     return playlist;
 }
@@ -93,7 +94,7 @@ async function fetchWarmupItems(
 
     // ✅ Fail-Safe: 如果没有 stability > 1 的记录,降级为任何已复习的词
     if (records.length === 0) {
-        console.warn('[Drive] No stability > 1 records, falling back to any reviewed words');
+        log.warn('No stability > 1 records, falling back to any reviewed words');
         const fallback = await client.userProgress.findMany({
             where: {
                 userId,
@@ -180,7 +181,7 @@ async function fetchBreakChunks(
     });
 
     if (vocabs.length === 0) {
-        console.warn('[Drive] No vocabs with collocations found');
+        log.warn('No vocabs with collocations found');
         return [];
     }
 
@@ -213,7 +214,7 @@ async function fetchBreakChunks(
         if (chunks.length >= limit) break;
     }
 
-    console.log(`[Drive] Fetched ${chunks.length} break chunks`);
+    log.debug({ count: chunks.length }, 'Fetched break chunks');
     return chunks;
 }
 
@@ -261,9 +262,7 @@ function opusDjShuffle(items: DriveItem[]): DriveItem[] {
     const chunks = items.filter(i => i.mode === 'WASH');
     const story = items.filter(i => i.mode === 'STORY');
 
-    if (DEBUG) {
-        console.log(`[DJ Shuffle] Layering: Easy=${easy.length}, Hard=${hard.length}, Chunks=${chunks.length}, Story=${story.length}`);
-    }
+    log.debug({ easy: easy.length, hard: hard.length, chunks: chunks.length, story: story.length }, 'DJ Shuffle layering');
 
     // Step 2: 难度穿插 (三明治模式: E-H-H-E-C)
     const result: DriveItem[] = [];
@@ -277,8 +276,6 @@ function opusDjShuffle(items: DriveItem[]): DriveItem[] {
         if (story.length) result.push(story.shift()!);
     }
 
-    if (DEBUG) {
-        console.log(`[DJ Shuffle] Result: ${result.length} items`);
-    }
+    log.debug({ count: result.length }, 'DJ Shuffle result');
     return result;
 }

@@ -9,7 +9,7 @@ import { DrillJobData } from '@/lib/queue/inventory-queue';
 import { Vocab } from '@prisma/client';
 import { generateWithFailover } from './llm-failover';
 // import { getDrillBatchPrompt } from '@/lib/prompts/drill'; // Legacy removed
-import { inventory } from '@/lib/inventory';
+import { inventory } from '@/lib/core/inventory';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import crypto from 'crypto';
@@ -17,6 +17,11 @@ import { SessionMode, BriefingPayload } from '@/types/briefing';
 import { safeParse } from '@/lib/ai/utils';
 import { ContextSelector } from '@/lib/ai/context-selector';
 import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
+import { getL1AudioScriptPrompt, AudioScriptInput } from '@/lib/generators/l1/audio-script';
+import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
+import { buildSimpleDrill } from '@/lib/templates/deterministic-drill'; // [B1 Fix] Pivot Fallback
+import { VisualTrapService } from '@/lib/services/visual-trap'; // [Phase 5]
+import { auditLLMGeneration } from '@/lib/services/audit-service'; // [V5.1] Audit
 
 const log = logger.child({ module: 'drill-processor' });
 
@@ -120,7 +125,9 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
         const syntaxGroup: DrillCandidate[] = [];
         const blitzGroup: DrillCandidate[] = [];
-        const phraseGroup: DrillCandidate[] = []; // Reserved for AUDIO mappings if needed
+        const audioGroup: DrillCandidate[] = []; // [L1] Audio
+        const phraseGroup: DrillCandidate[] = []; // Reserved
+        const contextGroup: DrillCandidate[] = []; // [L2] Context
 
         // Routing Logic
         if (mode === 'SYNTAX') {
@@ -148,8 +155,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             // Fallback / Other Modes
             if (mode === 'BLITZ') {
                 blitzGroup.push(...candidates);
-            } else if (mode === 'PHRASE' || mode === 'AUDIO') {
+            } else if (mode === 'PHRASE') {
                 phraseGroup.push(...candidates);
+            } else if (mode === 'AUDIO') {
+                audioGroup.push(...candidates);
+            } else if (mode === 'CONTEXT') {
+                // [L2] Context Lab
+                contextGroup.push(...candidates);
             } else {
                 // Default fallback to Syntax
                 syntaxGroup.push(...candidates);
@@ -202,17 +214,22 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         if (blitzGroup.length > 0) {
             tasks.push((async () => {
                 const { getL0BlitzBatchPrompt } = await import('@/lib/generators/l0/blitz');
-                const inputs = blitzGroup.map(c => {
+                const inputs = await Promise.all(blitzGroup.map(async c => {
                     let collys: string[] = [];
                     if (Array.isArray(c.collocations)) {
                         collys = c.collocations.map((item: any) => typeof item === 'string' ? item : item.text).filter(Boolean);
                     }
+
+                    // [Phase 5] Generate Visual Traps
+                    const traps = await VisualTrapService.generate(c.word, 3);
+
                     return {
                         targetWord: c.word,
                         meaning: c.definition_cn || '',
-                        collocations: collys
+                        collocations: collys,
+                        distractors: traps // Pass traps to prompt
                     };
-                });
+                }));
                 const p = getL0BlitzBatchPrompt(inputs);
 
                 const { text, provider } = await generateWithFailover(p.system, p.user);
@@ -273,6 +290,118 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             })().catch(err => log.error({ error: err.message }, 'Failed to process Phrase group')));
         }
 
+        // --- Task D: Process Audio Group (L1) ---
+        if (audioGroup.length > 0) {
+            tasks.push((async () => {
+                const inputs = audioGroup.map(mapToAudioInput);
+                const p = getL1AudioScriptPrompt(inputs);
+
+                const { text, provider } = await generateWithFailover(p.system, p.user);
+
+                const result = safeParse(text, BatchDrillOutputSchema, {
+                    model: provider,
+                    systemPrompt: p.system,
+                    userPrompt: p.user
+                });
+
+                result.drills.forEach((drill, idx) => {
+                    if (idx < audioGroup.length) {
+                        generatedDrills.push({
+                            drill,
+                            candidate: audioGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Audio group')));
+        }
+
+        // --- Task E: Process Context Group (L2) ---
+        if (contextGroup.length > 0) {
+            tasks.push((async () => {
+                // Group by Stage for batch efficiency
+                const stage1Inputs: (ContextGeneratorInput & { candidate: DrillCandidate })[] = [];
+                const stage2Inputs: (ContextGeneratorInput & { candidate: DrillCandidate })[] = [];
+                const stage3Inputs: (ContextGeneratorInput & { candidate: DrillCandidate })[] = [];
+
+                // Parallel context word fetching
+                await Promise.all(contextGroup.map(async c => {
+                    const related = await ContextSelector.select(userId, c.vocabId, {
+                        count: 3,
+                        minDistance: 0.2,  // TASK3.md: 0.2-0.4 range
+                        maxDistance: 0.4
+                    });
+
+                    // 🎯 3-Stage Routing (TASK3.md)
+                    const stability = c.reviewData?.stability || 0;
+                    const lapses = c.reviewData?.lapses || 0;
+                    const isCritical = lapses >= 3; // 3+ lapses = Critical
+                    let stage: ContextStage = 1;
+                    if (stability >= 45 && !isCritical) stage = 2;
+                    if (isCritical) stage = 3;
+
+                    const input: ContextGeneratorInput & { candidate: DrillCandidate } = {
+                        targetWord: c.word,
+                        meaning: c.definition_cn || '',
+                        contextWords: related.map(r => r.word),
+                        synonyms: c.synonyms || [],  // B3 Fix: Use type-safe access
+                        scenario: c.scenario || 'general office',
+                        stage,
+                        candidate: c
+                    };
+
+                    if (stage === 1) stage1Inputs.push(input);
+                    else if (stage === 2) stage2Inputs.push(input);
+                    else stage3Inputs.push(input);
+                }));
+
+                log.info({ stage1: stage1Inputs.length, stage2: stage2Inputs.length, stage3: stage3Inputs.length }, '🔀 [L2] Context Stage Distribution');
+
+                // 🛑 B1 Fix: Pivot 兜底函数
+                const processStageBatch = async (
+                    inputs: (ContextGeneratorInput & { candidate: DrillCandidate })[],
+                    stageNum: ContextStage
+                ) => {
+                    if (inputs.length === 0) return;
+
+                    try {
+                        const p = getL2ContextBatchPrompt(inputs, stageNum);
+                        const { text, provider } = await generateWithFailover(p.system, p.user);
+                        const result = safeParse(text, BatchDrillOutputSchema, { model: provider, systemPrompt: p.system, userPrompt: p.user });
+
+                        result.drills.forEach((drill, idx) => {
+                            if (idx < inputs.length) {
+                                generatedDrills.push({ drill, candidate: inputs[idx].candidate, systemPrompt: p.system, userPrompt: p.user, provider });
+                            }
+                        });
+                    } catch (err: any) {
+                        // 🛑 Pivot Rule: LLM 失败时使用确定性兜底
+                        log.warn({ error: err.message, stage: stageNum, count: inputs.length }, '[L2] Stage LLM failed, using Pivot fallback');
+
+                        for (const input of inputs) {
+                            const fallbackDrill = buildSimpleDrill({
+                                id: input.candidate.vocabId,
+                                word: input.candidate.word,
+                                definition_cn: input.candidate.definition_cn,
+                                commonExample: input.candidate.commonExample,
+                                collocations: input.candidate.collocations
+                            }, 'CONTEXT');
+                            generatedDrills.push({ drill: fallbackDrill, candidate: input.candidate, systemPrompt: '', userPrompt: '', provider: 'fallback' });
+                        }
+                    }
+                };
+
+                // Generate per stage (parallel with Pivot protection)
+                await Promise.all([
+                    processStageBatch(stage1Inputs, 1),
+                    processStageBatch(stage2Inputs, 2),
+                    processStageBatch(stage3Inputs, 3)
+                ]);
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Context group')));
+        }
+
         await Promise.all(tasks);
 
         log.info({ generatedCount: generatedDrills.length }, '✅ LLM 生成完成 (All Groups)');
@@ -300,6 +429,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 segments: rawDrill.segments,
             };
 
+            let isPivotLocal = false;
+
             // --- L0 Schema 验证 (Phase 1: Defense Layer) ---
             const isL0Mode = ['SYNTAX', 'PHRASE', 'BLITZ'].includes(mode);
 
@@ -324,6 +455,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                             'Generation failed, please retry.'
                         );
                         pivotCount++;
+                        isPivotLocal = true;
                         log.info({ vocabId: candidate.vocabId, word: candidate.word }, '🔄 使用 Pivot 兜底 Payload');
                     } else {
                         // 不使用 Pivot 时跳过此条目
@@ -355,6 +487,20 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 redis.lpush('admin:drill-history', streamEvent),
                 redis.ltrim('admin:drill-history', 0, 99) // Keep last 100
             ]).catch(err => log.error({ err }, 'Failed to publish/persist stream event'));
+
+            // --- [V5.1] Panoramic Audit: LLM Generation Logging ---
+            auditLLMGeneration(
+                userId,
+                mode,
+                candidate.word,
+                payload,
+                {
+                    provider: item.provider,
+                    vocabId: candidate.vocabId,
+                    type: candidate.type || 'NEW'
+                },
+                { isPivotFallback: item.provider === 'fallback' || isPivotLocal }
+            );
         }
 
         if (pivotCount > 0) {
@@ -379,8 +525,13 @@ interface DrillCandidate {
     definition_cn: string | null;
     word_family: any;
     collocations?: any;
-    type?: 'NEW' | 'REVIEW'; // [Smart Dispatch] Added
-    reviewData?: any;        // [Smart Dispatch] Added
+    type?: 'NEW' | 'REVIEW';
+    reviewData?: any;
+    confusion_audio?: string[];
+    // [L2 B3 Fix] 添加 synonyms 和 scenario 支持
+    synonyms?: string[];
+    scenario?: string;
+    commonExample?: string | null;
 }
 
 async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Promise<DrillCandidate[]> {
@@ -398,7 +549,8 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         word_family: v.word_family,
         collocations: v.collocations,
         type: 'NEW', // Default for manual fetch
-        reviewData: null
+        reviewData: null,
+        confusion_audio: v.confusion_audio || []
     };
 }
 
@@ -478,7 +630,8 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         word_family: omps.word_family,
         collocations: omps.collocations,
         type: omps.type, // [Smart Dispatch] Pass type
-        reviewData: omps.reviewData // [Smart Dispatch] Pass FSRS data
+        reviewData: omps.reviewData, // [Smart Dispatch] Pass FSRS data
+        confusion_audio: (omps as any).confusion_audio // OMPS might need update too
     }));
 
     // 4. 返回指定数量
@@ -494,5 +647,36 @@ async function mapToSyntaxInput(userId: string, c: DrillCandidate) {
         meaning: c.definition_cn || '暂无释义',
         contextWords,
         wordFamily: (c.word_family as Record<string, string>) || { v: c.word },
+    };
+}
+
+function mapToAudioInput(c: DrillCandidate): AudioScriptInput {
+    // Extract FSRS parameters
+    const stability = c.reviewData?.stability || 0;
+    const difficulty = c.reviewData?.difficulty || 5;
+
+    // TODO: Extract confusion_audio from Vocab (need to ensure it is fetched in fetchSpecificCandidates/fetchDueCandidates)
+    // Currently DrillCandidate does not have confusion_audio
+    // We update DrillCandidate interface and fetch logic below?
+    // Or just fetch it here individually?
+    // Ideally we update DrillCandidate.
+    // For now, default to empty array or fetch if critically needed (Stage 4).
+    // Given the fetch logic is separate, let's assume DrillCandidate interface update is too expensive right now,
+    // so we will pass [] and fix fetch logic next step if Stage 4 is high priority.
+    // Actually, confusion_audio IS needed for Stage 4.
+    // Let's rely on mapping logic to handle it if available.
+
+    // NOTE: Fetch logic (Step 432) returns DrillCandidate.
+    // We need to verify if confusion_audio is fetched.
+    // 'fetchOMPSCandidates' fetches from Vocab. 
+    // OMPS usually returns minimal fields. 
+    // Let's assume confusion_audio is NOT in OMPS result yet. 
+    // We will modify mapToCandidate/fetchDueCandidates next to include it.
+
+    return {
+        word: c.word,
+        stability,
+        difficulty,
+        confusion_audio: (c as any).confusion_audio || [] // Use type assertion for now
     };
 }

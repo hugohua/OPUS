@@ -42,6 +42,7 @@ model Vocab {
   priority         VocabPriority? // 优先级 (CORE: 核心商务词, SUPPORT: 支撑词, NOISE: 简单词)
   word_family      Json?          // 词族变形 { n: "...", v: "..." }
   confusing_words  String[]       // 易混淆词 (Malapropisms)
+  confusion_audio  String[]       @default([]) // [L1] 听觉干扰词 (发音相似)
   synonyms         String[]       // 商务近义词
   
   tags             String[] // 自动标签 (e.g. toeic_900)
@@ -258,6 +259,7 @@ model DrillCache {
 
 // ----------------------------------------------------------------------
 // [V5.0] Admin Inspector / AI Audit
+// [V5.1] Extended for Panoramic Audit System (OMPS + FSRS + LLM)
 // ----------------------------------------------------------------------
 model DrillAudit {
   id        String   @id @default(uuid())
@@ -267,10 +269,10 @@ model DrillAudit {
   targetWord String
   
   // Context & Input
-  // 推荐格式: "L0:SYNTAX" 或 "L1:AUDIO"
+  // 格式: "L0:SYNTAX" | "OMPS:SELECTION" | "FSRS:TRANSITION"
   contextMode String?
   
-  // The full drill object
+  // The full drill object or audit payload
   payload   Json     
   
   // Audit Result
@@ -282,10 +284,16 @@ model DrillAudit {
   // If 'BAD', manual flagging reason
   flagReason  String?
 
+  // 🆕 [V5.1] Panoramic Audit Extensions
+  userId      String?   // 可选，追踪特定用户问题
+  auditTags   String[]  // 标签: ["logic_anomaly", "high_quality", "cross_track"]
+
   // ⚡ 性能优化索引
   @@index([status])
   @@index([targetWord])
   @@index([createdAt])
+  @@index([contextMode])  // 🆕 按审计类型快速筛选
+  @@index([userId])       // 🆕 按用户追踪
 }
 
 // ----------------------------------------------------------------------

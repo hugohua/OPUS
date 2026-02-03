@@ -5,6 +5,7 @@ import { CommonChunks } from "@/components/vocabulary/detail/CommonChunks";
 import { ContextSnapshot } from "@/components/vocabulary/detail/ContextSnapshot";
 import { WeaverLab } from "@/components/vocabulary/detail/WeaverLab";
 import { GestureHint } from "@/components/vocabulary/detail/GestureHint";
+import { MasteryMatrix } from "@/components/vocabulary/detail/MasteryMatrix";
 import { redirect } from "next/navigation";
 
 interface WordDetailPageProps {
@@ -59,6 +60,10 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
                     derivatives={vocab.word_family}
                     synonyms={vocab.synonyms}
                 />
+
+                {/* [Phase 5] Multi-Track Mastery Matrix */}
+                {/* @ts-ignore - The action has been updated to return tracks */}
+                <MasteryMatrix tracks={data.tracks} />
 
                 {/* L0: Common Chunks */}
                 <CommonChunks

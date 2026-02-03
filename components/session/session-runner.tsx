@@ -17,6 +17,7 @@ import { SessionSkeleton } from "@/components/session/session-skeleton";
 import { BlitzSession } from "@/components/session/blitz-session";
 import { PhraseCard } from "@/components/briefing/phrase-card";
 import { PhraseFooter } from "@/components/briefing/phrase-footer";
+import { ContextDrillCard } from "@/components/drill/context-drill-card"; // [Phase 4] Import
 import { recordOutcome } from '@/actions/record-outcome';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
@@ -317,7 +318,20 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
     if (!currentDrill) return <SessionSkeleton mode={mode} />;
 
-    if (!currentDrill) return <SessionSkeleton mode={mode} />;
+    // [Phase 4] CONTEXT Mode Integration
+    // ContextDrillCard is self-contained (includes UniversalCard)
+    if (mode === 'CONTEXT') {
+        return (
+            <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
+                <ContextDrillCard
+                    drill={currentDrill}
+                    progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
+                    onGrade={(g) => handleComplete(g)}
+                    onExit={() => router.push('/dashboard')}
+                />
+            </div>
+        );
+    }
 
     // Map mode to color variant
     const variantMap: Record<string, "violet" | "emerald" | "amber" | "rose" | "blue" | "pink"> = {

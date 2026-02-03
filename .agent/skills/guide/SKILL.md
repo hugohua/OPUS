@@ -42,6 +42,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Phrase Mode**: `docs/dev-notes/technical-spec-phrase-mode.md` (Phrase Blitz specific specs)
 
 ### 4. Infrastructure & Testing
+- **Testing Protocol**: `.agent/rules/testing-protocol.md` (**Spec-First 宪法**：Hurl + Vitest 混合策略)
 - **Testing**: `docs/dev-notes/TESTING.md` (Vitest setup, mocking rules)
 - **Test Overview**: `docs/dev-notes/test-architecture-overview.md` (**测试全景图**：覆盖地图 + Gap 分析)
 - **Evaluation Matrix**: `docs/dev-notes/evaluation-matrix.md` (**三维评估体系**：Logic / Quality / Stability)
@@ -66,6 +67,18 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Usage Guide**: `lib/streaming/README.md` (API 文档、前端集成示例)
 - **Use Case**: WeaverLab (L3 故事生成)、未来的流式交互场景
 
+### 8. L1 Audio Gym (听觉反射训练)
+- **Implementation**: `docs/dev-notes/l1-audio-gym-implementation.md` (**Phase 4**: MVP 完整实现指南)
+- **UI Components**: `components/drill/audio-drill-card.tsx`, `components/session/audio-session-runner.tsx`
+- **Server Actions**: `actions/audio-session.ts` (Queue Fetch + FSRS Grading)
+- **Testing**: `actions/__tests__/audio-session.test.ts` (Unit Tests), `tests/l1-tts-generate.hurl` (API Tests)
+
+### 9. Panoramic Audit System (全景审计)
+- **Architecture**: `docs/dev-notes/panoramic-audit-system.md` (**V5.1**: 核心价值链追踪)
+- **Service**: `lib/services/audit-service.ts` (统一审计接口 + 环境变量开关)
+- **Report Script**: `scripts/audit-report.ts` (健康检查报告)
+- **Config**: `.env` (`AUDIT_ENABLED`, `AUDIT_SAMPLE_RATE`)
+
 
 ## 🚦 Decision Routing
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
@@ -73,9 +86,15 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.
 - **If 发现缓存命中率低 / 大量兜底数据** -> 阅读 `cache-hit-rate-optimization.md` 排查选词逻辑是否一致.
 - **If modifying Audio/Playback** -> Read `tts-architecture.md` (Architecture) AND `use-tts.ts` (Implementation).
+- **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md` (**Phase 4 Complete Guide**).
 - **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
 - **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).
 - **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.
 - **If modifying AI 内容生成 (L2 例句等)** -> Read `smart-content-architecture.md` (批量生成策略).
 - **If 实现新的流式 LLM 场景 (如对话、实时生成等)** -> Read `sse-streaming-architecture.md` (标准 SSE 工具) AND `lib/streaming/README.md` (API 使用).
+- **If 新增 API 端点** -> **必须先创建** `.hurl` 规格文件 (See `.agent/rules/testing-protocol.md`).
+- **If 新增 Server Action** -> **必须先创建** `.test.ts` 测试文件 (See `.agent/rules/testing-protocol.md`).
+- **If 需要追踪算法行为 / 排查异常** -> Read `panoramic-audit-system.md` (审计服务) AND 运行 `npx tsx scripts/audit-report.ts`.
+- **If 修改选词/评分/生成逻辑** -> **必须使用** `audit-service.ts` 中的埋点方法，而非直接操作 `DrillAudit` 表.
+

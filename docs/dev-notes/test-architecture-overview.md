@@ -21,10 +21,39 @@
 
 | 类别 | 数量 | 位置 |
 |------|------|------|
-| **Vitest Unit Tests** | 21 | `*/__tests__/*.test.ts(x)` |
+| **Vitest Unit Tests** | 24 | `*/__tests__/*.test.ts(x)` |
+| **Hurl API Tests** | 5 | `tests/l{1,2}-*.hurl` |
 | **手动测试脚本** | 8 | `scripts/test-*.ts` |
 | **LLM 评估脚本** | 2 | `scripts/eval*.ts` |
 | **评估数据集** | 2 | `tests/evals/*.json` |
+
+---
+
+## 🔀 混合测试策略 (Hybrid Testing)
+
+> 📋 完整规范见 `.agent/rules/testing-protocol.md`
+
+### Spec-First 原则
+```
+禁止直接编写实现代码。必须先定义测试规格。
+```
+
+### 测试工具分层
+
+| 组件类型 | 测试工具 | 开发顺序 |
+|----------|----------|----------|
+| **Route Handlers** | Hurl | 先写 `.hurl` → 再写 `route.ts` |
+| **Server Actions** | Vitest | 先写 `.test.ts` → 再写 Action |
+| **LLM Prompts** | Evals | 先定义基线 → 再改 Prompt |
+
+### 测试层级
+
+| 层级 | 名称 | 覆盖范围 | 触发时机 |
+|------|------|----------|----------|
+| **L1** | 防御层 | 认证、基础 CRUD | 每次 PR |
+| **L2** | 进攻层 | 业务逻辑、AI 集成 | 每次 PR |
+| **L3** | 规格层 | SSE 流、E2E | 发布前 |
+| **Eval** | 质量层 | LLM 输出评分 | Prompt 变更 |
 
 ---
 

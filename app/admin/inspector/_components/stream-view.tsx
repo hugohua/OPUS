@@ -11,7 +11,7 @@ import {
     Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { saveBadCase } from '@/app/actions/inspector';
+import { saveBadCase } from '@/actions/inspector';
 import {
     AlertDialog,
     AlertDialogAction,

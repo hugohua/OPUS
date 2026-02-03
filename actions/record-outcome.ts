@@ -8,6 +8,8 @@ import { RecordOutcomeSchema, RecordOutcomeInput } from '@/lib/validations/brief
 import { fsrs, Card, State, Rating } from 'ts-fsrs';
 import { calculateImplicitGrade } from '@/lib/algorithm/grading';
 import { calculateMasteryScore } from '@/lib/algorithm/mastery';
+import { auth } from '@/auth'; // [Security Fix]
+import { auditFSRSTransition } from '@/lib/services/audit-service';
 
 const log = createLogger('actions:record-outcome');
 
@@ -33,11 +35,30 @@ export async function recordOutcome(
     input: RecordOutcomeInput
 ): Promise<ActionState<any>> {
     try {
-        // 1. Validate Input
-        const { userId, vocabId, grade, mode } = RecordOutcomeSchema.parse(input);
-        const track = mapModeToTrack(mode); // Determine Track
+        // [Security Fix] Validate Session
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { status: 'error', message: 'Unauthorized' };
+        }
 
-        log.info({ userId, vocabId, grade, mode, track }, 'Recording outcome (Multi-Track)');
+        // 1. Validate Input
+        const { userId, vocabId, grade, mode, track: explicitTrack } = RecordOutcomeSchema.parse(input);
+
+        // [Security Fix] Vertical Privilege Escalation Check
+        if (session.user.id !== userId) {
+            log.warn({ sessionUser: session.user.id, inputUser: userId }, 'Security Alert: User mismatch in recordOutcome');
+            return { status: 'error', message: 'Forbidden: ID Mismatch' };
+        }
+
+        // [Track Priority] Use explicit track if provided, otherwise fallback to mode mapping
+        const track = explicitTrack || mapModeToTrack(mode);
+
+        // [Safety] Warn if Blitz mode without explicit track (potential Zombie Review)
+        if (!explicitTrack && mode === 'BLITZ') {
+            log.warn({ userId, vocabId }, 'BLITZ mode without explicit track - potential Zombie Review risk');
+        }
+
+        log.info({ userId, vocabId, grade, mode, track, explicitTrack }, 'Recording outcome (Multi-Track)');
 
         // 2. Fetch Current Progress (Track-Specific)
         // We use the composite unique key: userId_vocabId_track
@@ -91,9 +112,19 @@ export async function recordOutcome(
 
         let finalGrade = grade;
 
+        // [Cross-Track Policy] Conservative grading when review modality doesn't match training modality
+        const inferredTrack = mapModeToTrack(mode);
+        if (explicitTrack && explicitTrack !== inferredTrack && grade === 4) {
+            log.info(
+                { vocabId, sourceTrack: explicitTrack, reviewMode: mode },
+                'Cross-track review: capping Easy(4) -> Good(3)'
+            );
+            finalGrade = 3; // Cap Easy to Good for cross-modal reviews
+        }
+
         // [Implicit Grading Logic] (Shared Algorithm)
-        if (grade >= 3 && input.duration) {
-            finalGrade = calculateImplicitGrade(grade, input.duration, !!input.isRetry, mode) as any;
+        if (finalGrade >= 3 && input.duration) {
+            finalGrade = calculateImplicitGrade(finalGrade, input.duration, !!input.isRetry, mode) as any;
         }
 
         const rating = finalGrade as Rating; // 1 | 2 | 3 | 4
@@ -181,6 +212,24 @@ export async function recordOutcome(
                 status: 'LEARNING',
                 dueDate: newCard.due, // Legacy field
             }
+        });
+
+        // --- [V5.1] Panoramic Audit: FSRS Transition Logging ---
+        const GRADE_LABELS: Record<number, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' };
+        auditFSRSTransition(userId, {
+            vocabId,
+            mode,
+            track,
+            prevState: progress?.state ?? 0,
+            prevStability: progress?.stability ?? 0,
+            grade: finalGrade,
+            gradeLabel: GRADE_LABELS[finalGrade] || 'Unknown',
+            reps: progress?.reps ?? 0
+        }, {
+            newState: newCard.state,
+            newStability: newCard.stability,
+            scheduledDays: newCard.scheduled_days ?? 0,
+            masteryChange: dimUpdate
         });
 
         return {

@@ -62,6 +62,9 @@ async def startup_event():
     # 验证配置
     try:
         config.validate()
+        # 初始化并发控制 Semaphore (避免 Windows 事件循环绑定问题)
+        import asyncio
+        app.state.semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_REQUESTS)
         logger.info("config_validated", cache_dir=str(config.CACHE_DIR))
     except Exception as e:
         logger.error("config_validation_failed", error=str(e))

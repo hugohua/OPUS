@@ -194,8 +194,7 @@ async function main() {
                 // Parse
                 const result = safeParse(text, OutputSchema, {
                     model: modelName,
-                    userPrompt: 'Phonetics Batch',
-                    context: `Batch ${items.length} words`
+                    userPrompt: `Phonetics Batch (${items.length} words)`
                 });
 
                 if (!result || !result.items) {
