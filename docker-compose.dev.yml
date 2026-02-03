@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 数据库 (开发环境)
+  opus-db:
+    image: ankane/pgvector:latest
+    container_name: opus-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: opus
+    ports:
+      - "5432:5432"
+    volumes:
+      - opus_data:/var/lib/postgresql/data
+    networks:
+      - opus-net
+
+  # Redis (开发环境)
+  opus-redis:
+    image: redis:7-alpine
+    container_name: opus-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - opus_redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - opus-net
+
+  # TTS 服务 (开发环境 - 作为容器运行，避免本地配 Python 环境)
+  # 如果需要调试 Python 代码，请停止此容器并在本地运行 start.ps1
+  opus-tts:
+    build: ./python_tts_service
+    container_name: opus-tts
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TTS_API_KEY=${TTS_API_KEY}
+      - TTS_BASE_URL=${TTS_BASE_URL}
+    volumes:
+      - ./public/audio:/app/audio # 映射到本地 public 目录，方便 Next.js 读取
+    depends_on:
+      - opus-db
+      - opus-redis
+    networks:
+      - opus-net
+
+volumes:
+  opus_data:
+    external: true
+  opus_redis_data:
+
+
+networks:
+  opus-net:
+    driver: bridge

@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV production
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+# Install dependencies with cache mounting and mirror
+RUN --mount=type=cache,target=/root/.npm \
+    npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --production
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Copy Source Code
+COPY . .
+
+# Start Worker
+# Using tsx from dependencies (installed via npm install tsx --save earlier)
+CMD ["node_modules/.bin/tsx", "workers/index.ts"]

@@ -14,7 +14,7 @@ async function testProxy() {
 
     const client = new OpenAI({
         baseURL: "http://127.0.0.1:8045/v1",
-        apiKey: "sk-6157c3a544da426d8b4c04a953de7425",
+        apiKey: "sk-1bbb83ba938b4a9190d452c06ebed583",
     });
 
     try {

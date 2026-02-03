@@ -45,7 +45,7 @@ def test_config():
     print(f"  Default Language: {config.DEFAULT_LANGUAGE}")
     print(f"  Max Text Length: {config.MAX_TEXT_LENGTH}")
     print(f"  Cache Dir: {config.CACHE_DIR}")
-    print(f"  API Key: {'✅ 已配置' if config.OPENAI_API_KEY else '❌ 未配置'}")
+    print(f"  TTS API Key: {'✅ 已配置' if config.OPENAI_API_KEY else '❌ 未配置'}")
     print("✅ 配置加载测试通过")
 
 
