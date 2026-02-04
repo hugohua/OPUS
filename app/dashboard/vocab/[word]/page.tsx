@@ -6,6 +6,7 @@ import { ContextSnapshot } from "@/components/vocabulary/detail/ContextSnapshot"
 import { WeaverLab } from "@/components/vocabulary/detail/WeaverLab";
 import { GestureHint } from "@/components/vocabulary/detail/GestureHint";
 import { MasteryMatrix } from "@/components/vocabulary/detail/MasteryMatrix";
+import { EtymologyCard } from "@/components/vocab/EtymologyCard";
 import { redirect } from "next/navigation";
 
 interface WordDetailPageProps {
@@ -60,6 +61,11 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
                     derivatives={vocab.word_family}
                     synonyms={vocab.synonyms}
                 />
+
+
+
+                {/* [New] Etymology (Source Code) */}
+                <EtymologyCard etymology={vocab.etymology as any} className="mb-4" />
 
                 {/* [Phase 5] Multi-Track Mastery Matrix */}
                 {/* @ts-ignore - The action has been updated to return tracks */}

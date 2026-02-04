@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 网关层 (Nginx)
+  # ----------------------------------------------------------------------------
+  gateway:
+    image: nginx:alpine
+    container_name: opus-gateway
+    restart: always
+    ports:
+      - "80:80"
+      # - "443:443" # 预留 HTTPS 端口覆盖
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - opus_audio:/usr/share/nginx/html/audio:ro # 静态音频文件
+    depends_on:
+      - opus-web
+      - opus-tts
+    networks:
+      - opus-net
+
+  # ----------------------------------------------------------------------------
+  # 核心业务 (Next.js)
+  # ----------------------------------------------------------------------------
+  opus-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opus-web
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
+      - REDIS_URL=redis://opus-redis:6379
+      - PYTHON_TTS_URL=http://opus-tts:8000
+    env_file:
+      - .env.production
+    volumes:
+      - opus_audio:/app/public/audio
+    depends_on:
+      opus-db:
+        condition: service_healthy
+      opus-redis:
+        condition: service_healthy
+      opus-tts:
+        condition: service_started
+    networks:
+      - opus-net
+
+  # ----------------------------------------------------------------------------
+  # 异步任务 (Node.js Worker)
+  # ----------------------------------------------------------------------------
+  opus-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: opus-worker
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
+      - REDIS_URL=redis://opus-redis:6379
+    env_file:
+      - .env.production
+    depends_on:
+      opus-db:
+        condition: service_healthy
+      opus-redis:
+        condition: service_healthy
+    networks:
+      - opus-net
+
+  # ----------------------------------------------------------------------------
+  # TTS 服务 (Python FastAPI)
+  # ----------------------------------------------------------------------------
+  opus-tts:
+    build: ./python_tts_service
+    container_name: opus-tts
+    restart: always
+    # 不暴露端口到宿主机，仅通过 Nginx 或内部网络访问
+    environment:
+      - TTS_API_KEY=${TTS_API_KEY}
+      - TTS_BASE_URL=${TTS_BASE_URL}
+      # 生产环境可能需要覆盖这些
+      # - OPENAI_API_KEY=${OPENAI_API_KEY} 
+      # - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+    volumes:
+      - opus_audio:/app/audio
+    networks:
+      - opus-net
+
+  # ----------------------------------------------------------------------------
+  # 数据存储 (Postgres + pgvector)
+  # ----------------------------------------------------------------------------
+  opus-db:
+    image: ankane/pgvector:latest
+    container_name: opus-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-opus}
+    volumes:
+      - opus_data:/var/lib/postgresql/data
+    networks:
+      - opus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 缓存服务 (Redis)
+  # ----------------------------------------------------------------------------
+  opus-redis:
+    image: redis:7-alpine
+    container_name: opus-redis
+    restart: always
+    volumes:
+      - opus_redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - opus-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  opus_data:
+    external: true
+  opus_redis_data:
+  opus_audio:
+
+networks:
+  opus-net:
+    driver: bridge

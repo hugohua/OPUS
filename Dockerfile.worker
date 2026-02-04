@@ -14,11 +14,11 @@ RUN --mount=type=cache,target=/root/.npm \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm ci --production
 
-# Generate Prisma Client
-RUN npx prisma generate
-
 # Copy Source Code
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
 
 # Start Worker
 # Using tsx from dependencies (installed via npm install tsx --save earlier)

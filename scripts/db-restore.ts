@@ -1,10 +1,11 @@
 
 /**
- * Restore Database from JSON
+ * Restore Database from JSON Backup
  * 
  * 功能：
- *   从 backups/ 目录读取最新的 JSON 文件并恢复到数据库。
- *   支持 Vocab, User, UserProgress, Article, ArticleVocab, InvitationCode 表。
+ *   从 backups/ 目录读取最新的 JSON 备份文件，并恢复到数据库。
+ *   恢复前会清空目标表（User, Vocab, UserProgress）。
+ *   恢复后会重置 Vocab 表的自增 ID 序列。
  * 
  * 使用方法：
  *   npx tsx scripts/db-restore.ts
@@ -13,161 +14,117 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 
 // Load env
 try { process.loadEnvFile(); } catch { }
 
 const prisma = new PrismaClient();
 
-const MOCK_USER_EMAIL = '13964332@qq.com';
-
 async function main() {
-    console.log('📦 开始恢复数据...');
-
-    // Ensure mock user exists first
-    console.log('👤 确保 Mock 用户存在...');
-    let adminUser = await prisma.user.findUnique({ where: { email: MOCK_USER_EMAIL } });
-    if (!adminUser) {
-        console.log('   - 未找到 Mock 用户，准备直接创建...');
-        adminUser = await prisma.user.create({
-            data: {
-                email: MOCK_USER_EMAIL,
-                name: 'Hugo',
-                password: '$2b$10$YourDefaultBcryptHashHere', // bcrypt hash for '13964332' or default
-                invitedByCode: 'OPUS_GENESIS_KEY'
-            }
-        });
-        console.log(`✅ 已创建 Mock 用户 ID: ${adminUser.id}`);
-    } else {
-        console.log(`✅ 已确认 Admin 用户 ID: ${adminUser.id}`);
-    }
+    console.log('🔄 开始恢复数据...');
 
     const backupDir = path.join(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) {
-        console.error('❌ 没有找到 backups 目录');
-        return;
+        console.error('❌ 备份目录不存在');
+        process.exit(1);
     }
 
+    // 1. Find latest timestamp
     const files = fs.readdirSync(backupDir);
-    const getLatestFile = (prefix: string) => {
-        return files
-            .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
-            .sort()
-            .pop();
+    const timestamps = files
+        .map(f => {
+            // Match pattern like: vocab-2026-02-03T14-37-47-857Z.json
+            // Timestamp part: 2026-02-03T14-37-47-857Z
+            const match = f.match(/-(\d{4}-\d{2}-\d{2}T[\w-]+)\.json$/);
+            return match ? match[1] : null;
+        })
+        .filter(t => t !== null)
+        .sort()
+        .reverse();
+
+    if (timestamps.length === 0) {
+        console.error('❌ 未找到备份文件');
+        process.exit(1);
+    }
+
+    const latestTimestamp = timestamps[0];
+    console.log(`📅 使用最新备份: ${latestTimestamp}`);
+
+    // Helper to read JSON
+    const readBackup = (type: string) => {
+        const filePath = path.join(backupDir, `${type}-${latestTimestamp}.json`);
+        if (fs.existsSync(filePath)) {
+            return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        }
+        return [];
     };
 
-    const tables = [
-        { name: 'Vocab', prefix: 'vocab-', prisma: (prisma as any).vocab },
-        { name: 'User', prefix: 'user-', prisma: (prisma as any).user },
-        { name: 'UserProgress', prefix: 'progress-', prisma: (prisma as any).userProgress },
-        { name: 'Article', prefix: 'article-', prisma: (prisma as any).article },
-        { name: 'ArticleVocab', prefix: 'articleVocab-', prisma: (prisma as any).articleVocab },
-        { name: 'InvitationCode', prefix: 'invitationCode-', prisma: (prisma as any).invitationCode },
-    ];
+    const users = readBackup('user');
+    const vocabs = readBackup('vocab');
+    const progress = readBackup('progress');
+
+    console.log(`📊 准备恢复: User(${users.length}), Vocab(${vocabs.length}), UserProgress(${progress.length})`);
 
     try {
-        for (const table of tables) {
-            try {
-                const latestFile = getLatestFile(table.prefix);
-                if (!latestFile) {
-                    console.log(`⚠️ 跳过 ${table.name}: 找不到以 ${table.prefix} 开头的备份文件`);
-                    continue;
-                }
+        await prisma.$transaction(async (tx) => {
+            // 1. Clean existing data (Reverse order of dependencies)
+            // UserProgress -> Vocab, User
+            console.log('🧹 清空现有数据...');
+            await tx.userProgress.deleteMany({});
+            await tx.articleVocab.deleteMany({}); // ArticleVocab depends on Vocab
+            await tx.smartContent.deleteMany({}); // SmartContent depends on Vocab
+            await tx.article.deleteMany({}); // Article depends on User
 
-                const filePath = path.join(backupDir, latestFile);
-                console.log(`\n🔄 正在处理表: ${table.name} (文件: ${latestFile})...`);
-                const rawData = fs.readFileSync(filePath, 'utf-8');
-                const data = JSON.parse(rawData);
+            // Delete Users (Wait, seed created InvitationCode, Article, etc?)
+            // We need to be careful with other tables.
+            // UserProgress depends on User and Vocab.
+            // Article depends on User.
+            // DrillCache depends on User.
 
-                if (!Array.isArray(data) || data.length === 0) {
-                    console.log(`   - 备份数据为空，跳过。`);
-                    continue;
-                }
+            await tx.drillCache.deleteMany({});
+            await tx.user.deleteMany({}); // Deletes seeded user
 
-                // Clean & Fix data for main branch compatibility
-                const cleanData = data.map((item: any) => {
-                    const { embedding, ...rest } = item;
+            // Vocab
+            await tx.vocab.deleteMany({});
 
-                    // Field Fixes for branch compatibility
-                    if (table.name === 'User') {
-                        if (!rest.password) rest.password = '$2b$10$YourDefaultBcryptHashHere'; // Should be a valid hash
-                        if (!rest.updatedAt) rest.updatedAt = new Date();
-                        if (!rest.timezone) rest.timezone = 'Asia/Shanghai';
-                    }
+            // 2. Insert Data
+            console.log('📥 写入数据...');
 
-                    if (table.name === 'Vocab') {
-                        if (rest.frequency_score === undefined) rest.frequency_score = 0;
-                        if (rest.learningPriority === undefined) rest.learningPriority = 0;
-                    }
-
-                    if (table.name === 'UserProgress') {
-                        // FSRS v5 compatibility - Remove old fields
-                        delete (rest as any).easeFactor;
-
-                        // Fix Foreign Key - Map old userId to current adminUser.id
-                        rest.userId = (adminUser as any).id;
-
-                        if (rest.stability === undefined) rest.stability = 0;
-                        if (rest.difficulty === undefined) rest.difficulty = 0;
-                        if (rest.reps === undefined) rest.reps = 0;
-                        if (rest.lapses === undefined) rest.lapses = 0;
-                        if (rest.state === undefined) rest.state = 0;
-                    }
-
-                    return rest;
-                });
-
-                console.log(`   - 正在清空表...`);
-                // Use deleteMany in try/catch to avoid breaking constraints if other tables depend on it
-                try {
-                    await table.prisma.deleteMany({});
-                } catch (e: any) {
-                    console.warn(`   ⚠️ 清空表失败 (可能存在FK约束): ${e.message?.split('\n')[0]}`);
-                    // If we can't delete, we might not be able to insert easily.
-                    // But usually for restore we want fresh starts.
-                }
-
-                console.log(`   - 正在插入 ${cleanData.length} 条记录...`);
-                const batchSize = 500;
-                let successCount = 0;
-                for (let i = 0; i < cleanData.length; i += batchSize) {
-                    const batch = cleanData.slice(i, i + batchSize);
-                    try {
-                        await table.prisma.createMany({
-                            data: batch,
-                            skipDuplicates: true
-                        });
-                        successCount += batch.length;
-                    } catch (e: any) {
-                        console.error(`   ❌ 批次插入失败: ${e.message?.split('\n')[0]}`);
-                    }
-                }
-
-                // Sync sequence for ID (only for tables with BigInt/Int autoincrement PK)
-                if (table.name === 'Vocab') {
-                    const maxIdResult = await prisma.vocab.findFirst({
-                        orderBy: { id: 'desc' },
-                        select: { id: true }
-                    });
-                    if (maxIdResult) {
-                        try {
-                            await prisma.$queryRawUnsafe(`SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxIdResult.id})`);
-                        } catch (e) { console.warn('   ⚠️ 序列同步失败 (可忽略)'); }
-                    }
-                }
-
-                console.log(`✅ ${table.name} 恢复完成 (成功: ${successCount}/${cleanData.length})`);
-            } catch (tableError) {
-                console.error(`❌ ${table.name} 表恢复严重失败:`, tableError);
-                console.log(`⚠️ 继续尝试下一个表...`);
+            if (users.length > 0) {
+                await tx.user.createMany({ data: users });
+                console.log(`✅ User table restored (${users.length})`);
             }
-        }
 
-        console.log('\n🎉 恢复流程结束');
+            if (vocabs.length > 0) {
+                // Remove id if we want autoincrement to re-generate? 
+                // No, we want to KEEP the IDs to maintain relations.
+                await tx.vocab.createMany({ data: vocabs });
+                console.log(`✅ Vocab table restored (${vocabs.length})`);
+            }
 
-    } catch (globalError) {
-        console.error('❌ 全局恢复失败:', globalError);
+            if (progress.length > 0) {
+                await tx.userProgress.createMany({ data: progress });
+                console.log(`✅ UserProgress table restored (${progress.length})`);
+            }
+
+            // 3. Reset Sequences (Postgres specific)
+            // For Vocab ID
+            console.log('🔧 重置自增序列...');
+            const maxIdResult = await tx.vocab.aggregate({
+                _max: { id: true }
+            });
+            const maxId = maxIdResult._max.id || 0;
+            // Use safe integer for setval
+            await tx.$executeRawUnsafe(`SELECT setval(pg_get_serial_sequence('"Vocab"', 'id'), ${maxId + 1}, false);`);
+        }, {
+            maxWait: 20000,
+            timeout: 60000
+        });
+
+        console.log('\n🎉 数据恢复完成！');
+
+    } catch (error) {
+        console.error('❌ 恢复失败:', error);
     } finally {
         await prisma.$disconnect();
     }

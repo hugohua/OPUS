@@ -1,4 +1,6 @@
 import { createLogger } from '@/lib/logger';
+import fs from 'fs/promises';
+import path from 'path';
 
 const log = createLogger('etl-runner');
 
@@ -28,7 +30,7 @@ export const FREE_TIER_CONFIG: EtlConfig = {
 
 export const PAID_TIER_CONFIG: EtlConfig = {
     BATCH_SIZE: 10,
-    PARALLEL_REQUESTS: 8,
+    PARALLEL_REQUESTS: 6,
     RATE_LIMIT_COOLDOWN_MS: 5 * 1000,
     BATCH_INTERVAL_MS: 2 * 1000,
     MAX_RETRIES: 3,
@@ -43,15 +45,24 @@ export interface EtlBatchResult {
     successCount: number;
     failedCount: number;
     circuitBreak?: 'level1' | 'level2' | 'service_outage';
+    debugInfo?: {
+        systemPrompt: string;
+        userPrompt: string;
+        rawResult: string;
+        batchId: string;
+    }
 }
 
-export interface EtlJobOptions<T> {
+
+export interface EtlJobOptions<T, C = any> {
     jobName: string;
     tier: 'free' | 'paid';
-    fetchBatch: (batchSize: number) => Promise<T[]>;
-    processBatch: (items: T[], isDryRun: boolean, batchIndex: number) => Promise<EtlBatchResult>;
+    fetchBatch: (batchSize: number, isDryRun: boolean) => Promise<T[]>;
+    processBatch: (items: T[], isDryRun: boolean, batchIndex: number, context?: C) => Promise<EtlBatchResult>;
+    getTotalCount?: (isDryRun: boolean) => Promise<number>;
     isDryRun?: boolean;
     isContinuous?: boolean;
+    context?: C;
 }
 
 interface ProcessingStats {
@@ -63,6 +74,7 @@ interface ProcessingStats {
     consecutiveFailures: number;
     requestsThisHour: number;
     hourStartTime: Date;
+    initialTotal?: number;
 }
 
 // --- Utils ---
@@ -100,10 +112,64 @@ function chunkArray<T>(array: T[], size: number): T[][] {
     return chunked;
 }
 
+function getProgressBar(current: number, total: number, width = 20): string {
+    const percentage = Math.min(100, Math.round((current / total) * 100));
+    const filled = Math.round((width * current) / total);
+    const empty = width - filled;
+    const bar = '█'.repeat(filled) + '░'.repeat(empty);
+    return `${bar} ${percentage}%`;
+}
+
+async function writeDebugLog(jobName: string, info: NonNullable<EtlBatchResult['debugInfo']>) {
+    // ... (existing implementation)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `output/${jobName}_dry_run_${timestamp}_${info.batchId}.txt`;
+
+    const fileContent = `system prompt:
+${info.systemPrompt}
+
+user prompt:
+${info.userPrompt}
+
+result:
+${info.rawResult}
+
+---------------------------------------------
+Please copy the content above and send it to an LLM with the following prompt:
+
+"""
+# Role
+你是一位精通 Prompt Engineering 的专家，擅长优化 LLM 的指令遵循能力和内容生成质量。
+
+# Objective
+评估用户提供的 System Prompt、User Prompt 以及 LLM 生成的 Result。
+请分析 System Prompt 是否最优，生成的内容是否完全符合约束，并给出优化建议。
+
+# Output Format (Markdown)
+## 评分 (1-10分)
+给出综合评分。
+
+## 问题分析
+指出生成内容中存在的问题（如未遵循的约束、逻辑漏洞、格式错误等）。
+
+## 优化建议
+针对 System Prompt 给出具体的修改建议（中文），如果是 Prompt 结构问题，请提供优化后的 Prompt 片段。
+"""
+`;
+
+    try {
+        await fs.mkdir('output', { recursive: true });
+        await fs.writeFile(fileName, fileContent, 'utf-8');
+        log.info({ file: fileName }, "DRY-RUN: Debug file written");
+    } catch (e) {
+        log.error({ error: e }, "Failed to write debug file");
+    }
+}
+
 // --- Main Runner ---
 
-export async function runEtlJob<T>(options: EtlJobOptions<T>) {
-    const { jobName, tier, fetchBatch, processBatch, isDryRun = false, isContinuous = false } = options;
+export async function runEtlJob<T, C = any>(options: EtlJobOptions<T, C>) {
+    const { jobName, tier, fetchBatch, processBatch, getTotalCount, isDryRun = false, isContinuous = false, context } = options;
     const config = tier === 'paid' ? PAID_TIER_CONFIG : FREE_TIER_CONFIG;
 
     // Structured Start Log
@@ -118,7 +184,8 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
         }
     }, 'Starting ETL Job');
 
-    const stats: ProcessingStats = {
+    // Stats initialization
+    const initialStats: ProcessingStats = {
         totalProcessed: 0,
         totalSuccess: 0,
         totalFailed: 0,
@@ -129,9 +196,20 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
         hourStartTime: new Date()
     };
 
+    if (getTotalCount) {
+        try {
+            initialStats.initialTotal = await getTotalCount(isDryRun);
+            log.info({ totalItems: initialStats.initialTotal }, 'Total items to process identified');
+        } catch (e) {
+            log.warn({ error: e }, 'Failed to get total count');
+        }
+    }
+
+    const stats = initialStats;
     let shouldContinue = true;
 
     while (shouldContinue) {
+        // ... (existing loop content)    
         // 0. Hourly Limit Check
         const now = new Date();
         const hourElapsed = now.getTime() - stats.hourStartTime.getTime();
@@ -155,7 +233,7 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
         }
 
         // 1. Fetch
-        const items = await fetchBatch(config.BATCH_SIZE);
+        const items = await fetchBatch(config.BATCH_SIZE, isDryRun);
         if (items.length === 0) {
             log.info('No more items to process. Job done!');
             break;
@@ -164,10 +242,13 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
         stats.batchCount++;
         stats.requestsThisHour++;
 
-        log.info({
-            batch: stats.batchCount,
-            count: items.length
-        }, 'Processing batch');
+        // In continuous mode, reduce log noise. Only show progress.
+        if (!isContinuous) {
+            log.info({
+                batch: stats.batchCount,
+                count: items.length
+            }, 'Processing batch');
+        }
 
         // 2. Process (Parallel chunks)
         const subBatchSize = Math.ceil(items.length / config.PARALLEL_REQUESTS);
@@ -175,7 +256,7 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
 
         const results = await Promise.all(chunks.map((chunk, idx) => {
             // We pass a unique batch index for logging distinct threads if needed
-            return processBatch(chunk, isDryRun, stats.batchCount * 100 + idx);
+            return processBatch(chunk, isDryRun, stats.batchCount * 100 + idx, context);
         }));
 
         // 3. Aggregate
@@ -188,6 +269,10 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
                 if (res.circuitBreak === 'service_outage') circuitBreakAction = 'service_outage';
                 else if (res.circuitBreak === 'level2' && circuitBreakAction !== 'service_outage') circuitBreakAction = 'level2';
                 else if (!circuitBreakAction) circuitBreakAction = 'level1';
+            }
+            // Logic for writing debug log on dry run
+            if (isDryRun && res.debugInfo) {
+                await writeDebugLog(jobName, res.debugInfo);
             }
         }
 
@@ -233,12 +318,24 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
 
         // 5. Progress Report
         const elapsed = Date.now() - stats.startTime.getTime();
-        log.info({
+        let progressMsg = {
             processed: stats.totalProcessed,
             success: stats.totalSuccess,
             failed: stats.totalFailed,
             elapsed: formatDuration(elapsed)
-        }, 'Progress');
+        };
+
+        if (stats.initialTotal && stats.initialTotal > 0) {
+            // Assuming totalProcessed is cumulative. 
+            // NOTE: fetchBatch takes pending items, so totalProcessed isn't necessarily total done relative to initialTotal unless we assume job started from 0 or we track global status.
+            // But usually ETL runs on remaining items. So processed / (processed + remaining) ? 
+            // Simpler: processed / initialTotal.
+
+            const percentage = getProgressBar(stats.totalProcessed, stats.initialTotal);
+            Object.assign(progressMsg, { progress: percentage });
+        }
+
+        log.info(progressMsg, 'Progress');
 
         // 6. Loop Control
         if (!isContinuous) {
@@ -246,7 +343,6 @@ export async function runEtlJob<T>(options: EtlJobOptions<T>) {
         } else {
             if (circuitBreakAction) {
                 // If we hit a circuit break, we likely already slept.
-                // But if it was just a small glitch, we might want to respect the standard interval too.
             } else {
                 await sleep(config.BATCH_INTERVAL_MS);
             }

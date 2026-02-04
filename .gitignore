@@ -20,3 +20,6 @@ tts_venv/
 tts_venv
 reports/
 .DS_Store
+prisma/migrations
+dockers
+other-project-demo

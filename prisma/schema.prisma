@@ -68,6 +68,7 @@ model Vocab {
   progress         UserProgress[]
   articles         ArticleVocab[]
   smartContent     SmartContent[]
+  etymology        Etymology?
 
   @@index([learningPriority])
   @@index([scenarios])
@@ -330,5 +331,36 @@ model TTSCache {
   @@index([lastUsedAt])   // GC 清理用
   @@index([createdAt])    // Admin 查询用
   @@index([cacheType])    // 按类型筛选
+}
+
+model Etymology {
+  // 1. 基础关系
+  id          String   @id @default(uuid())
+  vocabId     Int      @unique
+  vocab       Vocab    @relation(fields: [vocabId], references: [id], onDelete: Cascade)
+
+  // 2. 核心分类 (Prompt mode)
+  // ROOTS | COMPOUND | STORY | NONE
+  mode        EtymologyMode 
+
+  // 3. 记忆钩子 (Prompt logic_cn)
+  // 业务价值最高的字段，单独列出
+  memory_hook String?  
+
+  // 4. 结构化数据 (JSONB)
+  // 包含: roots, components, origin_lang, related 等
+  data        Json     
+
+  // 5. 元数据
+  source      String?  @default("opus-ai-etl")
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+enum EtymologyMode {
+  ROOTS
+  DERIVATIVE
+  ASSOCIATION
+  NONE
 }
 
