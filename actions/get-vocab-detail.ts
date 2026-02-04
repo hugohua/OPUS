@@ -16,6 +16,9 @@ export async function getVocabDetail(identifier: number | string) {
         where: isId
             ? { id: Number(identifier) }
             : { word: String(identifier) },
+        include: {
+            etymology: true,
+        },
     });
 
     if (!vocab) {

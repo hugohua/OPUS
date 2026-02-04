@@ -45,8 +45,8 @@ const prisma = new PrismaClient();
 
 const TARGET_CRITERIA = {
     etymology: { is: null },
-    is_toeic_core: true,
-    learningPriority: { gte: 60 }
+    // is_toeic_core: true, // Expanded to ALL vocab
+    // learningPriority: { gte: 60 }
 };
 
 // --- Context Types ---

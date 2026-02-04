@@ -15,15 +15,19 @@ if [ ! -d "venv" ]; then
     ./venv/bin/pip install -r requirements.txt
 fi
 
-# 检查 .env 文件是否存在，如果存在则加载
-if [ -f .env ]; then
-    export $(cat .env | xargs)
+# 检查 .env 文件是否存在 (优先检查项目根目录)
+if [ -f ../.env ]; then
+    echo "Loading environment from ../.env"
+    export $(grep -v '^#' ../.env | xargs)
+elif [ -f .env ]; then
+    echo "Loading environment from .env"
+    export $(grep -v '^#' .env | xargs)
 fi
 
-# 检查 OPENAI_API_KEY
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "Warning: OPENAI_API_KEY is not set."
-    echo "Please set it via 'export OPENAI_API_KEY=your_key' or in a .env file."
+# 检查 TTS_API_KEY
+if [ -z "$TTS_API_KEY" ]; then
+    echo "Warning: TTS_API_KEY is not set."
+    echo "Please set it via 'export TTS_API_KEY=your_key' or in a .env file."
 fi
 
 echo "Starting TTS Service..."

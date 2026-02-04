@@ -64,7 +64,9 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
 
 
 
+
                 {/* [New] Etymology (Source Code) */}
+                {/* @ts-ignore */}
                 <EtymologyCard etymology={vocab.etymology as any} className="mb-4" />
 
                 {/* [Phase 5] Multi-Track Mastery Matrix */}

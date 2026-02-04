@@ -31,46 +31,51 @@ const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 /**
  * 主日志实例 (Pino)
  * 
- * - 控制台: 彩色美化输出
- * - 文件: JSON Lines 格式，按级别分离
- *   - logs/app.log: 所有日志
- *   - logs/errors.log: 仅错误日志
+ * - 开发环境: 彩色美化输出 (pino-pretty) + 文件
+ * - 生产环境: 简单 JSON 输出到 stdout
  */
-export const logger = pino({
-    level: LOG_LEVEL,
-    transport: {
-        targets: [
-            // 控制台输出 (始终启用)
-            {
-                target: 'pino-pretty',
-                level: LOG_LEVEL,
-                options: {
-                    colorize: true,
-                    translateTime: 'SYS:HH:MM:ss',
-                    ignore: 'pid,hostname',
-                }
-            },
-            // 应用日志文件 (所有级别)
-            {
-                target: 'pino/file',
-                level: LOG_LEVEL,
-                options: {
-                    destination: path.join(LOG_DIR, 'app.log'),
-                    mkdir: true,
-                }
-            },
-            // 错误日志文件 (仅 error 级别)
-            {
-                target: 'pino/file',
-                level: 'error',
-                options: {
-                    destination: path.join(LOG_DIR, 'errors.log'),
-                    mkdir: true,
-                }
-            },
-        ]
-    }
-});
+
+// 根据环境决定配置
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+export const logger = IS_PRODUCTION
+    ? pino({
+        level: LOG_LEVEL,
+        // 生产环境：简单配置，直接输出 JSON 到 stdout
+    })
+    : pino({
+        level: LOG_LEVEL,
+        // 开发环境：使用 transport 支持美化输出和文件日志
+        transport: {
+            targets: [
+                {
+                    target: 'pino-pretty',
+                    level: LOG_LEVEL,
+                    options: {
+                        colorize: true,
+                        translateTime: 'SYS:HH:MM:ss',
+                        ignore: 'pid,hostname',
+                    }
+                },
+                {
+                    target: 'pino/file',
+                    level: LOG_LEVEL,
+                    options: {
+                        destination: path.join(LOG_DIR, 'app.log'),
+                        mkdir: true,
+                    }
+                },
+                {
+                    target: 'pino/file',
+                    level: 'error',
+                    options: {
+                        destination: path.join(LOG_DIR, 'errors.log'),
+                        mkdir: true,
+                    }
+                },
+            ]
+        }
+    });
 
 /**
  * 创建模块专用日志器

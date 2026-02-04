@@ -27,6 +27,25 @@ nano .env.production
 > [!WARNING]
 > 请务必修改 `AUTH_SECRET`, `POSTGRES_PASSWORD` 和各类 API KEY。
 
+**域名配置说明**：
+
+Opus 已配置 `trustHost: true`，支持通过**多种方式**访问：
+- ✅ 域名：`https://opus.yourdomain.com`
+- ✅ IP：`http://192.168.1.100`
+- ✅ localhost（服务器本地）
+
+`AUTH_URL` 仅用于生成邮件链接等场景，建议设置为主要访问域名：
+
+```bash
+# 设置为主域名（推荐）
+export AUTH_URL=https://opus.yourdomain.com
+export NEXTAUTH_URL=https://opus.yourdomain.com
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+> [!NOTE]
+> 如果您的部署环境对安全性要求极高，可以在 `auth.config.ts` 中将 `trustHost: true` 改为明确的主机白名单。
+
 ### 2.3 启动服务
 使用提供的脚本一键部署：
 

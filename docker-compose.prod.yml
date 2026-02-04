@@ -6,7 +6,7 @@ services:
   # ----------------------------------------------------------------------------
   gateway:
     image: nginx:alpine
-    container_name: opus-gateway
+    container_name: opus-gateway-prod
     restart: always
     ports:
       - "80:80"
@@ -27,16 +27,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opus-web
+    container_name: opus-web-prod
     restart: always
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
       - REDIS_URL=redis://opus-redis:6379
       - PYTHON_TTS_URL=http://opus-tts:8000
+      # 可选：设置首选访问域名（用于邮件链接等场景）
+      # 已启用 trustHost，支持通过域名/IP/localhost 访问
+      - AUTH_URL=${AUTH_URL:-http://localhost}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost}
     env_file:
-      - .env.production
+      - .env
     volumes:
       - opus_audio:/app/public/audio
+      - opus_logs:/app/logs
     depends_on:
       opus-db:
         condition: service_healthy
@@ -54,13 +59,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    container_name: opus-worker
+    container_name: opus-worker-prod
     restart: always
     environment:
+      - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
       - REDIS_URL=redis://opus-redis:6379
     env_file:
-      - .env.production
+      - .env
     depends_on:
       opus-db:
         condition: service_healthy
@@ -74,15 +80,15 @@ services:
   # ----------------------------------------------------------------------------
   opus-tts:
     build: ./python_tts_service
-    container_name: opus-tts
+    container_name: opus-tts-prod
     restart: always
     # 不暴露端口到宿主机，仅通过 Nginx 或内部网络访问
     environment:
-      - TTS_API_KEY=${TTS_API_KEY}
-      - TTS_BASE_URL=${TTS_BASE_URL}
-      # 生产环境可能需要覆盖这些
-      # - OPENAI_API_KEY=${OPENAI_API_KEY} 
-      # - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      # TTS 服务使用 TTS_API_KEY，从 .env 中的 OPENAI_API_KEY 复制而来
+      - TTS_API_KEY=${OPENAI_API_KEY}
+      - TTS_BASE_URL=${OPENAI_BASE_URL}
+    env_file:
+      - .env
     volumes:
       - opus_audio:/app/audio
     networks:
@@ -93,7 +99,7 @@ services:
   # ----------------------------------------------------------------------------
   opus-db:
     image: ankane/pgvector:latest
-    container_name: opus-db
+    container_name: opus-db-prod
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -104,7 +110,7 @@ services:
     networks:
       - opus-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -114,7 +120,7 @@ services:
   # ----------------------------------------------------------------------------
   opus-redis:
     image: redis:7-alpine
-    container_name: opus-redis
+    container_name: opus-redis-prod
     restart: always
     volumes:
       - opus_redis_data:/data
@@ -122,7 +128,7 @@ services:
     networks:
       - opus-net
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -132,6 +138,8 @@ volumes:
     external: true
   opus_redis_data:
   opus_audio:
+  opus_logs:
+
 
 networks:
   opus-net:

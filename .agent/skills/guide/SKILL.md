@@ -61,6 +61,12 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Server Action**: `actions/content-generator.ts` (Cache-First + Batch Generation)
 - **Use Case**: Word Detail Page 的 ContextSnapshot 模块
 
+### 7. Etymology System (Memory Hooks) (NEW)
+- **Concept**: `docs/dev-notes/etymology-generation-feature.md` (**Memory-First** Strategy: Derivative > Roots > Association)
+- **Implementation**: `scripts/data-gen-etymology.ts` (ETL Script with BatchRunner)
+- **Schema**: `prisma/schema.prisma` (`Etymology` model & `EtymologyMode`)
+- **UI**: `components/vocab/EtymologyCard.tsx`
+
 ### 7. SSE 流式处理 (Universal Streaming Utility)
 - **Architecture**: `docs/dev-notes/sse-streaming-architecture.md` (**Standard**: OpenAI SDK + tuoye 模式)
 - **Core Utility**: `lib/streaming/sse.ts` (统一的 `handleOpenAIStream` 工具)
