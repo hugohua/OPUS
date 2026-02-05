@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\" \"npm run dev:tts\"",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\"",
     "dev:web": "next dev",
     "dev:worker": "npx tsx --watch workers/index.ts",
     "dev:tts": "npx tsx scripts/start-tts.ts",

@@ -117,7 +117,14 @@ export async function handleOpenAIStream(
                         // 发送 SSE 格式的内容事件
                         const event: SSEEvent = { type: 'content', data: content };
                         const sseData = `data: ${JSON.stringify(event)}\n\n`;
-                        controller.enqueue(encoder.encode(sseData));
+
+                        try {
+                            controller.enqueue(encoder.encode(sseData));
+                        } catch (err) {
+                            // Client disconnected, stop streaming gracefully
+                            console.warn(`[${errorContext}] Client disconnected during stream`);
+                            return;
+                        }
 
                         // 触发内容回调
                         if (onContent) {
@@ -126,17 +133,22 @@ export async function handleOpenAIStream(
                     }
                 }
 
-                // 发送完成事件
-                const doneEvent: SSEEvent = { type: 'done' };
-                const doneSseData = `data: ${JSON.stringify(doneEvent)}\n\n`;
-                controller.enqueue(encoder.encode(doneSseData));
-
-                // 触发完成回调
-                if (onComplete) {
-                    onComplete(fullContent);
+                // Check if stream is still open before sending done
+                if (controller.desiredSize !== null) {
+                    // 发送完成事件
+                    const doneEvent: SSEEvent = { type: 'done' };
+                    const doneSseData = `data: ${JSON.stringify(doneEvent)}\n\n`;
+                    controller.enqueue(encoder.encode(doneSseData));
                 }
 
-                controller.close();
+                // 触发完成回调 (Await to ensure DB writes finish)
+                if (onComplete) {
+                    await Promise.resolve(onComplete(fullContent));
+                }
+
+                if (controller.desiredSize !== null) {
+                    controller.close();
+                }
 
             } catch (error) {
                 console.error(`[${errorContext}] Stream Error:`, error);

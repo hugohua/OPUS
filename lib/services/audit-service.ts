@@ -32,7 +32,9 @@ export type AuditContextMode =
     | 'L0:PHRASE'
     | 'L0:NUANCE'
     | 'L1:AUDIO'
-    | 'L2:CONTEXT';
+    | 'L2:CONTEXT'
+    | 'WEAVER:SELECTION'
+    | 'WAND:LOOKUP';
 
 export interface AuditPayload {
     context: Record<string, any>;
@@ -258,7 +260,79 @@ export function auditSessionFallback(
     });
 }
 
+
+/**
+ * Weaver Selection 审计
+ * 记录 Priority Queue 和 Filler Queue 的构成
+ */
+export function auditWeaverSelection(
+    userId: string,
+    scenario: string,
+    inputs: {
+        priorityCount: number;
+        fillerCount: number;
+        priorityIds: number[];
+        fillerIds: number[];
+    }
+): void {
+    // ✅ User ID 校验
+    if (!userId || userId.trim() === '') {
+        log.warn('[AuditService] Invalid userId for WEAVER:SELECTION, skipping audit');
+        return;
+    }
+
+    const auditTags: string[] = [];
+    if (inputs.priorityCount === 0) auditTags.push('weaver_starved');
+
+    recordAudit({
+        targetWord: `WEAVER:${scenario.toUpperCase()}`,
+        contextMode: 'WEAVER:SELECTION',
+        userId,
+        payload: {
+            context: { scenario },
+            decision: inputs
+        },
+        auditTags
+    });
+}
+
+/**
+ * Magic Wand 查词审计
+ * 记录用户查词意图
+ */
+export function auditWandLookup(
+    userId: string,
+    word: string,
+    contextId?: string,
+    result?: {
+        vocabId: number;
+        found: boolean;
+    }
+): void {
+    // ✅ User ID 校验 + 词汇长度限制
+    if (!userId || userId.trim() === '') {
+        log.warn('[AuditService] Invalid userId for WAND:LOOKUP, skipping audit');
+        return;
+    }
+
+    // ✅ W2: 限制词汇长度为 100 字符
+    const sanitizedWord = word.trim().slice(0, 100);
+
+    recordAudit({
+        targetWord: sanitizedWord,
+        contextMode: 'WAND:LOOKUP',
+        userId,
+        payload: {
+            context: { contextId },
+            decision: result
+        },
+        // 如果是从 Generate 页面查词，标记为 contextual_lookup
+        auditTags: contextId ? ['contextual_lookup'] : ['direct_lookup']
+    });
+}
+
 // 导出配置状态（用于调试）
 export function getAuditConfig() {
     return { ...AUDIT_CONFIG };
 }
+

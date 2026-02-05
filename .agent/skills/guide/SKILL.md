@@ -19,12 +19,15 @@ This skill acts as an index for the project's documentation. When you are asked 
 | **Product Identity** | `docs/SYSTEM_PROMPT.md` | The Soul of Opus. Anti-Spec, User Persona, Core Principles. **Non-negotiable**. |
 | **Architecture** | `docs/architecture-rules.md` | Tech Stack, Folder Structure, Coding Standards, Anti-Patterns. |
 | **Critical Rules** | `.agent/rules/000-critical-language.md` | Language (Chinese for reasoning), etc. |
+| **L2 PRD (Weaver + Wand)** | `docs/PRD-L2-WEAVER-WAND.md` | Weaver Lab 文章生成 + Magic Wand 即时解析。 |
+| **L2 架构 (Weaver + Wand)** | `docs/dev-notes/weaver-wand-technical-architecture.md` | **完整技术架构**：API、SSE、审计、前端 Hook。 |
 
 ## 🗺️ Feature Map
 
 ### 1. User Interface (UI/UX)
 - **Rules**: `docs/ui-rules.md` (Design tokens, layout principles)
 - **System**: `docs/dev-notes/unified-ui-system-v1.md` (Component library, Shadcn/Aceternity integration)
+- **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**NEW**: Linear 质感、Cache-First 分层)
 - **Slash Command**: Use `/ui-opus` to access UI guidelines quickly.
 
 ### 2. Drill Engine (Core Mechanic)
