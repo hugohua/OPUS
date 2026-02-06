@@ -60,11 +60,36 @@ async function main() {
         fs.writeFileSync(articleVocabPath, JSON.stringify(articleVocabs, null, 2));
         console.log(`✅ [ArticleVocab] 已备份 ${articleVocabs.length} 条记录到 ${articleVocabPath}`);
 
+
         // 6. Backup InvitationCode
         const invitationCodes = await prisma.invitationCode.findMany();
         const invitationCodePath = path.join(backupDir, `invitationCode-${timestamp}.json`);
         fs.writeFileSync(invitationCodePath, JSON.stringify(invitationCodes, null, 2));
         console.log(`✅ [InvitationCode] 已备份 ${invitationCodes.length} 条记录到 ${invitationCodePath}`);
+
+        // 7. Backup SmartContent (High Value)
+        const smartContent = await prisma.smartContent.findMany();
+        const smartContentPath = path.join(backupDir, `smartContent-${timestamp}.json`);
+        fs.writeFileSync(smartContentPath, JSON.stringify(smartContent, null, 2));
+        console.log(`✅ [SmartContent] 已备份 ${smartContent.length} 条记录到 ${smartContentPath}`);
+
+        // 8. Backup Etymology (High Value)
+        const etymology = await prisma.etymology.findMany();
+        const etymologyPath = path.join(backupDir, `etymology-${timestamp}.json`);
+        fs.writeFileSync(etymologyPath, JSON.stringify(etymology, null, 2));
+        console.log(`✅ [Etymology] 已备份 ${etymology.length} 条记录到 ${etymologyPath}`);
+
+        // 9. Backup TTSCache (High Value Metadata)
+        const ttsCache = await prisma.tTSCache.findMany();
+        const ttsCachePath = path.join(backupDir, `ttsCache-${timestamp}.json`);
+        fs.writeFileSync(ttsCachePath, JSON.stringify(ttsCache, null, 2));
+        console.log(`✅ [TTSCache] 已备份 ${ttsCache.length} 条记录到 ${ttsCachePath}`);
+
+        // 10. Backup DrillAudit (Analytics)
+        const drillAudit = await prisma.drillAudit.findMany();
+        const drillAuditPath = path.join(backupDir, `drillAudit-${timestamp}.json`);
+        fs.writeFileSync(drillAuditPath, JSON.stringify(drillAudit, null, 2));
+        console.log(`✅ [DrillAudit] 已备份 ${drillAudit.length} 条记录到 ${drillAuditPath}`);
 
         console.log('\n🎉 所有表备份完成！');
 
