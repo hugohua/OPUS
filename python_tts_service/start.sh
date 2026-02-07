@@ -18,10 +18,10 @@ fi
 # 检查 .env 文件是否存在 (优先检查项目根目录)
 if [ -f ../.env ]; then
     echo "Loading environment from ../.env"
-    export $(grep -v '^#' ../.env | xargs)
+    export $(grep -v '^#' ../.env | sed 's/#.*//' | xargs)
 elif [ -f .env ]; then
     echo "Loading environment from .env"
-    export $(grep -v '^#' .env | xargs)
+    export $(grep -v '^#' .env | sed 's/#.*//' | xargs)
 fi
 
 # 检查 TTS_API_KEY

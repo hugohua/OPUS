@@ -74,10 +74,11 @@ async function fetchWordsForDrill(
     return [...reviewWords.map((r) => r.vocab), ...newWords];
 }
 
+import { createPhrasePayload } from './phrase-drill';
+
 /**
  * Vocab 输入接口 (用于 Drill 构建)
  * 定义 buildSimpleDrill 函数所需的词汇字段
- * 注意：collocations/definitions 使用 unknown 以兼容 Prisma JsonValue
  */
 export interface VocabDrillInput {
     id: number;
@@ -88,86 +89,68 @@ export interface VocabDrillInput {
     definitions?: unknown; // Prisma JsonValue
     phoneticUk?: string | null;
     phoneticUs?: string | null;
+    partOfSpeech?: string | null; // [New]
 }
 
 /**
- * 构建单个简单 Drill
+ * 构建单个简单 Drill (统一兜底至 Phrase Mode)
  */
 export function buildSimpleDrill(vocab: VocabDrillInput, mode: SessionMode): BriefingPayload {
-    // 1. 尝试从 Collocations 获取短语 (Phrase Mode 优先)
-    let sentence = vocab.commonExample;
-    let translation = vocab.definition_cn;
+    // 1. 尝试从 Collocations 获取短语
+    let sentence = "";
+    let translation = "";
 
     // Check for collocations
     if (vocab.collocations && Array.isArray(vocab.collocations) && vocab.collocations.length > 0) {
-        // Strategy: Find the first collocation that has BOTH text and translation
         const candidates = vocab.collocations as any[];
+        // Strategy: Find first collocation with translation
         const bestCollo = candidates.find(c => c.text && c.trans);
 
         if (bestCollo) {
             sentence = bestCollo.text;
             translation = bestCollo.trans;
         } else {
-            // Fallback: Use the first one with text, even if no translation (better than nothing for Phrase mode)
+            // Fallback: Use first text-only
             const textOnly = candidates.find(c => c.text);
             if (textOnly) {
                 sentence = textOnly.text;
-                // translation remains vocab.definition_cn
+                translation = vocab.definition_cn || "";
             }
         }
     }
 
-    // [New] Construct Rich Definition Logic
-    // If definitions object exists, try to combine business_cn and general_cn
-    let richDefinition = vocab.definition_cn; // Default to simple definition
-
-    if (vocab.definitions && typeof vocab.definitions === 'object') {
-        const defs = vocab.definitions as any;
-        const parts = [];
-        if (defs.business_cn) parts.push(defs.business_cn);
-        if (defs.general_cn && defs.general_cn !== defs.business_cn) parts.push(defs.general_cn);
-
-        if (parts.length > 0) {
-            richDefinition = parts.join('; ');
-        }
+    // 2. Fallback to commonExample
+    if (!sentence && vocab.commonExample) {
+        sentence = vocab.commonExample;
+        translation = vocab.definition_cn || "";
     }
 
-    // Fallback if no sentence found
+    // 3. Last Resort: Construct artificial sentence
     if (!sentence) {
-        sentence = `The word "${vocab.word}" means ${vocab.definition_cn || 'unknown'}.`;
+        sentence = `The word "${vocab.word}" means ${vocab.definition_cn || 'something'}.`;
+        translation = vocab.definition_cn || "未知";
     }
 
-    return {
-        meta: {
-            format: 'chat',
-            mode: mode,
-            batch_size: 1,
-            sys_prompt_version: 'deterministic-v1',
-            vocabId: vocab.id,
-            target_word: vocab.word,
+    // [New] Construct Rich Definition Logic for Explanation
+    // Update: createPhrasePayload handles generic info. We just pass what we have.
+    // If we want to strictly follow previous rich definition logic, we might need to pass it?
+    // createPhrasePayload uses generic `vocab.definition_cn`.
+    // Let's stick to generic for unification. Rich Definition logic was mainly for explanation_markdown.
+    // The createPhrasePayload logic is: `**${vocab.word}**: ${vocab.definition_cn}\n\n[${vocab.phoneticUs}] ${vocab.partOfSpeech}`
+    // If we want to preserve "Rich Definition" (Business v. General), we should ideally pass a processed definition string.
+    // But for unification, let's trust the standard definition first.
+
+    return createPhrasePayload(
+        {
+            id: vocab.id,
+            word: vocab.word,
+            definition_cn: vocab.definition_cn || '', // Ensure string
+            phoneticUs: vocab.phoneticUs ?? vocab.phoneticUk ?? null, // Fallback to UK if US missing, ensure null
+            partOfSpeech: vocab.partOfSpeech ?? null // Now supported, ensure null
         },
-        segments: [
-            {
-                type: 'text',
-                content_markdown: sentence,
-                audio_text: sentence,
-                translation_cn: translation ?? undefined, // Keeps sentence translation (e.g., "补充食物供应")
-                phonetic: vocab.phoneticUk ?? vocab.phoneticUs ?? undefined, // [New] Prefer UK, fallback to US
-            },
-            {
-                type: 'interaction',
-                dimension: 'V',
-                task: {
-                    style: 'swipe_card',
-                    question_markdown: `**${vocab.word}** 的意思是？`,
-                    options: [vocab.definition_cn || '我认识', '我不认识'],
-                    answer_key: richDefinition || '我认识',
-                    explanation_markdown: `**${vocab.word}**\n\n${richDefinition || '暂无释义'}`,
-                    explanation: {
-                        definition_cn: richDefinition || '暂无释义', // Uses rich definition (e.g., "补充; 重新装满")
-                    },
-                },
-            },
-        ],
-    };
+        sentence,
+        translation,
+        mode,
+        'deterministic_fallback'
+    );
 }

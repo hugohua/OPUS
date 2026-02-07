@@ -82,6 +82,7 @@ export async function getNextDrillBatch(
                     definitions: candidate.definitions, // [New]
                     commonExample: candidate.commonExample,
                     phoneticUk: candidate.phoneticUk, // [New]
+                    partOfSpeech: candidate.partOfSpeech, // [New]
                     collocations: candidate.collocations // Check collocations
                 }, mode);
                 source = 'deterministic_fallback';

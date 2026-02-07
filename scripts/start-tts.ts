@@ -27,10 +27,17 @@ if (isWindows) {
 
 console.log(`Starting TTS service in ${ttsDir} on ${process.platform}...`);
 
+// 计算 CACHE_DIR 绝对路径，确保 Python 无论从哪里启动都写入正确位置
+const cacheDir = path.join(rootDir, 'public', 'audio');
+
 const child = spawn(cmd, args, {
     cwd: ttsDir,
     stdio: 'inherit',
     shell: true,
+    env: {
+        ...process.env,
+        CACHE_DIR: cacheDir,  // 覆盖/注入 CACHE_DIR
+    },
 });
 
 child.on('exit', (code) => {

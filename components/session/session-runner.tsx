@@ -345,7 +345,13 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     };
 
     const variant = variantMap[mode] || "violet";
-    const isPhraseMode = mode === 'PHRASE';
+
+    // [Fix] Dynamic UI Switching
+    // Check if current card requests 'bubble_select' style (Phrase Mode UI)
+    // This allows Fallback cards in SYNTAX mode to render as Phrase Cards
+    const userInteraction = currentDrill?.segments.find(s => s.type === 'interaction');
+    const interactionStyle = (userInteraction?.task as any)?.style;
+    const isPhraseMode = mode === 'PHRASE' || interactionStyle === 'bubble_select';
 
     // --- Definition Extraction Helper ---
     // Extract real definition from flexible structure

@@ -37,6 +37,7 @@ export interface OMPSCandidate {
     frequency_score: number;
     commonExample: string | null;
     collocations?: any;
+    partOfSpeech?: string | null; // [New] For Fallback Card
     type: 'REVIEW' | 'NEW';
     reviewData?: any;
     confusion_audio?: string[]; // [New] L1 Audio

@@ -386,7 +386,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                                 word: input.candidate.word,
                                 definition_cn: input.candidate.definition_cn,
                                 commonExample: input.candidate.commonExample,
-                                collocations: input.candidate.collocations
+                                collocations: input.candidate.collocations,
+                                partOfSpeech: input.candidate.partOfSpeech // [New]
                             }, 'CONTEXT');
                             generatedDrills.push({ drill: fallbackDrill, candidate: input.candidate, systemPrompt: '', userPrompt: '', provider: 'fallback' });
                         }
@@ -532,6 +533,7 @@ interface DrillCandidate {
     synonyms?: string[];
     scenario?: string;
     commonExample?: string | null;
+    partOfSpeech?: string | null; // [New]
 }
 
 async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Promise<DrillCandidate[]> {
@@ -548,6 +550,7 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         definition_cn: v.definition_cn,
         word_family: v.word_family,
         collocations: v.collocations,
+        partOfSpeech: v.partOfSpeech, // [New]
         type: 'NEW', // Default for manual fetch
         reviewData: null,
         confusion_audio: v.confusion_audio || []
@@ -631,6 +634,7 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         collocations: omps.collocations,
         type: omps.type, // [Smart Dispatch] Pass type
         reviewData: omps.reviewData, // [Smart Dispatch] Pass FSRS data
+        partOfSpeech: omps.partOfSpeech, // [New]
         confusion_audio: (omps as any).confusion_audio // OMPS might need update too
     }));
 
