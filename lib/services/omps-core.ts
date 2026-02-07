@@ -31,6 +31,7 @@ export interface OMPSCandidate {
     word: string;
     definition_cn: string;
     phoneticUk?: string | null;
+    phoneticUs?: string | null; // [New]
     definitions?: VocabDefinitions; // [Fix] Strict typing replacing 'any'
     word_family: any;
     priority_level: number;
@@ -41,6 +42,7 @@ export interface OMPSCandidate {
     type: 'REVIEW' | 'NEW';
     reviewData?: any;
     confusion_audio?: string[]; // [New] L1 Audio
+    etymology?: any; // [New] Source Code
 }
 
 export interface OMPSConfig {
@@ -51,11 +53,15 @@ export interface OMPSConfig {
     posFilter?: string[];  // 词性过滤 (可选)
 }
 
+// --- 默认配置 ---
+// reviewRatio: 0.7 是 FSRS 标准平衡值，优先清理复习债务，防止遗忘雪崩。
+// 注意："救援 (Rescue)" 逻辑由 FSRS 排序隐式处理 (Due 队列按 next_review_at 排序)，
+// 无需人为拆分单独的救援桶，避免破坏 FSRS 的最优调度。
 const DEFAULT_CONFIG: OMPSConfig = {
-    reviewRatio: 0.7,
-    simpleRatio: 0.2,
-    coreRatio: 0.6,
-    hardRatio: 0.2,
+    reviewRatio: 0.7,   // 复习优先 ~70%
+    simpleRatio: 0.2,   // 新词分层: 简单 20%
+    coreRatio: 0.6,     // 新词分层: 核心 60%
+    hardRatio: 0.2,     // 新词分层: 困难 20%
 };
 
 // ============================================
@@ -137,7 +143,7 @@ export async function fetchOMPSCandidates(
         },
         take: reviewQuota,
         orderBy: { next_review_at: 'asc' },
-        include: { vocab: true }
+        include: { vocab: { include: { etymology: true } } }
     });
 
     const reviewsMapped = reviews.map(r => mapToCandidate(r.vocab, 2, 'REVIEW', r));
@@ -302,7 +308,8 @@ export async function fetchNewBucket(
             { is_toeic_core: 'desc' },
             { frequency_score: 'desc' }
         ],
-        take: limit
+        take: limit,
+        include: { etymology: true }
     });
 
     return words.map(w => mapToCandidate(w, 3, 'NEW'));
@@ -364,7 +371,8 @@ async function getInventoryBackedWords(
                 progress: {
                     where: { userId, track: currentTrack },
                     take: 1
-                }
+                },
+                etymology: true
             }
         });
 
@@ -423,6 +431,7 @@ function mapToCandidate(
         word: v.word,
         definition_cn: v.definition_cn,
         phoneticUk: v.phoneticUk, // [New]
+        phoneticUs: v.phoneticUs, // [New]
         definitions: v.definitions, // [New]
         word_family: v.word_family,
         priority_level: priority,
@@ -431,7 +440,8 @@ function mapToCandidate(
         collocations: v.collocations,
         type,
         reviewData,
-        confusion_audio: v.confusion_audio || []
+        confusion_audio: v.confusion_audio || [],
+        etymology: v.etymology // [New]
     };
 }
 

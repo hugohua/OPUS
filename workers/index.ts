@@ -69,7 +69,10 @@ drillWorker.on('stalled', (jobId) => {
 // 启动日志
 log.info('🚀 Opus Drill Worker 已启动');
 log.info({ redis: process.env.REDIS_URL }, 'Redis 连接');
-log.info({ providers: process.env.AI_PROVIDER_ORDER || 'aliyun,openrouter' }, 'LLM Provider 顺序');
+log.info({
+    fast: process.env.AI_FAST_ORDER || 'aliyun,openrouter',
+    smart: process.env.AI_SMART_ORDER || 'openrouter,aliyun'
+}, 'LLM Provider 顺序');
 
 // 优雅关闭
 process.on('SIGTERM', async () => {

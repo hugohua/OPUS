@@ -14,13 +14,21 @@ vi.mock('@/lib/logger', () => ({
             error: vi.fn(),
         }),
     },
+    createLogger: () => ({
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+    })
 }));
 
 // Mock Inventory
-vi.mock('@/lib/inventory', () => ({
+vi.mock('@/lib/core/inventory', () => ({
     inventory: {
         getInventoryCounts: vi.fn().mockResolvedValue({}),
         pushDrill: vi.fn().mockResolvedValue(true),
+        isFull: vi.fn().mockResolvedValue(false),
+        getInventoryStats: vi.fn().mockResolvedValue({}),
+        getCapacity: vi.fn().mockResolvedValue(50),
     },
 }));
 
@@ -52,8 +60,21 @@ vi.mock('@/lib/generators/l0/phrase', () => ({
 }));
 
 // Mock LLM Failover
-vi.mock('../llm-failover', () => ({
-    generateWithFailover: vi.fn().mockResolvedValue({ text: 'MOCKED_LLM_OUTPUT', provider: 'mock-gpt' }),
+// Mock AIService
+vi.mock('@/lib/ai/core', () => ({
+    AIService: {
+        generateObject: vi.fn().mockResolvedValue({
+            object: {
+                drills: [
+                    {
+                        meta: { format: 'chat', target_word: 'mock' },
+                        segments: [],
+                    }
+                ]
+            },
+            provider: 'mock-gpt'
+        }),
+    }
 }));
 
 // Mock AI Utils

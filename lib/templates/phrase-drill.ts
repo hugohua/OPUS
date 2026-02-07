@@ -17,7 +17,8 @@ export function createPhrasePayload(
     phrase: string,
     translation: string,
     mode: 'PHRASE' | string = 'PHRASE',
-    source: string = 'db_collocation'
+    source: string = 'db_collocation',
+    etymology?: any // [New]
 ): BriefingPayload {
     // 1. Highlight Logic (Simple Regex)
     // Replace the target word (case-insensitive) with **word**
@@ -34,13 +35,15 @@ export function createPhrasePayload(
             sys_prompt_version: 'deterministic-v1-phrase',
             vocabId: vocab.id,
             target_word: vocab.word,
-            source: source
+            source: source,
+            etymology: etymology // [New]
         },
         segments: [
             {
                 type: 'text',
                 content_markdown: questionMarkdown, // The Question (Front)
-                translation_cn: translation         // The Answer (Back)
+                translation_cn: translation,        // The Answer (Back)
+                phonetic: vocab.phoneticUs || undefined // [Fix] Add phonetic field
             },
             {
                 type: 'interaction',
@@ -80,5 +83,5 @@ export function buildPhraseDrill(vocab: Vocab): BriefingPayload | null {
     }
 
     // 2. Delegate to generic builder
-    return createPhrasePayload(vocab, phrase, translation, 'PHRASE', 'db_collocation');
+    return createPhrasePayload(vocab, phrase, translation, 'PHRASE', 'db_collocation', (vocab as any).etymology);
 }

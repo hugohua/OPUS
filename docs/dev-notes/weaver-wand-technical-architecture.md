@@ -462,9 +462,8 @@ void db.drillAudit?.create({...}).catch(err => {...}); // Fire-and-Forget
 
 ```env
 # OpenAI / DashScope
-DASHSCOPE_API_KEY=sk-xxx
-DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_MODEL_NAME=qwen-plus
+   - **Model**: `AI_MODEL_NAME` (Global Config)
+   - **Protocol**: OpenAI Compatible (SSE Stream)
 
 # 审计系统
 AUDIT_ENABLED=true

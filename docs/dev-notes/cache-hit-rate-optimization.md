@@ -442,6 +442,102 @@ Aliyun (Primary) → OpenRouter (Fallback) → 任务重试
 
 ---
 
+## 故障排查指南
+
+### 问题 1: 全量兜底数据 (100% Fallback)
+
+**现象**: 
+- 用户访问 `/dashboard/session/SYNTAX` 等页面时，所有卡片都是 `deterministic_fallback` 来源
+- 缓存命中率 `hitRate: 0%`
+- 审计报告显示大量 `SYNTAX:FALLBACK` 记录
+
+**诊断流程**:
+
+```bash
+# 1. 检查 Worker 是否运行
+ps aux | grep "workers/index.ts"
+# 预期: 应该有进程运行
+
+# 2. 检查队列状态
+npx tsx scripts/inspect-queue-v2.ts
+# 预期输出:
+# - waiting: 0-5 (正常)
+# - failed: 0 (正常)
+# - completed: 增长中
+
+# 3. 检查 Redis 库存
+redis-cli
+KEYS user:*:mode:SYNTAX:vocab:*:drills
+LLEN user:{userId}:mode:SYNTAX:vocab:{vocabId}:drills
+```
+
+**常见原因**:
+
+| 原因 | 症状 | 解决方案 |
+|------|------|----------|
+| Worker 未启动 | `ps` 无进程 | `npm run dev:worker` 或 `npm run dev:all` |
+| Worker 进程卡住 | 队列 `waiting` 持续积压 | 重启 Worker: `pkill -f "workers/index.ts" && npm run dev:worker` |
+| 队列损坏 | `failed` 大量任务 | 清空队列: `npx tsx scripts/clear-queue.ts` |
+| Redis 连接失败 | Worker 日志报错 | 检查 `.env` 中 `REDIS_URL` 配置 |
+
+**快速修复脚本**:
+
+```bash
+#!/bin/bash
+# scripts/fix-worker-queue.sh
+
+echo "🔍 诊断 Worker 队列状态..."
+
+# 1. 停止旧 Worker
+pkill -f "tsx.*workers/index.ts"
+
+# 2. 清空队列
+npx tsx scripts/clear-queue.ts
+
+# 3. 重启 Worker
+npm run dev:worker > worker.log 2>&1 &
+
+echo "✅ Worker 已重启。请等待 10 秒后访问应用。"
+sleep 10
+
+# 4. 触发一次生成任务验证
+npx tsx -e "
+import { enqueueDrillGeneration } from '@/lib/queue/inventory-queue';
+enqueueDrillGeneration('test-user', 'SYNTAX', 'realtime').then(() => {
+  console.log('✅ 测试任务已入队');
+  process.exit(0);
+});
+"
+```
+
+**预防措施**:
+
+1. 在 `package.json` 中确保 `dev:all` 正确配置:
+   ```json
+   {
+     "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:worker\""
+   }
+   ```
+
+2. 添加 Worker 健康检查（可选）:
+   ```typescript
+   // workers/index.ts
+   setInterval(async () => {
+     const counts = await inventoryQueue.getJobCounts();
+     if (counts.waiting > 50) {
+       log.warn({ counts }, '⚠️ 队列积压过多');
+     }
+   }, 60000); // 每分钟检查一次
+   ```
+
+3. 使用 PM2 管理 Worker（生产环境）:
+   ```bash
+   pm2 start "npx tsx workers/index.ts" --name opus-worker
+   pm2 logs opus-worker
+   ```
+
+---
+
 ## 总结
 
 Opus Drill 系统通过以下机制实现高命中率和零等待体验：

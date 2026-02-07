@@ -9,11 +9,27 @@
 
 核心逻辑位于 `actions/get-next-drill.ts`。它充当 PRD 中规定的“智能后端”。
 
-### 2.1 "30/50/20" 协议 (候选词选择)
-我们实施了一个严格的漏斗模型，优先考虑“生存 (Survival)”（救援）而非“习得 (Acquisition)”（新内容）：
-1.  **救援 (Rescue, 30%)**: `dim_v_score < 30` 的单词（句法薄弱）。
-2.  **复习 (Review, 50%)**: FSRS 判定到期的单词 (`next_review_at <= NOW`)。
-3.  **新词 (New, 20%)**: 高频词，通过词性 (POS) 过滤。
+### 2.1 核心调度策略 (FSRS-Native)
+
+> **[UPDATE] v2.0 协议 (FSRS-First Inventory Protocol)**  
+> 原 "30/50/20" 协议已废弃，统一采用基于 FSRS 的库存优先策略。
+
+调度器不再人为区分"救援"与"复习"，而是统一视为"库存复习"：
+
+1.  **复习 (Review, Target ~70%)**:
+    - **来源**: FSRS `Due` Queue (即 `next_review_at <= now`)
+    - **排序**: 按 `next_review_at` 升序（逾期越久越优先）
+    - *注：FSRS 算法自动涵盖了原 "Rescue (救援)" 的场景*
+
+2.  **新词 (New, Target ~30%)**:
+    - **来源**: `New` Queue (从未学习过的词)
+    - **逻辑**: 当复习队列不足以填满 Session 时，或强制插入新词以保持进度
+    - **分层采样**: Simple 20% / Core 60% / Hard 20%
+
+#### 废弃指标
+- ~~`dim_v_score`~~: 已移除。掌握度统一由 FSRS `stability` (S) 和 `difficulty` (D) 决定。
+
+> 参考实现: `lib/services/omps-core.ts` 的 `fetchOMPSCandidates` 函数
 
 ### 2.2 "1+N" 上下文规则
 为了确保训练有意义，每个目标词都丰富了 **上下文单词 (Context Words)**：

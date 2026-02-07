@@ -26,9 +26,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             {/* Left: Welcome & Slogan */}
             <div>
                 <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                    Welcome back, <span className="text-violet-600 dark:text-violet-400">{displayName}</span>
+                    欢迎回来，<span className="text-violet-600 dark:text-violet-400">{displayName}</span>
                 </h1>
-                <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Let's keep the momentum.</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">继续保持进步。</p>
             </div>
 
             {/* Right: Actions */}

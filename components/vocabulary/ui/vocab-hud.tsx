@@ -28,14 +28,14 @@ export function VocabHud({ stats, totalCount }: VocabHudProps) {
         <header className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 z-20">
             <div className="flex items-end justify-between mb-4">
                 <div>
-                    <h1 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">Vocabulary Inventory</h1>
+                    <h1 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">词库</h1>
                     <p className="text-xs text-zinc-500 font-mono mt-0.5">TOEIC Core • FSRS v4.5</p>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-mono font-bold text-emerald-500">
                         {stats.mastered.toLocaleString()}
                     </div>
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Mastered Items</div>
+                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">已掌握</div>
                 </div>
             </div>
 

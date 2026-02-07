@@ -8,15 +8,28 @@ import { cn } from "@/lib/utils";
 interface EtymologyCardProps {
     etymology: Etymology | null;
     className?: string;
+    variant?: 'default' | 'minimal'; // [New]
 }
 
-export function EtymologyCard({ etymology, className }: EtymologyCardProps) {
+export function EtymologyCard({ etymology, className, variant = 'default' }: EtymologyCardProps) {
     if (!etymology || etymology.mode === "NONE") return null;
 
     const data = etymology.data as any;
     const hasVisuals = Array.isArray(data.roots) && data.roots.length > 0;
 
-    // Vercel / Linear Doc Function Style
+    // Minimal Mode: Show ONLY the logic line
+    if (variant === 'minimal') {
+        return (
+            <div className={cn("w-full pl-3 border-l-2 border-indigo-300 bg-indigo-50/50 py-2 pr-2 rounded-r select-text", className)}>
+                <p className="font-mono text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold mr-2">// Logic:</span>
+                    {etymology.memory_hook || data.logic_cn}
+                </p>
+            </div>
+        );
+    }
+
+    // Default Full Mode
     return (
         <section className={cn("px-6 py-2", className)}>
             {/* Header */}

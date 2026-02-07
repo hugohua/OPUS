@@ -146,9 +146,9 @@ export function GeneratorStreamView() {
             await fetch('/api/admin/history', { method: 'DELETE' });
             setQueue([]);
             setSelectedId(null);
-            toast.success('History buffer cleared');
+            toast.success('历史缓冲已清空');
         } catch (e) {
-            toast.error('Failed to clear history');
+            toast.error('清空历史失败');
         }
     };
 
@@ -160,179 +160,77 @@ export function GeneratorStreamView() {
     };
 
     const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard");
+        // Modern Clipboard API (HTTPS / localhost)
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    toast.success("已复制到剪贴板");
+                })
+                .catch((err) => {
+                    console.error('Clipboard API failed', err);
+                    fallbackCopy(text);
+                });
+        } else {
+            // Fallback for non-HTTPS (e.g., http://192.168.x.x)
+            fallbackCopy(text);
+        }
     };
 
-    // Component to render details (reused in Split View and Drawer)
-    const DetailContent = ({ itemId }: { itemId: string | null }) => {
-        const activeItem = queue.find(q => q.id === itemId) || queue[0];
-        if (!activeItem) return (
-            <div className="flex-1 p-8 flex items-center justify-center text-muted-foreground bg-muted/20">
-                Waiting for stream data...
-            </div>
-        );
+    const fallbackCopy = (text: string) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
 
-        // Safe access to payload
-        // Drill payload structure: { meta: {}, segments: [] }
-        const segments = activeItem.payload?.segments || [];
-        const interaction = segments.find((s: any) => s.type === 'interaction');
-        const meta = activeItem.payload?.meta || {};
+        try {
+            const success = document.execCommand('copy');
+            if (success) {
+                toast.success("已复制到剪贴板");
+            } else {
+                toast.error("复制失败");
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+            toast.error("复制失败");
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    };
 
-        return (
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col md:flex-row gap-4 md:gap-8 bg-background/50">
 
-                {/* Column 1: Input Context */}
-                <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[300px]">
-                    <div
-                        className="flex items-center justify-between cursor-pointer md:cursor-default"
-                        onClick={() => setIsInputExpanded(!isInputExpanded)}
-                    >
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                            <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">Input Context</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopy(JSON.stringify(meta, null, 2) + "\n\n" + (activeItem.debug?.systemPrompt || "") + "\n\n" + (activeItem.debug?.userPrompt || ""));
-                                }}
-                                className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-white"
-                                title="Copy Content"
-                            >
-                                <Copy className="w-3 h-3" />
-                            </button>
-                            <div className="md:hidden text-[10px] items-center gap-1 text-muted-foreground flex">
-                                {isInputExpanded ? 'Collapse' : 'Expand'}
-                                {isInputExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={cn(
-                        "w-full bg-muted/50 rounded-xl border p-4 font-mono text-xs text-foreground leading-relaxed overflow-x-auto transition-all duration-300 ease-in-out",
-                        !isInputExpanded ? "max-h-[120px] md:max-h-none overflow-hidden relative" : "max-h-none opacity-100"
-                    )}>
-                        {!isInputExpanded && (
-                            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none md:hidden"></div>
-                        )}
-
-                        <div className="text-muted-foreground">// Meta</div>
-                        <div className="pl-4"><span className="text-violet-500">"id"</span>: <span className="text-emerald-500">"{activeItem.id}"</span></div>
-                        <br />
-                        <div className="text-muted-foreground">// Payload Meta</div>
-                        <pre className="text-muted-foreground/80">{JSON.stringify(meta, null, 2)}</pre>
-
-                        {activeItem.debug && (
-                            <>
-                                <br />
-                                <div className="text-muted-foreground">// System Prompt</div>
-                                <pre className="text-amber-500/80 whitespace-pre-wrap">{activeItem.debug.systemPrompt}</pre>
-                                <br />
-                                <div className="text-muted-foreground">// User Prompt</div>
-                                <pre className="text-sky-500/80 whitespace-pre-wrap">{activeItem.debug.userPrompt}</pre>
-
-                                {activeItem.debug.model && (
-                                    <>
-                                        <br />
-                                        <div className="text-muted-foreground">// Model</div>
-                                        <pre className="text-purple-500 font-bold">{activeItem.debug.model}</pre>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                {/* Column 2: Rendered Output (Light Mode Preview) */}
-                <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[350px]">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">Rendered Output</span>
-                        </div>
-                        <span className="text-[10px] font-mono text-muted-foreground">Model: {activeItem.debug?.model || 'Unknown'}</span>
-                    </div>
-
-                    {/* The Preview Card - Light Mode Only */}
-                    <div className="w-full bg-zinc-50 text-zinc-900 rounded-2xl p-6 shadow-2xl relative">
-                        <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-400 border border-zinc-200 px-1 rounded">PREVIEW</div>
-
-                        {interaction ? (
-                            <>
-                                <h3 className="font-serif text-xl leading-relaxed text-center mt-4">
-                                    {/* Simplified rendering of markdown */}
-                                    {interaction.task?.question_markdown || "No question content"}
-                                </h3>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
-                                    {interaction.task?.options?.map((opt: any) => (
-                                        <div key={typeof opt === 'string' ? opt : opt.text} className="p-3 rounded-xl border border-zinc-200 bg-white text-center text-sm">
-                                            {typeof opt === 'string' ? opt : opt.text}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="mt-6 pt-4 border-t border-zinc-200">
-                                    <p className="text-[10px] font-mono text-zinc-500 uppercase">Explanation</p>
-                                    <p className="text-xs text-zinc-600 mt-1">
-                                        {interaction.task?.explanation_markdown || "No explanation provided."}
-                                    </p>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-10 opacity-50 font-mono text-xs">
-                                Raw payload view (No interaction found)
-                                <br />
-                                {JSON.stringify(segments.slice(0, 1))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Audit Action */}
-                    <div className="mt-4 pb-8 md:pb-0">
-                        <AuditButton
-                            target={activeItem.target}
-                            context={activeItem.context}
-                            payload={activeItem.payload}
-                        />
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
 
             {/* Header */}
             <header className="h-16 shrink-0 border-b flex items-center justify-between px-6 bg-background/30 backdrop-blur">
-                <h2 className="text-lg font-bold text-foreground">Real-time Stream</h2>
+                <h2 className="text-lg font-bold text-foreground">实时数据流</h2>
                 <div className="flex items-center gap-4">
-                    <span className="text-xs font-mono text-muted-foreground">Queue: {queue.length} items</span>
+                    <span className="text-xs font-mono text-muted-foreground">队列: {queue.length} 条</span>
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <button
                                 className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors"
-                                title="Clear History"
+                                title="清空历史"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Clear History Buffer?</AlertDialogTitle>
+                                <AlertDialogTitle>清空历史缓冲？</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will delete the recent drill history from the Redis buffer.
-                                    This action cannot be undone.
+                                    这将删除 Redis 缓冲区中最近的 Drill 历史记录。
+                                    此操作无法撤销。
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>取消</AlertDialogCancel>
                                 <AlertDialogAction onClick={handleClear} className="bg-rose-600 hover:bg-rose-700 text-white">
-                                    Clear History
+                                    清空历史
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -348,7 +246,7 @@ export function GeneratorStreamView() {
                         )}
                     >
                         {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-                        {isPaused ? "Resume Stream" : "Pause Stream"}
+                        {isPaused ? "恢复推送" : "暂停推送"}
                     </button>
                 </div>
             </header>
@@ -383,7 +281,7 @@ export function GeneratorStreamView() {
                                 "text-[10px]",
                                 item.status === 'error' ? "text-rose-400" : "text-muted-foreground"
                             )}>
-                                {item.status === 'error' ? 'JSON Parse Error' : `Context: ${item.context}`}
+                                {item.status === 'error' ? 'JSON 解析错误' : `上下文: ${item.context}`}
                             </div>
                         </div>
                     ))}
@@ -391,7 +289,12 @@ export function GeneratorStreamView() {
 
                 {/* Desktop: Side-by-Side Details */}
                 {isDesktop && (
-                    <DetailContent itemId={selectedId} />
+                    <DetailPanel
+                        item={queue.find(q => q.id === selectedId) || queue[0]}
+                        isInputExpanded={isInputExpanded}
+                        setIsInputExpanded={setIsInputExpanded}
+                        onCopy={handleCopy}
+                    />
                 )}
 
                 {/* Mobile: Drawer Details */}
@@ -399,15 +302,170 @@ export function GeneratorStreamView() {
                     <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                         <DrawerContent className="h-[90vh]">
                             <DrawerHeader className="border-b">
-                                <DrawerTitle>Drills Detail</DrawerTitle>
+                                <DrawerTitle>Drill 详情</DrawerTitle>
                                 <DrawerDescription className="font-mono text-xs">
                                     #{selectedId}
                                 </DrawerDescription>
                             </DrawerHeader>
-                            <DetailContent itemId={selectedId} />
+                            <DetailPanel
+                                item={queue.find(q => q.id === selectedId) || queue[0]}
+                                isInputExpanded={isInputExpanded}
+                                setIsInputExpanded={setIsInputExpanded}
+                                onCopy={handleCopy}
+                            />
                         </DrawerContent>
                     </Drawer>
                 )}
+            </div>
+        </div>
+    );
+}
+
+// Extracted Component to prevent remounting
+function DetailPanel({
+    item,
+    isInputExpanded,
+    setIsInputExpanded,
+    onCopy
+}: {
+    item: DrillItem | undefined;
+    isInputExpanded: boolean;
+    setIsInputExpanded: (v: boolean) => void;
+    onCopy: (text: string) => void;
+}) {
+    if (!item) return (
+        <div className="flex-1 p-8 flex items-center justify-center text-muted-foreground bg-muted/20">
+            等待流数据...
+        </div>
+    );
+
+    // Safe access to payload
+    const segments = item.payload?.segments || [];
+    const interaction = segments.find((s: any) => s.type === 'interaction');
+    const meta = item.payload?.meta || {};
+
+    return (
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col md:flex-row gap-4 md:gap-8 bg-background/50">
+
+            {/* Column 1: Input Context */}
+            <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[300px]">
+                <div
+                    className="flex items-center justify-between cursor-pointer md:cursor-default"
+                    onClick={() => setIsInputExpanded(!isInputExpanded)}
+                >
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">输入上下文</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCopy(JSON.stringify(meta, null, 2) + "\n\n" + (item.debug?.systemPrompt || "") + "\n\n" + (item.debug?.userPrompt || ""));
+                            }}
+                            className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-white"
+                            title="复制内容"
+                        >
+                            <Copy className="w-3 h-3" />
+                        </button>
+                        <div className="md:hidden text-[10px] items-center gap-1 text-muted-foreground flex">
+                            {isInputExpanded ? '收起' : '展开'}
+                            {isInputExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </div>
+                    </div>
+                </div>
+
+                <div className={cn(
+                    "w-full bg-muted/50 rounded-xl border p-4 font-mono text-xs text-foreground leading-relaxed overflow-x-auto transition-all duration-300 ease-in-out",
+                    !isInputExpanded
+                        ? "max-h-[120px] md:max-h-[500px] overflow-hidden md:overflow-auto relative"
+                        : "max-h-none opacity-100 overflow-visible"
+                )}>
+                    {!isInputExpanded && (
+                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none md:hidden"></div>
+                    )}
+
+                    <div className="text-muted-foreground">// Meta</div>
+                    <div className="pl-4"><span className="text-violet-500">"id"</span>: <span className="text-emerald-500">"{item.id}"</span></div>
+                    <br />
+                    <div className="text-muted-foreground">// Payload Meta</div>
+                    <pre className="text-muted-foreground/80">{JSON.stringify(meta, null, 2)}</pre>
+
+                    {item.debug && (
+                        <>
+                            <br />
+                            <div className="text-muted-foreground">// System Prompt</div>
+                            <pre className="text-amber-500/80 whitespace-pre-wrap">{item.debug.systemPrompt}</pre>
+                            <br />
+                            <div className="text-muted-foreground">// User Prompt</div>
+                            <pre className="text-sky-500/80 whitespace-pre-wrap">{item.debug.userPrompt}</pre>
+
+                            {item.debug.model && (
+                                <>
+                                    <br />
+                                    <div className="text-muted-foreground">// Model</div>
+                                    <pre className="text-purple-500 font-bold">{item.debug.model}</pre>
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Column 2: Rendered Output (Light Mode Preview) */}
+            <div className="flex-1 flex flex-col gap-4 min-w-0 md:min-w-[350px]">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">渲染输出</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-muted-foreground">模型: {item.debug?.model || '未知'}</span>
+                </div>
+
+                {/* The Preview Card - Light Mode Only */}
+                <div className="w-full bg-zinc-50 text-zinc-900 rounded-2xl p-6 shadow-2xl relative">
+                    <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-400 border border-zinc-200 px-1 rounded">预览</div>
+
+                    {interaction ? (
+                        <>
+                            <h3 className="font-serif text-xl leading-relaxed text-center mt-4">
+                                {/* 简化渲染 markdown */}
+                                {interaction.task?.question_markdown || "无问题内容"}
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+                                {interaction.task?.options?.map((opt: any) => (
+                                    <div key={typeof opt === 'string' ? opt : opt.text} className="p-3 rounded-xl border border-zinc-200 bg-white text-center text-sm">
+                                        {typeof opt === 'string' ? opt : opt.text}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-zinc-200">
+                                <p className="text-[10px] font-mono text-zinc-500 uppercase">解释</p>
+                                <p className="text-xs text-zinc-600 mt-1">
+                                    {interaction.task?.explanation_markdown || "暂无解释"}
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-10 opacity-50 font-mono text-xs">
+                            原始数据视图 (无交互内容)
+                            <br />
+                            {JSON.stringify(segments.slice(0, 1))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Audit Action */}
+                <div className="mt-4 pb-8 md:pb-0">
+                    <AuditButton
+                        key={item.id}
+                        target={item.target}
+                        context={item.context}
+                        payload={item.payload}
+                    />
+                </div>
             </div>
         </div>
     );

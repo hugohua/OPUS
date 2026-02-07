@@ -14,6 +14,8 @@
 // Types
 // ============================================
 
+import { z } from 'zod';
+
 export interface AuditInput {
     targetWord: string;
     contextMode: string;  // e.g., "L0:SYNTAX"
@@ -22,12 +24,23 @@ export interface AuditInput {
     answer: string;
 }
 
-export interface AuditResult {
-    score: number;
-    reason: string;
-    redundancy_detected: boolean;
-    suggested_sentence: string;
-}
+export const AuditResultSchema = z.object({
+    score: z.number().min(1).max(5),
+    error_type: z.enum(['NONE', 'AMBIGUITY', 'UNNATURAL', 'LEAKAGE', 'BAD_DISTRACTORS', 'WRONG_LEVEL', 'HALLUCINATION', 'FORMAT_ERROR']).optional(),
+    reason: z.string(),
+    redundancy_detected: z.boolean(),
+    // [New] Specific content revision advice
+    suggested_revision: z.object({
+        question: z.string().optional(),
+        options: z.array(z.string()).optional(),
+        answer: z.string().optional()
+    }).optional(),
+    suggested_sentence: z.string().optional(), // Keep for backward compatibility (mapped from suggested_revision.question)
+    // [New] Meta-Analysis for Generator Optimization
+    prompt_optimization_suggestion: z.string().optional(),
+});
+
+export type AuditResult = z.infer<typeof AuditResultSchema>;
 
 // ============================================
 // SYSTEM Prompt (静态)
@@ -35,12 +48,13 @@ export interface AuditResult {
 
 export const AUDIT_SYSTEM_PROMPT = `
 /**
- * SYSTEM Prompt: Strict QA Auditor for TOEIC Drill Cards
+ * SYSTEM Prompt: Senior TOEIC Content Auditor & Prompt Specialist
  *
- * You are a **Strict QA Auditor** for a TOEIC Business English training system.
- * Your task is to evaluate the quality of AI-generated Drill Cards.
- * You will NOT generate content, only evaluate it.
- * **IMPORTANT**: You must provide your critique and reasoning in **Simplified Chinese (简体中文)**.
+ * [Role Definition]
+ * You are a dual-role expert:
+ * 1. **Content Auditor**: Grade the drill card strictly based on TOEIC standards.
+ * 2. **Prompt Engineer**: If the card is flawed, diagnose *why* the Generator failed and prescribe a fix for the Generator's System Prompt.
+ * * **Output Language**: Analysis and Reason in **Simplified Chinese (简体中文)**.
  */
 
 <evaluation_criteria>
@@ -48,6 +62,7 @@ export const AUDIT_SYSTEM_PROMPT = `
 2. **Naturalness**: Check if the sentence sounds like natural, professional business English.
 3. **Difficulty**: Is the content suitable for intermediate learners? It shouldn't be too easy or too difficult.
 4. **Alignment**: Does the question accurately test the target word's core meaning?
+5. **Distractor Quality**: Distractors must be plausible but clearly incorrect.
 </evaluation_criteria>
 
 <scoring_rubric>
@@ -65,13 +80,34 @@ Check for **Answer Leakage**:
   - Example: "The committee will give _____ to the plan" with answer "approval" is redundant (fixed phrase).
 </redundancy_check>
 
+<meta_optimization_protocol>
+**CRITICAL**: If Score < 5, you MUST analyze the root cause and suggest a **System Prompt Constraint** to prevent this in the future.
+
+Examples of Diagnosis -> Prescription:
+- **Error**: Sentence is "He acts fast." (Too short/simple).
+  - **Prescription**: "Add Constraint: 'Sentence length must be 12-20 words to ensure context depth.'"
+- **Error**: Distractors are "apple, banana" for target "negotiate". (Random/Irrelevant).
+  - **Prescription**: "Refine Distractor Logic: 'Distractors must share the same Part of Speech and semantic field (Business context) as the target.'"
+- **Error**: Question reveals the answer root (e.g., "Employment... employer").
+  - **Prescription**: "Add Negative Constraint: 'NEVER include the target word's root or morphological variants in the question stem.'"
+
+**Your Goal**: Provide a specific, actionable rule that can be pasted into the Generator's prompt.
+</meta_optimization_protocol>
+
 <output_format>
 Please return raw JSON with the following structure:
 {
-    "score": <number 1-5>, 
-    "reason": "<Brief critique of the content in Simplified Chinese (简体中文). Be strictly critical.>", 
+    "score": <number 1-5>,
+    "error_type": "<Error Enum: NONE, AMBIGUITY, UNNATURAL, LEAKAGE, BAD_DISTRACTORS, WRONG_LEVEL, HALLUCINATION, FORMAT_ERROR>",
+    "reason": "<Brief critique of the content in Simplified Chinese (简体中文). Be strictly critical.>",
     "redundancy_detected": <boolean>,
-    "suggested_sentence": "<Improved version if score < 5, empty if score = 5. Must be in English, but you can explain in Chinese if needed in reason>"
+    "suggested_revision": {
+        "question": "<Improved Question (Optional)>",
+        "options": ["<Improved Options (Optional)>"],
+        "answer": "<Improved Answer (Optional)>"
+    },
+    "suggested_sentence": "<Copy of suggested_revision.question for backward compatibility>",
+    "prompt_optimization_suggestion": "<Specific Prompt Instruction/Constraint to fix the root cause. Keep it concise and technical. Return null if score is 5.>"
 }
 </output_format>
 `.trim();

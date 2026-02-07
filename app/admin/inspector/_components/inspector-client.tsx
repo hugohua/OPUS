@@ -15,7 +15,7 @@ export function InspectorClient() {
             {/* Header / Tabs */}
             <div className="h-14 border-b border-border bg-background/95 flex items-center px-6 gap-6 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex items-center gap-2 mr-8">
-                    <span className="font-mono font-bold text-violet-500">GOD VIEW</span>
+                    <span className="font-mono font-bold text-violet-500">神之眼</span>
                 </div>
 
                 <button
@@ -27,7 +27,7 @@ export function InspectorClient() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    生成器调试 (Generator)
+                    生成器调试
                 </button>
 
                 <button
@@ -39,7 +39,7 @@ export function InspectorClient() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    内容模拟 (Content Sim)
+                    内容模拟
                 </button>
 
                 <button
@@ -51,7 +51,7 @@ export function InspectorClient() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    全景审计 (Audit)
+                    全景审计
                 </button>
             </div>
 

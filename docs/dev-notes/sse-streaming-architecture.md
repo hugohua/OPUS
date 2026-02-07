@@ -53,7 +53,11 @@ export async function handleOpenAIStream(
 **Options**:
 ```typescript
 interface HandleOpenAIStreamOptions {
-    model?: string;              // 默认: QWEN_MODEL_NAME || "qwen-plus"
+    // **Unified Config**:
+    //   - `OPENAI_API_KEY`: 统一 API Key
+    //   - `OPENAI_BASE_URL`: 统一 Base URL
+    //   - `AI_MODEL_NAME`: 默认模型 (e.g. qwen-full)
+    model?: string;              // 默认: AI_MODEL_NAME || "gpt-4o"
     temperature?: number;        // 默认: 0.7
     errorContext?: string;       // 日志前缀，默认: "OpenAI Stream"
     onContent?: (chunk: string) => void;     // 每个 chunk 回调

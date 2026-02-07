@@ -18,6 +18,7 @@ import {
 } from '@/lib/queue';
 import { SessionMode } from '@/types/briefing';
 import { ActionState } from '@/types/action';
+import { auditInventoryEvent } from '@/lib/services/audit-service';
 import { revalidatePath } from 'next/cache';
 import { getCacheCount, CACHE_LIMIT_MAP } from '@/lib/drill-cache';
 
@@ -171,6 +172,14 @@ export async function handleTriggerGeneration(
 
         const jobs = await enqueueDrillGeneration(userId, mode, 'realtime');
         revalidatePath('/admin/queue');
+
+        // [Audit] 记录手动触发事件
+        auditInventoryEvent(userId, 'TRIGGER', mode, {
+            currentCount,
+            capacity: await inventory.getCapacity(mode),
+            source: 'manual'
+        });
+
         return {
             status: 'success',
             message: `${jobs.length} 个任务已入队 (当前库存: ${currentCount}题)`,

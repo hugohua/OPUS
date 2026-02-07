@@ -204,7 +204,7 @@ export function VocabularyCard({
                     className="flex items-center gap-2 text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-500 dark:hover:text-emerald-400"
                 >
                     <CheckCircle className="h-3.5 w-3.5" />
-                    <span>Mastered</span>
+                    <span>已掌握</span>
                 </Button>
             </CardFooter>
         </Card>

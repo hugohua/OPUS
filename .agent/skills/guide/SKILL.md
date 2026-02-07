@@ -28,6 +28,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Rules**: `docs/ui-rules.md` (Design tokens, layout principles)
 - **System**: `docs/dev-notes/unified-ui-system-v1.md` (Component library, Shadcn/Aceternity integration)
 - **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**NEW**: Linear 质感、Cache-First 分层)
+- **中文化术语规范**: `docs/dev-notes/ui-localization-terminology.md` (**NEW**: 全站翻译一致性标准)
 - **Slash Command**: Use `/ui-opus` to access UI guidelines quickly.
 
 ### 2. Drill Engine (Core Mechanic)
@@ -45,6 +46,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Phrase Mode**: `docs/dev-notes/technical-spec-phrase-mode.md` (Phrase Blitz specific specs)
 
 ### 4. Infrastructure & Testing
+- **Unified AI Architecture**: `docs/dev-notes/ai-service-architecture.md` (**Core**: `lib/ai/core.ts` Facade, Failover Strategy)
 - **Testing Protocol**: `.agent/rules/testing-protocol.md` (**Spec-First 宪法**：Hurl + Vitest 混合策略)
 - **Testing**: `docs/dev-notes/TESTING.md` (Vitest setup, mocking rules)
 - **Test Overview**: `docs/dev-notes/test-architecture-overview.md` (**测试全景图**：覆盖地图 + Gap 分析)

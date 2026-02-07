@@ -17,31 +17,37 @@
 
 ---
 
-## 2. 架构设计：极速通道 ("The Fast Path")
+## 2. 架构设计：统一缓存路径 (Unified Cache-First)
 
-为了确保零等待性能，我们在分发层实现了一个架构级的分流。
+> **[UPDATE] V2.0**: 原 "Fast Path" 设计已废弃，PHRASE 与其他 Mode 统一走 Redis 缓存。
 
 ### 2.1 分发逻辑 (`actions/get-next-drill.ts`)
 
-当 Mode 为 `PHRASE` 时，请求将绕过标准的 Queue/Worker 流程，直接走 Fast Path：
+所有 Mode 统一使用 **Cache-First + DB Fallback** 策略：
 
 ```mermaid
 graph TD
-    User-->|Req: Mode=PHRASE| Dispatcher
-    Dispatcher-->|Check Mode| Decision{Is Phrase?}
-    Decision-->|Yes| DB[(Postgres: Vocab)]
-    Decision-->|No| Redis[(Redis: Inventory)]
-    
-    DB-->|Fetch Collocation| TemplateEngine
-    TemplateEngine-->|Construct JSON| Client
+    User-->|Req: Any Mode| OMPS[OMPS 选词引擎]
+    OMPS-->|候选词| Cache{Redis Cache}
+    Cache-->|Hit| Client[返回 Drill]
+    Cache-->|Miss| Fallback[确定性兜底]
+    Fallback-->|DB Collocations| Client
+    Cache-->|Miss Trigger| Worker[后台补货 Job]
 ```
 
-### 2.2 模版引擎 (`lib/templates/phrase-drill.ts`)
-- **输入**: `Vocab` 对象。
+### 2.2 Worker 内的 DB-First 策略 (`drill-processor.ts`)
+
+PHRASE 模式在 **Worker 生成阶段** 优先使用数据库搭配词：
+
+1. 尝试从 `vocab.collocations` 构建 Drill (零 LLM 成本)
+2. 若无搭配，Fallback 到 LLM 生成
+
+### 2.3 模版引擎 (`lib/templates/phrase-drill.ts`)
+- **输入**: `Vocab` 对象
 - **逻辑**:
-  1. 优先提取 `vocab.collocations` 中的第一个有效搭配。
-  2. 若无搭配，降级使用 `commonExample`。
-  3. 应用 Regex 将目标词包裹在 markdown bold `**word**` 中以高亮。
+  1. 优先提取 `vocab.collocations` 中的第一个有效搭配
+  2. 若无搭配，降级使用 `commonExample`
+  3. 应用 Regex 将目标词包裹在 markdown bold `**word**` 中以高亮
 - **输出**: 标准的多态 `BriefingPayload`。
 
 ---

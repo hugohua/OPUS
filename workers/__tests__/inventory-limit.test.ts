@@ -12,7 +12,7 @@ vi.mock('@/lib/db', () => ({
     }
 }));
 
-vi.mock('@/lib/inventory', () => ({
+vi.mock('@/lib/core/inventory', () => ({
     inventory: {
         getInventoryStats: vi.fn(),
         getInventoryCounts: vi.fn(),
@@ -28,8 +28,10 @@ vi.mock('@/lib/drill-cache', () => ({
     }
 }));
 
-vi.mock('../llm-failover', () => ({
-    generateWithFailover: vi.fn(),
+vi.mock('@/lib/ai/core', () => ({
+    AIService: {
+        generateObject: vi.fn(),
+    }
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -75,9 +77,11 @@ describe('Inventory Limit Enforcement', () => {
                 mode: 'SYNTAX',
                 correlationId: 'test-limit',
                 // No vocabIds -> Generic Fetch
+                // 'long' mode removed, Context now uses 'fast'
+                // We can add a test case for 'fast' mode with context input if needed, 
+                // but for now let's just ensure we test the supported modes.
             }
         } as any;
-
         const result = await processDrillJob(job);
 
         // Assert

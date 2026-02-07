@@ -46,7 +46,8 @@ services:
       - AI_MODEL_NAME=${AI_MODEL_NAME}
       - ETL_API_KEY=${ETL_API_KEY}
       - ETL_BASE_URL=${ETL_BASE_URL}
-      - AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}
+      - AI_FAST_ORDER=${AI_FAST_ORDER}
+      - AI_SMART_ORDER=${AI_SMART_ORDER}
       - AUTH_SECRET=${AUTH_SECRET}
       # Add other Auth env vars if needed
     volumes:
@@ -72,7 +73,8 @@ services:
       - AI_MODEL_NAME=${AI_MODEL_NAME}
       - ETL_API_KEY=${ETL_API_KEY}
       - ETL_BASE_URL=${ETL_BASE_URL}
-      - AI_PROVIDER_ORDER=${AI_PROVIDER_ORDER}
+      - AI_FAST_ORDER=${AI_FAST_ORDER}
+      - AI_SMART_ORDER=${AI_SMART_ORDER}
     depends_on:
       - opus-db
       - opus-redis

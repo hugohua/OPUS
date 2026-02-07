@@ -286,7 +286,7 @@ def call_dashscope_tts(text: str, voice: str = "Cherry") -> bytes:
     Returns:
         bytes: WAV 格式音频数据
     """
-    api_key = os.getenv("DASHSCOPE_API_KEY")
+    api_key = os.getenv("TTS_API_KEY")
     
     synthesizer = SpeechSynthesizer(
         model="qwen3-tts-flash",
@@ -347,7 +347,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - TTS_API_KEY=${TTS_API_KEY}
     volumes:
       - ./public/audio:/app/audio  # 共享音频目录
     networks:

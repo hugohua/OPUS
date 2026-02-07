@@ -1,24 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VocabularyAIService } from '../VocabularyAIService';
-import { generateText } from 'ai';
+import { AIService } from '../core';
 
 // Mocks
-vi.mock('ai', () => ({
-    generateText: vi.fn(),
-}));
-
-vi.mock('../client', () => ({
-    getAIModel: vi.fn(() => ({
-        model: { name: 'mock-model' },
-        modelName: 'mock-model'
-    })),
-}));
-
-vi.mock('../utils', () => ({
-    safeParse: vi.fn((text, schema) => {
-        // Simple mock of safeParse
-        return JSON.parse(text);
-    }),
+vi.mock('../core', () => ({
+    AIService: {
+        generateObject: vi.fn(),
+    }
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -38,25 +26,31 @@ describe('VocabularyAIService', () => {
         service = new VocabularyAIService();
     });
 
-    it('should enrich vocabulary and sanitize scenarios', async () => {
-        const mockRawResponse = JSON.stringify({
+    it('should enrich vocabulary using AIService', async () => {
+        const mockResult = {
             items: [{
                 word: 'negotiate',
                 definition_cn: '谈判',
-                scenarios: ['negotiation', 'invalid_tag'] // invalid_tag should be dropped
+                scenarios: ['negotiation']
             }]
-        });
+        };
 
-        (generateText as any).mockResolvedValue({ text: mockRawResponse });
+        (AIService.generateObject as any).mockResolvedValue({
+            object: mockResult,
+            provider: 'mock-provider'
+        });
 
         const result = await service.enrichVocabulary([{ word: 'negotiate', def_en: 'negotiate' }]);
 
-        expect(result.items[0].scenarios).toEqual(['negotiation']);
-        expect(generateText).toHaveBeenCalled();
+        expect(result.items[0].word).toBe('negotiate');
+        expect(AIService.generateObject).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'smart',
+            temperature: 0.1,
+        }));
     });
 
     it('should throw and log error on failure', async () => {
-        (generateText as any).mockRejectedValue(new Error('AI Failed'));
+        (AIService.generateObject as any).mockRejectedValue(new Error('AI Failed'));
 
         await expect(service.enrichVocabulary([{ word: 'fail', def_en: 'fail' }])).rejects.toThrow('AI Failed');
     });

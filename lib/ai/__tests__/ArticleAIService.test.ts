@@ -3,21 +3,13 @@ vi.mock('server-only', () => ({}));
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ArticleAIService } from '../ArticleAIService';
-import { generateText } from 'ai';
+import { AIService } from '../core';
 
 // Mocks
-vi.mock('ai', () => ({
-    generateText: vi.fn(),
-}));
-
-vi.mock('@ai-sdk/openai', () => ({
-    createOpenAI: vi.fn(() => ({
-        chat: vi.fn((name) => ({ name }))
-    }))
-}));
-
-vi.mock('../utils', () => ({
-    safeParse: vi.fn((text, schema) => JSON.parse(text)),
+vi.mock('../core', () => ({
+    AIService: {
+        generateObject: vi.fn(),
+    }
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -34,18 +26,22 @@ describe('ArticleAIService', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new ArticleAIService('test-model');
+        service = new ArticleAIService();
     });
 
     it('should generate article with correct input', async () => {
         const mockArticle = {
             title: 'Test Article',
-            content: 'This is a test content with negotiate.',
-            target_word: 'negotiate',
-            vocabulary_highlights: ['negotiate']
+            body: [
+                { paragraph: 'This is a test.', highlights: [] }
+            ],
+            summaryZh: 'Test Summary'
         };
 
-        (generateText as any).mockResolvedValue({ text: JSON.stringify(mockArticle) });
+        (AIService.generateObject as any).mockResolvedValue({
+            object: mockArticle,
+            provider: 'mock-provider'
+        });
 
         const input = {
             targetWord: { word: 'negotiate', definition_cn: '谈判' } as any,
@@ -56,14 +52,15 @@ describe('ArticleAIService', () => {
         const result = await service.generateArticle(input as any);
 
         expect(result.title).toBe('Test Article');
-        expect(generateText).toHaveBeenCalledWith(expect.objectContaining({
+        expect(AIService.generateObject).toHaveBeenCalledWith(expect.objectContaining({
+            mode: 'fast',
             system: expect.any(String),
             prompt: expect.stringContaining('negotiate')
         }));
     });
 
     it('should handle and log AI errors', async () => {
-        (generateText as any).mockRejectedValue(new Error('Network Error'));
+        (AIService.generateObject as any).mockRejectedValue(new Error('Network Error'));
 
         const input = {
             targetWord: { word: 'error', definition_cn: '错误' } as any,

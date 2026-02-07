@@ -85,26 +85,37 @@ export function EditorialDrill({ content, answer, status, selected, translation,
                             );
                         }
                         if (seg.type === "v") {
-                            // Verb Gap -> Answer 使用纯 CSS transition，与其他区域同步 500ms
+                            // Verb Gap -> Answer 使用 inline-grid 堆叠策略，实现宽度自适应
                             return (
-                                <span key={i} className="inline-block relative mx-2 align-baseline min-w-[80px]">
-                                    {/* Gap Line - 回答后淡出 */}
+                                <span key={i} className="inline-grid grid-cols-1 grid-rows-1 relative mx-2 align-baseline min-w-[80px]">
+                                    {/* Layer 1: Gap Line & Question Mark */}
+                                    {/* 始终在流中 (relative/static)，但在 Revealed 状态下透明。
+                                        它的 w-full 会跟随 Grid 宽度（即跟随 Answer 宽度），且 min-w-[80px] 由父级保障。
+                                     */}
                                     <span
                                         className={cn(
-                                            "block w-full h-[2px] bg-zinc-400 dark:bg-zinc-600 mt-[1.2rem] transition-opacity duration-500 ease-in-out",
-                                            status === "idle" ? "opacity-100 animate-pulse" : "opacity-0"
+                                            "col-start-1 row-start-1 w-full flex flex-col items-center pointer-events-none transition-opacity duration-500",
+                                            status === "idle" ? "opacity-100" : "opacity-0"
                                         )}
-                                    />
-                                    {/* Question Mark - 回答后淡出 */}
-                                    <span className={cn(
-                                        "absolute -top-6 left-1/2 -translate-x-1/2 text-zinc-400 dark:text-zinc-500 font-mono text-xs transition-opacity duration-500 ease-in-out",
-                                        status === "idle" ? "opacity-100" : "opacity-0"
-                                    )}>?</span>
-                                    {/* Answer - 回答后淡入 */}
+                                        aria-hidden="true"
+                                    >
+                                        {/* Gap Line */}
+                                        <span className="block w-full h-[2px] bg-zinc-400 dark:bg-zinc-600 mt-[1.2rem]" />
+                                        {/* Question Mark */}
+                                        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-zinc-400 dark:text-zinc-500 font-mono text-xs">?</span>
+                                    </span>
+
+                                    {/* Layer 2: Answer Content */}
+                                    {/* 核心逻辑：
+                                        - Idle: absolute (不占位)，导致 Grid 宽度由 Layer 1 (Gap Line + min-w) 决定。
+                                        - Revealed: relative (占位)，内容撑开 Grid 宽度，防止重叠。
+                                     */}
                                     <span
                                         className={cn(
-                                            "absolute inset-0 flex items-center justify-center font-bold px-2 py-0.5 rounded text-[0.9em] transition-all duration-500 ease-in-out",
-                                            status === "idle" ? "opacity-0 scale-90" : "opacity-100 scale-100",
+                                            "col-start-1 row-start-1 flex items-center justify-center font-bold px-2 py-0.5 rounded text-[0.9em] transition-all duration-500 ease-in-out whitespace-nowrap z-10",
+                                            status === "idle"
+                                                ? "absolute inset-0 opacity-0 scale-90 pointer-events-none"
+                                                : "relative opacity-100 scale-100",
                                             status === "correct" ? "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50" : status === "wrong" ? "text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-950/50 line-through" : ""
                                         )}
                                     >

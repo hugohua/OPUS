@@ -96,9 +96,20 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     };
 
     // --- 2. 状态变更同步到 Storage ---
+    // [P0 Anti-Fallback] 如果大部分是兜底数据，不缓存，让用户刷新时能获取新题
     useEffect(() => {
         if (queue.length > 0 && !completed) {
-            saveSession(userId, mode, queue, index);
+            // 检测兜底数据比例
+            const fallbackCount = queue.filter(d => (d.meta as any)?.source === 'deterministic_fallback').length;
+            const isMostlyFallback = fallbackCount / queue.length > 0.5;
+            const isLargeEnough = queue.length >= 5; // 防止小队列误判
+
+            if (isMostlyFallback && isLargeEnough) {
+                console.log('[SessionRunner] Skipping cache: mostly fallback data', { fallbackCount, total: queue.length });
+                // 不缓存，用户刷新后会重新请求
+            } else {
+                saveSession(userId, mode, queue, index);
+            }
         }
     }, [queue, index, completed, userId, mode]);
 
@@ -497,6 +508,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                                             phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
                                             partOfSpeech={partOfSpeech || ""}
                                             targetWord={currentDrill.meta.target_word}
+                                            etymology={(currentDrill.meta as any).etymology} // [New]
                                         />
                                     </motion.div>
                                 </AnimatePresence>

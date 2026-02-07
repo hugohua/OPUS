@@ -108,14 +108,14 @@ export function VocabularyList() {
                 {/* Status Bar */}
                 <div className="px-6 py-2 bg-white/80 dark:bg-zinc-900/30 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900 sticky top-0 z-10 backdrop-blur-sm">
                     <span className="text-[10px] font-mono text-zinc-500 uppercase">
-                        Showing {data?.pages[0]?.metadata.total ?? 0} Words in "{status}"
+                        正在显示 "{status}" 模式下的 {data?.pages[0]?.metadata.total ?? 0} 个词
                     </span>
                     {(status !== 'ALL' || search) && (
                         <button
                             onClick={() => { setStatus('ALL'); setSearch(''); }}
                             className="text-[10px] text-indigo-400 hover:underline"
                         >
-                            Clear all filters
+                            清除筛选
                         </button>
                     )}
                 </div>
@@ -150,7 +150,7 @@ export function VocabularyList() {
                                 >
                                     {isLoaderRow ? (
                                         <div className="flex items-center justify-center h-full text-xs text-zinc-600 font-mono">
-                                            {hasNextPage ? 'Loading more...' : 'End of list'}
+                                            {hasNextPage ? '加载中...' : '已加载全部'}
                                         </div>
                                     ) : (
                                         <VocabListItemRow

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { stripBold, hasBold } from "@/lib/utils/markdown";
 import { useTTS } from "@/hooks/use-tts"; // Re-added for H1 interaction
 import { TTSButton } from "@/components/tts/tts-button";
+import { EtymologyCard } from "@/components/vocab/EtymologyCard"; // [New]
 
 interface PhraseCardProps {
     phraseMarkdown: string;
@@ -13,6 +14,7 @@ interface PhraseCardProps {
     partOfSpeech?: string;
     status: "idle" | "correct" | "wrong" | "revealed";
     targetWord?: string;
+    etymology?: any; // [New]
 }
 
 export function PhraseCard({
@@ -22,7 +24,8 @@ export function PhraseCard({
     phonetic,
     partOfSpeech,
     status,
-    targetWord
+    targetWord,
+    etymology // [New]
 }: PhraseCardProps) {
 
     // Smart Highlight Logic matching Demo Style (Tilted + Indigo)
@@ -184,6 +187,12 @@ export function PhraseCard({
                         {partOfSpeech && <span className="italic mr-2 text-zinc-400 font-serif">{partOfSpeech}</span>}
                         {renderSmartText(wordDefinition || "")}
                     </div>
+                    {/* Etymology Module */}
+                    {isRevealed && etymology && (
+                        <div className="w-full mt-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 px-6">
+                            <EtymologyCard etymology={etymology} variant="minimal" />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

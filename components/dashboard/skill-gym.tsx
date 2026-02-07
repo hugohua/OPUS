@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 const SKILLS = [
     {
         id: "speed-run",
-        name: "Speed Run",
-        desc: "Visual & Meaning (L0)",
-        sub: "Includes: Syntax, Trap",
+        name: "极速挑战",
+        desc: "视觉 & 语义 (L0)",
+        sub: "含: 语法, 陷阱",
         icon: Zap,
         color: "text-emerald-400",
         bg: "bg-emerald-500/10",
@@ -21,19 +21,19 @@ const SKILLS = [
     },
     {
         id: "audio-gym",
-        name: "Audio Gym",
-        desc: "Listening & Logic (L1)",
-        sub: "Includes: Echo, Phrase",
+        name: "听力训练",
+        desc: "听力 & 逻辑 (L1)",
+        sub: "含: 复读, 短语",
         icon: Volume2,
         color: "text-blue-400",
         bg: "bg-blue-500/10",
-        href: "/dashboard/session/PHRASE"
+        href: "/dashboard/session/AUDIO"
     },
     {
         id: "context-lab",
-        name: "Context Lab",
-        desc: "Real-world Ops (L2)",
-        sub: "Includes: Cloze, Nuance",
+        name: "情境实验室",
+        desc: "实战演练 (L2)",
+        sub: "含: 填空, 辨析",
         icon: Brain,
         color: "text-violet-400",
         bg: "bg-violet-500/10",
@@ -44,7 +44,7 @@ const SKILLS = [
 export function SkillGym() {
     return (
         <section>
-            <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-widest text-[10px]">Skill Gym</h3>
+            <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-widest text-[10px]">技能训练</h3>
             <div className="grid grid-cols-2 gap-3">
                 {SKILLS.map((skill) => (
                     <Link

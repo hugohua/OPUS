@@ -11,7 +11,7 @@ export type AIScenario = 'etl' | 'default';
  * 创建带代理的 fetch 函数
  * @param specificProxyUrl - 指定的代理 URL，如果有值则优先使用，否则尝试读取 HTTPS_PROXY
  */
-function createProxyFetch(specificProxyUrl?: string): typeof fetch | undefined {
+export function createProxyFetch(specificProxyUrl?: string): typeof fetch | undefined {
     // 优先级: 参数指定 > 环境变量 HTTPS_PROXY
     // 注意: 如果 specificProxyUrl 显式传空字符串 ""，则表示禁用代理
     const proxyUrl = specificProxyUrl !== undefined ? specificProxyUrl : process.env.HTTPS_PROXY;

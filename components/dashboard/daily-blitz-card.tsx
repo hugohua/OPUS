@@ -25,7 +25,7 @@ export function DailyBlitzCard() {
                         <div>
                             <div className="flex justify-between items-start">
                                 <span className="inline-flex items-center rounded-md bg-yellow-100 dark:bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-300 ring-1 ring-inset ring-yellow-500/20 dark:ring-yellow-400/20 font-mono">
-                                    Daily Blitz
+                                    每日闪电战
                                 </span>
 
                                 {/* Audio Toggle (Functional) */}
@@ -37,7 +37,7 @@ export function DailyBlitzCard() {
                                     }}
                                 >
                                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider group-hover/toggle:text-zinc-700 dark:group-hover/toggle:text-zinc-300 transition-colors">
-                                        Audio
+                                        语音
                                     </span>
                                     <div className={cn(
                                         "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
@@ -53,7 +53,7 @@ export function DailyBlitzCard() {
                             </div>
 
                             <h2 className="mt-4 text-3xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
-                                Start Session
+                                开始训练
                                 <Volume2
                                     className={cn(
                                         "w-6 h-6 ml-1 transition-all duration-300",
@@ -61,12 +61,12 @@ export function DailyBlitzCard() {
                                     )}
                                 />
                             </h2>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">20 items due · Mixed Mode</p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">20 项待复习 · 混合模式</p>
                         </div>
 
                         <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            READY TO LAUNCH
+                            准备就绪
                         </div>
                     </div>
                 </div>

@@ -33,7 +33,7 @@ export function FsrsHud({ stats, retentionRate = 94 }: FsrsHudProps) {
                     <div className="flex items-center gap-2">
                         {/* Lucide: Activity */}
                         <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                        <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">Memory Telemetry</span>
+                        <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">记忆遥测</span>
                     </div>
                     {/* Retention Badge */}
                     <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
@@ -59,21 +59,21 @@ export function FsrsHud({ stats, retentionRate = 94 }: FsrsHudProps) {
                 {/* Legend / Stats Row */}
                 <div className="flex items-center justify-between text-[10px] font-mono">
 
-                    <Link href="/vocabulary?status=MASTERED" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="Long-term memory">
+                    <Link href="/vocabulary?status=MASTERED" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="长期记忆">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        <span className="text-zinc-400">Stable</span>
+                        <span className="text-zinc-400">已掌握</span>
                         <span className="text-zinc-900 dark:text-zinc-100 font-bold">{stats.mastered}</span>
                     </Link>
 
-                    <Link href="/vocabulary?status=LEARNING" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="In acquisition">
+                    <Link href="/vocabulary?status=LEARNING" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="正在习得">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                        <span className="text-zinc-400">Learning</span>
+                        <span className="text-zinc-400">学习中</span>
                         <span className="text-zinc-900 dark:text-zinc-100 font-bold">{stats.learning}</span>
                     </Link>
 
-                    <Link href="/vocabulary?status=REVIEW" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="Review needed">
+                    <Link href="/vocabulary?status=REVIEW" className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 active:scale-95 transition-transform" title="需要复习">
                         <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                        <span className="text-zinc-400">Due</span>
+                        <span className="text-zinc-400">待复习</span>
                         <span className="text-rose-600 dark:text-rose-400 font-bold">{stats.due}</span>
                     </Link>
 

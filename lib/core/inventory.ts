@@ -2,6 +2,7 @@ import { redis as connection } from '@/lib/queue/connection';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { createLogger } from '@/lib/logger';
 import { inventoryQueue } from '@/lib/queue';
+import { auditInventoryEvent } from '@/lib/services/audit-service';
 
 const log = createLogger('lib:inventory');
 
@@ -24,6 +25,17 @@ export const inventory = {
      * 将生成的 Drill 推入库存
      */
     async pushDrill(userId: string, mode: string, vocabId: number | string, drill: BriefingPayload) {
+        // [Fix] Capacity Guard - Prevent Overflow
+        const stats: any = await this.getInventoryStats(userId);
+        const currentCount = stats[mode] || 0;
+        const capacity = await this.getCapacity(mode);
+
+        if (currentCount >= capacity) {
+            log.warn({ userId, mode, vocabId, currentCount, capacity }, '⛔ pushDrill blocked - inventory full');
+            auditInventoryEvent(userId, 'ADD', mode, { currentCount, capacity, source: 'auto' });
+            return; // Early exit
+        }
+
         const key = keys.drillList(userId, mode, vocabId);
 
         // Multi-exec for atomicity
@@ -70,7 +82,8 @@ export const inventory = {
         const key = keys.drillList(userId, mode, vocabId);
         const len = await connection.llen(key);
 
-        if (len < 2) {
+        // [P1] LOW_WATERMARK = 3 (原为 2)
+        if (len < 3) {
             log.info({ userId, mode, vocabId, len }, '📉 Low inventory detected. Buffering for replenishment.');
             // Add to buffer for Batch Aggregation (Plan C)
             await this.addToBuffer(userId, mode, vocabId);
@@ -152,15 +165,19 @@ export const inventory = {
      * 触发急救任务 (Plan B)
      */
     async triggerEmergency(userId: string, mode: string, vocabId: number | string) {
+        // [P1] Job Deduplication: 使用确定性 Job ID 防止重复入队
+        const jobId = `replenish:${userId}:${mode}:${vocabId}`;
+
         await inventoryQueue.add('replenish_one', {
             userId,
             mode: mode as SessionMode,
             vocabId: Number(vocabId),
             correlationId: `emergency-${vocabId}-${Date.now()}`
         }, {
+            jobId, // BullMQ 会忽略重复 jobId
             priority: 1 // High Priority
         });
-        log.info({ userId, mode, vocabId }, '🚑 Emergency replenishment triggered');
+        log.info({ userId, mode, vocabId, jobId }, '🚑 Emergency replenishment triggered');
     },
 
     /**
@@ -170,15 +187,20 @@ export const inventory = {
     async triggerBatchEmergency(userId: string, mode: string, vocabIds: number[]) {
         if (vocabIds.length === 0) return;
 
+        // [P1] Job Deduplication: 使用时间窗口（分钟级）防止短时间内重复提交
+        const timeWindow = Math.floor(Date.now() / 60000); // 1分钟窗口
+        const jobId = `replenish-batch:${userId}:${mode}:${timeWindow}`;
+
         await inventoryQueue.add('replenish_batch', {
             userId,
             mode: mode as SessionMode,
             vocabIds,
             correlationId: `batch-emergency-${Date.now()}`
         }, {
+            jobId, // BullMQ 会忽略重复 jobId
             priority: 1 // High Priority (Same as Emergency)
         });
-        log.info({ userId, mode, count: vocabIds.length }, '🚑📦 Batch Emergency replenishment triggered');
+        log.info({ userId, mode, count: vocabIds.length, jobId }, '🚑📦 Batch Emergency replenishment triggered');
     },
 
     /**

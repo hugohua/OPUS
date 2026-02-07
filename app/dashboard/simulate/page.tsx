@@ -2,10 +2,10 @@
 
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cva, VariantProps } from 'class-variance-authority';
+import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { Zap, Puzzle, Scale } from 'lucide-react';
+import { Zap, Volume2, Brain } from 'lucide-react';
 
 // --- CVA Definition ---
 const modeCardVariants = cva(
@@ -13,69 +13,62 @@ const modeCardVariants = cva(
     {
         variants: {
             mode: {
-                SYNTAX: "border-l-teal-500 hover:shadow-lg dark:hover:shadow-teal-900/20",
-                CHUNKING: "border-l-blue-500 hover:shadow-lg dark:hover:shadow-blue-900/20",
-                NUANCE: "border-l-violet-500 hover:shadow-lg dark:hover:shadow-violet-900/20",
-                BLITZ: "border-l-orange-500 hover:shadow-lg dark:hover:shadow-orange-900/20",
+                "speed-run": "border-l-emerald-500 hover:shadow-lg dark:hover:shadow-emerald-900/20",
+                "audio-gym": "border-l-blue-500 hover:shadow-lg dark:hover:shadow-blue-900/20",
+                "context-lab": "border-l-violet-500 hover:shadow-lg dark:hover:shadow-violet-900/20",
             },
         },
         defaultVariants: {
-            mode: "SYNTAX",
+            mode: "speed-run",
         },
     }
 );
 
 interface ModeConfig {
-    id: "SYNTAX" | "CHUNKING" | "NUANCE" | "BLITZ";
+    id: "speed-run" | "audio-gym" | "context-lab";
     title: string;
     desc: string;
+    level: string;
+    subModes: string[];
     icon: typeof Zap;
     colorClass: string;
     batchSize: number;
-    backlog: number;
     href: string;
 }
 
 const MODES: ModeConfig[] = [
     {
-        id: "BLITZ",
-        title: "短语闪词",
-        desc: "高速复习。语境优先，低阻力。",
+        id: "speed-run",
+        title: "极速挑战",
+        desc: "快速刷词，建立形义连接。",
+        level: "L0 基础",
+        subModes: ["语法", "闪词"],
         icon: Zap,
-        colorClass: "text-orange-600 dark:text-orange-400",
+        colorClass: "text-emerald-600 dark:text-emerald-400",
         batchSize: 20,
-        backlog: 5, // Mock
-        href: "/dashboard/blitz",
-    },
-    {
-        id: "SYNTAX",
-        title: "语法钻研",
-        desc: "修复破碎的语法逻辑。掌握 S-V-O 核心句式。",
-        icon: Zap,
-        colorClass: "text-teal-600 dark:text-teal-400",
-        batchSize: 20,
-        backlog: 12, // Mock
         href: "/dashboard/session/SYNTAX",
     },
     {
-        id: "CHUNKING",
-        title: "语块流畅",
-        desc: "掌握固定短语和商务搭配，提升表达自然度。",
-        icon: Puzzle,
+        id: "audio-gym",
+        title: "听力训练",
+        desc: "盲听训练，情感语音，意群断句。",
+        level: "L1 进阶",
+        subModes: ["短语", "语块", "听力"],
+        icon: Volume2,
         colorClass: "text-blue-600 dark:text-blue-400",
-        batchSize: 30,
-        backlog: 0,
-        href: "/dashboard/session/CHUNKING",
+        batchSize: 20,
+        href: "/dashboard/session/PHRASE",
     },
     {
-        id: "NUANCE",
-        title: "细微差异审计",
-        desc: "为高管决策提供精准用词，理解语义背后的深度。",
-        icon: Scale,
+        id: "context-lab",
+        title: "情境实验室",
+        desc: "商务长难句填空，精准用词辨析。",
+        level: "L2 塔尖",
+        subModes: ["情境", "辨析"],
+        icon: Brain,
         colorClass: "text-violet-600 dark:text-violet-400",
-        batchSize: 50,
-        backlog: 5,
-        href: "/dashboard/session/NUANCE",
+        batchSize: 20,
+        href: "/dashboard/session/CONTEXT",
     },
 ];
 
@@ -119,22 +112,21 @@ export default function SimulatePage() {
                                             </div>
                                             <h2 className="font-semibold text-lg">{mode.title}</h2>
                                         </div>
-                                        {mode.backlog > 0 && (
-                                            <Badge variant="destructive" className="animate-pulse">
-                                                {mode.backlog} 个待复习
-                                            </Badge>
-                                        )}
+                                        <Badge variant="outline" className="text-xs">
+                                            {mode.level}
+                                        </Badge>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-sm text-muted-foreground leading-relaxed">
                                             {mode.desc}
                                         </p>
                                     </CardContent>
-                                    <CardFooter className="pt-0 flex gap-2">
-                                        <Badge variant="outline" className="text-xs font-normal">
-                                            规模: {mode.batchSize}
-                                        </Badge>
-                                        {/* Level Indicator? */}
+                                    <CardFooter className="pt-0 flex gap-2 flex-wrap">
+                                        {mode.subModes.map((sub) => (
+                                            <Badge key={sub} variant="secondary" className="text-[10px] font-normal">
+                                                {sub}
+                                            </Badge>
+                                        ))}
                                     </CardFooter>
                                 </Card>
                             </Link>

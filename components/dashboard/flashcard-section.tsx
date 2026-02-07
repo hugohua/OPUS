@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 const FLASHCARD_MODES = [
     {
         id: "phrase-deck",
-        name: "Phrase Deck",
-        desc: "Business Collocations",
-        sub: "L0 • Visual",
+        name: "短语卡组",
+        desc: "商务搭配",
+        sub: "L0 • 视觉",
         icon: Layers,
         color: "text-indigo-400",
         bg: "bg-indigo-500/10",
@@ -17,9 +17,9 @@ const FLASHCARD_MODES = [
     },
     {
         id: "drive-mode",
-        name: "Audio Drive",
-        desc: "Passive Listening",
-        sub: "L0 • Audio",
+        name: "听力驾驶",
+        desc: "被动听力",
+        sub: "L0 • 听力",
         icon: Car,
         color: "text-amber-400",
         bg: "bg-amber-500/10",
@@ -31,7 +31,7 @@ export function FlashcardSection() {
     return (
         <section>
             <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-widest text-[10px]">
-                Flashcards
+                卡片
             </h3>
 
             <div className="grid grid-cols-2 gap-3">

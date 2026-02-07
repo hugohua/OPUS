@@ -95,29 +95,79 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
         <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-xl p-4 shadow-sm flex flex-col gap-4">
             <h3 className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest">手动触发 (Manual Triggers)</h3>
 
-            <div className="space-y-3">
-                <TriggerButton
-                    mode="SYNTAX"
-                    color="emerald"
-                    onClick={() => handleTrigger('SYNTAX')}
-                    loading={loading === 'trigger-SYNTAX'}
-                />
-                <TriggerButton
-                    mode="CHUNKING"
-                    color="sky"
-                    onClick={() => handleTrigger('CHUNKING')}
-                    loading={loading === 'trigger-CHUNKING'}
-                />
-                {/* 注意：参考设计只有三个按钮，这里我们保留所有支持的模式 */}
-                <TriggerButton
-                    mode="NUANCE"
-                    color="violet"
-                    onClick={() => handleTrigger('NUANCE')}
-                    loading={loading === 'trigger-NUANCE'}
-                />
+            {/* L0: 基础训练 (Syntax + Phrase) */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-500">L0</span>
+                    <span className="text-xs font-medium text-muted-foreground">基础训练 (Foundation)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <TriggerButton
+                        mode="SYNTAX"
+                        label="语法 (Syntax)"
+                        color="emerald"
+                        onClick={() => handleTrigger('SYNTAX')}
+                        loading={loading === 'trigger-SYNTAX'}
+                    />
+                    <TriggerButton
+                        mode="PHRASE"
+                        label="短语 (Phrase)"
+                        color="emerald"
+                        onClick={() => handleTrigger('PHRASE')}
+                        loading={loading === 'trigger-PHRASE'}
+                    />
+                </div>
             </div>
 
-            <div className="pt-3 border-t border-border flex gap-2">
+            {/* L1: 韵律训练 (Chunking + Audio) */}
+            <div className="space-y-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-500/20 bg-sky-500/5 text-sky-500">L1</span>
+                    <span className="text-xs font-medium text-muted-foreground">韵律训练 (Rhythm)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <TriggerButton
+                        mode="CHUNKING"
+                        label="语块 (Chunking)"
+                        color="sky"
+                        onClick={() => handleTrigger('CHUNKING')}
+                        loading={loading === 'trigger-CHUNKING'}
+                    />
+                    <TriggerButton
+                        mode="AUDIO"
+                        label="听力 (Audio)"
+                        color="sky"
+                        onClick={() => handleTrigger('AUDIO')}
+                        loading={loading === 'trigger-AUDIO'}
+                    />
+                </div>
+            </div>
+
+            {/* L2: 认知训练 (Nuance + Reading) */}
+            <div className="space-y-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-500">L2</span>
+                    <span className="text-xs font-medium text-muted-foreground">认知训练 (Cognitive)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <TriggerButton
+                        mode="NUANCE"
+                        label="辨析 (Nuance)"
+                        color="violet"
+                        onClick={() => handleTrigger('NUANCE')}
+                        loading={loading === 'trigger-NUANCE'}
+                    />
+                    <TriggerButton
+                        mode="READING"
+                        label="阅读 (Reading)"
+                        color="violet"
+                        onClick={() => handleTrigger('READING')}
+                        loading={loading === 'trigger-READING'}
+                    />
+                </div>
+            </div>
+
+            <div className="pt-4 mt-2 border-t border-border flex gap-2">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <button
@@ -157,21 +207,23 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
 
 function TriggerButton({
     mode,
+    label,
     color,
     onClick,
     loading
 }: {
     mode: string,
+    label?: string,
     color: 'emerald' | 'sky' | 'violet' | 'amber',
     onClick: () => void,
     loading: boolean
 }) {
     // Semantic color mapping
     const styleMap = {
-        emerald: "hover:bg-emerald-500/10 hover:border-emerald-500/20 text-muted-foreground hover:text-emerald-500",
-        sky: "hover:bg-sky-500/10 hover:border-sky-500/20 text-muted-foreground hover:text-sky-500",
-        violet: "hover:bg-violet-500/10 hover:border-violet-500/20 text-muted-foreground hover:text-violet-500",
-        amber: "hover:bg-amber-500/10 hover:border-amber-500/20 text-muted-foreground hover:text-amber-500",
+        emerald: "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+        sky: "border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 text-sky-600 dark:text-sky-400",
+        violet: "border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 text-violet-600 dark:text-violet-400",
+        amber: "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400",
     };
 
     const activeStyle = styleMap[color] || styleMap.amber;
@@ -181,15 +233,15 @@ function TriggerButton({
             onClick={onClick}
             disabled={loading}
             className={cn(
-                "group w-full flex items-center justify-between p-3 rounded-xl border border-transparent transition-all active:scale-[0.98] bg-muted/50",
+                "group flex items-center justify-between p-2.5 rounded-lg border transition-all active:scale-[0.98]",
                 activeStyle,
                 "disabled:opacity-50 disabled:pointer-events-none"
             )}
         >
-            <span className="text-sm font-medium transition-colors">
-                {loading ? '生成中...' : `生成 ${mode.charAt(0) + mode.slice(1).toLowerCase()}`}
+            <span className="text-xs font-medium">
+                {loading ? '...' : (label || mode)}
             </span>
-            <ArrowRight className="w-4 h-4 transition-colors opacity-70 group-hover:opacity-100" />
+            {!loading && <Play className="w-3 h-3 opacity-70 group-hover:opacity-100 fill-current" />}
         </button>
     )
 }

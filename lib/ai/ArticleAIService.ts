@@ -1,50 +1,11 @@
 import 'server-only';
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { AIService } from './core';
 import { GeneratedArticleSchema } from '@/lib/validations/article';
 import type { ArticleGenerationInput, GeneratedArticle } from '@/types/article';
 import { ARTICLE_GENERATION_PROMPT } from '@/lib/generators/etl/article';
-import { safeParse } from './utils';
 import { createLogger, logAIError } from '@/lib/logger';
 
-// Proxy support
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import nodeFetch, { RequestInit as NodeFetchRequestInit } from 'node-fetch';
-
 const log = createLogger('article-ai');
-
-/**
- * 创建带代理的 fetch 函数（仅用于 AI 调用）
- */
-function createProxyFetch(): typeof fetch | undefined {
-    const proxyUrl = process.env.HTTPS_PROXY;
-
-    if (!proxyUrl) {
-        return undefined;
-    }
-
-    log.info({ proxy: proxyUrl }, 'Proxy enabled for AI requests');
-    const agent = new HttpsProxyAgent(proxyUrl);
-
-    const proxyFetch = async (
-        input: RequestInfo | URL,
-        init?: RequestInit
-    ): Promise<Response> => {
-        const url = typeof input === 'string' ? input : input.toString();
-
-        const nodeFetchInit: NodeFetchRequestInit = {
-            method: init?.method,
-            headers: init?.headers as NodeFetchRequestInit['headers'],
-            body: init?.body as NodeFetchRequestInit['body'],
-            agent,
-        };
-
-        const response = await nodeFetch(url, nodeFetchInit);
-        return response as unknown as Response;
-    };
-
-    return proxyFetch;
-}
 
 /**
  * 文章 AI 生成服务
@@ -52,21 +13,10 @@ function createProxyFetch(): typeof fetch | undefined {
  * 使用 AI 模型根据选词结果生成商务英语短文
  */
 export class ArticleAIService {
-    private model;
-    private modelName: string;
-
-    constructor(modelName?: string) {
-        this.modelName = modelName || process.env.AI_MODEL_NAME || 'qwen-plus';
-
-        const proxyFetch = createProxyFetch();
-
-        const openai = createOpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            baseURL: process.env.OPENAI_BASE_URL,
-            ...(proxyFetch && { fetch: proxyFetch }),
-        });
-
-        this.model = openai.chat(this.modelName);
+    // modelName is now managed by AIService internally based on mode
+    // We keep this property for compatibility if needed, or remove it.
+    // For logging, we'll just say "AIService" or get it from result.
+    constructor() {
     }
 
     /**
@@ -81,7 +31,7 @@ export class ArticleAIService {
             targetWord: targetWord.word,
             contextWords: contextWords.map(w => w.word),
             scenario,
-            model: this.modelName,
+            model: 'AIService',
         }, 'Generating article');
 
         const userPrompt = JSON.stringify({
@@ -99,27 +49,22 @@ export class ArticleAIService {
         let rawResponse: string | undefined;
 
         try {
-            const { text } = await generateText({
-                model: this.model,
+            const { object: article, provider } = await AIService.generateObject({
+                mode: 'fast', // Article generation is time-sensitive but needs quality. 'fast' uses Aliyun/Default.
+                schema: GeneratedArticleSchema,
                 system: ARTICLE_GENERATION_PROMPT,
                 prompt: userPrompt,
             });
 
-            rawResponse = text;
-            log.debug({ responseLength: text.length }, 'AI response received, parsing');
-
-            return safeParse(text, GeneratedArticleSchema, {
-                systemPrompt: ARTICLE_GENERATION_PROMPT,
-                userPrompt,
-                model: this.modelName,
-            });
+            log.info({ provider, title: article.title }, 'Article generated successfully');
+            return article;
         } catch (error) {
             logAIError({
                 error,
                 systemPrompt: ARTICLE_GENERATION_PROMPT,
                 userPrompt,
                 rawResponse,
-                model: this.modelName,
+                model: 'AIService',
                 context: 'ArticleAIService.generateArticle 调用失败',
             });
 
@@ -131,6 +76,6 @@ export class ArticleAIService {
      * 获取当前使用的模型名称
      */
     getModelName(): string {
-        return this.modelName;
+        return 'AIService';
     }
 }

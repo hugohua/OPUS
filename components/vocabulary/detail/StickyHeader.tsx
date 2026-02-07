@@ -136,7 +136,7 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
                     {/* FSRS Status */}
                     <div className="flex items-center gap-1">
                         <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-500 uppercase">
-                            {isReviewPhase ? "Review" : "Learning"}
+                            {isReviewPhase ? "待复习" : "学习中"}
                         </span>
                         <span className="text-zinc-300 dark:text-zinc-600">•</span>
                         <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono">

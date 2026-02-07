@@ -40,17 +40,19 @@ export function repairJson(content: string): string {
  * 策略：找到最后一个完整的 item 对象，截断后续内容并闭合 JSON
  */
 export function recoverTruncatedJson(content: string): { recovered: string; itemsDropped: number } | null {
+    console.log('[DEBUG] recoverTruncatedJson input:', content.slice(0, 100));
     try {
         // 查找 "items": [ 或 "drills": [ 的位置
         const itemsMatch = content.match(/"(items|drills)"\s*:\s*\[/);
         if (!itemsMatch || itemsMatch.index === undefined) {
+            console.log('[DEBUG] No items/drills array found');
             return null;
         }
 
+        const key = itemsMatch[1]; // "items" or "drills"
         const itemsStart = itemsMatch.index + itemsMatch[0].length;
 
-        // 找到所有完整的 item 对象 (以 }, 或 } 结尾，后跟 { 或 ])
-        // 使用贪婪匹配找到最后一个完整的 }
+        // 找到所有完整的 item 对象
         let lastCompleteEnd = -1;
         let braceCount = 0;
         let inString = false;
@@ -99,9 +101,12 @@ export function recoverTruncatedJson(content: string): { recovered: string; item
         const itemsDropped = incompleteItemStart !== -1 ? 1 : 0;
 
         // 重建 JSON：截取到最后一个完整 item，然后闭合
+        // 注意：闭合时需要匹配开始时的 key (items 或 drills)
+        // 其实 prefix 已经包含了 "key": [ ... ] 的前半部分，所以只需要闭合 ]}
         const prefix = content.slice(0, lastCompleteEnd + 1);
         const recovered = prefix + ']}';
 
+        console.log('[DEBUG] recoverTruncatedJson success:', recovered);
         return { recovered, itemsDropped };
     } catch {
         return null;

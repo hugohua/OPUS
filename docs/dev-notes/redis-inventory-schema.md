@@ -1,30 +1,46 @@
 # Redis Inventory Schema & Design
 
+> **[UPDATE] V2.0 (Schedule-Driven)**  
+> 更新日期: 2026-02-07
+
 ## 1. Key Structure Overview
 
-All keys are namespaced under `opus:v1:`.
+### 1.1 Drill Inventory (三维粒度)
 
-### 1.1 Drill Inventory (Ammo Depot)
-Stores pre-generated drills for a specific user and vocabulary.
+Stores pre-generated drills for a specific **User + Mode + Vocabulary** combination.
 
-- **Key Pattern**: `opus:v1:user:{userId}:inventory:{vocabId}`
-- **Type**: `List` (LPUSH / RPOP)
-- **TTL**: 7 Days (Refresh on access)
-- **Value**: JSON String (Compressed)
+- **Key Pattern**: `user:{userId}:mode:{mode}:vocab:{vocabId}:drills`
+- **Type**: `List` (RPUSH / LPOP)
+- **TTL**: None (由 Mode 容量上限控制)
+- **Value**: JSON String (`BriefingPayload`)
 - **Operations**:
-  - `LPOP`: Consumer fetches one drill.
-  - `RPUSH`: Producer (Worker) adds new drills.
-  - `LLEN`: Check inventory level.
+  - `LPOP`: Consumer fetches one drill
+  - `RPUSH`: Producer (Worker) adds new drills
+  - `LLEN`: Check inventory level
 
-### 1.2 Global Generators Queue (Job Queue)
-Managed by BullMQ.
+> **为什么是三维粒度？**  
+> 不同 Mode (SYNTAX/PHRASE/AUDIO 等) 生成的内容结构不同，不能跨 Mode 共用。
 
-- **Queue Name**: `opus:drill-generation`
-- **Job ID**: `gen:{userId}:{vocabId}:{timestamp}`
+### 1.2 Inventory Stats (聚合统计)
+- **Key Pattern**: `user:{userId}:inventory:stats`
+- **Type**: `Hash`
+- **Fields**: `{ SYNTAX: 15, PHRASE: 10, AUDIO: 5, ... }`
+
+### 1.3 Replenish Buffer (缓冲区)
+- **Key**: `buffer:replenish_drills`
+- **Type**: `Set`
+- **Purpose**: 聚合多个低库存请求，批量发送 Job
+
+### 1.4 Job Queue (BullMQ)
+
+- **Queue Name**: `opus:inventory-queue`
+- **Job Types**:
+  - `replenish_one`: 单词急救 (Plan B)
+  - `replenish_batch`: 批量补货 (Plan C)
+  - `generate-{mode}`: 定时生成
 - **Priority**:
-  - `1` (High): Real-time fallback triggers.
-  - `5` (Medium): Low inventory warnings.
-  - `10` (Low): Cron background refill.
+  - `1` (High): 紧急补货
+  - `5` (Medium): 批量补货
 
 ---
 
@@ -74,47 +90,60 @@ interface InventoryItem {
 
 ## 3. Inventory Logic
 
-### 3.1 Consumption (Next.js)
+> 实际实现: `lib/core/inventory.ts`
+
+### 3.1 Consumption (Next.js Action)
 ```typescript
-// Pseudocode
-async function fetchDrill(userId: string, vocabId: number, preferredDim: Dimension) {
-  const key = `opus:v1:user:${userId}:inventory:${vocabId}`;
-  
-  // 1. Try to pop from Redis
-  const drill = await redis.lpop(key);
+// 参考: actions/get-next-drill.ts
+import { inventory } from '@/lib/core/inventory';
+
+async function fetchDrill(userId: string, mode: string, vocabId: number) {
+  // 1. 尝试从 Redis 弹出
+  const drill = await inventory.popDrill(userId, mode, vocabId);
   
   if (drill) {
-    // Async check inventory level
-    const remaining = await redis.llen(key);
-    if (remaining < 3) {
-      // Trigger refill job (Fire & Forget)
-      queue.add('refill', { userId, vocabId }, { priority: 5 });
-    }
-    return JSON.parse(drill);
+    // popDrill 内部自动触发 checkAndTriggerReplenish
+    return drill;
   }
   
-  // 2. Cache Miss -> Fallback
-  return generateDeterministicFallback(vocabId);
+  // 2. Cache Miss -> 确定性兜底
+  const fallback = buildSimpleDrill(vocab, mode);
+  
+  // 3. 触发后台补货
+  inventory.triggerBatchEmergency(userId, mode, [vocabId]);
+  
+  return fallback;
 }
 ```
 
 ### 3.2 Production (Worker)
 ```typescript
-// Pseudocode worker
-worker.process('opus:drill-generation', async (job) => {
-  const { userId, vocabId } = job.data;
+// 参考: workers/drill-processor.ts
+async function processDrillJob(job) {
+  const { userId, mode, vocabIds } = job.data;
   
-  // 1. Check user weakness (Postgres)
-  const stats = await prisma.userProgress.findUnique({ ... });
-  const weakDim = getWeakestDimension(stats);
+  // 1. 前置检查: 库存已满则跳过
+  if (await inventory.isFull(userId, mode)) {
+    return { success: true, reason: 'inventory_full' };
+  }
   
-  // 2. Generate content (LLM or Python)
-  const drills = await generateDrills(vocabId, weakDim, count=5);
+  // 2. 生成内容 (LLM)
+  const drills = await generateDrills(vocabIds, mode);
   
-  // 3. Push to Redis
-  const key = `opus:v1:user:${userId}:inventory:${vocabId}`;
-  const pipeline = redis.pipeline();
-  drills.forEach(d => pipeline.rpush(key, JSON.stringify(d)));
-  await pipeline.exec();
-});
+  // 3. 推入 Redis (带容量保护)
+  for (const drill of drills) {
+    await inventory.pushDrill(userId, mode, drill.vocabId, drill);
+  }
+}
 ```
+
+### 3.3 Capacity Control
+```typescript
+// lib/core/inventory.ts
+async function isFull(userId: string, mode: string): Promise<boolean> {
+  const stats = await getInventoryStats(userId);
+  const capacity = await getCapacity(mode);  // CACHE_LIMIT_MAP * DRILLS_PER_BATCH
+  return stats[mode] >= capacity;
+}
+```
+

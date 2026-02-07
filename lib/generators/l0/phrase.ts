@@ -17,9 +17,9 @@
  */
 
 export interface PhraseGeneratorInput {
-    targetWord: string;
-    meaning?: string;
-    modifiers: string[];
+  targetWord: string;
+  meaning?: string;
+  modifiers: string[];
 }
 
 export const L0_PHRASE_SYSTEM_PROMPT = `
@@ -142,6 +142,9 @@ REGENERATE card if:
 <response_template>
 CRITICAL: Return JSON Only. Follow this structure exactly. 
 Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
+Variable Definitions:
+- \${Full_Phrase_With_Bolded_Target}: The complete phrase (e.g. "highly **relevant**").
+- \${Full_Phrase_Translation_CN}: The translation of the phrase (e.g. "高度相关的").
 
 {
   "drills": [
@@ -155,8 +158,8 @@ Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
       "segments": [
         {
           "type": "text",
-          "content_markdown": "#### \${TargetWord}",
-          "translation_cn": "\${Meaning_CN_if_provided_or_Generated}"
+          "content_markdown": "\${Full_Phrase_With_Bolded_Target}",
+          "translation_cn": "\${Full_Phrase_Translation_CN}"
         },
         {
           "type": "interaction",
@@ -192,5 +195,5 @@ Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
 `.trim();
 
 export function getL0PhraseBatchPrompt(inputs: PhraseGeneratorInput[]) {
-    return { system: L0_PHRASE_SYSTEM_PROMPT, user: JSON.stringify(inputs) };
+  return { system: L0_PHRASE_SYSTEM_PROMPT, user: JSON.stringify(inputs) };
 }

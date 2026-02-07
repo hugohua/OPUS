@@ -20,13 +20,14 @@ let _openaiClient: OpenAI | null = null;
 
 /**
  * 获取 OpenAI SDK 客户端实例（单例模式）
- * 自动读取环境变量配置 DashScope 或 OpenAI
+ * 自动读取环境变量配置
+ * 统一使用 standard OPENAI_API_KEY / OPENAI_BASE_URL
  */
 export function getOpenAIClient(): OpenAI {
     if (!_openaiClient) {
         _openaiClient = new OpenAI({
-            apiKey: process.env.DASHSCOPE_API_KEY || process.env.OPENAI_API_KEY,
-            baseURL: process.env.DASHSCOPE_BASE_URL || process.env.OPENAI_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1"
+            apiKey: process.env.OPENAI_API_KEY,
+            baseURL: process.env.OPENAI_BASE_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1"
         });
     }
     return _openaiClient;
@@ -56,6 +57,8 @@ export interface HandleOpenAIStreamOptions {
     onContent?: (content: string) => void;
     /** 完成回调（全部内容） */
     onComplete?: (fullContent: string) => void;
+    /** 自定义 OpenAI 客户端 (可选) */
+    client?: OpenAI;
 }
 
 /**
@@ -84,14 +87,16 @@ export async function handleOpenAIStream(
     options: HandleOpenAIStreamOptions = {}
 ): Promise<Response> {
     const {
-        model = process.env.QWEN_MODEL_NAME || "qwen-plus",
+        model = process.env.AI_MODEL_NAME || "qwen-plus",
         temperature = 0.7,
         errorContext = "OpenAI Stream",
         onContent,
-        onComplete
+        onComplete,
+        client
     } = options;
 
-    const openai = getOpenAIClient();
+    // 优先使用传入的 client，否则使用单例 client
+    const openai = client || getOpenAIClient();
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({

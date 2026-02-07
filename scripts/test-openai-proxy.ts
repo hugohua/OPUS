@@ -7,14 +7,20 @@
  *   npx tsx scripts/test-openai-proxy.ts
  */
 
+import "dotenv/config";
 import OpenAI from "openai";
 
 async function testProxy() {
     console.log("🚀 开始测试 OpenAI 兼容代理...\n");
 
+    const apiKey = process.env.ETL_API_KEY;
+    if (!apiKey) {
+        console.warn("⚠️ Warning: ETL_API_KEY not found in .env");
+    }
+
     const client = new OpenAI({
-        baseURL: "http://127.0.0.1:8045/v1",
-        apiKey: "sk-1bbb83ba938b4a9190d452c06ebed583",
+        baseURL: process.env.ETL_BASE_URL || "http://127.0.0.1:8045/v1",
+        apiKey: apiKey || "sk-1bbb83ba938b4a9190d452c06ebed583", // Fallback to hardcoded key if env missing
     });
 
     try {

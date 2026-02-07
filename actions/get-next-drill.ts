@@ -17,7 +17,7 @@ import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing'
 import { inventory } from '@/lib/core/inventory';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
-import { auditSessionFallback } from '@/lib/services/audit-service';
+import { auditSessionFallback, auditInventoryEvent } from '@/lib/services/audit-service';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -68,7 +68,16 @@ export async function getNextDrillBatch(
             try {
                 // All modes (SYNTAX, PHRASE, BLITZ, AUDIO, etc.) try cache first
                 drill = await inventory.popDrill(userId, mode, candidate.vocabId);
-                if (drill) source = 'cache_v2';
+                if (drill) {
+                    source = 'cache_v2';
+                    // [Audit] 记录库存消费事件
+                    auditInventoryEvent(userId, 'CONSUME', mode, {
+                        currentCount: 0, // 消费时不单独查询库存
+                        capacity: 0,
+                        delta: -1,
+                        vocabId: candidate.vocabId // W2 Fix: 记录消费的词汇 ID
+                    });
+                }
             } catch (e) {
                 log.error({ error: e, candidate }, 'Redis pop failed');
             }
@@ -83,6 +92,7 @@ export async function getNextDrillBatch(
                     commonExample: candidate.commonExample,
                     phoneticUk: candidate.phoneticUk, // [New]
                     partOfSpeech: candidate.partOfSpeech, // [New]
+                    etymology: candidate.etymology, // [New]
                     collocations: candidate.collocations // Check collocations
                 }, mode);
                 source = 'deterministic_fallback';

@@ -32,12 +32,12 @@ export function GlobalAdminSidebar() {
     const navItems = [
         {
             path: '/admin/inspector',
-            label: '神之眼 (Inspector)',
+            label: '神之眼',
             icon: <ShieldAlert className="w-5 h-5" />
         },
         {
             path: '/admin/queue',
-            label: '队列管理 (Queue)',
+            label: '队列管理',
             icon: <ListOrdered className="w-5 h-5" />
         }
     ];
@@ -83,7 +83,7 @@ export function GlobalAdminSidebar() {
                     <div className="w-6 h-6 rounded bg-violet-600 flex items-center justify-center font-bold text-[10px] text-white">
                         OP
                     </div>
-                    <span className="font-mono font-bold text-sm text-foreground">OPUS Admin</span>
+                    <span className="font-mono font-bold text-sm text-foreground">OPUS 后台</span>
                 </div>
 
                 <Drawer>

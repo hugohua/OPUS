@@ -70,7 +70,7 @@ opus/
 #### 1.1 识别TTS Provider
 - **Provider**: 阿里云 DashScope (`qwen3-tts-flash`)
 - **API调用位置**: `python_tts_service/main.py`
-- **认证**: 通过 `process.env.OPENAI_API_KEY` (实际是阿里云Key)
+- **认证**: 通过 `process.env.TTS_API_KEY`
 
 #### 1.2 缓存机制分析
 
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
 > [!WARNING]
 > ### 🔐 安全注意事项
-> - **API Key**: 必须使用 `process.env.DASHSCOPE_API_KEY`，禁止硬编码
+> - **API Key**: 必须使用 `process.env.TTS_API_KEY`，禁止硬编码
 > - **Rate Limiting**: 需添加请求频率限制，防止滥用
 > - **文本长度限制**: 单次请求最大500字符（与源码一致）
 

@@ -232,13 +232,13 @@ logs/
     - **Plan A (降级)**: 使用 `deterministic-drill` 生成规则兜底数据 (Zero-Wait)。
     - **Plan B (急救)**: 触发高优先级 BullMQ 任务 (`priority: high`)。
 
-### D. LLM Failover 标准 (Worker)
-- **配置**: 通过 `AI_PROVIDER_ORDER` 环境变量控制顺序。
-- **接口**: 新增厂商必须实现标准接口，配置需遵循：
-  - `[PROVIDER]_API_KEY`
-  - `[PROVIDER]_BASE_URL`
-  - `[PROVIDER]_MODEL_NAME`
-  - `[PROVIDER]_HTTPS_PROXY` (如需)
+### D. Unified LLM Architecture (AIService v3.0)
+- **Facade**: 所有业务代码 **必须** 通过 `lib/ai/core.ts` (`AIService`) 调用 AI。
+- **Ban**: 严禁在业务逻辑中直接 import `ai` SDK 或 `fetch` LLM API。
+- **Failover**: 由 `ProviderRegistry` (`lib/ai/providers.ts`) 统一管理厂商轮询策略。
+- **Strategies**:
+  - `mode: 'fast'`: Qwen-Turbo (User Facing)
+  - `mode: 'smart'`: Gemini/Claude (ETL/Reasoning)
 
 ---
 

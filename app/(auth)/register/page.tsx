@@ -54,13 +54,13 @@ export default function RegisterPage() {
     return (
         <AuthCard
             title="Opus."
-            description="NEW_USER_PROTOCOL"
+            description="新用户初始化"
         >
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
                 {/* Invite Code - Priority Field */}
                 <InviteInput
-                    label="Invitation Key"
+                    label="邀请码"
                     placeholder="XXXX-XXXX-XXXX"
                     error={form.formState.errors.inviteCode?.message}
                     {...form.register("inviteCode")}
@@ -69,16 +69,16 @@ export default function RegisterPage() {
 
                 <div className="grid gap-4 mt-6">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Display Name</Label>
+                        <Label htmlFor="name">显示名称</Label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground stroke-[1.5px]" />
-                            <Input id="name" placeholder="John Doe" className="pl-9" {...form.register("name")} disabled={isPending} />
+                            <Input id="name" placeholder="您的名字" className="pl-9" {...form.register("name")} disabled={isPending} />
                         </div>
                         {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">邮箱</Label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground stroke-[1.5px]" />
                             <Input id="email" type="email" placeholder="name@example.com" className="pl-9" {...form.register("email")} disabled={isPending} />
@@ -87,7 +87,7 @@ export default function RegisterPage() {
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">密码</Label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground stroke-[1.5px]" />
                             <Input id="password" type="password" placeholder="••••••••" className="pl-9" {...form.register("password")} disabled={isPending} />
@@ -97,13 +97,13 @@ export default function RegisterPage() {
                 </div>
 
                 <Button type="submit" className="w-full mt-6" disabled={isPending}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Initialize Account"}
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "初始化账户"}
                 </Button>
 
                 <div className="text-center text-sm text-muted-foreground mt-4">
-                    <span className="opacity-70">Already authorized? </span>
+                    <span className="opacity-70">已有账户？</span>
                     <Link href="/login" className="underline hover:text-primary transition-colors">
-                        Login
+                        登录
                     </Link>
                 </div>
             </form>

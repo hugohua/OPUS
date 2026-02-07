@@ -34,7 +34,11 @@ export type AuditContextMode =
     | 'L1:AUDIO'
     | 'L2:CONTEXT'
     | 'WEAVER:SELECTION'
-    | 'WAND:LOOKUP';
+    | 'WAND:LOOKUP'
+    | 'INVENTORY:FULL'
+    | 'INVENTORY:ADD'
+    | 'INVENTORY:CONSUME'
+    | 'INVENTORY:TRIGGER';
 
 export interface AuditPayload {
     context: Record<string, any>;
@@ -328,6 +332,53 @@ export function auditWandLookup(
         },
         // 如果是从 Generate 页面查词，标记为 contextual_lookup
         auditTags: contextId ? ['contextual_lookup'] : ['direct_lookup']
+    });
+}
+
+/**
+ * 库存事件类型
+ */
+export type InventoryEventType =
+    | 'FULL'      // 库存满拒绝生成
+    | 'ADD'       // 入库成功
+    | 'CONSUME'   // 库存消费
+    | 'TRIGGER';  // 手动触发
+
+/**
+ * 库存事件审计
+ * 追踪库存管理链路的关键事件
+ */
+export function auditInventoryEvent(
+    userId: string,
+    eventType: InventoryEventType,
+    mode: string,
+    context: {
+        currentCount: number;
+        capacity: number;
+        delta?: number;
+        source?: 'auto' | 'manual' | 'emergency';
+        vocabId?: number; // W2 Fix: 消费时记录具体词汇 ID
+    }
+): void {
+    const auditTags: string[] = [];
+
+    // 自动标记
+    if (eventType === 'FULL') {
+        auditTags.push('inventory_blocked');
+    }
+    if (context.source === 'manual') {
+        auditTags.push('manual_trigger');
+    }
+    if (context.currentCount > context.capacity) {
+        auditTags.push('over_capacity');
+    }
+
+    recordAudit({
+        targetWord: `INVENTORY:${mode}`,
+        contextMode: `INVENTORY:${eventType}`,
+        userId,
+        payload: { context },
+        auditTags
     });
 }
 

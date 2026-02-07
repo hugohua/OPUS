@@ -7,21 +7,20 @@ import { redis } from '@/lib/queue/connection';
 import { Prisma } from '@prisma/client';
 import { DrillJobData } from '@/lib/queue/inventory-queue';
 import { Vocab } from '@prisma/client';
-import { generateWithFailover } from './llm-failover';
-// import { getDrillBatchPrompt } from '@/lib/prompts/drill'; // Legacy removed
+
 import { inventory } from '@/lib/core/inventory';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
-import { safeParse } from '@/lib/ai/utils';
+import { AIService } from '@/lib/ai/core';
 import { ContextSelector } from '@/lib/ai/context-selector';
 import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
 import { getL1AudioScriptPrompt, AudioScriptInput } from '@/lib/generators/l1/audio-script';
 import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill'; // [B1 Fix] Pivot Fallback
 import { VisualTrapService } from '@/lib/services/visual-trap'; // [Phase 5]
-import { auditLLMGeneration } from '@/lib/services/audit-service'; // [V5.1] Audit
+import { auditLLMGeneration, auditInventoryEvent } from '@/lib/services/audit-service'; // [V5.1] Audit
 
 const log = logger.child({ module: 'drill-processor' });
 
@@ -62,6 +61,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         // ============================================
         // 1. 确定生成目标 (Candidates)
         // ============================================
+
+        // [Fix] Early Interception - Before ANY processing (Token Saver)
+        if (await inventory.isFull(userId, mode)) {
+            log.warn({ userId, mode }, '🛑 Inventory Full - Early Exit (Token Saved)');
+            return { success: true, count: 0, reason: 'inventory_full_early' };
+        }
+
         let candidates: DrillCandidate[] = [];
 
         if (vocabIds && vocabIds.length > 0) {
@@ -87,6 +93,14 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     const maxDrills = await inventory.getCapacity(mode);
 
                     log.warn({ userId, mode, currentCount, maxDrills }, '🛑 Inventory Full - Skipping Auto-Generation');
+
+                    // [Audit] 记录库存满事件
+                    auditInventoryEvent(userId, 'FULL', mode, {
+                        currentCount,
+                        capacity: maxDrills,
+                        source: 'auto'
+                    });
+
                     return { success: true, count: 0, reason: 'inventory_full_pre_check' };
                 }
 
@@ -128,6 +142,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         const audioGroup: DrillCandidate[] = []; // [L1] Audio
         const phraseGroup: DrillCandidate[] = []; // Reserved
         const contextGroup: DrillCandidate[] = []; // [L2] Context
+        const chunkingGroup: DrillCandidate[] = []; // [L1] Chunking
+        const nuanceGroup: DrillCandidate[] = []; // [L2] Nuance
 
         // Routing Logic
         if (mode === 'SYNTAX') {
@@ -162,6 +178,12 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             } else if (mode === 'CONTEXT') {
                 // [L2] Context Lab
                 contextGroup.push(...candidates);
+            } else if (mode === 'CHUNKING') {
+                // [L1] Chunking (Semantic Rhythms)
+                chunkingGroup.push(...candidates);
+            } else if (mode === 'NUANCE') {
+                // [L2] Nuance (Business Nuance)
+                nuanceGroup.push(...candidates);
             } else {
                 // Default fallback to Syntax
                 syntaxGroup.push(...candidates);
@@ -184,14 +206,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 const inputs = await Promise.all(syntaxGroup.map(c => mapToSyntaxInput(userId, c)));
                 const p = getL0SyntaxBatchPrompt(inputs);
 
-                const { text, provider } = await generateWithFailover(p.system, p.user);
-                primaryProvider = provider;
-
-                const result = safeParse(text, BatchDrillOutputSchema, {
-                    model: provider,
-                    systemPrompt: p.system,
-                    userPrompt: p.user
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'fast',
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
                 });
+                primaryProvider = provider;
 
                 // Map results back to candidates 
                 // Assumes LLM respects order. Drill output is array.
@@ -232,12 +253,11 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 }));
                 const p = getL0BlitzBatchPrompt(inputs);
 
-                const { text, provider } = await generateWithFailover(p.system, p.user);
-
-                const result = safeParse(text, BatchDrillOutputSchema, {
-                    model: provider,
-                    systemPrompt: p.system,
-                    userPrompt: p.user
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'fast',
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
                 });
 
                 result.drills.forEach((drill, idx) => {
@@ -254,11 +274,49 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             })().catch(err => log.error({ error: err.message }, 'Failed to process Blitz group')));
         }
 
-        // --- Task C: Process Phrase Group (if any) ---
+        // --- Task C: Process Phrase Group (Hybrid: DB First -> LLM Fallback) ---
         if (phraseGroup.length > 0) {
             tasks.push((async () => {
                 const { getL0PhraseBatchPrompt } = await import('@/lib/generators/l0/phrase');
-                const inputs = await Promise.all(phraseGroup.map(async c => {
+                const { buildPhraseDrill } = await import('@/lib/templates/phrase-drill');
+
+                const llmCandidates: DrillCandidate[] = [];
+
+                // 1. Try DB First (Deterministic)
+                for (const c of phraseGroup) {
+                    // Map DrillCandidate to partial Vocab for builder
+                    const vocabLike = {
+                        id: c.vocabId,
+                        word: c.word,
+                        definition_cn: c.definition_cn,
+                        phoneticUs: c.phoneticUs,
+                        partOfSpeech: c.partOfSpeech,
+                        collocations: c.collocations,
+                        commonExample: c.commonExample,
+                        etymology: c.etymology
+                    } as any;
+
+                    const dbDrill = buildPhraseDrill(vocabLike);
+
+                    if (dbDrill) {
+                        generatedDrills.push({
+                            drill: dbDrill,
+                            candidate: c,
+                            systemPrompt: 'DB_FIRST',
+                            userPrompt: 'DB_FIRST',
+                            provider: 'db_collocation'
+                        });
+                    } else {
+                        llmCandidates.push(c);
+                    }
+                }
+
+                if (llmCandidates.length === 0) return;
+
+                // 2. LLM Fallback for remaining candidates
+                log.info({ count: llmCandidates.length }, '⚠️ Phrase DB miss, falling back to LLM');
+
+                const inputs = await Promise.all(llmCandidates.map(async c => {
                     const modifiers = await getContextWords(userId, c.vocabId, c.word);
                     return {
                         targetWord: c.word,
@@ -268,19 +326,18 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 }));
                 const p = getL0PhraseBatchPrompt(inputs);
 
-                const { text, provider } = await generateWithFailover(p.system, p.user);
-
-                const result = safeParse(text, BatchDrillOutputSchema, {
-                    model: provider,
-                    systemPrompt: p.system,
-                    userPrompt: p.user
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'smart', // Phrase might need more nuance
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
                 });
 
                 result.drills.forEach((drill, idx) => {
-                    if (idx < phraseGroup.length) {
+                    if (idx < llmCandidates.length) {
                         generatedDrills.push({
                             drill,
-                            candidate: phraseGroup[idx],
+                            candidate: llmCandidates[idx],
                             systemPrompt: p.system,
                             userPrompt: p.user,
                             provider: provider
@@ -290,18 +347,81 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             })().catch(err => log.error({ error: err.message }, 'Failed to process Phrase group')));
         }
 
+        // --- Task F: Process Chunking Group (L1) ---
+        if (chunkingGroup.length > 0) {
+            tasks.push((async () => {
+                const { getL1ChunkingBatchPrompt } = await import('@/lib/generators/l1/chunking');
+                const inputs = chunkingGroup.map(c => ({
+                    sentence: c.commonExample || `The ${c.word} is essential for success.`,
+                    targetWord: c.word
+                }));
+                const p = getL1ChunkingBatchPrompt(inputs);
+
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'fast',
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
+                });
+
+                result.drills.forEach((drill, idx) => {
+                    if (idx < chunkingGroup.length) {
+                        generatedDrills.push({
+                            drill,
+                            candidate: chunkingGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Chunking group')));
+        }
+
+        // --- Task G: Process Nuance Group (L2) ---
+        if (nuanceGroup.length > 0) {
+            tasks.push((async () => {
+                const { getL2NuanceBatchPrompt } = await import('@/lib/generators/l2/nuance');
+                const inputs = nuanceGroup.map(c => ({
+                    targetWord: c.word,
+                    meaning: c.definition_cn || '',
+                    synonyms: c.synonyms || [],
+                    scenario: c.scenario || 'business communication'
+                }));
+                const p = getL2NuanceBatchPrompt(inputs);
+
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'fast', // Unified to Fast for all user-facing drills
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
+                });
+
+                result.drills.forEach((drill, idx) => {
+                    if (idx < nuanceGroup.length) {
+                        generatedDrills.push({
+                            drill,
+                            candidate: nuanceGroup[idx],
+                            systemPrompt: p.system,
+                            userPrompt: p.user,
+                            provider: provider
+                        });
+                    }
+                });
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Nuance group')));
+        }
+
         // --- Task D: Process Audio Group (L1) ---
         if (audioGroup.length > 0) {
             tasks.push((async () => {
                 const inputs = audioGroup.map(mapToAudioInput);
                 const p = getL1AudioScriptPrompt(inputs);
 
-                const { text, provider } = await generateWithFailover(p.system, p.user);
-
-                const result = safeParse(text, BatchDrillOutputSchema, {
-                    model: provider,
-                    systemPrompt: p.system,
-                    userPrompt: p.user
+                const { object: result, provider } = await AIService.generateObject({
+                    mode: 'fast',
+                    schema: BatchDrillOutputSchema,
+                    system: p.system,
+                    prompt: p.user
                 });
 
                 result.drills.forEach((drill, idx) => {
@@ -368,8 +488,12 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                     try {
                         const p = getL2ContextBatchPrompt(inputs, stageNum);
-                        const { text, provider } = await generateWithFailover(p.system, p.user);
-                        const result = safeParse(text, BatchDrillOutputSchema, { model: provider, systemPrompt: p.system, userPrompt: p.user });
+                        const { object: result, provider } = await AIService.generateObject({
+                            mode: 'fast', // Unified to Fast (User request: Context is short enough)
+                            schema: BatchDrillOutputSchema,
+                            system: p.system,
+                            prompt: p.user
+                        });
 
                         result.drills.forEach((drill, idx) => {
                             if (idx < inputs.length) {
@@ -425,7 +549,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     sys_prompt_version: 'v2.8-schedule',
                     vocabId: candidate.vocabId,
                     target_word: candidate.word,
-                    source: 'llm_v2'
+                    source: 'llm_v2',
+                    etymology: candidate.etymology // [New]
                 },
                 segments: rawDrill.segments,
             };
@@ -504,11 +629,22 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             );
         }
 
+        // [Audit] 批量入库事件 (循环外一次性记录)
+        if (successCount > 0) {
+            auditInventoryEvent(userId, 'ADD', mode, {
+                currentCount: successCount,
+                capacity: 0, // 留空，批量入库时不单独查询
+                delta: successCount,
+                source: job.name.startsWith('generate-') ? 'auto' : 'emergency'
+            });
+        }
+
         if (pivotCount > 0) {
             log.warn({ correlationId, pivotCount, successCount }, '⚠️ 部分 Drill 使用了 Pivot 兜底');
         }
 
         log.info({ correlationId, successCount }, 'Drill V2 入库完成');
+
 
         return { success: true, count: successCount, pivotCount, provider: primaryProvider };
 
@@ -534,11 +670,15 @@ interface DrillCandidate {
     scenario?: string;
     commonExample?: string | null;
     partOfSpeech?: string | null; // [New]
+    etymology?: any; // [New]
+    phoneticUs?: string | null; // [New]
+    phoneticUk?: string | null; // [New]
 }
 
 async function fetchSpecificCandidates(userId: string, vocabIds: number[]): Promise<DrillCandidate[]> {
     const vocabs = await db.vocab.findMany({
-        where: { id: { in: vocabIds } }
+        where: { id: { in: vocabIds } },
+        include: { etymology: true } // [New]
     });
     return vocabs.map(mapToCandidate);
 }
@@ -553,7 +693,10 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         partOfSpeech: v.partOfSpeech, // [New]
         type: 'NEW', // Default for manual fetch
         reviewData: null,
-        confusion_audio: v.confusion_audio || []
+        confusion_audio: v.confusion_audio || [],
+        etymology: (v as any).etymology, // [New]
+        phoneticUs: v.phoneticUs, // [New]
+        phoneticUk: v.phoneticUk // [New]
     };
 }
 
@@ -635,7 +778,10 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         type: omps.type, // [Smart Dispatch] Pass type
         reviewData: omps.reviewData, // [Smart Dispatch] Pass FSRS data
         partOfSpeech: omps.partOfSpeech, // [New]
-        confusion_audio: (omps as any).confusion_audio // OMPS might need update too
+        confusion_audio: (omps as any).confusion_audio, // OMPS might need update too
+        etymology: (omps as any).etymology, // [New]
+        phoneticUs: omps.phoneticUs, // [New]
+        phoneticUk: omps.phoneticUk // [New]
     }));
 
     // 4. 返回指定数量

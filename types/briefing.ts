@@ -34,6 +34,7 @@ export interface BriefingPayload {
         target_word?: string;
         source?: string; // Track origin (cache, deterministic, llm)
         nuance_goal?: string; // PHRASE mode: semantic goal (e.g., "Describe quality")
+        etymology?: any; // [New] Etymology data (Prisma Type or generic object)
     };
     segments: BriefingSegment[];
 }

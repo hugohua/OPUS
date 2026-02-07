@@ -26,29 +26,29 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
     if (s.status === 'MASTERED') {
         statusColor = "text-emerald-500";
         statusBg = "bg-emerald-500/10";
-        statusText = "Stable";
+        statusText = "已掌握";
         barColor = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
     } else if (s.status === 'LEARNING' || s.status === 'REVIEW') {
         if (s.isLeech) {
             statusColor = "text-rose-500";
             statusBg = "bg-rose-500/10";
-            statusText = "Leech";
+            statusText = "难点词";
             barColor = "bg-rose-500";
         } else if (s.nextReview && new Date(s.nextReview) <= new Date()) {
             statusColor = "text-amber-500";
             statusBg = "bg-amber-500/10";
-            statusText = "Due";
+            statusText = "待复习";
             barColor = "bg-amber-500";
         } else {
             statusColor = "text-amber-500"; // Learning/Review generally active
             statusBg = "bg-amber-500/10";
-            statusText = s.status === 'REVIEW' ? 'Reviewing' : 'Learning';
+            statusText = s.status === 'REVIEW' ? '待复习' : '学习中';
             barColor = "bg-amber-500";
         }
     } else {
         // New
         rankColor = "text-zinc-600";
-        statusText = "New";
+        statusText = "新词";
         // New items might not show status pill in demo, or just grey?
     }
 
@@ -62,9 +62,9 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
         : 0;
 
     let dueText = "";
-    if (s.status === 'NEW') dueText = "Not started";
-    else if (nextReviewDays <= 0) dueText = "Due Today";
-    else dueText = `Review: ${nextReviewDays}d`;
+    if (s.status === 'NEW') dueText = "未开始";
+    else if (nextReviewDays <= 0) dueText = "今日复习";
+    else dueText = `复习: ${nextReviewDays}天`;
 
 
     return (
@@ -117,7 +117,7 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
                         </div>
                     </>
                 ) : (
-                    <div className="text-[10px] text-zinc-600 font-mono">Unseen</div>
+                    <div className="text-[10px] text-zinc-600 font-mono">未学习</div>
                 )}
             </div>
         </div>

@@ -22,7 +22,7 @@ function LogDetailContent({ log }: { log: any }) {
     if (!log) return (
         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 p-8">
             <Brain className="w-16 h-16 mb-4" />
-            <p>Select a log entry to view details</p>
+            <p>选择一条日志查看详情</p>
         </div>
     );
 
@@ -32,18 +32,18 @@ function LogDetailContent({ log }: { log: any }) {
             <div className="rounded-xl border bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-2">
-                        <span className="text-violet-500">Target:</span>
+                        <span className="text-violet-500">目标词:</span>
                         {log.targetWord}
                     </h3>
                     <span className="font-mono text-xs text-muted-foreground">{log.id}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <div className="text-muted-foreground text-xs uppercase mb-1">Context Mode</div>
+                        <div className="text-muted-foreground text-xs uppercase mb-1">上下文模式</div>
                         <div className="font-mono">{log.contextMode}</div>
                     </div>
                     <div>
-                        <div className="text-muted-foreground text-xs uppercase mb-1">Timestamp</div>
+                        <div className="text-muted-foreground text-xs uppercase mb-1">时间戳</div>
                         <div className="font-mono">{new Date(log.createdAt).toLocaleString()}</div>
                     </div>
                 </div>
@@ -54,7 +54,7 @@ function LogDetailContent({ log }: { log: any }) {
                 <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-4 flex gap-3 items-start">
                     <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
                     <div>
-                        <h4 className="font-bold text-rose-600 mb-1">Anomalies Detected</h4>
+                        <h4 className="font-bold text-rose-600 mb-1">检测到异常</h4>
                         <div className="flex gap-2 flex-wrap">
                             {log.auditTags.map((t: string) => (
                                 <span key={t} className="font-mono text-xs text-rose-500 bg-rose-500/10 px-2 py-1 rounded">
@@ -68,9 +68,9 @@ function LogDetailContent({ log }: { log: any }) {
 
             {/* Payload Inspector */}
             <div>
-                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Snapshot Payload</h4>
-                <div className="rounded-xl border bg-zinc-950 p-4 overflow-x-auto">
-                    <pre className="font-mono text-xs text-zinc-300 leading-relaxed">
+                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">快照数据</h4>
+                <div className="rounded-xl border bg-zinc-100 dark:bg-zinc-950 p-4 overflow-x-auto">
+                    <pre className="font-mono text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
                         {JSON.stringify(log.payload, null, 2)}
                     </pre>
                 </div>
@@ -107,7 +107,7 @@ export function AuditDashboard() {
             }
         } catch (error) {
             console.error(error);
-            toast.error('Failed to load audit data');
+            toast.error('加载审计数据失败');
         } finally {
             setIsLoading(false);
         }
@@ -134,7 +134,7 @@ export function AuditDashboard() {
             <header className="p-6 border-b bg-background/50 backdrop-blur z-10 shrink-0">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-indigo-500">
-                        Panoramic Audit
+                        全景审计
                     </h2>
                     <button
                         onClick={fetchData}
@@ -151,36 +151,36 @@ export function AuditDashboard() {
                     <div className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-xs font-mono font-bold text-emerald-600 uppercase tracking-wider">Selection Pulse</p>
+                                <p className="text-xs font-mono font-bold text-emerald-600 uppercase tracking-wider">选词命中率</p>
                                 <h3 className="text-2xl font-bold text-emerald-500 mt-1">{stats?.selectionCompliance ?? '-'}%</h3>
                             </div>
                             <Filter className="w-5 h-5 text-emerald-500/50" />
                         </div>
-                        <p className="text-[10px] text-emerald-600/60 mt-2">Target &gt; 98% (No Shortage)</p>
+                        <p className="text-[10px] text-emerald-600/60 mt-2">目标 &gt; 98% (无短缺)</p>
                     </div>
 
                     {/* FSRS */}
                     <div className="relative overflow-hidden rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-xs font-mono font-bold text-violet-600 uppercase tracking-wider">Memory Flux</p>
+                                <p className="text-xs font-mono font-bold text-violet-600 uppercase tracking-wider">记忆稳定性</p>
                                 <h3 className="text-2xl font-bold text-violet-500 mt-1">{stats?.retentionRate ?? '-'}%</h3>
                             </div>
                             <Brain className="w-5 h-5 text-violet-500/50" />
                         </div>
-                        <p className="text-[10px] text-violet-600/60 mt-2">Target &gt; 90% (Stability Growth)</p>
+                        <p className="text-[10px] text-violet-600/60 mt-2">目标 &gt; 90% (稳定增长)</p>
                     </div>
 
                     {/* Anomalies */}
                     <div className="relative overflow-hidden rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-xs font-mono font-bold text-rose-600 uppercase tracking-wider">System Entropy</p>
+                                <p className="text-xs font-mono font-bold text-rose-600 uppercase tracking-wider">系统异常</p>
                                 <h3 className="text-2xl font-bold text-rose-500 mt-1">{stats?.anomalyCount ?? '-'}</h3>
                             </div>
                             <AlertCircle className="w-5 h-5 text-rose-500/50" />
                         </div>
-                        <p className="text-[10px] text-rose-600/60 mt-2">Active Anomalies</p>
+                        <p className="text-[10px] text-rose-600/60 mt-2">当前异常数</p>
                     </div>
                 </div>
             </header>
@@ -274,7 +274,7 @@ export function AuditDashboard() {
                     <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                         <DrawerContent className="h-[85vh]">
                             <DrawerHeader className="border-b">
-                                <DrawerTitle>Audit Detail</DrawerTitle>
+                                <DrawerTitle>审计详情</DrawerTitle>
                                 <DrawerDescription className="font-mono text-xs">
                                     #{selectedLog?.id}
                                 </DrawerDescription>

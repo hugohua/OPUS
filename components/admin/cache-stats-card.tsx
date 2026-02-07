@@ -32,35 +32,35 @@ interface CacheStatsCardProps {
 const MODE_GROUPS = [
     {
         level: 'L0',
-        label: 'Foundation',
-        subLabel: 'Syntax & Phrase',
+        label: '基础训练 (Foundation)',
+        subLabel: '语法 & 短语',
         color: 'emerald',
         icon: Wrench,
         modes: [
-            { key: 'SYNTAX', label: 'Syntax Drill' },
-            { key: 'PHRASE', label: 'Phrase Drill' },
+            { key: 'SYNTAX', label: '语法 (Syntax)' },
+            { key: 'PHRASE', label: '短语 (Phrase)' },
         ]
     },
     {
         level: 'L1',
-        label: 'Rhythm Flow',
-        subLabel: 'Audio & Chunking',
+        label: '韵律训练 (Rhythm)',
+        subLabel: '听力 & 分块',
         color: 'sky',
         icon: Activity,
         modes: [
-            { key: 'CHUNKING', label: 'Chunking' },
-            { key: 'AUDIO', label: 'Audio Drill' },
+            { key: 'CHUNKING', label: '语块 (Chunking)' },
+            { key: 'AUDIO', label: '听力 (Audio)' },
         ]
     },
     {
         level: 'L2',
-        label: 'Cognitive',
-        subLabel: 'Nuance & Logic',
+        label: '认知训练 (Cognitive)',
+        subLabel: '细微差异 & 逻辑',
         color: 'violet',
         icon: Brain,
         modes: [
-            { key: 'NUANCE', label: 'Nuance Drill' },
-            { key: 'READING', label: 'Reading Drill' },
+            { key: 'NUANCE', label: '辨析 (Nuance)' },
+            { key: 'READING', label: '阅读 (Reading)' },
         ]
     }
 ];
@@ -73,7 +73,7 @@ export function CacheStatsCard({ stats }: CacheStatsCardProps) {
                 <div>
                     <h3 className="text-xs font-mono font-medium text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                         <Database className="w-3 h-3" />
-                        Inventory Monitor
+                        库存监控
                     </h3>
                 </div>
                 <div className="text-right">

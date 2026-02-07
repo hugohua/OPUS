@@ -116,14 +116,10 @@ while (true) {
 工具自动读取以下环境变量（优先级从高到低）:
 
 ```env
-# DashScope 配置（优先）
-DASHSCOPE_API_KEY=sk-xxx
-DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-QWEN_MODEL_NAME=qwen-plus
-
-# OpenAI 配置（Fallback）
+# Unified Config
 OPENAI_API_KEY=sk-xxx
-OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL_NAME=qwen-plus
 ```
 
 ## 调试

@@ -9,8 +9,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
-import { generateObject } from 'ai';
-import { getAIModel } from '@/lib/ai/client';
+import { AIService } from '@/lib/ai/core';
 import { createLogger } from '@/lib/logger';
 import {
     L2SentencePayloadSchema,
@@ -73,14 +72,15 @@ export async function getOrGenerateL2Context(
     log.info({ vocabId, word }, 'SmartContent cache miss, batch generating 6 scenarios...');
 
     try {
-        const { model, modelName } = getAIModel();
-
-        const { object } = await generateObject({
-            model,
+        const { object, provider } = await AIService.generateObject({
+            mode: 'fast',
             schema: L2BatchPayloadSchema,
             system: L2_SMART_CONTENT_SYSTEM_PROMPT,
             prompt: buildL2BatchUserPrompt(word, definition),
         });
+
+        // 记录使用的 Provider
+        log.info({ vocabId, provider }, 'SmartContent generated via AIService');
 
         // 3. Zod 校验
         const validated = L2BatchPayloadSchema.safeParse(object);
@@ -100,7 +100,7 @@ export async function getOrGenerateL2Context(
                         type: 'L2_SENTENCE',
                         scenario: payload.scenario,
                         payload: payload,
-                        model: modelName,
+                        model: provider,
                     },
                 })
             )

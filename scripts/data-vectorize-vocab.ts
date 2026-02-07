@@ -11,7 +11,7 @@
  *   npx tsx scripts/data-vectorize-vocab.ts --force     # 强制重新生成所有单词向量
  * 
  * 注意：
- *   1. 环境变量要求: DASHSCOPE_API_KEY (推荐) 或 OPENAI_API_KEY
+ *   1. 环境变量要求: OPENAI_API_KEY (推荐)
  *   2. 可选环境变量: HTTPS_PROXY, EMBEDDING_MODEL_NAME (默认 text-embedding-v3/v2)
  *   3. 核心逻辑依赖 `VectorizationService`，dry-run 模式会输出预览文件到 `output/` 目录。
  */

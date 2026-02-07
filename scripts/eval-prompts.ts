@@ -35,7 +35,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateWithFailover } from '../workers/llm-failover';
+import { AIService } from '../lib/ai/core';
 import { JUDGE_PROMPTS } from '../lib/generators/judges';
 
 // ES Module compatibility
@@ -133,14 +133,15 @@ async function main() {
     const secondaryModelName = process.env.ETL_MODEL_NAME || 'openrouter';
 
     if (compare) {
-        const originalOrder = process.env.AI_PROVIDER_ORDER;
-        process.env.AI_PROVIDER_ORDER = 'openrouter';
+        const originalOrder = process.env.AI_FAST_ORDER;
+        // Force OpenRouter (or secondary) for comparison
+        process.env.AI_FAST_ORDER = 'openrouter';
         console.log(`[Secondary] Calling ${secondaryModelName} with ${inputs.length} items...`);
 
         secondaryOutputs = await runBatchModel(secondaryModelName, prompt, inputs.length);
         console.log(`[Secondary] Received ${secondaryOutputs.length} valid items.`);
 
-        process.env.AI_PROVIDER_ORDER = originalOrder;
+        process.env.AI_FAST_ORDER = originalOrder;
     }
 
     // 4. Map & Judge
@@ -370,7 +371,11 @@ async function fetchTestCasesFromDB(mode: string): Promise<any[]> {
  */
 async function runBatchModel(modelName: string, prompt: { system: string, user: string }, expectedCount: number): Promise<any[]> {
     try {
-        const response = await generateWithFailover(prompt.system, prompt.user);
+        const response = await AIService.generateText({
+            system: prompt.system,
+            prompt: prompt.user,
+            mode: 'fast'
+        });
 
         // Attempt clean JSON parse
         let jsonStr = response.text;
@@ -405,7 +410,11 @@ async function runJudge(content: string, role: string) {
     const userPrompt = `Evaluate this generated drill content:\n${content}`;
 
     try {
-        const judgeResult = await generateWithFailover(systemPrompt, userPrompt);
+        const judgeResult = await AIService.generateText({
+            system: systemPrompt,
+            prompt: userPrompt,
+            mode: 'smart'
+        });
         let parseText = judgeResult.text;
         if (parseText.includes('```json')) {
             parseText = parseText.split('```json')[1].split('```')[0].trim();
@@ -868,7 +877,11 @@ Generate a complete Markdown document following the specified format.`;
 
     let summaryMarkdown: string;
     try {
-        const result = await generateWithFailover(systemPrompt, userPrompt);
+        const result = await AIService.generateText({
+            system: systemPrompt,
+            prompt: userPrompt,
+            mode: 'smart' // Summary generation needs reasoning
+        });
         summaryMarkdown = result.text;
 
         // Clean up markdown code blocks if present

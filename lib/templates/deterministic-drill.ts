@@ -52,7 +52,7 @@ async function fetchWordsForDrill(
         },
         take: limit,
         orderBy: { next_review_at: 'asc' },
-        include: { vocab: true },
+        include: { vocab: { include: { etymology: true } } },
     });
 
     if (reviewWords.length >= limit) {
@@ -69,6 +69,7 @@ async function fetchWordsForDrill(
         },
         take: limit - reviewWords.length,
         orderBy: { frequency_score: 'desc' },
+        include: { etymology: true }
     });
 
     return [...reviewWords.map((r) => r.vocab), ...newWords];
@@ -90,6 +91,7 @@ export interface VocabDrillInput {
     phoneticUk?: string | null;
     phoneticUs?: string | null;
     partOfSpeech?: string | null; // [New]
+    etymology?: any; // [New]
 }
 
 /**
@@ -151,6 +153,7 @@ export function buildSimpleDrill(vocab: VocabDrillInput, mode: SessionMode): Bri
         sentence,
         translation,
         mode,
-        'deterministic_fallback'
+        'deterministic_fallback',
+        vocab.etymology // [New]
     );
 }

@@ -22,7 +22,7 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
         {
             href: "/dashboard",
             icon: Home,
-            label: "Dashboard",
+            label: "主页",
             exact: true
         },
         {
@@ -32,18 +32,18 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
             // Previous was BookOpen. Let's stick to semantic meaning: Inventory => Layers/Database.
             // But user said "Inventory (Word List)". 
             // Let's use Layers as it looks like a stack of cards.
-            label: "Inventory",
+            label: "词库",
             hasDot: hasDue
         },
         {
             href: "/admin", // User requested Admin
             icon: ShieldCheck, // Shield icon
-            label: "Admin"
+            label: "后台"
         },
         {
             href: "/dashboard/profile", // User requested Profile
             icon: SlidersHorizontal, // Sliders icon
-            label: "Profile"
+            label: "我的"
         }
     ];
 

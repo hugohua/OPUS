@@ -18,7 +18,7 @@
 
 import { ContextSelector } from '@/lib/ai/context-selector';
 import { prisma } from '@/lib/db';
-import { generateWithFailover } from '@/workers/llm-failover'; // Reusing existing LLM integration
+import { AIService } from '@/lib/ai/core';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('eval-script');
@@ -104,10 +104,11 @@ async function main() {
         `;
 
         try {
-            const { text } = await generateWithFailover(
-                'You are a strict JSON-only output machine.',
-                prompt
-            );
+            const { text } = await AIService.generateText({
+                system: 'You are a strict JSON-only output machine.',
+                prompt: prompt,
+                mode: 'smart'
+            });
 
             // Simple parsing
             const jsonMatch = text.match(/\{[\s\S]*\}/);

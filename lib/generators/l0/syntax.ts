@@ -174,16 +174,16 @@ For each Target Word, select the MATCHING formula below and fill the slots.
     </distractor_logic>
 
     <explanation_logic language="zh-CN">
-        Max 25 chars.
+        Max 80 chars.
         Logic:
-        1. Identify WHY the Distractor is wrong (Wrong POS? Wrong Meaning? Look-alike?).
-        2. Generate explanation based on that reason.
+        1. Analyze the context (Subject/Verb) vs the Distractor.
+        2. If Distractor matches POS but fails semantically (e.g., Person vs Concept), explain the clash.
         
         Templates:
-        - POS Mismatch: "缺{target_pos_cn}。{distractor}是{dist_pos_cn}。"
-        - Confusing Word: "形近词。{distractor}意为{dist_meaning}。"
-        - Grammar Valid but Wrong Word: "语意不符。{distractor}意为..."
-        - Default: "词性错误。需填{correct_pos_cn}。"
+        - Noun Type Mismatch (Person vs Abstract): "名词类型不匹配。主语 '{subject}' 指代人物，此处应使用指人的名词 '{target_word}' ({target_meaning_cn})，而非抽象名词 '{distractor}' ({dist_meaning_cn})。"
+        - POS Mismatch: "词性错误。此处缺{target_pos_cn}修饰 '{context_word}'。'{distractor}' 是{dist_pos_cn}。"
+        - Confusing Word: "形近词辨析。'{target_word}' 意为{target_meaning_cn}；'{distractor}' 意为{dist_meaning_cn}，不符语境。"
+        - Default: "语法不匹配。此处需要{target_pos_cn} '{target_word}'，而非 '{distractor}'。"
     </explanation_logic>
 </interaction_config>
 
@@ -225,7 +225,7 @@ Example 1 (Verb):
             "question_markdown": "The manager _______ the plan.",
             "options": ["approval", "approved"],
             "answer_key": "approved",
-            "explanation_markdown": "缺谓语<v>。approval是名词。"
+            "explanation_markdown": "词性错误。系动词 'is' 后需要形容词作表语。'accuracy' 是名词 (准确度)，不符合语法结构。"
           }
         }
       ]

@@ -47,7 +47,7 @@ export function VocabFilters({
                         value={search}
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="block w-full pl-10 pr-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-md bg-zinc-50 dark:bg-zinc-900 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 text-zinc-900 dark:text-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all focus:outline-none"
-                        placeholder="Search strategy, 策略..."
+                        placeholder="搜索单词..."
                     />
                 </div>
 
@@ -56,7 +56,7 @@ export function VocabFilters({
                     className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
                 >
                     <ListFilter className="w-3.5 h-3.5" />
-                    <span>Sort: {sort === 'RANK' ? 'Rank' : 'Due'}</span>
+                    <span>排序: {sort === 'RANK' ? '排名' : '待复习'}</span>
                 </button>
             </div>
 
@@ -65,35 +65,35 @@ export function VocabFilters({
                 {/* Mask for scroll fade if supported, otherwise just scroll */}
 
                 <FilterChip
-                    label="All"
+                    label="全部"
                     active={status === 'ALL'}
                     onClick={() => onStatusChange('ALL')}
                     variant="default"
                 />
 
                 <FilterChip
-                    label="New"
+                    label="新词"
                     active={status === 'NEW'}
                     onClick={() => onStatusChange('NEW')}
                     dotColor="bg-zinc-600"
                 />
 
                 <FilterChip
-                    label="Learning"
+                    label="学习中"
                     active={status === 'LEARNING'}
                     onClick={() => onStatusChange('LEARNING')}
                     dotColor="bg-amber-500"
                 />
 
                 <FilterChip
-                    label="Review"
+                    label="待复习"
                     active={status === 'REVIEW'}
                     onClick={() => onStatusChange('REVIEW')}
                     dotColor="bg-emerald-500"
                 />
 
                 <FilterChip
-                    label="Leech"
+                    label="难点词"
                     active={status === 'LEECH'}
                     onClick={() => onStatusChange('LEECH')}
                     variant="rose"
@@ -103,7 +103,7 @@ export function VocabFilters({
                 <div className="w-px h-4 bg-zinc-800 mx-1 shrink-0"></div>
 
                 <FilterChip
-                    label="AI Context"
+                    label="AI 情境"
                     active={status === 'CONTEXT'}
                     onClick={() => onStatusChange('CONTEXT')}
                     variant="violet"
@@ -126,7 +126,7 @@ interface FilterChipProps {
 }
 
 function FilterChip({ label, active, onClick, variant = 'default', dotColor, icon }: FilterChipProps) {
-    if (label === 'All') {
+    if (label === '全部') {
         return (
             <button
                 onClick={onClick}

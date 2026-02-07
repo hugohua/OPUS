@@ -8,12 +8,13 @@
  * 2. auditDrillQuality: AI 自动评审 (使用 quality-auditor Prompt)
  */
 
-import { generateWithFailover } from '../workers/llm-failover';
+import { AIService } from '@/lib/ai/core';
 import { createAuditRecord } from '@/actions/audit-actions';
 import {
     AUDIT_SYSTEM_PROMPT,
     getAuditUserPrompt,
-    AuditResult
+    AuditResult,
+    AuditResultSchema
 } from '@/lib/generators/audit/quality-auditor';
 
 // Re-export for UI
@@ -52,17 +53,21 @@ export async function auditDrillQuality(
     contextMode: string,
     payload: any
 ) {
+    console.log('[Audit] Starting audit for:', targetWord);
     try {
         const segments = payload.segments || [];
         const interaction = segments.find((s: any) => s.type === 'interaction');
 
         if (!interaction) {
+            console.error('[Audit] No interaction found');
             return { success: false, error: "No interaction found in payload" };
         }
 
         const question = interaction.task?.question_markdown || "";
         const options = interaction.task?.options || [];
         const answer = interaction.task?.answer_key || "";
+
+        console.log('[Audit] Extracted data:', { question, options, answer });
 
         // 使用分离的 Prompt
         const userPrompt = getAuditUserPrompt({
@@ -73,17 +78,16 @@ export async function auditDrillQuality(
             answer
         });
 
-        const { text } = await generateWithFailover(
-            AUDIT_SYSTEM_PROMPT,  // 静态 System Prompt
-            userPrompt            // 动态 User Prompt
-        );
+        console.log('[Audit] Calling AIService (smart mode)');
+        const { object: result, provider } = await AIService.generateObject({
+            mode: 'smart',
+            schema: AuditResultSchema,
+            system: AUDIT_SYSTEM_PROMPT,
+            prompt: userPrompt
+        });
 
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("Failed to parse AI response");
-        }
-
-        const result = JSON.parse(jsonMatch[0]) as AuditResult;
+        console.log('[Audit] AIService response received from:', provider);
+        console.log('[Audit] Result:', result);
 
         // 保存审计结果
         await createAuditRecord({
@@ -96,10 +100,11 @@ export async function auditDrillQuality(
             isRedundant: result.redundancy_detected
         });
 
+        console.log('[Audit] Success! Returning result');
         return { success: true, data: result };
 
     } catch (error) {
-        console.error("Audit failed:", error);
+        console.error("[Audit] Failed:", error);
         return { success: false, error: String(error) };
     }
 }
