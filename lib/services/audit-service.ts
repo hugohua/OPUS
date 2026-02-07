@@ -38,7 +38,8 @@ export type AuditContextMode =
     | 'INVENTORY:FULL'
     | 'INVENTORY:ADD'
     | 'INVENTORY:CONSUME'
-    | 'INVENTORY:TRIGGER';
+    | 'INVENTORY:TRIGGER'
+    | 'LLM:FAILOVER';
 
 export interface AuditPayload {
     context: Record<string, any>;
@@ -233,6 +234,54 @@ export function auditLLMGeneration(
             generator: {
                 ...generator,
                 mode
+            }
+        },
+        auditTags
+    });
+}
+
+/**
+ * LLM Provider Failover 审计
+ * 记录 Provider 切换事件，便于追踪不稳定的 Provider
+ */
+export function auditLLMFailover(
+    userId: string | null, // 新增：可选的用户 ID，用于审计追溯
+    failedProvider: string,
+    fallbackProvider: string | null,
+    error: string,
+    context: {
+        mode: 'fast' | 'smart';
+        attemptNumber: number;
+        totalProviders: number;
+    }
+): void {
+    const auditTags: string[] = ['provider_failover'];
+
+    // 标记是否全部失败
+    if (!fallbackProvider) {
+        auditTags.push('all_providers_failed');
+    }
+
+    // 标记连续失败
+    if (context.attemptNumber > 1) {
+        auditTags.push('multi_failover');
+    }
+
+    recordAudit({
+        targetWord: `LLM:${context.mode.toUpperCase()}`,
+        contextMode: 'LLM:FAILOVER',
+        status: fallbackProvider ? 'PENDING' : 'BAD',
+        payload: {
+            context: {
+                mode: context.mode,
+                attemptNumber: context.attemptNumber,
+                totalProviders: context.totalProviders,
+                userId // 包含用户 ID 供后续追溯
+            },
+            decision: {
+                failedProvider,
+                fallbackProvider,
+                errorMessage: error.slice(0, 500) // 限制错误信息长度
             }
         },
         auditTags

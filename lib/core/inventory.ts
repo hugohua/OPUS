@@ -264,5 +264,45 @@ export const inventory = {
         const { CACHE_LIMIT_MAP, DRILLS_PER_BATCH } = await import('@/lib/drill-cache');
         // Max Limit = Limit (Batches) * DRILLS_PER_BATCH 
         return (CACHE_LIMIT_MAP[mode as SessionMode] || 5) * DRILLS_PER_BATCH;
+    },
+
+    /**
+     * 清空指定用户的所有库存
+     * @param userId 用户 ID
+     * @returns 删除的 Key 数量
+     */
+    async clearAll(userId: string): Promise<number> {
+        // 1. Find all inventory keys for this user
+        const pattern = `user:${userId}:mode:*:vocab:*:drills`;
+        let cursor = '0';
+        const keysToDelete: string[] = [];
+
+        do {
+            // ✅ 重命名为 foundKeys 避免与顶层 keys 对象冲突
+            const [nextCursor, foundKeys] = await connection.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+            cursor = nextCursor;
+            keysToDelete.push(...foundKeys);
+        } while (cursor !== '0');
+
+        // 2. Also include stats key (使用顶层 keys 对象)
+        keysToDelete.push(keys.stats(userId));
+
+        if (keysToDelete.length === 0) {
+            log.info({ userId }, 'No inventory keys to delete');
+            return 0;
+        }
+
+        // 3. Delete in batches to avoid Redis command limits
+        let deletedCount = 0;
+        const BATCH_SIZE = 100;
+
+        for (let i = 0; i < keysToDelete.length; i += BATCH_SIZE) {
+            const batch = keysToDelete.slice(i, i + BATCH_SIZE);
+            deletedCount += await connection.del(...batch);
+        }
+
+        log.info({ userId, deletedCount, keyCount: keysToDelete.length }, '🗑️ Inventory cleared');
+
+        return deletedCount;
     }
 };

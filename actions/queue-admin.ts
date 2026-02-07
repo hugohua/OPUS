@@ -189,3 +189,30 @@ export async function handleTriggerGeneration(
         return { status: 'error', message: (error as Error).message };
     }
 }
+
+/**
+ * 清空库存
+ * 删除当前用户所有 Mode 的所有已缓存 Drill
+ */
+export async function handleClearInventory(): Promise<ActionState> {
+    try {
+        const session = await import('@/auth').then(m => m.auth());
+        if (!session?.user?.id) {
+            return { status: 'error', message: '未登录' };
+        }
+
+        const { inventory } = await import('@/lib/core/inventory');
+        const deletedCount = await inventory.clearAll(session.user.id);
+
+        revalidatePath('/admin/queue');
+
+        return {
+            status: 'success',
+            message: `库存已清空 (删除 ${deletedCount} 条记录)`,
+            data: { deletedCount }
+        };
+    } catch (error) {
+        return { status: 'error', message: (error as Error).message };
+    }
+}
+

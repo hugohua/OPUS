@@ -12,6 +12,7 @@ import {
     handleResumeQueue,
     handleClearQueue,
     handleTriggerGeneration,
+    handleClearInventory,
 } from '@/actions/queue-admin';
 import { SessionMode } from '@/types/briefing';
 import { toast } from 'sonner';
@@ -68,6 +69,20 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
             const result = await handleClearQueue();
             if (result.status === 'success') {
                 toast.success('队列已清空');
+            } else {
+                toast.error(result.message);
+            }
+        } finally {
+            setLoading(null);
+        }
+    };
+
+    const handleClearInv = async () => {
+        setLoading('clear-inventory');
+        try {
+            const result = await handleClearInventory();
+            if (result.status === 'success') {
+                toast.success(result.message);
             } else {
                 toast.error(result.message);
             }
@@ -187,6 +202,31 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                         <AlertDialogFooter>
                             <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
                             <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                确认清空
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <button
+                            disabled={loading !== null}
+                            className="flex-1 py-2 text-xs font-medium text-amber-400 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        >
+                            {loading === 'clear-inventory' ? '清空中...' : '清空库存'}
+                        </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-foreground">确认清空库存？</AlertDialogTitle>
+                            <AlertDialogDescription className="text-muted-foreground">
+                                此操作将清除您账户下所有 Mode 的已缓存 Drill 数据。清空后需要重新触发生成来填充库存。
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleClearInv} className="bg-amber-500 text-white hover:bg-amber-600">
                                 确认清空
                             </AlertDialogAction>
                         </AlertDialogFooter>
