@@ -382,6 +382,7 @@ async function getInventoryBackedWords(
         for (const v of vocabs) {
             const prog = v.progress[0];
 
+
             // [Fix] 重复出现问题
             // 如果是复习词，必须检查 next_review_at 是否已到期
             // 因为 Redis 可能还有库存，但单词其实刚才已经在 Session 中复习过了（next_review_at 更新到了未来）

@@ -67,7 +67,7 @@ describe('L1.5 Chunking Generator', () => {
             const prompt = getL1ChunkingBatchPrompt([input]);
 
             expect(prompt.system).toContain('"distractor_chunk"');
-            expect(prompt.system).toContain('logically incorrect');
+            expect(prompt.system).toContain('syntactic error');
         });
 
     });

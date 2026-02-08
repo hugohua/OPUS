@@ -114,6 +114,55 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         }
     }, [mode, index, queue, generateAndPreload]);
 
+    // ⚠️ 关键：这两个函数必须在使用它们的 useEffect 之前定义
+    // 原因：JavaScript TDZ - const 声明不会提升到定义之前
+    // 参考：Line 230 useEffect 懒加载逻辑中调用 loadMore()
+
+    // 初始化 vocab ID 集合的辅助函数
+    const initVocabSet = useCallback((items: BriefingPayload[]) => {
+        if (items.length === 0) return;
+
+        for (const p of items) {
+            // ✅ 从类型定义确认正确的属性名
+            const vid = p.meta.vocabId;
+            if (vid && typeof vid === 'number') {
+                loadedVocabIds.current.add(vid);
+            }
+        }
+    }, []);
+
+    // loadMore 函数定义（必须在使用它的 useEffect 之前）
+    const loadMore = useCallback(async () => {
+        setIsLoadingMore(true);
+        try {
+            const excludeIds = Array.from(loadedVocabIds.current);
+            const res = await getNextDrillBatch({
+                userId,
+                mode,
+                limit: BATCH_LIMIT,
+                excludeVocabIds: excludeIds
+            });
+
+            if (res.status === 'success' && res.data && res.data.length > 0) {
+                const newItems = res.data;
+                console.log(`[loadMore] ✅ Loaded ${newItems.length} new drills, total: ${queue.length + newItems.length}`);
+                initVocabSet(newItems);
+                setQueue(prev => [...prev, ...newItems]);
+                toast.success('新弹药已就位！', { duration: 1000 });
+            } else {
+                console.warn('[loadMore] ⚠️ No more drills available');
+                setHasMore(false);
+            }
+        } catch (e) {
+            console.error('[loadMore] ❌ Failed to fetch drill batch:', e);
+            // ✅ Fail-Safe: 友好提示，不让用户感到"失败"
+            toast.error('网络不稳定，请稍后再试', { duration: 3000 });
+            setHasMore(false); // 防止无限重试
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [userId, mode, initVocabSet, queue.length]); // setState functions are stable by React guarantee
+
     // --- 1. 挂载时：恢复状态 or 初始加载 ---
     useEffect(() => {
         // 如果外部传入了 payload (SSR case, unlikely now but possible)，则不恢复
@@ -139,13 +188,6 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
         restore();
     }, []); // Run once on mount
-
-    const initVocabSet = (items: BriefingPayload[]) => {
-        items.forEach(p => {
-            const vid = (p.meta as any).vocabId;
-            if (vid) loadedVocabIds.current.add(vid);
-        });
-    };
 
     // --- 2. 状态变更同步到 Storage ---
     // [P0 Anti-Fallback] 如果大部分是兜底数据，不缓存，让用户刷新时能获取新题
@@ -248,32 +290,6 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     if (mode === 'BLITZ') {
         return <BlitzSession userId={userId} />;
     }
-
-    const loadMore = async () => {
-        setIsLoadingMore(true);
-        try {
-            const excludeIds = Array.from(loadedVocabIds.current);
-            const res = await getNextDrillBatch({
-                userId,
-                mode,
-                limit: BATCH_LIMIT,
-                excludeVocabIds: excludeIds
-            });
-
-            if (res.status === 'success' && res.data && res.data.length > 0) {
-                const newItems = res.data;
-                initVocabSet(newItems);
-                setQueue(prev => [...prev, ...newItems]);
-                toast.success('新弹药已就位！', { duration: 1000 });
-            } else {
-                setHasMore(false); // No more items returned
-            }
-        } catch (e) {
-            // 静默失败
-        } finally {
-            setIsLoadingMore(false);
-        }
-    };
 
     const textSegment = currentDrill?.segments.find(s => s.type === 'text');
     const interactSegment = currentDrill?.segments.find(s => s.type === 'interaction');

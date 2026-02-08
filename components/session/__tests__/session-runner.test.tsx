@@ -62,7 +62,7 @@ const createDrills = (count: number, startId = 1): BriefingPayload[] => {
             {
                 type: 'interaction',
                 task: {
-                    style: 'bubble_select',
+                    style: 'swipe_card',
                     options: ['Option A', 'Option B'],
                     answer_key: 'Option A'
                 }

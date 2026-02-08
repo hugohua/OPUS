@@ -108,11 +108,17 @@ export async function getOrGenerateL2Context(
 
         log.info({ vocabId, word, count: records.length }, 'SmartContent batch created');
 
-        // 5. 异步触发 TTS (只为第一条生成，其他按需)
+        // 5. 异步触发 TTS (为所有场景生成音频)
+        // [Fix] 之前只生成第一条，导致切换场景时音频缺失
+        for (const record of records) {
+            const payload = record.payload as L2SentencePayload;
+            // 不等待，后台执行
+            triggerTTSGeneration(record.id, payload.text).catch(err => {
+                log.error({ err, contentId: record.id }, 'TTS generation failed');
+            });
+        }
+
         const firstRecord = records[0];
-        triggerTTSGeneration(firstRecord.id, sentences[0].text).catch(err => {
-            log.error({ err, contentId: firstRecord.id }, 'TTS generation failed');
-        });
 
         // 6. 返回第一条
         return {

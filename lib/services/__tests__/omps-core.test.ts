@@ -8,7 +8,7 @@
  * - Suite D: Integration (集成场景)
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { fetchOMPSCandidates, getStratifiedNewWords, fetchNewBucket, OMPSCandidate } from '../omps-core';
 
 // ============================================
@@ -405,9 +405,15 @@ describe('Suite D: Integration', () => {
 describe('Suite E: Inventory First Strategy', () => {
 
     beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2024-01-01T12:00:00Z'));
         vi.clearAllMocks();
         // 默认 Redis 没数据
         (redis.keys as any).mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('E1: 库存有词但未到期 -> 应过滤并返回空 (或走后续逻辑)', async () => {
@@ -448,7 +454,7 @@ describe('Suite E: Inventory First Strategy', () => {
 
         // 已到期 - 改用 mockImplementation
         (prisma.vocab.findMany as any).mockImplementation(() => {
-            const past = new Date(Date.now() - 3600);
+            const past = new Date(Date.now() - 3600000); // 1 hour ago (relative to fake time)
             const vocab2 = createVocab(vocabId);
             const prog2 = createProgress(vocabId, past, 'REVIEW');
             (vocab2 as any).progress = [prog2];

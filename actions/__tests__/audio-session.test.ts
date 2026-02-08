@@ -6,10 +6,15 @@
  *   - getAudioSession(): 获取 Audio Track 的训练队列
  *   - submitAudioGrade(): 提交评分并更新 FSRS
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { prisma } from '@/lib/db';
 import { getAudioSession, submitAudioGrade } from '@/actions/audio-session';
 import { recordOutcome } from '@/actions/record-outcome';
+
+// Mock auth
+vi.mock('@/auth', () => ({
+    auth: vi.fn(() => Promise.resolve({ user: { id: 'clq2w3e4r5t6y7u8i9o0p1a3b' } }))
+}));
 
 describe('Audio Session Actions', () => {
     // 测试用户 ID (必须是有效 CUID)
@@ -244,6 +249,7 @@ describe('Audio Session Actions', () => {
                     vocabId: vocab.id,
                     track: 'AUDIO',
                     status: 'REVIEW',
+                    state: 2, // State.Review
                     stability: 5.0,
                     difficulty: 5.0,
                     next_review_at: new Date()

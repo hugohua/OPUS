@@ -3,6 +3,11 @@ import { prisma } from '@/lib/db';
 import { recordOutcome } from '@/actions/record-outcome';
 import { fetchOMPSCandidates } from '@/lib/services/omps-core';
 
+// Mock auth
+vi.mock('@/auth', () => ({
+    auth: vi.fn(() => Promise.resolve({ user: { id: 'clq2w3e4r5t6y7u8i9o0p1a2s' } }))
+}));
+
 // Mock DB is not needed if we are running integration test with real DB (e.g. Docker)
 // But here we likely want to stick to the existing pattern. 
 // If there's no global setup, we assume we might be running against the real dev DB (reset state).
