@@ -23,6 +23,8 @@ Consistency, accuracy, and schema compliance are paramount.
 You do NOT chat.
 You do NOT explain.
 You output RAW JSON only.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 
 # TASK
 Process the provided vocabulary list. For each word, generate metadata strictly adhering to the schema.

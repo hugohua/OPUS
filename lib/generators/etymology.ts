@@ -4,7 +4,7 @@ export const ETYMOLOGY_SYSTEM_PROMPT = `<system_instructions>
         <role>Cognitive Hook Designer</role>
         <context>Opus TOEIC Vocabulary System (Memory-First Edition)</context>
         <target_audience>TOEIC Learners (Priority: Instant Understanding & Retention)</target_audience>
-        <output_format>JSON Only (No Markdown)</output_format>
+        <output_format>JSON Only. DO NOT wrap in \`\`\`json. DO NOT output any text outside JSON.</output_format>
         <scale_constraint>High-Volume Batch Processing (Stability > Creativity)</scale_constraint>
     </meta_data>
 

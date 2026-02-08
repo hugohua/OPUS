@@ -17,27 +17,27 @@
 import { z } from 'zod';
 
 export interface AuditInput {
-    targetWord: string;
-    contextMode: string;  // e.g., "L0:SYNTAX"
-    question: string;
-    options: string[];
-    answer: string;
+  targetWord: string;
+  contextMode: string;  // e.g., "L0:SYNTAX"
+  question: string;
+  options: string[];
+  answer: string;
 }
 
 export const AuditResultSchema = z.object({
-    score: z.number().min(1).max(5),
-    error_type: z.enum(['NONE', 'AMBIGUITY', 'UNNATURAL', 'LEAKAGE', 'BAD_DISTRACTORS', 'WRONG_LEVEL', 'HALLUCINATION', 'FORMAT_ERROR']).optional(),
-    reason: z.string(),
-    redundancy_detected: z.boolean(),
-    // [New] Specific content revision advice
-    suggested_revision: z.object({
-        question: z.string().optional(),
-        options: z.array(z.string()).optional(),
-        answer: z.string().optional()
-    }).optional(),
-    suggested_sentence: z.string().optional(), // Keep for backward compatibility (mapped from suggested_revision.question)
-    // [New] Meta-Analysis for Generator Optimization
-    prompt_optimization_suggestion: z.string().optional(),
+  score: z.number().min(1).max(5),
+  error_type: z.enum(['NONE', 'AMBIGUITY', 'UNNATURAL', 'LEAKAGE', 'BAD_DISTRACTORS', 'WRONG_LEVEL', 'HALLUCINATION', 'FORMAT_ERROR']).optional(),
+  reason: z.string(),
+  redundancy_detected: z.boolean(),
+  // [New] Specific content revision advice
+  suggested_revision: z.object({
+    question: z.string().optional(),
+    options: z.array(z.string()).optional(),
+    answer: z.string().optional()
+  }).optional(),
+  suggested_sentence: z.string().optional(), // Keep for backward compatibility (mapped from suggested_revision.question)
+  // [New] Meta-Analysis for Generator Optimization
+  prompt_optimization_suggestion: z.string().optional(),
 });
 
 export type AuditResult = z.infer<typeof AuditResultSchema>;
@@ -95,7 +95,10 @@ Examples of Diagnosis -> Prescription:
 </meta_optimization_protocol>
 
 <output_format>
-Please return raw JSON with the following structure:
+Please return raw JSON with the following structure.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
+
 {
     "score": <number 1-5>,
     "error_type": "<Error Enum: NONE, AMBIGUITY, UNNATURAL, LEAKAGE, BAD_DISTRACTORS, WRONG_LEVEL, HALLUCINATION, FORMAT_ERROR>",
@@ -117,7 +120,7 @@ Please return raw JSON with the following structure:
 // ============================================
 
 export function getAuditUserPrompt(input: AuditInput): string {
-    return `
+  return `
 /**
  * USER Prompt: Audit Drill Card
  *

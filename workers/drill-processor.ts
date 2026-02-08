@@ -15,6 +15,8 @@ import crypto from 'crypto';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
 import { AIService } from '@/lib/ai/core';
 import { ContextSelector } from '@/lib/ai/context-selector';
+import { buildSyntaxInput, buildPhraseInput, buildBlitzInputWithTraps } from '@/lib/generators/input-builders';
+import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
 import { getL1AudioScriptPrompt, AudioScriptInput } from '@/lib/generators/l1/audio-script';
 import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
@@ -203,7 +205,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         if (syntaxGroup.length > 0) {
             tasks.push((async () => {
                 const { getL0SyntaxBatchPrompt } = await import('@/lib/generators/l0/syntax');
-                const inputs = await Promise.all(syntaxGroup.map(c => mapToSyntaxInput(userId, c)));
+                const inputs = await Promise.all(syntaxGroup.map(c => buildSyntaxInput(userId, c as VocabEntity)));
                 const p = getL0SyntaxBatchPrompt(inputs);
 
                 const { object: result, provider } = await AIService.generateObject({
@@ -235,22 +237,12 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         if (blitzGroup.length > 0) {
             tasks.push((async () => {
                 const { getL0BlitzBatchPrompt } = await import('@/lib/generators/l0/blitz');
-                const inputs = await Promise.all(blitzGroup.map(async c => {
-                    let collys: string[] = [];
-                    if (Array.isArray(c.collocations)) {
-                        collys = c.collocations.map((item: any) => typeof item === 'string' ? item : item.text).filter(Boolean);
-                    }
 
-                    // [Phase 5] Generate Visual Traps
-                    const traps = await VisualTrapService.generate(c.word, 3);
+                // 使用共享 buildBlitzInputWithTraps（含 VisualTrapService 调用和 Fail-Safe）
+                const inputs = await Promise.all(
+                    blitzGroup.map(c => buildBlitzInputWithTraps(c as VocabEntity))
+                );
 
-                    return {
-                        targetWord: c.word,
-                        meaning: c.definition_cn || '',
-                        collocations: collys,
-                        distractors: traps // Pass traps to prompt
-                    };
-                }));
                 const p = getL0BlitzBatchPrompt(inputs);
 
                 const { object: result, provider } = await AIService.generateObject({
@@ -316,14 +308,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 // 2. LLM Fallback for remaining candidates
                 log.info({ count: llmCandidates.length }, '⚠️ Phrase DB miss, falling back to LLM');
 
-                const inputs = await Promise.all(llmCandidates.map(async c => {
-                    const modifiers = await getContextWords(userId, c.vocabId, c.word);
-                    return {
-                        targetWord: c.word,
-                        meaning: c.definition_cn || '暂无释义',
-                        modifiers: modifiers.length > 0 ? modifiers : ['frequently', 'highly', 'effectively']
-                    };
-                }));
+                const inputs = llmCandidates.map(c => buildPhraseInput(c as VocabEntity));
                 const p = getL0PhraseBatchPrompt(inputs);
 
                 const { object: result, provider } = await AIService.generateObject({
@@ -700,29 +685,7 @@ function mapToCandidate(v: Vocab): DrillCandidate {
     };
 }
 
-/**
- * 获取上下文单词 (The "N" in "1+N")
- * 策略 (Hybrid):
- * 1. 尝试从 UserProgress (Learning/Review) 中找语义相关的 (Vector Search)
- * 2. 如果不足 3 个，从 Global Vocab 中找语义相关的 (Vector Search)
- * 3. 兜底：随机选择
- */
-async function getContextWords(userId: string, targetVocabId: number, targetWord: string): Promise<string[]> {
-    try {
-        const selectorResult = await ContextSelector.select(userId, targetVocabId, {
-            count: 3,
-            strategies: ['USER_VECTOR', 'GLOBAL_VECTOR', 'RANDOM'],
-            minDistance: 0.15,
-            maxDistance: 0.5,
-            excludeIds: [targetVocabId]
-        });
-
-        return selectorResult.map(v => v.word);
-    } catch (e) {
-        log.error({ error: String(e), targetWord }, 'ContextSelector failed, returning empty');
-        return [];
-    }
-}
+// [Refactored] getContextWords 已迁移到 lib/generators/input-builders.ts
 
 /**
  * 获取需要预生成的候选词
@@ -790,15 +753,7 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
 
 // --- Helper: Input Mappers ---
 
-async function mapToSyntaxInput(userId: string, c: DrillCandidate) {
-    const contextWords = await getContextWords(userId, c.vocabId, c.word);
-    return {
-        targetWord: c.word,
-        meaning: c.definition_cn || '暂无释义',
-        contextWords,
-        wordFamily: (c.word_family as Record<string, string>) || { v: c.word },
-    };
-}
+// [Refactored] mapToSyntaxInput 已迁移到 lib/generators/input-builders.ts (buildSyntaxInput)
 
 function mapToAudioInput(c: DrillCandidate): AudioScriptInput {
     // Extract FSRS parameters

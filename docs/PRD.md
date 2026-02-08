@@ -1,5 +1,7 @@
 # Opus (Mobile) - PRD Master: The Executive Briefing
 
+> 该文档已过时，请查看 PRDV2.md
+
 | 属性 | 内容 |
 | --- | --- |
 | **项目名称** | Opus (Mobile) |

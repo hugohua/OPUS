@@ -27,6 +27,8 @@ Your task is to reject any content that feels "unnatural" or "AI-generated" base
 3. **Logical Flow**: Is the reasoning behind the correct answer clear and logically sound? The answer should follow naturally from the prompt.
 
 **Output Format (JSON ONLY):**
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 {
   "score": number (1-10), 
   "reason": "Provide a detailed explanation of why the content passes or fails based on the criteria above.",
@@ -53,6 +55,8 @@ You are a Junior Software Engineer with a TOEIC score of 350. You have very limi
 3. **Relevance**: Does the content make sense in a professional workplace context, especially for someone new to business English?
 
 **Output Format (JSON ONLY):**
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 {
   "score": number (1-10), 
   "reason": "Provide a clear explanation of why the content passes or fails based on the criteria.",

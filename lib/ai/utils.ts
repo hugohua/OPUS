@@ -2,6 +2,22 @@ import { z } from 'zod';
 import { logAIError, aiLogger } from '@/lib/logger';
 
 /**
+ * 自定义 AI 解析错误
+ * 携带原始 LLM 响应，便于审计调试
+ */
+export class AIParseError extends Error {
+    readonly rawResponse: string;
+    readonly zodError?: z.ZodError;
+
+    constructor(message: string, rawResponse: string, zodError?: z.ZodError) {
+        super(message);
+        this.name = 'AIParseError';
+        this.rawResponse = rawResponse;
+        this.zodError = zodError;
+    }
+}
+
+/**
  * 清理 Markdown 代码块标记
  */
 export function cleanMarkdown(content: string): string {
@@ -171,7 +187,13 @@ export function safeParse<T>(content: string, schema: z.ZodSchema<T>, context?: 
             context: 'JSON 解析/验证失败',
         });
 
-        throw firstError;
+        // 抛出携带原始响应的错误，便于审计追溯
+        const zodError = firstError instanceof z.ZodError ? firstError : undefined;
+        throw new AIParseError(
+            zodError?.message || String(firstError),
+            content, // 原始 LLM 响应
+            zodError
+        );
     }
 }
 

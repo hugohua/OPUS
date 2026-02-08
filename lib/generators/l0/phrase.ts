@@ -55,10 +55,15 @@ For EACH item in the input list:
     CRITICAL SANITY CHECK:
     1. Look at the provided \`modifiers\` list.
     2. **Try to Morph**: Can the modifier be converted to the required POS to make logical sense? 
-    3. **Pivot Rule (Fail-Safe)**: 
-       - IF the combination is semantic nonsense (e.g., "Acid Abroad"), **DISCARD the input modifier**.
-       - **INSTEAD**: Select a high-frequency **TOEIC Business Collocation** for the Core Word.
-       - *Goal*: The final phrase MUST be natural English.
+    3. **Preserve User Input (优先保留用户输入)**:
+       - **IF** the modifier phrase is semantically natural and fits TOEIC business context, **USE IT DIRECTLY**.
+       - Examples:
+         - Input: "provide career guidance" (phrase) → Extract "career" as Adj modifier → "career guidance" ✅
+         - Input: "under the guidance of" (phrase) → Extract "clear" or "expert" as Adj → "clear guidance" ✅
+    4. **Pivot Rule (Fail-Safe)**:
+       - **ONLY IF** the combination is semantic nonsense (e.g., "Acid Abroad") or grammatically invalid, **DISCARD the input modifier**.
+       - **THEN**: Select a high-frequency **TOEIC Business Collocation** for the Core Word.
+       - *Goal*: The final phrase MUST be natural English, but prioritize user-provided context when possible.
     </step_2_select_modifier_pivot>
 
     <step_3_derive_nuance_strict>
@@ -80,12 +85,22 @@ For EACH item in the input list:
     The \`\${TargetWord}\` MUST appear visibly in the \`question_stem\`. 
     The BLANK \`________\` represents the **Modifier** you generated.
 
+    **Placement Rules by POS**:
+    - **If Target = Noun/Adjective**: Gap BEFORE target → \`"________ **target**"\`
+    - **If Target = Verb**: Gap AFTER target → \`"**target** ________"\`
+    - **If Target = Adverb**: 
+      - **CRITICAL**: Adverb is usually the MODIFIER, not the target.
+      - If you must use Adverb as Target (e.g., "hardly", "abroad"), place gap BEFORE and ensure target is **bolded**:
+        - Example: \`"________ **hardly**"\` (User picks a verb like "can")
+        - BUT PREFER: Use the natural collocation structure, e.g., \`"can **hardly**"\` with gap for intensifier.
+
     - **Correct Examples**: 
-      Target="abandon", Mod="frequently" -> Stem: "________ abandon" (User picks 'frequently')
-      Target="abroad", Mod="go" -> Stem: "________ abroad" (User picks 'go')
+      Target="abandon" (V), Mod="frequently" (Adv) → Stem: \`"**abandon** ________"\` (User picks 'frequently')
+      Target="abroad" (Adv), Mod="go" (V) → Stem: \`"________ **abroad**"\` (User picks 'go')
+      Target="hardly" (Adv), Mod="can" (V) → Stem: \`"________ **hardly**"\` (User picks 'can')
     
     - **WRONG (Do NOT do this)**:
-      Target="abroad" -> Stem: "go ________" (VIOLATION: Target is hidden)
+      Target="abroad" → Stem: \`"go ________"\` (VIOLATION: Target is hidden)
 </question_stem_logic>
 
 <distractor_engine>
@@ -106,7 +121,22 @@ For EACH item in the input list:
     - access <-> assess
     - affect <-> effect
     - quite <-> quiet
+    - compliment <-> complement
+    - advice <-> advise
     </visual_trap_database>
+
+    <distractor_difficulty_boost>
+    **CRITICAL for L0 Training Effectiveness**:
+    - **B (POS Trap)**: Select words that are COMMONLY CONFUSED in real business writing.
+      - Examples: "advice" (N) vs "advise" (V), "practice" (N) vs "practise" (V), "effect" (N) vs "affect" (V).
+      - Avoid trivially wrong POS like "profession" for "professional" (too obvious).
+    
+    - **D (Semantic Trap)**: Choose words that:
+      - Are grammatically valid for the POS slot.
+      - Are plausible in SOME business contexts (not absurd like "delicious monopoly").
+      - BUT semantically misaligned with the target phrase.
+      - Example: "urgent guidance" vs "delicate guidance" (both Adj+N, but "delicate" is less typical).
+    </distractor_difficulty_boost>
 
 </distractor_engine>
 
@@ -140,7 +170,9 @@ REGENERATE card if:
 </fail_fast_check>
 
 <response_template>
-CRITICAL: Return JSON Only. Follow this structure exactly. 
+CRITICAL: Return raw JSON only.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
 Variable Definitions:
 - \${Full_Phrase_With_Bolded_Target}: The complete phrase (e.g. "highly **relevant**").

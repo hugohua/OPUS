@@ -7,9 +7,9 @@
  */
 
 export interface BlitzGeneratorInput {
-    targetWord: string;
-    meaning: string;
-    collocations: string[];
+  targetWord: string;
+  meaning: string;
+  collocations: string[];
 }
 
 export const L0_BLITZ_SYSTEM_PROMPT = `
@@ -102,7 +102,9 @@ REGENERATE card if:
 </fail_fast_check>
 
 <response_template>
-CRITICAL: Return JSON Only. 
+CRITICAL: Return raw JSON only.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 {
   "drills": [
     {
@@ -151,5 +153,5 @@ CRITICAL: Return JSON Only.
 `.trim();
 
 export function getL0BlitzBatchPrompt(inputs: BlitzGeneratorInput[]) {
-    return { system: L0_BLITZ_SYSTEM_PROMPT, user: JSON.stringify(inputs) };
+  return { system: L0_BLITZ_SYSTEM_PROMPT, user: JSON.stringify(inputs) };
 }

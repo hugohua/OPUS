@@ -10,60 +10,85 @@ const log = createLogger('actions:drive');
 // ------------------------------------------------------------------
 // Types
 // ------------------------------------------------------------------
-import { DriveItem, DriveMode, DRIVE_VOICE_CONFIG, DRIVE_VOICE_SPEED_PRESETS } from '@/lib/constants/drive';
+import {
+    DriveItem,
+    DriveMode,
+    DriveTrack,
+    DrivePlaylistResponse,
+    DrivePlaylistOptions,
+    DRIVE_VOICE_CONFIG,
+    DRIVE_VOICE_SPEED_PRESETS
+} from '@/lib/constants/drive';
 
 // ------------------------------------------------------------------
 // Algorithm: Sandwich (Warmup -> Review -> Break)
+// V2: 支持多轨道 + Cursor-based 分页
 // ------------------------------------------------------------------
-export async function generateDrivePlaylist(): Promise<DriveItem[]> {
+export async function generateDrivePlaylist(
+    options: DrivePlaylistOptions = {}
+): Promise<DrivePlaylistResponse> {
     const session = await auth();
     if (!session?.user?.id) {
         throw new Error('Unauthorized');
     }
     const userId = session.user.id;
 
-    log.info({ userId }, 'Generating playlist');
+    // 解构参数，设置默认值
+    const track: DriveTrack = options.track || 'VISUAL';
+    const cursor = options.cursor || 0;
+    const pageSize = options.pageSize || 15;
 
+    log.info({ userId, track, cursor, pageSize }, 'Generating playlist V2');
 
-    // ✅ Transaction: 确保所有查询在同一快照下执行,防止 FSRS 数据中途更新
-    const [warmupItems, reviewItems, breakItems] = await db.$transaction(async (tx) => {
+    // ✅ Transaction: 确保所有查询在同一快照下执行
+    const [warmupItems, reviewItems, breakItems, totalCount] = await db.$transaction(async (tx) => {
+        // 获取总数用于判断 hasMore
+        const total = await tx.userProgress.count({
+            where: { userId, track }
+        });
+
         return await Promise.all([
-            fetchWarmupItems(userId, 3, tx),   // ✅ 传入 tx
-            fetchReviewItems(userId, 10, tx),  // ✅ 传入 tx
-            fetchBreakChunks(userId, 2, tx)    // ✅ 传入 tx
+            fetchWarmupItems(userId, 3, track, tx),
+            fetchReviewItems(userId, pageSize - 5, track, tx, cursor), // Review 承担主要分页
+            fetchBreakChunks(userId, 2, tx),
+            Promise.resolve(total)
         ]);
     });
 
-    // 2. Assembly (Sandwich Structure)
-    // Structure: Warmup -> [ Review -> Break ] (If we had loop logic, but for now linear)
-    // Actually, user requested: Warmup -> Review -> Break -> Loop
-    // Since we return a static list, we'll just concat them. Client handles looping or fetching more.
-    // For "Loop", client can re-fetch or we provide a loopable structure? 
-    // Let's just provide a single batch. Client logic: onEnd -> next(). 
-    // If we want infinite loop, we simply return this batch. 
-
+    // 组装 Playlist
     const rawPlaylist: DriveItem[] = [
         ...warmupItems,
         ...reviewItems,
         ...breakItems
     ];
 
-    // 3. ✨ Opus DJ Shuffle (场景聚类 + 难度穿插)
-    const playlist = opusDjShuffle(rawPlaylist);
+    // DJ Shuffle (场景聚类 + 难度穿插)
+    const items = opusDjShuffle(rawPlaylist);
+
+    // 计算分页元数据
+    // ⚠️ 注意: hasMore 是基于 track 总记录数的近似估算
+    // 实际可用词可能因 stability/due 过滤而更少，但这个估算足够用于 UI 决策
+    const nextCursor = cursor + reviewItems.length;
+    const hasMore = nextCursor < totalCount;
 
     log.info({
-        total: playlist.length,
+        total: items.length,
         warmup: warmupItems.length,
         review: reviewItems.length,
         break: breakItems.length,
-        distribution: {
-            QUIZ: playlist.filter((i: DriveItem) => i.mode === 'QUIZ').length,
-            WASH: playlist.filter((i: DriveItem) => i.mode === 'WASH').length,
-            STORY: playlist.filter((i: DriveItem) => i.mode === 'STORY').length
-        }
-    }, 'Generated playlist');
+        track,
+        cursor,
+        nextCursor: hasMore ? nextCursor : null,
+        hasMore,
+        totalInTrack: totalCount
+    }, 'Generated playlist V2');
 
-    return playlist;
+    return {
+        items,
+        nextCursor: hasMore ? nextCursor : null,
+        hasMore,
+        track
+    };
 }
 
 // ------------------------------------------------------------------
@@ -79,12 +104,13 @@ export async function generateDrivePlaylist(): Promise<DriveItem[]> {
 async function fetchWarmupItems(
     userId: string,
     limit: number,
+    track: DriveTrack,
     client: Prisma.TransactionClient | typeof db = db
 ): Promise<DriveItem[]> {
     const records = await client.userProgress.findMany({
         where: {
             userId,
-            track: 'VISUAL',
+            track,
             stability: { gt: 1 }, // ✅ 降低门槛,使用相对排序
         },
         include: { vocab: true },
@@ -94,11 +120,11 @@ async function fetchWarmupItems(
 
     // ✅ Fail-Safe: 如果没有 stability > 1 的记录,降级为任何已复习的词
     if (records.length === 0) {
-        log.warn('No stability > 1 records, falling back to any reviewed words');
+        log.warn({ track }, 'No stability > 1 records, falling back to any reviewed words');
         const fallback = await client.userProgress.findMany({
             where: {
                 userId,
-                track: 'VISUAL',
+                track,
                 status: { not: 'NEW' } // 任何非新词
             },
             include: { vocab: true },
@@ -108,7 +134,7 @@ async function fetchWarmupItems(
 
         return fallback.map(r => ({
             ...mapToDriveItem(r.vocab, 'QUIZ', 'warmup'),
-            stability: r.stability || 0.1 // 兜底默认值
+            stability: r.stability || 0.1 // 兆底默认值
         }));
     }
 
@@ -122,16 +148,19 @@ async function fetchWarmupItems(
 async function fetchReviewItems(
     userId: string,
     limit: number,
-    client: Prisma.TransactionClient | typeof db = db
+    track: DriveTrack,
+    client: Prisma.TransactionClient | typeof db = db,
+    skipCount: number = 0
 ): Promise<DriveItem[]> {
     const records = await client.userProgress.findMany({
         where: {
             userId,
-            track: 'VISUAL',
+            track,
             next_review_at: { lte: new Date() }, // Due
         },
         include: { vocab: true },
         orderBy: { next_review_at: 'asc' }, // Overdue first
+        skip: skipCount,
         take: limit,
     });
 
@@ -141,7 +170,7 @@ async function fetchReviewItems(
         const extra = await client.userProgress.findMany({
             where: {
                 userId,
-                track: 'VISUAL',
+                track,
                 status: { in: ['REVIEW', 'MASTERED'] }, // No NEW
                 id: { notIn: records.map(r => r.id) }
             },

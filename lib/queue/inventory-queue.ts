@@ -53,7 +53,9 @@ export async function enqueueDrillGeneration(
     const priorityValue = priority === 'realtime' ? 1 : 5;
 
     // 根据模式决定需要拆分成多少个批次 (每个批次 10 条)
-    const MODE_TARGET_COUNT: Record<SessionMode, number> = {
+    const { createSessionModeRecord } = await import('@/lib/config/mixed-mode-config');
+
+    const MODE_TARGET_COUNT = createSessionModeRecord({
         SYNTAX: 20,     // 20/10 = 2 batches
         CHUNKING: 30,   // 30/10 = 3 batches
         NUANCE: 50,     // 50/10 = 5 batches
@@ -63,7 +65,7 @@ export async function enqueueDrillGeneration(
         READING: 20,
         VISUAL: 20,
         CONTEXT: 20     // [L2] Context Lab
-    };
+    });
 
     const targetCount = MODE_TARGET_COUNT[mode] || 20;
     const batches = Math.ceil(targetCount / 10);

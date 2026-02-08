@@ -116,6 +116,28 @@ async function fetchDrill(userId: string, mode: string, vocabId: number) {
 }
 ```
 
+### 3.2 Batch Consumption (Mixed Mode)
+
+> **[NEW] V2.1** - 解决 N+1 查询问题
+
+```typescript
+// 参考: actions/get-next-drill.ts (getMixedDrillBatch)
+
+// 1. 按场景分组
+const scenarioGroups = { "SYNTAX": [101, 102], "PHRASE": [103] };
+
+// 2. 批量获取 (单次 Redis Pipeline)
+const drillMap = await inventory.popDrillBatch(userId, scenarioGroups);
+
+// 3. 处理结果
+for (const candidate of candidates) {
+  const drill = drillMap[candidate.vocabId] || buildSimpleDrill(candidate);
+}
+```
+
+**优化效果**: Redis 请求次数从 `N` 降为 `1` (Pipeline)
+```
+
 ### 3.2 Production (Worker)
 ```typescript
 // 参考: workers/drill-processor.ts

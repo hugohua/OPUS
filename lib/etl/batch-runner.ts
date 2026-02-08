@@ -1,6 +1,7 @@
 import { createLogger } from '@/lib/logger';
 import fs from 'fs/promises';
 import path from 'path';
+import { getQAPromptForGenerator } from '@/lib/generators/audit/qa-registry';
 
 const log = createLogger('etl-runner');
 
@@ -125,6 +126,10 @@ async function writeDebugLog(jobName: string, info: NonNullable<EtlBatchResult['
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `output/${jobName}_dry_run_${timestamp}_${info.batchId}.txt`;
 
+    // 从 jobName 提取 generator key (e.g., 'debug-l0-syntax' -> 'l0-syntax')
+    const genKey = jobName.replace(/^debug-/, '');
+    const qaPrompt = getQAPromptForGenerator(genKey);
+
     const fileContent = `system prompt:
 ${info.systemPrompt}
 
@@ -135,26 +140,7 @@ result:
 ${info.rawResult}
 
 ---------------------------------------------
-Please copy the content above and send it to an LLM with the following prompt:
-
-"""
-# Role
-你是一位精通 Prompt Engineering 的专家，擅长优化 LLM 的指令遵循能力和内容生成质量。
-
-# Objective
-评估用户提供的 System Prompt、User Prompt 以及 LLM 生成的 Result。
-请分析 System Prompt 是否最优，生成的内容是否完全符合约束，并给出优化建议。
-
-# Output Format (Markdown)
-## 评分 (1-10分)
-给出综合评分。
-
-## 问题分析
-指出生成内容中存在的问题（如未遵循的约束、逻辑漏洞、格式错误等）。
-
-## 优化建议
-针对 System Prompt 给出具体的修改建议（中文），如果是 Prompt 结构问题，请提供优化后的 Prompt 片段。
-"""
+${qaPrompt}
 `;
 
     try {

@@ -17,7 +17,7 @@ const SKILLS = [
         icon: Zap,
         color: "text-emerald-400",
         bg: "bg-emerald-500/10",
-        href: "/dashboard/session/SYNTAX"
+        href: "/dashboard/session/L0_MIXED"
     },
     {
         id: "audio-gym",
@@ -27,7 +27,7 @@ const SKILLS = [
         icon: Volume2,
         color: "text-blue-400",
         bg: "bg-blue-500/10",
-        href: "/dashboard/session/AUDIO"
+        href: "/dashboard/session/L1_MIXED"
     },
     {
         id: "context-lab",
@@ -37,7 +37,7 @@ const SKILLS = [
         icon: Brain,
         color: "text-violet-400",
         bg: "bg-violet-500/10",
-        href: "/dashboard/session/CONTEXT"
+        href: "/dashboard/session/L2_MIXED"
     }
 ];
 

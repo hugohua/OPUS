@@ -95,6 +95,7 @@
 - `components/dashboard/flashcard-section.tsx`
 - `components/dashboard/fsrs-hud.tsx`
 - `components/dashboard/floating-dock.tsx`
+- `app/dashboard/simulate/page.tsx`
 
 ### Vocabulary 模块
 - `components/vocabulary/vocabulary-list.tsx`

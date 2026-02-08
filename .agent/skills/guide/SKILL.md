@@ -34,14 +34,16 @@ This skill acts as an index for the project's documentation. When you are asked 
 ### 2. Drill Engine (Core Mechanic)
 - **Implementation**: `docs/dev-notes/drill-engine-implementation.md` (The "Briefing" generation logic)
 - **Prompt Structure**: `docs/dev-notes/prompt-structure-v2.md` (**Standard V2 Output Specification**, 包含 Rich Option/Explanation 定义)
+- **L0 Syntax Generator**: `lib/generators/l0/syntax.ts` (**Source of Truth**: S-V-O 公式、Slot-Based Explanation、挖空算法)
 - **Word Selection (OMPS)**: `docs/dev-notes/omps-word-selection-engine.md` (**核心选词引擎**，所有场景必读)
 - **Context Selection**: `docs/dev-notes/context-selector-guide.md` (How we pick words/sentences)
 - **Vector Logic**: `docs/dev-notes/vector-context-selection-v2.md` (Embedding & Similarity rules)
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
-- **Phase 2 Architecture**: `docs/dev-notes/phase2-architecture-summary.md` (**New Standard**: Multi-Track & Zero-Wait)
-- **Redis Inventory**: `docs/dev-notes/redis-inventory-schema.md` (Zero-Wait caching layer)
+- **Mixed Mode Architecture**: `docs/dev-notes/mixed-mode-architecture.md` (**NEW**: L0/L1/L2 混合模式、Stability 场景选择、批量操作)
+- **Phase 2 Architecture**: `docs/dev-notes/phase2-architecture-summary.md` (Multi-Track & Zero-Wait)
+- **Redis Inventory**: `docs/dev-notes/redis-inventory-schema.md` (Zero-Wait caching layer, **V2.1**: Batch Operations)
 - **缓存与选词架构**: `docs/dev-notes/cache-hit-rate-optimization.md` (生产消费协作)
 - **Phrase Mode**: `docs/dev-notes/technical-spec-phrase-mode.md` (Phrase Blitz specific specs)
 
@@ -92,6 +94,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 
 ## 🚦 Decision Routing
+- **If implementing Mixed Mode / L0_MIXED / L1_MIXED / DAILY_BLITZ** -> Read `mixed-mode-architecture.md` (**Stability 阈值、Track 隔离、批量操作**).
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
 - **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
 - **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.

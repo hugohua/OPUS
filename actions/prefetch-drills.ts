@@ -53,17 +53,19 @@ export async function prefetchDrills() {
  * 这个函数会自己完成生成和保存
  */
 async function triggerBackgroundGeneration(userId: string, mode: SessionMode) {
-    const sizeMap: Record<SessionMode, number> = {
+    const { createSessionModeRecord } = await import('@/lib/config/mixed-mode-config');
+
+    const sizeMap = createSessionModeRecord({
         'SYNTAX': 20,
         'CHUNKING': 30,
         'NUANCE': 50,
         'BLITZ': 10,
-        'PHRASE': 20,
-        'AUDIO': 20,
-        'READING': 20,
+        'PHRASE': 25,
+        'AUDIO': 30,
+        'READING': 40,
         'VISUAL': 20,
-        'CONTEXT': 20    // [L2] Context Lab
-    };
+        'CONTEXT': 35
+    });
 
     try {
         log.info({ userId, mode }, 'Background generation started');

@@ -146,14 +146,65 @@ export function buildSimpleDrill(vocab: VocabDrillInput, mode: SessionMode): Bri
         {
             id: vocab.id,
             word: vocab.word,
-            definition_cn: vocab.definition_cn || '', // Ensure string
-            phoneticUs: vocab.phoneticUs ?? vocab.phoneticUk ?? null, // Fallback to UK if US missing, ensure null
-            partOfSpeech: vocab.partOfSpeech ?? null // Now supported, ensure null
+            definition_cn: vocab.definition_cn || '',
+            phoneticUs: vocab.phoneticUs ?? vocab.phoneticUk ?? null,
+            partOfSpeech: vocab.partOfSpeech ?? null
         },
         sentence,
         translation,
         mode,
         'deterministic_fallback',
-        vocab.etymology // [New]
+        vocab.etymology
     );
+}
+
+/**
+ * [New] 构建 Chunking 模式的兜底数据
+ * 必须返回符合 ChunkingDrillOutput 结构的 payload (强转为 BriefingPayload)
+ */
+export function buildChunkingDrillFallback(vocab: VocabDrillInput): BriefingPayload {
+    const sentence = vocab.commonExample || `The word ${vocab.word} is very important.`;
+    const translation = vocab.definition_cn || "这个词非常重要。";
+
+    // Simple naive splitter (Mock logic)
+    // Real logic needs NLP, but this is a fallback for testing/offline
+    const parts = sentence.split(' ');
+    const mid = Math.floor(parts.length / 2);
+
+    // Construct 3 chunks
+    const chunks = [
+        { id: 1, text: parts.slice(0, 2).join(' '), type: "S" as const },
+        { id: 2, text: parts.slice(2, mid).join(' '), type: "V" as const },
+        { id: 3, text: parts.slice(mid).join(' '), type: "O" as const }
+    ];
+
+    return {
+        // Mocking ChunkingDrillOutput structure but casting to BriefingPayload to satisfy TS
+        // In runtime, SessionRunner passes this entire object to ChunkingDrill
+        target_word: vocab.word,
+        full_sentence: sentence,
+        translation_cn: translation,
+        grammar_point: "Basic Structure",
+        complexity_level: "Medium",
+        chunks: chunks,
+        distractor_chunk: null,
+        analysis: {
+            skeleton: { subject: "Subject", verb: "Verb", object: "Object" },
+            links: [
+                { from_chunk_id: 1, to_chunk_id: 2, reason: "主谓一致" },
+                { from_chunk_id: 2, to_chunk_id: 3, reason: "动宾搭配" }
+            ],
+            business_insight: "基础句式结构展示。"
+        },
+        meta: {
+            format: "chat", // Dummy
+            mode: "CHUNKING",
+            batch_size: 1,
+            sys_prompt_version: "v1.0",
+            vocabId: vocab.id,
+            target_word: vocab.word,
+            source: "deterministic_fallback_chunking"
+        },
+        segments: [] // Dummy to satisfy type, usually ignored by ChunkingDrill
+    } as unknown as BriefingPayload;
 }

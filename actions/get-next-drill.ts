@@ -12,12 +12,12 @@ import { z } from 'zod';
 import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { ActionState } from '@/types/action';
-import { BriefingPayload, SessionMode } from '@/types/briefing';
+import { BriefingPayload, SessionMode, SingleScenarioMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
 import { inventory } from '@/lib/core/inventory';
-import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
+import { buildSimpleDrill, buildChunkingDrillFallback } from '@/lib/templates/deterministic-drill';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
-import { auditSessionFallback, auditInventoryEvent } from '@/lib/services/audit-service';
+import { auditInventoryEvent, auditSessionFallback, auditMixedModeDistribution } from '@/lib/services/audit-service';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -32,6 +32,12 @@ export async function getNextDrillBatch(
         const limit = inputLimit || 10;
 
         log.info({ userId, mode, limit }, 'Fetching drill batch (OMPS V1.1)');
+
+        // 1.5 混合模式路由
+        const { isMixedMode } = await import('@/lib/core/scenario-selector');
+        if (isMixedMode(mode)) {
+            return getMixedDrillBatch(userId, mode, limit, excludeVocabIds);
+        }
 
         // 2. 通过 OMPS 获取候选词
         // 配置词性过滤 (SYNTAX 模式需要动词/名词)
@@ -84,17 +90,31 @@ export async function getNextDrillBatch(
 
             // 3.3 缓存未命中 -> 确定性兜底
             if (!drill) {
-                drill = buildSimpleDrill({
-                    id: candidate.vocabId,
-                    word: candidate.word,
-                    definition_cn: candidate.definition_cn,
-                    definitions: candidate.definitions, // [New]
-                    commonExample: candidate.commonExample,
-                    phoneticUk: candidate.phoneticUk, // [New]
-                    partOfSpeech: candidate.partOfSpeech, // [New]
-                    etymology: candidate.etymology, // [New]
-                    collocations: candidate.collocations // Check collocations
-                }, mode);
+                if (mode === 'CHUNKING') {
+                    drill = buildChunkingDrillFallback({
+                        id: candidate.vocabId,
+                        word: candidate.word,
+                        definition_cn: candidate.definition_cn,
+                        definitions: candidate.definitions,
+                        commonExample: candidate.commonExample,
+                        phoneticUk: candidate.phoneticUk,
+                        partOfSpeech: candidate.partOfSpeech,
+                        etymology: candidate.etymology,
+                        collocations: candidate.collocations
+                    });
+                } else {
+                    drill = buildSimpleDrill({
+                        id: candidate.vocabId,
+                        word: candidate.word,
+                        definition_cn: candidate.definition_cn,
+                        definitions: candidate.definitions, // [New]
+                        commonExample: candidate.commonExample,
+                        phoneticUk: candidate.phoneticUk, // [New]
+                        partOfSpeech: candidate.partOfSpeech, // [New]
+                        etymology: candidate.etymology, // [New]
+                        collocations: candidate.collocations // Check collocations
+                    }, mode);
+                }
                 source = 'deterministic_fallback';
                 missedVocabIds.push(candidate.vocabId);
 
@@ -161,4 +181,191 @@ export async function getNextDrillBatch(
             fieldErrors: {},
         };
     }
+}
+
+/**
+ * 混合模式 Drill 获取
+ * 为每个候选词根据 FSRS Stability 选择场景，然后从对应 Inventory 获取 Drill
+ */
+async function getMixedDrillBatch(
+    userId: string,
+    mixedMode: SessionMode,
+    limit: number,
+    excludeVocabIds: number[] = []
+): Promise<ActionState<BriefingPayload[]>> {
+    const { MIXED_MODE_SCENARIOS, selectScenario } = await import('@/lib/core/scenario-selector');
+
+    const allowedScenarios = MIXED_MODE_SCENARIOS[mixedMode];
+    if (!allowedScenarios || allowedScenarios.length === 0) {
+        return {
+            status: 'error',
+            message: `Unknown or empty mixed mode: ${mixedMode}`,
+        };
+    }
+
+    log.info({ userId, mixedMode, allowedScenarios }, '🎭 Mixed mode routing');
+
+    // 🔧 修复B2: 根据混合模式确定主 Track（保持 Multi-Track FSRS 隔离）
+    const primaryTrack =
+        mixedMode === 'L0_MIXED' || mixedMode === 'DAILY_BLITZ' ? 'VISUAL' :
+            mixedMode === 'L1_MIXED' ? 'AUDIO' :
+                mixedMode === 'L2_MIXED' ? 'CONTEXT' :
+                    'VISUAL'; // 兜底
+
+    // 1. 获取候选词（使用正确的 Track）
+    const candidates = await fetchOMPSCandidates(
+        userId,
+        limit,
+        {},
+        excludeVocabIds,
+        primaryTrack  // ✅ 使用动态 Track 而不是硬编码 VISUAL
+    );
+
+    if (candidates.length === 0) {
+        return {
+            status: 'success',
+            message: 'No candidates found for mixed mode',
+            data: [],
+        };
+    }
+
+    // 2. 预先分配场景
+    const vocabScenarioMap = new Map<number, SingleScenarioMode>();
+    const scenarioGroups: Record<string, number[]> = {};
+    const scenarioDistribution: Record<string, number> = {};
+
+    for (const candidate of candidates) {
+        const stability = candidate.reviewData?.stability || 0;
+        const selectedScenario = selectScenario(stability, allowedScenarios);
+
+        vocabScenarioMap.set(candidate.vocabId, selectedScenario);
+        scenarioDistribution[selectedScenario] = (scenarioDistribution[selectedScenario] || 0) + 1;
+
+        if (!scenarioGroups[selectedScenario]) {
+            scenarioGroups[selectedScenario] = [];
+        }
+        scenarioGroups[selectedScenario].push(candidate.vocabId);
+    }
+
+    // 3. 批量查询 Inventory (解决 N+1 问题)
+    // 🔧 P1 优化: 使用 popDrillBatch 替代循环查询
+    let drillMap: Record<number, BriefingPayload> = {};
+    try {
+        drillMap = await inventory.popDrillBatch(userId, scenarioGroups);
+    } catch (e) {
+        // 🔧 P1 优化: 数据库故障降级处理
+        log.error({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }, 'Inventory batch fetch failed');
+        // 继续执行，所有词汇将回退到 buildSimpleDrill
+    }
+
+    // 4. 组装结果（Cache Hit 或 Fallback）
+    const drills: BriefingPayload[] = [];
+    const missingCandidates: { candidate: typeof candidates[0], scenario: string }[] = [];
+
+    for (const candidate of candidates) {
+        const selectedScenario = vocabScenarioMap.get(candidate.vocabId)!;
+        let drill = drillMap[candidate.vocabId];
+        let source = 'unknown';
+
+        if (drill) {
+            source = 'cache_v2';
+            auditInventoryEvent(userId, 'CONSUME', selectedScenario, {
+                currentCount: 0,
+                capacity: 0,
+                delta: -1,
+                vocabId: candidate.vocabId
+            });
+        } else {
+            // Cache Miss -> Deterministic Fallback
+            // 🔧 修复W5: 兜底策略文档
+            // 降级策略：当 Inventory 为空时，使用模板生成基础 Drill
+            // 目的：保证 Zero-Wait 体验，避免用户等待 LLM 生成
+            // 策略：使用 buildSimpleDrill 生成确定性内容（基于词汇本身的属性）
+            drill = buildSimpleDrill({
+                id: candidate.vocabId,
+                word: candidate.word,
+                definition_cn: candidate.definition_cn,
+                definitions: candidate.definitions,
+                commonExample: candidate.commonExample,
+                phoneticUk: candidate.phoneticUk,
+                partOfSpeech: candidate.partOfSpeech,
+                etymology: candidate.etymology,
+                collocations: candidate.collocations
+            }, selectedScenario);
+            source = 'deterministic_fallback';
+
+            // 收集缺货词汇，稍后批量触发急救
+            missingCandidates.push({ candidate, scenario: selectedScenario });
+
+            auditSessionFallback(userId, selectedScenario, candidate.vocabId, candidate.word);
+        }
+
+        if (drill) {
+            drill.meta = {
+                ...drill.meta,
+                mode: selectedScenario,
+                source,
+                vocabId: candidate.vocabId,
+                stability: candidate.reviewData?.stability || 0, // ✅ BLOCKER-02 修复: 传递 Stability 用于日志统计
+            };
+            drills.push(drill);
+        }
+    }
+
+    // 5. 触发批量急救 (异步非阻塞)
+    if (missingCandidates.length > 0) {
+        // 按场景分组触发批量急救
+        const missingByScenario: Record<string, number[]> = {};
+        for (const item of missingCandidates) {
+            if (!missingByScenario[item.scenario]) missingByScenario[item.scenario] = [];
+            missingByScenario[item.scenario].push(item.candidate.vocabId);
+        }
+
+        for (const [scenario, vids] of Object.entries(missingByScenario)) {
+            inventory.triggerBatchEmergency(userId, scenario, vids).catch(err => {
+                log.warn({ error: err.message, scenario }, 'Batch emergency trigger failed');
+            });
+        }
+    }
+
+    log.info({
+        userId,
+        mixedMode,
+        total: drills.length,
+        scenarioDistribution,
+        // 🔧 修复W2: 添加 Stability 范围统计
+        stabilityRange: drills.length > 0 ? {
+            min: Math.min(...drills.map(d => {
+                const meta = d.meta as any;
+                return meta.stability || 0;
+            })),
+            max: Math.max(...drills.map(d => {
+                const meta = d.meta as any;
+                return meta.stability || 0;
+            })),
+            avg: (drills.reduce((sum, d) => {
+                const meta = d.meta as any;
+                return sum + (meta.stability || 0);
+            }, 0) / drills.length).toFixed(2)
+        } : null
+    }, '🎭 Mixed mode drill distribution');
+
+    // ✅ BLOCKER-01 修复: 调用监控函数持久化数据
+    if (drills.length > 0) {
+        auditMixedModeDistribution(userId, mixedMode, {
+            distribution: scenarioDistribution,
+            totalDrills: drills.length,
+            stabilityStats: {
+                min: Math.min(...candidates.map(c => c.reviewData?.stability || 0)),
+                max: Math.max(...candidates.map(c => c.reviewData?.stability || 0)),
+                avg: parseFloat((candidates.reduce((sum, c) => sum + (c.reviewData?.stability || 0), 0) / candidates.length).toFixed(2))
+            }
+        });
+    }
+
+    return {
+        status: 'success',
+        message: `Mixed mode (${mixedMode}) drills fetched`,
+        data: drills,
+    };
 }

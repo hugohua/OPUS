@@ -66,16 +66,24 @@ const createCandidate = (id: number, word: string = `word-${id}`) => ({
     definitions: { business_cn: `商务-${id}` },
     commonExample: `Example for ${word}`,
     phoneticUk: '/UK/',
+    phoneticUs: '/US/',
     partOfSpeech: 'n',
+    word_family: { parents: [], children: [] },
+    priority_level: 1,
+    frequency_score: 100,
     etymology: null,
     collocations: {},
     type: 'NEW' as const,
+    confusion_audio: [],
 });
 
 const createCachedDrill = (vocabId: number): BriefingPayload => ({
     meta: {
         format: 'chat',
         target_word: `word-${vocabId}`,
+        mode: 'SYNTAX',
+        batch_size: 10,
+        sys_prompt_version: 'v2.0',
     },
     segments: [
         { type: 'text', content_markdown: 'Cached content.' },
@@ -87,6 +95,9 @@ const createFallbackDrill = (vocabId: number): BriefingPayload => ({
     meta: {
         format: 'chat',
         target_word: `word-${vocabId}`,
+        mode: 'SYNTAX',
+        batch_size: 10,
+        sys_prompt_version: 'v2.0',
     },
     segments: [
         { type: 'text', content_markdown: 'Fallback content.' },
@@ -412,9 +423,13 @@ describe('Suite E: 元数据与统计', () => {
             commonExample: 'Test example',
             phoneticUk: '/test/',
             partOfSpeech: 'v',
+            word_family: { parents: [], children: [] },
+            priority_level: 1,
+            frequency_score: 100,
             etymology: { root: 'test' },
             collocations: { noun: ['case'] },
             type: 'NEW' as const,
+            confusion_audio: [],
         }];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockResolvedValue(null);

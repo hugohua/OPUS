@@ -13,6 +13,7 @@ import {
     Database,     // Icon
     MoreHorizontal
 } from 'lucide-react';
+import { MODE_LABELS } from "@/lib/constants/modes";
 
 interface CacheStatsCardProps {
     stats: {
@@ -22,6 +23,7 @@ interface CacheStatsCardProps {
         AUDIO: number;
         NUANCE: number;
         READING: number;
+        BLITZ: number;
         total: number;
         targets: Record<string, number>;
     };
@@ -37,8 +39,9 @@ const MODE_GROUPS = [
         color: 'emerald',
         icon: Wrench,
         modes: [
-            { key: 'SYNTAX', label: '语法 (Syntax)' },
-            { key: 'PHRASE', label: '短语 (Phrase)' },
+            { key: 'SYNTAX', label: MODE_LABELS['SYNTAX'] },
+            { key: 'PHRASE', label: MODE_LABELS['PHRASE'] },
+            { key: 'BLITZ', label: MODE_LABELS['BLITZ'] },
         ]
     },
     {
@@ -48,8 +51,8 @@ const MODE_GROUPS = [
         color: 'sky',
         icon: Activity,
         modes: [
-            { key: 'CHUNKING', label: '语块 (Chunking)' },
-            { key: 'AUDIO', label: '听力 (Audio)' },
+            { key: 'CHUNKING', label: MODE_LABELS['CHUNKING'] },
+            { key: 'AUDIO', label: MODE_LABELS['AUDIO'] },
         ]
     },
     {
@@ -59,8 +62,8 @@ const MODE_GROUPS = [
         color: 'violet',
         icon: Brain,
         modes: [
-            { key: 'NUANCE', label: '辨析 (Nuance)' },
-            { key: 'READING', label: '阅读 (Reading)' },
+            { key: 'NUANCE', label: MODE_LABELS['NUANCE'] },
+            { key: 'READING', label: MODE_LABELS['READING'] },
         ]
     }
 ];

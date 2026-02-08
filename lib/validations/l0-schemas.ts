@@ -18,7 +18,7 @@ import { BriefingPayload } from '@/types/briefing';
  * L0 Meta 扩展: 必须包含 vocabId 和 target_word
  */
 const L0MetaSchema = z.object({
-    format: z.enum(['chat', 'email', 'memo']),
+    format: z.string().optional(), // 暂未使用，放宽校验以兼容不同 LLM
     mode: z.enum(['SYNTAX', 'PHRASE', 'BLITZ']),
     batch_size: z.number().optional(),
     sys_prompt_version: z.string().optional(),

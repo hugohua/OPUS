@@ -7,7 +7,8 @@
  */
 'use server';
 
-import { db } from '@/lib/db';
+// ... imports
+// ... imports
 import {
     getQueueCounts,
     isQueuePaused,
@@ -20,7 +21,7 @@ import { SessionMode } from '@/types/briefing';
 import { ActionState } from '@/types/action';
 import { auditInventoryEvent } from '@/lib/services/audit-service';
 import { revalidatePath } from 'next/cache';
-import { getCacheCount, CACHE_LIMIT_MAP } from '@/lib/drill-cache';
+import { getCacheCount, CACHE_LIMIT_MAP, DRILLS_PER_BATCH } from '@/lib/drill-cache';
 
 // --- 查询类 ---
 
@@ -61,6 +62,7 @@ export async function getCacheStats(): Promise<{
     AUDIO: number;
     NUANCE: number;
     READING: number;
+    BLITZ: number;
     total: number;
     targets: {
         SYNTAX: number;
@@ -69,35 +71,60 @@ export async function getCacheStats(): Promise<{
         AUDIO: number;
         NUANCE: number;
         READING: number;
+        BLITZ: number;
     };
 }> {
+    // Helper to calculate targets from config
+    const getTargets = () => Object.keys(CACHE_LIMIT_MAP).reduce((acc, key) => {
+        const mode = key as SessionMode;
+        acc[mode] = (CACHE_LIMIT_MAP[mode] || 5) * DRILLS_PER_BATCH;
+        return acc;
+    }, {} as Record<SessionMode, number>);
+
+    const emptyTargets = getTargets();
+
     try {
         const session = await import('@/auth').then(m => m.auth());
         if (!session?.user?.id) return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, total: 0,
-            targets: { SYNTAX: 50, PHRASE: 50, CHUNKING: 50, AUDIO: 50, NUANCE: 30, READING: 50 }
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, total: 0,
+            targets: emptyTargets
         };
 
         const { inventory } = await import('@/lib/core/inventory');
         const stats = await inventory.getInventoryStats(session.user.id);
 
-        // Convert batch limits to drill targets (1 Batch = DRILLS_PER_BATCH Drills)
-        const { DRILLS_PER_BATCH } = await import('@/lib/drill-cache');
-        const targets = Object.keys(CACHE_LIMIT_MAP).reduce((acc, key) => {
-            const mode = key as SessionMode;
-            acc[mode] = (CACHE_LIMIT_MAP[mode] || 5) * DRILLS_PER_BATCH;
-            return acc;
-        }, {} as Record<SessionMode, number>);
-
-        return { ...stats, targets };
+        return { ...stats, targets: emptyTargets };
     } catch (error) {
         console.error('getCacheStats error:', error);
         return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, total: 0,
-            targets: { SYNTAX: 50, PHRASE: 50, CHUNKING: 50, AUDIO: 50, NUANCE: 30, READING: 50 }
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, total: 0,
+            targets: emptyTargets
         };
     }
 }
+
+// ... existing actions ...
+
+/**
+ * 清空指定 Mode 的库存
+ */
+export async function handleClearModeInventory(
+    userId: string,
+    mode: SessionMode
+): Promise<ActionState> {
+    try {
+        const { inventory } = await import('@/lib/core/inventory');
+        const deletedCount = await inventory.clearMode(userId, mode);
+        revalidatePath('/admin/queue');
+        return {
+            status: 'success',
+            message: `${mode} 库存已清空 (删除 ${deletedCount} 条)`
+        };
+    } catch (error) {
+        return { status: 'error', message: (error as Error).message };
+    }
+}
+
 
 // --- 操作类 ---
 

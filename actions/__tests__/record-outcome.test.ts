@@ -18,6 +18,12 @@ vi.mock('@/auth', () => ({
     auth: vi.fn(),
 }));
 
+// [Mock Audit Service]
+vi.mock('@/lib/services/audit-service', () => ({
+    auditFSRSTransition: vi.fn(),
+    recordAudit: vi.fn(),
+}));
+
 import { auth } from '@/auth';
 
 const mockPrisma = prisma as unknown as DeepMockProxy<PrismaClient>;

@@ -31,7 +31,16 @@ export function useTTS() {
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
+            // Remove event listeners to prevent stale callbacks
+            audioRef.current.oncanplaythrough = null;
+            audioRef.current.onplay = null;
+            audioRef.current.onended = null;
+            audioRef.current.onerror = null;
+            audioRef.current.ontimeupdate = null;
+            audioRef.current = null;
         }
+        // Invalidate current hash to prevent pending audio from playing
+        currentHashRef.current = null;
         setState((prev) => ({
             ...prev,
             status: "idle",
@@ -92,37 +101,37 @@ export function useTTS() {
             const audio = new Audio(audioUrl);
             audioRef.current = audio;
 
-            // Event Listeners
-            audio.addEventListener("canplaythrough", () => {
+            // Event Listeners (使用赋值方式，与 stop() 清理逻辑匹配)
+            audio.oncanplaythrough = () => {
                 if (currentHashRef.current === hash) {
                     audio.play().catch((e) => {
                         console.error("Autoplay failed", e);
                         setState((prev) => ({ ...prev, status: "error", error: "Autoplay blocked" }));
                     });
                 }
-            });
+            };
 
-            audio.addEventListener("play", () => {
+            audio.onplay = () => {
                 if (currentHashRef.current === hash) {
                     setState((prev) => ({ ...prev, status: "playing", url: audioUrl! }));
                 }
-            });
+            };
 
-            audio.addEventListener("ended", () => {
+            audio.onended = () => {
                 if (currentHashRef.current === hash) {
                     setState((prev) => ({ ...prev, status: "idle", currentTime: 0 }));
                 }
-            });
+            };
 
-            audio.addEventListener("error", (e) => {
+            audio.onerror = (e) => {
                 if (currentHashRef.current === hash) {
                     console.error("Audio playback error", e);
                     setState((prev) => ({ ...prev, status: "error", error: "Playback error" }));
                 }
-            });
+            };
 
             // Update time
-            audio.addEventListener("timeupdate", () => {
+            audio.ontimeupdate = () => {
                 if (currentHashRef.current === hash) {
                     setState((prev) => ({
                         ...prev,
@@ -130,7 +139,7 @@ export function useTTS() {
                         duration: audio.duration || 0
                     }));
                 }
-            });
+            };
 
         } catch (err: any) {
             console.error("TTS Error:", err);

@@ -13,6 +13,7 @@ import {
     handleClearQueue,
     handleTriggerGeneration,
     handleClearInventory,
+    handleClearModeInventory,
 } from '@/actions/queue-admin';
 import { SessionMode } from '@/types/briefing';
 import { toast } from 'sonner';
@@ -27,6 +28,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { MODE_LABELS } from "@/lib/constants/modes";
 
 interface OperationPanelProps {
     isPaused: boolean;
@@ -36,8 +38,10 @@ interface OperationPanelProps {
 export function OperationPanel({ isPaused: initialPaused, userId }: OperationPanelProps) {
     const [isPaused, setIsPaused] = useState(initialPaused);
     const [loading, setLoading] = useState<string | null>(null);
+    const [confirmClearMode, setConfirmClearMode] = useState<SessionMode | null>(null);
 
     const handleTogglePause = async () => {
+        // ... (unchanged)
         setLoading('pause');
         try {
             if (isPaused) {
@@ -63,7 +67,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
     };
 
     const handleClear = async () => {
-        // Confirmation is now handled by AlertDialog
+        // ... (unchanged)
         setLoading('clear');
         try {
             const result = await handleClearQueue();
@@ -78,6 +82,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
     };
 
     const handleClearInv = async () => {
+        // ... (unchanged)
         setLoading('clear-inventory');
         try {
             const result = await handleClearInventory();
@@ -91,7 +96,27 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
         }
     };
 
+    const confirmClearOneMode = async () => {
+        if (!confirmClearMode) return;
+        const mode = confirmClearMode;
+
+        setLoading(`clear-${mode}`);
+        setConfirmClearMode(null); // Close dialog immediately or wait? Better close immediately.
+
+        try {
+            const result = await handleClearModeInventory(userId, mode);
+            if (result.status === 'success') {
+                toast.success(result.message);
+            } else {
+                toast.error(result.message);
+            }
+        } finally {
+            setLoading(null);
+        }
+    };
+
     const handleTrigger = async (mode: SessionMode) => {
+        // ... (unchanged)
         setLoading(`trigger-${mode}`);
         try {
             // 使用传入的真实用户 ID
@@ -119,17 +144,21 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                 <div className="grid grid-cols-2 gap-2">
                     <TriggerButton
                         mode="SYNTAX"
-                        label="语法 (Syntax)"
+                        label={MODE_LABELS['SYNTAX']}
                         color="emerald"
                         onClick={() => handleTrigger('SYNTAX')}
+                        onClear={() => setConfirmClearMode('SYNTAX')}
                         loading={loading === 'trigger-SYNTAX'}
+                        clearing={loading === 'clear-SYNTAX'}
                     />
                     <TriggerButton
                         mode="PHRASE"
-                        label="短语 (Phrase)"
+                        label={MODE_LABELS['PHRASE']}
                         color="emerald"
                         onClick={() => handleTrigger('PHRASE')}
+                        onClear={() => setConfirmClearMode('PHRASE')}
                         loading={loading === 'trigger-PHRASE'}
+                        clearing={loading === 'clear-PHRASE'}
                     />
                 </div>
             </div>
@@ -143,17 +172,21 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                 <div className="grid grid-cols-2 gap-2">
                     <TriggerButton
                         mode="CHUNKING"
-                        label="语块 (Chunking)"
+                        label={MODE_LABELS['CHUNKING']}
                         color="sky"
                         onClick={() => handleTrigger('CHUNKING')}
+                        onClear={() => setConfirmClearMode('CHUNKING')}
                         loading={loading === 'trigger-CHUNKING'}
+                        clearing={loading === 'clear-CHUNKING'}
                     />
                     <TriggerButton
                         mode="AUDIO"
-                        label="听力 (Audio)"
+                        label={MODE_LABELS['AUDIO']}
                         color="sky"
                         onClick={() => handleTrigger('AUDIO')}
+                        onClear={() => setConfirmClearMode('AUDIO')}
                         loading={loading === 'trigger-AUDIO'}
+                        clearing={loading === 'clear-AUDIO'}
                     />
                 </div>
             </div>
@@ -167,22 +200,27 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                 <div className="grid grid-cols-2 gap-2">
                     <TriggerButton
                         mode="NUANCE"
-                        label="辨析 (Nuance)"
+                        label={MODE_LABELS['NUANCE']}
                         color="violet"
                         onClick={() => handleTrigger('NUANCE')}
+                        onClear={() => setConfirmClearMode('NUANCE')}
                         loading={loading === 'trigger-NUANCE'}
+                        clearing={loading === 'clear-NUANCE'}
                     />
                     <TriggerButton
                         mode="READING"
-                        label="阅读 (Reading)"
+                        label={MODE_LABELS['READING']}
                         color="violet"
                         onClick={() => handleTrigger('READING')}
+                        onClear={() => setConfirmClearMode('READING')}
                         loading={loading === 'trigger-READING'}
+                        clearing={loading === 'clear-READING'}
                     />
                 </div>
             </div>
 
             <div className="pt-4 mt-2 border-t border-border flex gap-2">
+                {/* ... existing Clear Queue ... */}
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <button
@@ -192,6 +230,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                             {loading === 'clear' ? '清空中...' : '清空队列'}
                         </button>
                     </AlertDialogTrigger>
+                    {/* ... content ... */}
                     <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-foreground">确认清空队列？</AlertDialogTitle>
@@ -214,14 +253,14 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                             disabled={loading !== null}
                             className="flex-1 py-2 text-xs font-medium text-amber-400 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
                         >
-                            {loading === 'clear-inventory' ? '清空中...' : '清空库存'}
+                            {loading === 'clear-inventory' ? '清空中...' : '清空全站库存'}
                         </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="text-foreground">确认清空库存？</AlertDialogTitle>
+                            <AlertDialogTitle className="text-foreground">确认清空全站库存？</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
-                                此操作将清除您账户下所有 Mode 的已缓存 Drill 数据。清空后需要重新触发生成来填充库存。
+                                ⚠️ 此操作将清除您账户下 **所有 Mode** 的已缓存 Drill 数据。
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -241,6 +280,26 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                     {loading === 'pause' ? '...' : isPaused ? '恢复' : '暂停'}
                 </button>
             </div>
+
+            {/* Single Mode Clear Confirmation Dialog */}
+            <AlertDialog open={!!confirmClearMode} onOpenChange={(open) => !open && setConfirmClearMode(null)}>
+                <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-foreground">
+                            确认清空 {confirmClearMode ? MODE_LABELS[confirmClearMode] : ''} 库存？
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            此操作仅清除当前 Mode 的缓存数据，不会影响其他 Mode。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmClearOneMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            确认清空
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
@@ -250,13 +309,17 @@ function TriggerButton({
     label,
     color,
     onClick,
-    loading
+    onClear,
+    loading,
+    clearing
 }: {
     mode: string,
     label?: string,
     color: 'emerald' | 'sky' | 'violet' | 'amber',
     onClick: () => void,
-    loading: boolean
+    onClear?: () => void,
+    loading: boolean,
+    clearing?: boolean
 }) {
     // Semantic color mapping
     const styleMap = {
@@ -269,19 +332,40 @@ function TriggerButton({
     const activeStyle = styleMap[color] || styleMap.amber;
 
     return (
-        <button
-            onClick={onClick}
-            disabled={loading}
-            className={cn(
-                "group flex items-center justify-between p-2.5 rounded-lg border transition-all active:scale-[0.98]",
-                activeStyle,
-                "disabled:opacity-50 disabled:pointer-events-none"
+        <div className="flex items-stretch gap-1">
+            <button
+                onClick={onClick}
+                disabled={loading || clearing}
+                className={cn(
+                    "flex-1 group flex items-center justify-between p-2.5 rounded-lg border transition-all active:scale-[0.98]",
+                    activeStyle,
+                    "disabled:opacity-50 disabled:pointer-events-none"
+                )}
+            >
+                <span className="text-xs font-medium">
+                    {loading ? '...' : (label || mode)}
+                </span>
+                {!loading && <Play className="w-3 h-3 opacity-70 group-hover:opacity-100 fill-current" />}
+            </button>
+
+            {onClear && (
+                <button
+                    onClick={onClear}
+                    disabled={loading || clearing}
+                    className={cn(
+                        "w-9 flex items-center justify-center rounded-lg border transition-all active:scale-[0.98]",
+                        activeStyle,
+                        "disabled:opacity-50 disabled:pointer-events-none opacity-80 hover:opacity-100"
+                    )}
+                    title={`清空 ${mode} 库存`}
+                >
+                    {clearing ? (
+                        <span className="text-[10px] animate-pulse">...</span>
+                    ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                </button>
             )}
-        >
-            <span className="text-xs font-medium">
-                {loading ? '...' : (label || mode)}
-            </span>
-            {!loading && <Play className="w-3 h-3 opacity-70 group-hover:opacity-100 fill-current" />}
-        </button>
+        </div>
     )
 }

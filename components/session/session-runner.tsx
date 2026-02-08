@@ -8,16 +8,20 @@
  */
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { EditorialDrill } from "@/components/briefing/editorial-drill";
+
+import { ChunkingDrill } from '@/components/briefing/chunking-drill';
 import { SessionSkeleton } from "@/components/session/session-skeleton";
 import { BlitzSession } from "@/components/session/blitz-session";
 import { PhraseCard } from "@/components/briefing/phrase-card";
 import { PhraseFooter } from "@/components/briefing/phrase-footer";
 import { ContextDrillCard } from "@/components/drill/context-drill-card"; // [Phase 4] Import
+import { AudioScriptDrill } from "@/components/drill/audio-script-drill"; // [New] Audio Drill UI
+import { useTTS } from "@/hooks/use-tts";
 import { recordOutcome } from '@/actions/record-outcome';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
@@ -35,6 +39,7 @@ interface SessionRunnerProps {
 
 const LOAD_THRESHOLD = 10; // 剩余 10 张时触发加载更多
 const BATCH_LIMIT = 10;   // 每批加载数量
+const PREFETCH_LOOKAHEAD = 3; // 音频预加载前瞻数量
 
 export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {
     if (mode === 'BLITZ') {
@@ -53,7 +58,6 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
-    const [dataSource, setDataSource] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true); // Prevent infinite loop if no more items
 
     // Track loaded VocabIDs to exclude them in next fetch
@@ -61,6 +65,56 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
     // [Time-Based Grading] Response Timer
     const startTime = useRef<number>(Date.now());
+
+    // TTS Hook for Audio Mode
+    const tts = useTTS();
+
+    // ==================== 音频预加载 ====================
+    const prefetchedIndicesRef = useRef<Set<number>>(new Set());
+    const preloadedAudiosRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+    const generateAndPreload = useCallback(async (script: string, voice: string) => {
+        try {
+            const res = await fetch('/api/tts/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: script, voice, language: 'en-US', speed: 1.0 })
+            });
+            if (!res.ok) return;
+
+            const { url } = await res.json();
+            if (!url || preloadedAudiosRef.current.has(url)) return;
+
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            audio.load();
+            preloadedAudiosRef.current.set(url, audio);
+
+            console.log(`[Audio Prefetch] 已预加载: ${script.slice(0, 30)}...`);
+        } catch {
+            // 静默失败
+        }
+    }, []);
+
+    const prefetchNextItems = useCallback(() => {
+        if (mode !== 'AUDIO') return;
+
+        for (let offset = 1; offset <= PREFETCH_LOOKAHEAD; offset++) {
+            const targetIndex = index + offset;
+            if (targetIndex >= queue.length) break;
+            if (prefetchedIndicesRef.current.has(targetIndex)) continue;
+
+            const nextDrill = queue[targetIndex];
+            const textSeg = nextDrill?.segments.find(s => s.type === 'text');
+            const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
+            const voice = (nextDrill?.meta?.sender_voice as any) || "Cherry";
+
+            if (script) {
+                prefetchedIndicesRef.current.add(targetIndex);
+                generateAndPreload(script, voice);
+            }
+        }
+    }, [mode, index, queue, generateAndPreload]);
 
     // --- 1. 挂载时：恢复状态 or 初始加载 ---
     useEffect(() => {
@@ -99,22 +153,13 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     // [P0 Anti-Fallback] 如果大部分是兜底数据，不缓存，让用户刷新时能获取新题
     useEffect(() => {
         if (queue.length > 0 && !completed) {
-            // 检测兜底数据比例
-            const fallbackCount = queue.filter(d => (d.meta as any)?.source === 'deterministic_fallback').length;
-            const isMostlyFallback = fallbackCount / queue.length > 0.5;
-            const isLargeEnough = queue.length >= 5; // 防止小队列误判
-
-            if (isMostlyFallback && isLargeEnough) {
-                console.log('[SessionRunner] Skipping cache: mostly fallback data', { fallbackCount, total: queue.length });
-                // 不缓存，用户刷新后会重新请求
-            } else {
-                saveSession(userId, mode, queue, index);
-            }
+            saveSession(userId, mode, queue, index);
         }
     }, [queue, index, completed, userId, mode]);
 
     const loadInitialData = async () => {
         try {
+            // 标准路径：使用 OMPS + Inventory
             const res = await getNextDrillBatch({
                 userId,
                 mode,
@@ -128,10 +173,6 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                 setQueue(newItems);
                 // 保存数据来源
                 console.log('🔍 API Response meta:', res.meta); // 调试日志
-                if (res.meta?.source) {
-                    console.log('🔍 Setting dataSource to:', res.meta.source); // 调试日志
-                    setDataSource(res.meta.source);
-                }
             } else {
                 toast.error('加载训练数据失败');
             }
@@ -158,10 +199,52 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         if (isInitialLoading) return; // 初始加载完成后才启用
 
         const remaining = queue.length - index;
+        // Disable lazy load for simulation (fixed batch size)
         if (remaining <= LOAD_THRESHOLD && !isLoadingMore && hasMore) {
             loadMore();
         }
     }, [index, queue.length, isLoadingMore, isInitialLoading]);
+
+    // --- Audio Auto-Play Logic ---
+    useEffect(() => {
+        if (mode === 'AUDIO' && currentDrill && !completed) {
+            // Stop previous audio immediately
+            tts.stop();
+
+            const textSeg = currentDrill.segments.find(s => s.type === 'text');
+            const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
+
+            if (script) {
+                // Short delay to allow UI transition
+                const timer = setTimeout(() => {
+                    tts.play({
+                        text: script,
+                        voice: (currentDrill.meta.sender_voice as any) || "Cherry",
+                        speed: 1.0,
+                    });
+                }, 500);
+
+                // Cleanup: Stop audio AND clear timeout on re-run/unmount
+                return () => {
+                    clearTimeout(timer);
+                    tts.stop();
+                };
+            }
+        }
+
+        // Cleanup for non-script cases
+        return () => {
+            tts.stop();
+        };
+    }, [index, mode, currentDrill]);
+
+    // --- Audio Prefetch Trigger ---
+    useEffect(() => {
+        if (mode === 'AUDIO' && !completed && queue.length > 0) {
+            const timer = setTimeout(prefetchNextItems, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [index, mode, queue.length, completed, prefetchNextItems]);
 
     const loadMore = async () => {
         setIsLoadingMore(true);
@@ -291,6 +374,18 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         handleComplete(isCorrect);
     };
 
+    // [New] For ChunkingDrill
+    const handleNext = () => {
+        if (index < queue.length - 1) {
+            setStatus("idle");
+            setSelectedOption(null);
+            setIndex(i => i + 1);
+        } else {
+            clearSession(userId, mode);
+            setCompleted(true);
+        }
+    };
+
     // --- 初始加载中显示骨架屏 ---
     if (isInitialLoading) {
         return <SessionSkeleton mode={mode} />;
@@ -344,6 +439,26 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         );
     }
 
+    if (mode === 'AUDIO') {
+        return (
+            <AudioScriptDrill
+                drill={currentDrill}
+                isPlaying={tts.isPlaying}
+                onTogglePlay={() => {
+                    if (tts.isPlaying) tts.stop();
+                    else {
+                        const textSeg = currentDrill.segments.find(s => s.type === 'text');
+                        const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
+                        if (script) tts.play({ text: script, voice: "Cherry" });
+                    }
+                }}
+                onGrade={(g) => handleComplete(g)}
+                index={index + 1}
+                total={queue.length}
+            />
+        );
+    }
+
     // Map mode to color variant
     const variantMap: Record<string, "violet" | "emerald" | "amber" | "rose" | "blue" | "pink"> = {
         SYNTAX: "emerald",
@@ -367,6 +482,11 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     // --- Definition Extraction Helper ---
     // Extract real definition from flexible structure
     const getDefinition = () => {
+        // 0. [P0] Try meta.definition_cn first (used by CHUNKING, etc.)
+        if (currentDrill?.meta && (currentDrill.meta as any).definition_cn) {
+            return (currentDrill.meta as any).definition_cn;
+        }
+
         if (!interactSegment?.task) return "";
         const task = interactSegment.task as any;
 
@@ -380,8 +500,12 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         if (explanationMarkdown) {
             const lines = explanationMarkdown.split('\n');
             // Try to find a line that looks like definition (often line 2 or 3)
-            // Skip title (##)
-            const cleanLines = lines.filter((l: string) => l.trim().length > 0 && !l.startsWith('##'));
+            // Skip title (##) and lines starting with "**" (Chunks:, etc.)
+            const cleanLines = lines.filter((l: string) =>
+                l.trim().length > 0 &&
+                !l.startsWith('##') &&
+                !l.startsWith('**')
+            );
             if (cleanLines.length > 0) return cleanLines[0];
         }
 
@@ -464,32 +588,50 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
     return (
         <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
             {/* Dark Mode Ambient Glow */}
-            <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none z-0" />
+            {/* Dark Mode Ambient Glow */}
+            <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-violet-900/20 from-transparent via-transparent to-transparent pointer-events-none z-0" />
 
             {/* Fallback/Loading Layer if needed, but UniversalCard handles the main shell */}
             <div className="relative z-10 h-full">
 
                 <UniversalCard
-                    variant={variant}
+                    variant={mode === 'CHUNKING' ? 'blue' : variant}
                     category={`${mode} DRILL`}
                     progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
                     onExit={() => router.push('/dashboard')}
-                    footer={ActiveFooter}
-                    clean={false}
-                    contentClassName="h-[60dvh] w-full flex flex-col justify-center"
+                    footer={mode === 'CHUNKING' ? null : ActiveFooter}
+                    clean={mode === 'CHUNKING'}
+                    contentClassName={mode === 'CHUNKING'
+                        ? "p-0 bg-transparent border-none shadow-none max-w-none w-full h-full"
+                        : "h-[60dvh] w-full flex flex-col justify-center"
+                    }
                 >
                     {/* Body Content */}
-                    {textSegment && interactSegment && (
-                        <div className="w-full">
-                            {/* DataSource Indicator */}
-                            {dataSource === 'deterministic' && (
-                                <div className="mb-6 flex justify-center">
-                                    <span className="inline-flex items-center rounded-md bg-amber-400/10 px-2 py-1 text-xs font-medium text-amber-400 ring-1 ring-inset ring-amber-400/20">
-                                        Offline Backup
-                                    </span>
-                                </div>
-                            )}
+                    {/* CHUNKING mode has its own data structure, render separately */}
+                    {mode === 'CHUNKING' && currentDrill && (
+                        <div className="w-full h-full">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 1.05 }}
+                                    transition={{ duration: 0.4 }}
+                                    className="w-full h-full"
+                                >
+                                    <ChunkingDrill
+                                        drill={(currentDrill.segments.find((s: any) => s.type === 'chunking_drill') || currentDrill) as any}
+                                        onComplete={handleNext}
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                    )}
 
+                    {/* Standard modes (PHRASE, SYNTAX, AUDIO, etc.) */}
+                    {mode !== 'CHUNKING' && textSegment && interactSegment && (
+                        <div className="w-full">
+                            {/* Standard Modes (PHRASE, SYNTAX, EDITORIAL) */}
                             {isPhraseMode ? (
                                 <AnimatePresence mode="wait">
                                     <motion.div
@@ -508,7 +650,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                                             phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
                                             partOfSpeech={partOfSpeech || ""}
                                             targetWord={currentDrill.meta.target_word}
-                                            etymology={(currentDrill.meta as any).etymology} // [New]
+                                            etymology={(currentDrill.meta as any).etymology}
                                         />
                                     </motion.div>
                                 </AnimatePresence>
@@ -524,6 +666,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                                     >
                                         <EditorialDrill
                                             content={textSegment.content_markdown || ""}
+                                            questionMarkdown={(interactSegment.task as any)?.question_markdown}
                                             translation={(textSegment as any).translation_cn}
                                             explanation={explanationMarkdown}
                                             answer={interactSegment.task?.answer_key || ""}
@@ -542,7 +685,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                         </div>
                     )}
                 </UniversalCard>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }

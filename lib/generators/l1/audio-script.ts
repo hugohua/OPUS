@@ -14,11 +14,11 @@ import { BriefingPayloadSchema, DrillSegmentSchema } from '@/lib/validations/bri
  */
 
 export interface AudioScriptInput {
-    word: string;
-    stability: number;
-    difficulty: number;
-    confusion_audio?: string[];
-    // Context or other metadata can be added here
+  word: string;
+  stability: number;
+  difficulty: number;
+  confusion_audio?: string[];
+  // Context or other metadata can be added here
 }
 
 export const L1_AUDIO_SYSTEM_PROMPT = `
@@ -51,7 +51,9 @@ Your goal is to generate "Eyes-Free" auditory drills that train "Audio Reflex".
 </generation_matrix>
 
 <output_requirements>
-- **JSON ONLY**: Return confirmed JSON.
+- **JSON ONLY**: Return raw JSON only.
+- DO NOT wrap in \`\`\`json or \`\`\`.
+- DO NOT output any text outside the JSON object.
 - **Payload Structure**: Must match BriefingPayload V2.
 - **Emotion Tag**: Add meaningful emotion tags for TTS (e.g., <emotional_tone="urgent">).
 </output_requirements>
@@ -100,22 +102,22 @@ Your goal is to generate "Eyes-Free" auditory drills that train "Audio Reflex".
 `.trim();
 
 export function getL1AudioScriptPrompt(inputs: AudioScriptInput[]) {
-    // 简单预处理输入，为 LLM 提供更多上下文线索
-    const contextStr = inputs.map(i => {
-        let mode = "Carrier Phrase";
-        if (i.difficulty > 7) mode = "Auditory Discrimination";
-        else if (i.stability >= 15) mode = "Dialogue";
-        else if (i.stability >= 3) mode = "Instant Logic";
+  // 简单预处理输入，为 LLM 提供更多上下文线索
+  const contextStr = inputs.map(i => {
+    let mode = "Carrier Phrase";
+    if (i.difficulty > 7) mode = "Auditory Discrimination";
+    else if (i.stability >= 15) mode = "Dialogue";
+    else if (i.stability >= 3) mode = "Instant Logic";
 
-        const confusionStr = i.confusion_audio && i.confusion_audio.length > 0
-            ? `Confusions: [${i.confusion_audio.join(', ')}]`
-            : 'Confusions: None';
+    const confusionStr = i.confusion_audio && i.confusion_audio.length > 0
+      ? `Confusions: [${i.confusion_audio.join(', ')}]`
+      : 'Confusions: None';
 
-        return `Word: ${i.word} | Stats: S=${i.stability}, D=${i.difficulty} | ${confusionStr} | MODE: ${mode}`;
-    }).join('\n');
+    return `Word: ${i.word} | Stats: S=${i.stability}, D=${i.difficulty} | ${confusionStr} | MODE: ${mode}`;
+  }).join('\n');
 
-    return {
-        system: L1_AUDIO_SYSTEM_PROMPT,
-        user: `GENERATE AUDIO DRILLS FOR:\n${contextStr}`
-    };
+  return {
+    system: L1_AUDIO_SYSTEM_PROMPT,
+    user: `GENERATE AUDIO DRILLS FOR:\n${contextStr}`
+  };
 }

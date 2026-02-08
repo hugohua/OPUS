@@ -5,9 +5,9 @@
  */
 
 export interface ContextGeneratorInput {
-    targetWord: string;
-    meaning: string;
-    contextKeywords: string[]; // List of related words to weave in
+  targetWord: string;
+  meaning: string;
+  contextKeywords: string[]; // List of related words to weave in
 }
 
 export const L2_CONTEXT_SYSTEM_PROMPT = `
@@ -30,7 +30,9 @@ Then, create a "Fill in the Blank" drill for the Target Word.
 </processing_logic>
 
 <response_template>
-CRITICAL: Return JSON Only. Follow this structure exactly.
+CRITICAL: Return raw JSON only.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 
 {
   "drills": [
@@ -83,8 +85,8 @@ CRITICAL: Return JSON Only. Follow this structure exactly.
 `.trim();
 
 export function getL2ContextBatchPrompt(inputs: ContextGeneratorInput[]) {
-    return {
-        system: L2_CONTEXT_SYSTEM_PROMPT,
-        user: `GENERATE ${inputs.length} CONTEXT DRILLS.\n\nINPUT DATA:\n${JSON.stringify(inputs, null, 2)}`
-    };
+  return {
+    system: L2_CONTEXT_SYSTEM_PROMPT,
+    user: `GENERATE ${inputs.length} CONTEXT DRILLS.\n\nINPUT DATA:\n${JSON.stringify(inputs, null, 2)}`
+  };
 }

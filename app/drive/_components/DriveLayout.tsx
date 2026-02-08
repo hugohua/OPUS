@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useTTS } from '@/hooks/use-tts';
-import { DriveItem, DRIVE_VOICE_CONFIG, DriveMode, DRIVE_VOICE_SPEED_PRESETS, DashScopeVoice } from '@/lib/constants/drive';
+import { DriveItem, DRIVE_VOICE_CONFIG, DriveMode, DriveTrack, DRIVE_VOICE_SPEED_PRESETS, DashScopeVoice } from '@/lib/constants/drive';
+import { generateDrivePlaylist } from '@/actions/drive';
 import { DriveHeader } from './DriveHeader';
 import { DriveMain } from './DriveMain';
 import { DriveControls } from './DriveControls';
@@ -44,10 +45,23 @@ export const useDrive = () => {
 // ------------------------------------------------------------------
 interface DriveLayoutProps {
     initialPlaylist: DriveItem[];
+    initialCursor: number | null;
+    initialHasMore: boolean;
+    track: DriveTrack;
 }
 
-export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
-    const [playlist] = useState<DriveItem[]>(initialPlaylist);
+export function DriveLayout({
+    initialPlaylist,
+    initialCursor,
+    initialHasMore,
+    track
+}: DriveLayoutProps) {
+    // ✅ V2: 支持动态加载
+    const [playlist, setPlaylist] = useState<DriveItem[]>(initialPlaylist);
+    const [cursor, setCursor] = useState<number | null>(initialCursor);
+    const [hasMore, setHasMore] = useState(initialHasMore);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
 
@@ -57,6 +71,40 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
 
     // TTS Engine
     const tts = useTTS();
+
+    // ------------------------------------------------------------------
+    // Load More Logic (V2)
+    // ------------------------------------------------------------------
+    // ✅ 使用 ref 存储 loading 状态，避免 useCallback 频繁重建
+    const isLoadingRef = React.useRef(false);
+
+    const loadMore = useCallback(async () => {
+        // 使用 ref 双重检查，防止并发调用
+        if (!hasMore || isLoadingRef.current || cursor === null) return;
+
+        isLoadingRef.current = true;
+        setIsLoadingMore(true);
+        try {
+            const res = await generateDrivePlaylist({ track, cursor, pageSize: 15 });
+            setPlaylist(prev => [...prev, ...res.items]);
+            setCursor(res.nextCursor);
+            setHasMore(res.hasMore);
+            console.log('[Drive] Loaded more items:', res.items.length, 'hasMore:', res.hasMore);
+        } catch (error) {
+            console.error('[Drive] Load more failed:', error);
+        } finally {
+            isLoadingRef.current = false;
+            setIsLoadingMore(false);
+        }
+    }, [hasMore, cursor, track]); // ✅ 移除 isLoadingMore 依赖，使用 ref 代替
+
+    // 自动触发 Load More：剩余 3 个时预加载
+    useEffect(() => {
+        const remaining = playlist.length - currentIndex;
+        if (remaining <= 3 && hasMore && !isLoadingRef.current) {
+            loadMore();
+        }
+    }, [currentIndex, playlist.length, hasMore, loadMore]); // ✅ 移除 isLoadingMore
 
     // Derived Current Item
     const currentItem = playlist[currentIndex];
@@ -109,13 +157,44 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
     };
 
     // ------------------------------------------------------------------
+    // ------------------------------------------------------------------
     // Prefetch Logic (Incremental Background Preloading)
+    // V2: 完整预加载 - 生成 + 下载到浏览器缓存
     // ------------------------------------------------------------------
     const PREFETCH_LOOKAHEAD = 5; // Always keep 5 items ahead prefetched
     const prefetchedIndicesRef = React.useRef<Set<number>>(new Set());
+    const preloadedAudiosRef = React.useRef<Map<string, HTMLAudioElement>>(new Map());
+
+    // 🔥 核心：生成音频并预加载到浏览器
+    const generateAndPreload = async (text: string, voice: DashScopeVoice, speed: number): Promise<void> => {
+        try {
+            const response = await fetch('/api/tts/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, voice, language: 'en-US', speed })
+            });
+
+            if (!response.ok) return;
+
+            const { url } = await response.json();
+            if (!url || preloadedAudiosRef.current.has(url)) return;
+
+            // ✅ 预加载音频到浏览器内存
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            audio.load();
+
+            // 缓存引用，防止被 GC
+            preloadedAudiosRef.current.set(url, audio);
+
+            console.log(`[Drive Prefetch] Preloaded: ${text.slice(0, 20)}...`);
+        } catch {
+            // 静默失败
+        }
+    };
 
     const prefetchNextItems = async () => {
-        const allRequests: Array<Promise<any>> = [];
+        const allRequests: Array<Promise<void>> = [];
 
         // Calculate target range: [currentIndex + 1, currentIndex + PREFETCH_LOOKAHEAD]
         for (let offset = 1; offset <= PREFETCH_LOOKAHEAD; offset++) {
@@ -132,68 +211,20 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
                 // Quiz needs 2 audios: question + answer
                 const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
                 const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || nextItem.speed || 1.0;
-
-                allRequests.push(
-                    fetch('/api/tts/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: nextItem.word || nextItem.text,
-                            voice: qVoice,
-                            language: 'en-US',
-                            speed: qSpeed
-                        })
-                    }).catch(() => { })
-                );
+                allRequests.push(generateAndPreload(nextItem.word || nextItem.text, qVoice, qSpeed));
 
                 const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
                 const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
-
-                allRequests.push(
-                    fetch('/api/tts/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: nextItem.trans,
-                            voice: aVoice,
-                            language: 'en-US',
-                            speed: aSpeed
-                        })
-                    }).catch(() => { })
-                );
+                allRequests.push(generateAndPreload(nextItem.trans, aVoice, aSpeed));
             } else if (nextItem.mode === 'WASH') {
                 const wVoice = DRIVE_VOICE_CONFIG.WASH_PHRASE;
                 const wSpeed = DRIVE_VOICE_SPEED_PRESETS[wVoice] || nextItem.speed || 1.0;
-
-                allRequests.push(
-                    fetch('/api/tts/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: nextItem.text,
-                            voice: wVoice,
-                            language: 'en-US',
-                            speed: wSpeed
-                        })
-                    }).catch(() => { })
-                );
+                allRequests.push(generateAndPreload(nextItem.text, wVoice, wSpeed));
             } else {
                 // STORY
                 const sVoice = DRIVE_VOICE_CONFIG.STORY;
                 const sSpeed = DRIVE_VOICE_SPEED_PRESETS[sVoice] || nextItem.speed || 1.0;
-
-                allRequests.push(
-                    fetch('/api/tts/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: nextItem.text,
-                            voice: sVoice,
-                            language: 'en-US',
-                            speed: sSpeed
-                        })
-                    }).catch(() => { })
-                );
+                allRequests.push(generateAndPreload(nextItem.text, sVoice, sSpeed));
             }
 
             // Mark as prefetched BEFORE request completes (optimistic)
@@ -202,7 +233,7 @@ export function DriveLayout({ initialPlaylist }: DriveLayoutProps) {
 
         // Fire all requests in parallel (silent fail)
         if (allRequests.length > 0) {
-            console.log(`[Drive Prefetch] Loading ${allRequests.length} new audio(s) for indices after ${currentIndex}`);
+            console.log(`[Drive Prefetch] Loading ${allRequests.length} audio(s) for indices after ${currentIndex}`);
             await Promise.allSettled(allRequests);
         }
     };

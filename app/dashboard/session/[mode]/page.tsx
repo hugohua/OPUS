@@ -28,7 +28,12 @@ export default async function SessionPage(props: PageProps) {
     const userId = session.user.id;
     const modeRaw = params.mode.toUpperCase();
 
-    const validModes = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'PHRASE', 'CONTEXT'];
+    const validModes = [
+        // 单一场景
+        'SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'PHRASE', 'CONTEXT', 'AUDIO', 'READING', 'VISUAL',
+        // 混合场景
+        'L0_MIXED', 'L1_MIXED', 'L2_MIXED', 'DAILY_BLITZ'
+    ];
     if (!validModes.includes(modeRaw)) {
         notFound();
     }

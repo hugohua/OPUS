@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/drawer";
 import { AuditButton } from './audit-button';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { MODE_LABELS } from '@/lib/constants/modes';
 
 // Mock Data for Initial State (to show structure)
 interface DrillItem {
@@ -78,7 +79,7 @@ export function GeneratorStreamView() {
                         id: d.id,
                         time: d.createdAt ? new Date(d.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'History',
                         target: d.payload?.meta?.target_word || 'Unknown',
-                        context: `${d.payload?.meta?.format || 'Unknown'} / ${d.payload?.meta?.mode || 'Unknown'}`,
+                        context: `${d.payload?.meta?.format || 'Unknown'} / ${MODE_LABELS[d.payload?.meta?.mode] || d.payload?.meta?.mode || 'Unknown'}`,
                         status: d.status,
                         payload: d.payload,
                         debug: d.debug
@@ -105,9 +106,9 @@ export function GeneratorStreamView() {
                 console.log("[Stream] RX:", data); // DEBUG
                 const newItem: DrillItem = {
                     id: data.id,
-                    time: 'Live', // In production use date-fns relative time
+                    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                     target: data.payload?.meta?.target_word || 'Unknown',
-                    context: `${data.payload?.meta?.format || 'Unknown'} / ${data.payload?.meta?.mode || 'Unknown'}`,
+                    context: `${data.payload?.meta?.format || 'Unknown'} / ${MODE_LABELS[data.payload?.meta?.mode] || data.payload?.meta?.mode || 'Unknown'}`,
                     status: data.status,
                     payload: data.payload,
                     debug: data.debug

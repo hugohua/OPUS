@@ -87,7 +87,7 @@ describe('Inventory Limit Enforcement', () => {
         // Assert
         expect(result.success).toBe(true);
         expect(result.count).toBe(0);
-        expect(result.reason).toBe('inventory_full_pre_check');
+        expect(result.reason).toBe('inventory_full_early');
         // omps fetch should NOT be called
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         expect(fetchOMPSCandidates).not.toHaveBeenCalled();

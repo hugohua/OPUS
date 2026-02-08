@@ -59,3 +59,21 @@ export const DRIVE_VOICE_SPEED_PRESETS: Record<DashScopeVoice, number> = {
     'Maia': 1.0,
     'Neil': 1.0
 };
+
+// ------------------------------------------------------------------
+// Multi-Track & Pagination Types (V2)
+// ------------------------------------------------------------------
+export type DriveTrack = 'VISUAL' | 'AUDIO' | 'CONTEXT';
+
+export interface DrivePlaylistResponse {
+    items: DriveItem[];
+    nextCursor: number | null;
+    hasMore: boolean;
+    track: DriveTrack;
+}
+
+export interface DrivePlaylistOptions {
+    track?: DriveTrack;
+    cursor?: number;
+    pageSize?: number;
+}

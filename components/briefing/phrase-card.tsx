@@ -30,6 +30,33 @@ export function PhraseCard({
 
     // Smart Highlight Logic matching Demo Style (Tilted + Indigo)
     const renderSmartText = (text: string) => {
+        // [P0] Chunk Tag Processing (L1 意群断句)
+        // 先检查是否包含 <chunk> 标签
+        if (text.includes('<chunk>')) {
+            const chunkRegex = /(<chunk>.*?<\/chunk>)/g;
+            const parts = text.split(chunkRegex);
+
+            return parts.map((part, i) => {
+                if (part.startsWith('<chunk>') && part.endsWith('</chunk>')) {
+                    const innerContent = part.replace(/<\/?chunk>/g, '');
+                    // 递归处理内部内容（可能包含 **bold** 或 targetWord）
+                    return (
+                        <span key={i} className="inline-block bg-cyan-500/10 px-2 py-0.5 rounded-lg border-b-2 border-cyan-500/50 mx-0.5">
+                            {renderInnerHighlight(innerContent)}
+                        </span>
+                    );
+                }
+                // 非 chunk 部分也需要处理高亮
+                return <span key={i}>{renderInnerHighlight(part)}</span>;
+            });
+        }
+
+        // Fallback: 没有 chunk 标签，使用原有逻辑
+        return renderInnerHighlight(text);
+    };
+
+    // Inner highlight logic (handles **bold** and targetWord)
+    const renderInnerHighlight = (text: string) => {
         let regex: RegExp;
         let isMarkdown = false;
 

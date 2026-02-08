@@ -89,7 +89,9 @@ export async function getCacheCount(userId: string, mode: string) {
  */
 export const DRILLS_PER_BATCH = 10;
 
-export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
+import { createSessionModeRecord } from '@/lib/config/mixed-mode-config';
+
+export const CACHE_LIMIT_MAP = createSessionModeRecord({
     SYNTAX: 5,      // 50 drills
     CHUNKING: 5,    // 50 drills
     NUANCE: 3,      // 30 drills
@@ -98,5 +100,5 @@ export const CACHE_LIMIT_MAP: Record<SessionMode, number> = {
     AUDIO: 5,       // 50 drills
     READING: 5,     // 50 drills
     VISUAL: 5,      // 50 drills
-    CONTEXT: 3,     // [L2] 30 drills (lower volume, higher quality)
-};
+    CONTEXT: 3      // [L2] 30 drills (lower volume, higher quality)
+});

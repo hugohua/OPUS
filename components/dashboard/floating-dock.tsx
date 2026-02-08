@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Layers, ShieldCheck, SlidersHorizontal, BookOpen } from "lucide-react"; // Using Lucide approximations for provided SVGs
+import { Layers, ShieldCheck, User, Zap } from "lucide-react";
 
 interface FloatingDockProps {
     hasDue?: boolean;
@@ -20,35 +20,31 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
 
     const navItems = [
         {
-            href: "/dashboard",
-            icon: Home,
-            label: "主页",
-            exact: true
+            href: "/dashboard/simulate",
+            icon: Zap,
+            label: "模拟",
+            exact: false
         },
         {
             href: "/vocabulary",
-            icon: Layers, // Visual approximation to the "Stack/List" icon in demo, or sticking to BookOpen? 
-            // Demo 2nd icon looks like a List. Let's use Layers or BookCopy. 
-            // Previous was BookOpen. Let's stick to semantic meaning: Inventory => Layers/Database.
-            // But user said "Inventory (Word List)". 
-            // Let's use Layers as it looks like a stack of cards.
+            icon: Layers,
             label: "词库",
             hasDot: hasDue
         },
         {
-            href: "/admin", // User requested Admin
-            icon: ShieldCheck, // Shield icon
+            href: "/admin",
+            icon: ShieldCheck,
             label: "后台"
         },
         {
-            href: "/dashboard/profile", // User requested Profile
-            icon: SlidersHorizontal, // Sliders icon
+            href: "/dashboard/profile",
+            icon: User,
             label: "我的"
         }
     ];
 
     return (
-        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-zinc-200 dark:border-white/10 rounded-full shadow-2xl flex items-center justify-around px-2 z-50">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[360px] h-16 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-2xl shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 flex items-center justify-around px-2 z-50">
             {navItems.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
@@ -58,17 +54,23 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                            "w-12 h-12 flex items-center justify-center rounded-full transition-all duration-300 relative",
+                            "flex flex-col items-center justify-center w-16 h-full transition-all duration-300 relative group",
                             active
-                                ? "text-indigo-500 bg-indigo-500/10"
-                                : "text-zinc-400 hover:text-indigo-500 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                                ? "text-indigo-600 dark:text-indigo-400"
+                                : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
                         )}
                     >
-                        <Icon className="w-6 h-6 stroke-[1.5px]" />
+                        <div className={cn(
+                            "p-1.5 rounded-xl transition-all duration-300 mb-0.5",
+                            active ? "bg-indigo-50 dark:bg-indigo-500/10 scale-110" : "group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800"
+                        )}>
+                            <Icon className={cn("w-5 h-5 stroke-[2px]", active && "fill-indigo-500/20")} />
+                        </div>
+                        <span className="text-[10px] font-medium scale-90 origin-top">{item.label}</span>
 
                         {/* Red Dot for Due Items */}
                         {item.hasDot && (
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-zinc-900 shadow-sm animate-pulse-slow"></span>
+                            <span className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm animate-pulse"></span>
                         )}
                     </Link>
                 );

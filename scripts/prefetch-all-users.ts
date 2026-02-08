@@ -24,9 +24,11 @@ import { SessionMode } from '@/types/briefing';
 const log = createLogger('script:prefetch-all-users');
 
 // --- 配置 ---
+import { createSessionModeRecord } from '@/lib/config/mixed-mode-config';
+
 // --- 配置 ---
 const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
-const BATCH_SIZE_MAP: Record<SessionMode, number> = {
+const BATCH_SIZE_MAP = createSessionModeRecord({
     SYNTAX: 20,
     CHUNKING: 30,
     NUANCE: 50,
@@ -35,8 +37,8 @@ const BATCH_SIZE_MAP: Record<SessionMode, number> = {
     AUDIO: 20,
     READING: 20,
     VISUAL: 20,
-    CONTEXT: 20,  // [L2] Context Lab
-};
+    CONTEXT: 20  // [L2] Context Lab
+});
 const CACHE_THRESHOLD = 2; // 每个模式至少保持 2 条缓存
 const ACTIVE_DAYS = 7;     // 最近 N 天活跃的用户
 

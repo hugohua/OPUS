@@ -253,6 +253,7 @@ export function auditLLMFailover(
         mode: 'fast' | 'smart';
         attemptNumber: number;
         totalProviders: number;
+        errorDetails?: Record<string, any>; // 新增：完整错误上下文
     }
 ): void {
     const auditTags: string[] = ['provider_failover'];
@@ -281,12 +282,14 @@ export function auditLLMFailover(
             decision: {
                 failedProvider,
                 fallbackProvider,
-                errorMessage: error.slice(0, 500) // 限制错误信息长度
+                errorMessage: error.slice(0, 500), // 限制错误信息长度
+                errorDetails: context.errorDetails // 新增：完整错误上下文
             }
         },
         auditTags
     });
 }
+
 
 
 /**
@@ -436,3 +439,39 @@ export function getAuditConfig() {
     return { ...AUDIT_CONFIG };
 }
 
+/**
+ * 混合模式场景分布监控
+ * 记录混合模式的场景分配情况，用于优化 Stability 阈值
+ */
+export function auditMixedModeDistribution(
+    userId: string,
+    mixedMode: string,
+    data: {
+        distribution: Record<string, number>;
+        totalDrills: number;
+        stabilityStats: {
+            min: number;
+            max: number;
+            avg: number;
+        };
+    }
+): void {
+    const auditTags: string[] = ['mixed_mode_stats'];
+
+    // 标记场景分布异常
+    const scenarios = Object.keys(data.distribution);
+    if (scenarios.length === 1) {
+        auditTags.push('single_scenario_only'); // 只有一个场景被使用
+    }
+
+    recordAudit({
+        targetWord: `MIXED:${mixedMode}`,
+        contextMode: 'MIXED_MODE:DISTRIBUTION',
+        userId,
+        payload: {
+            context: { mixedMode },
+            decision: data
+        },
+        auditTags
+    });
+}

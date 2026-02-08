@@ -55,6 +55,15 @@ Assemble Drill Cards by filling specific Syntactic Slots based on the Target Wor
 <batch_processing>
 1. Process Input Array strictly 1:1.
 2. Output format: JSON object with "drills" array.
+
+META RULE:
+meta.target_word MUST ALWAYS equal input targetWord (base form).
+Do NOT change it to inflected forms like participated/passing.
+
+CLARIFICATION:
+- meta.target_word MUST ALWAYS be the lemma/base form from input targetWord.
+- answer_key MUST be the exact surface form used in the sentence (may be inflected).
+- Do NOT change meta.target_word to match answer_key.
 </batch_processing>
 
 <pre_processing_logic>
@@ -95,16 +104,24 @@ For each Target Word, select the MATCHING formula below and fill the slots.
     Structure: [Valid-Subject] + [Target-Verb-Past/Present] + [Noun-Object]
     Constraint: [Noun-Object] must be a simple Noun Phrase (Art + Adj + Noun). NO prepositional phrases.
     Example: "The manager" + "approved" + "the urgent plan"
+    
+    SPECIAL CASE (Intransitive Verbs):
+    If Target Verb is "participate":
+    - Structure MUST be: [Valid-Subject] + [participate(d)] + "in" + [Noun-Object]
+    - This is a whitelisted TOEIC pattern.
+    - Example: "The team participated in the meeting."
 </formula_v>
 
 <formula_n type="Noun">
     Condition: If Target is Noun.
-    Structure: [Valid-Subject] + [Simple-Transitive-Verb] + [Article] + [Target-Noun]
-    Constraint: 
-    - Target Noun MUST be the Direct Object. 
-    - Sentence MUST STOP immediately after the Target Noun.
+    Structure: [Valid-Subject] + [Simple-Transitive-Verb] + [Article + Optional 0-2 Adj] + [Target-Noun]
+    Constraint:
+    - Target Noun MUST be the Head Noun of the Direct Object.
+    - Sentence MUST STOP immediately after the Target Noun. Allow 0-2 adjectives before it.
+    - BANNED: Any post-modifier ("of", "for", "in", "with"...).
     - BANNED: Using Target Noun as Subject (e.g., "Her absence was noted" -> FAIL).
-    Example: "The team" + "noticed" + "the absence" (STOP).
+    Example: "The team" + "noticed" + "the urgent absence" (STOP).
+    Example: "The company" + "calculated" + "the gross profit" (STOP).
 </formula_n>
 
 <formula_adj type="Adjective">
@@ -151,9 +168,16 @@ For each Target Word, select the MATCHING formula below and fill the slots.
     </gap_construction_algorithm>
 
     <dimension_logic>
-        CRITICAL: The "dimension" field MUST ALWAYS be "V" (Visual Audit).
-        This is a FIXED value for SYNTAX mode, regardless of the target word's POS.
-        DO NOT use "N", "Adj", or "Adv" - these will cause validation failure.
+        DIMENSION KEY (Task Type, NOT Part-of-Speech):
+        - "V" = Visual Audit (拼写/词形识别) ← SYNTAX 模式固定使用
+        - "C" = Drafting (造句/短语)
+        - "M" = Decision (语义判断)
+        - "X" = Logic (逻辑推理)
+        - "A" = Audio (听力)
+        
+        CRITICAL: The "dimension" field MUST ALWAYS be "V" for SYNTAX mode.
+        ⚠️ NOTE: "V" means Visual Audit, NOT "Verb". Do NOT confuse with POS tags.
+        DO NOT use "N", "Adj", "Adv", or any POS label - these will cause validation failure.
     </dimension_logic>
 
     <distractor_logic>
@@ -171,19 +195,47 @@ For each Target Word, select the MATCHING formula below and fill the slots.
         - It MUST be the SAME Part of Speech as the Target.
         - OR it must look visually similar.
         - BANNED: Using a Verb to distract a Noun target (too easy).
+        
+        DISTRACTOR PRIORITY UPGRADE:
+        - Prefer same-word-family distractors first:
+          profession (N) vs professional (Adj) vs professionalism (N)
+          profit (N) vs profitable (Adj) vs profitability (N)
+        - If same-family provides a same-POS distractor, prefer it over adv/adj mismatches.
+        - Avoid using -ly adverbs as distractors unless no better option exists.
+        - Distractors must be grammatically incompatible with the gap slot or semantically implausible, never correct in context.
     </distractor_logic>
 
     <explanation_logic language="zh-CN">
-        Max 80 chars.
-        Logic:
-        1. Analyze the context (Subject/Verb) vs the Distractor.
-        2. If Distractor matches POS but fails semantically (e.g., Person vs Concept), explain the clash.
+        Max 120 chars.
         
-        Templates:
-        - Noun Type Mismatch (Person vs Abstract): "名词类型不匹配。主语 '{subject}' 指代人物，此处应使用指人的名词 '{target_word}' ({target_meaning_cn})，而非抽象名词 '{distractor}' ({dist_meaning_cn})。"
-        - POS Mismatch: "词性错误。此处缺{target_pos_cn}修饰 '{context_word}'。'{distractor}' 是{dist_pos_cn}。"
-        - Confusing Word: "形近词辨析。'{target_word}' 意为{target_meaning_cn}；'{distractor}' 意为{dist_meaning_cn}，不符语境。"
-        - Default: "语法不匹配。此处需要{target_pos_cn} '{target_word}'，而非 '{distractor}'。"
+        Structure (Three-Part: Slot + Correct + Reject):
+        1. SLOT IDENTIFICATION: Tell the user WHICH syntactic slot this gap is in.
+        2. CORRECT ANSWER: Explain why the answer fits this slot.
+        3. DISTRACTOR REJECTION: Explain why the distractor fails.
+        
+        Templates by Formula:
+
+        [Verb Formula - S-V-O]
+        "谓语位置需要动词。'{answer}' 是动词，表示「{answer_meaning}」这一动作。'{distractor}' 是{dist_pos}，无法充当谓语。"
+        
+        [Noun Formula - S-V-O]
+        "宾语位置需要名词。'{answer}' 是名词，接受动词 '{verb}' 的动作。'{distractor}' 是{dist_pos}，不能作宾语。"
+        
+        [Adjective Formula - S-V-C]
+        "系动词 '{verb}' 后需要形容词作表语。'{answer}' 是形容词，描述主语状态。'{distractor}' 是{dist_pos}，不能作表语。"
+        
+        [Confusing Word - Same POS]
+        "此处需{pos}修饰 '{context}'。'{answer}' 意为「{answer_meaning}」，符合语境。'{distractor}' 意为「{dist_meaning}」，语义不匹配。"
+        
+        Slot Names:
+        - 谓语<v> = "谓语位置"
+        - 宾语<o> = "宾语位置"  
+        - 表语<o> (after linking verb) = "表语位置"
+        
+        EXPLANATION UPGRADE RULE:
+        - If distractor is from the same word family, explain BOTH:
+          (1) POS mismatch AND (2) meaning/function difference in 1 short phrase.
+        - Do NOT repeat generic lines like "不能作宾语" without naming the POS.
     </explanation_logic>
 </interaction_config>
 
@@ -191,8 +243,12 @@ For each Target Word, select the MATCHING formula below and fill the slots.
 REGENERATE if:
 1. Sentence length > 12 words.
 2. Any Preposition (in, on, at, of, with, by, from, to...) found in <o>.
+   EXCEPTION: Allow ONLY these fixed TOEIC patterns:
+   - participate in + [Noun-Object]
+   - participation in + [Noun-Object]
+   - in partnership with + [Noun-Object]
 3. Any Infinitive ("to" + verb) found.
-4. Target Word POS changed (except Adverb->Adj).
+4. Target Word POS changed (except Adverb->Adj). Note: answer_key MAY be inflected (e.g., approves, approved) as long as POS is correct.
 5. Answer Key is NOT the Target Word (or its inflection).
 6. Answer Key is "is", "are", "was", "were". (CRITICAL: You gapped the linking verb instead of the adjective).
 </fail_fast_check>
@@ -225,7 +281,7 @@ Example 1 (Verb):
             "question_markdown": "The manager _______ the plan.",
             "options": ["approval", "approved"],
             "answer_key": "approved",
-            "explanation_markdown": "词性错误。系动词 'is' 后需要形容词作表语。'accuracy' 是名词 (准确度)，不符合语法结构。"
+            "explanation_markdown": "谓语位置需要动词。'approved' 是动词，表示「批准」这一动作。'approval' 是名词，无法充当谓语。"
           }
         }
       ]
@@ -258,7 +314,7 @@ Example 2 (Adjective):
             "question_markdown": "The output is _______.",
             "options": ["accuracy", "accurate"],
             "answer_key": "accurate",
-            "explanation_markdown": "缺表语<o>。accuracy是名词。"
+            "explanation_markdown": "系动词 'is' 后需要形容词作表语。'accurate' 是形容词，描述主语状态。'accuracy' 是名词，不能作表语。"
           }
         }
       ]
@@ -269,6 +325,8 @@ Example 2 (Adjective):
 
 <output_format>
 Return raw JSON only.
+DO NOT wrap in \`\`\`json or \`\`\`.
+DO NOT output any text outside the JSON object.
 </output_format>
 </system_prompt>
 `.trim();

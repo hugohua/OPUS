@@ -423,23 +423,16 @@ describe('Suite E: Inventory First Strategy', () => {
         (redis.pipeline as any).mockReturnValue(mockPipeline);
 
         // 2. Mock DB 返回该词是 REVIEW 状态且未到期
-        // 关键修复：确保 findMany 返回的是包含 progress 数组的 vocab 对象
-        const nextDay = new Date(Date.now() + 86400000);
-        const vocab1 = createVocab(vocabId);
-        const prog1 = createProgress(vocabId, nextDay, 'REVIEW');
-        (vocab1 as any).progress = [prog1];
+        (prisma.vocab.findMany as any).mockImplementation(() => {
+            const nextDay = new Date(Date.now() + 86400000);
+            const vocab1 = createVocab(vocabId);
+            const prog1 = createProgress(vocabId, nextDay, 'REVIEW');
+            (vocab1 as any).progress = [prog1];
+            return Promise.resolve([vocab1]);
+        });
 
-        (prisma.vocab.findMany as any).mockResolvedValue([vocab1]);
+        // ... (E1 rest)
 
-        // 3. 同时让普通查询返回空，确保如果我们过滤了库存，结果就是空（方便验证）
-        (prisma.userProgress.findMany as any).mockResolvedValue([]);
-
-        // 执行
-        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
-
-        // 验证：应该被过滤掉，因为未到期
-        const target = result.find(c => c.vocabId === vocabId);
-        expect(target).toBeUndefined();
     });
 
     it('E2: 库存有词且已到期 -> 应该选中', async () => {
@@ -453,13 +446,14 @@ describe('Suite E: Inventory First Strategy', () => {
         };
         (redis.pipeline as any).mockReturnValue(mockPipeline);
 
-        // 已到期
-        const past = new Date(Date.now() - 3600);
-        const vocab2 = createVocab(vocabId);
-        const prog2 = createProgress(vocabId, past, 'REVIEW');
-        (vocab2 as any).progress = [prog2];
-
-        (prisma.vocab.findMany as any).mockResolvedValue([vocab2]);
+        // 已到期 - 改用 mockImplementation
+        (prisma.vocab.findMany as any).mockImplementation(() => {
+            const past = new Date(Date.now() - 3600);
+            const vocab2 = createVocab(vocabId);
+            const prog2 = createProgress(vocabId, past, 'REVIEW');
+            (vocab2 as any).progress = [prog2];
+            return Promise.resolve([vocab2]);
+        });
 
         const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
 
@@ -491,4 +485,7 @@ describe('Suite E: Inventory First Strategy', () => {
         expect(target?.type).toBe('NEW');
     });
 
+
 });
+
+

@@ -6,7 +6,30 @@
  */
 import { z } from 'zod';
 
-export const SessionModeSchema = z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO', 'READING', 'VISUAL', 'PHRASE', 'CONTEXT']);
+// 单一场景模式
+export const SingleScenarioModeSchema = z.enum([
+    'SYNTAX', 'PHRASE', 'BLITZ',     // L0 基础层
+    'AUDIO', 'CHUNKING',              // L1 感知层
+    'CONTEXT', 'NUANCE',              // L2 应用层
+    'READING', 'VISUAL'               // 其他模式
+]);
+
+// 混合场景模式
+export const MixedScenarioModeSchema = z.enum([
+    'L0_MIXED',      // 混合 SYNTAX, PHRASE, BLITZ
+    'L1_MIXED',      // 混合 AUDIO, CHUNKING
+    'L2_MIXED',      // 混合 CONTEXT, NUANCE
+    'DAILY_BLITZ'    // 全场景混合
+]);
+
+// SessionMode 统一 Schema（向后兼容）
+// 🔧 修复B3: 添加自定义错误消息
+export const SessionModeSchema = z.union([
+    SingleScenarioModeSchema,
+    MixedScenarioModeSchema
+], {
+    message: 'Invalid session mode. Must be a valid single scenario (SYNTAX, PHRASE, etc.) or mixed mode (L0_MIXED, L1_MIXED, L2_MIXED, DAILY_BLITZ)'
+});
 
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
@@ -84,7 +107,7 @@ export const DrillSegmentSchema = z.object({
 
 export const BriefingPayloadSchema = z.object({
     meta: z.object({
-        format: z.enum(['chat', 'email', 'memo']),
+        format: z.string().optional(), // 暂未使用，放宽校验以兼容不同 LLM
         mode: SessionModeSchema,
         batch_size: z.number().optional(),
         sys_prompt_version: z.string().optional(),

@@ -44,9 +44,11 @@ You must output a single valid JSON object adhering to this exact structure:
 
 # Critical Constraints
 1. **NO Markdown**: Output raw JSON only. Start with \`{\`.
-2. **Highlights Array**: Must include only the actual vocabulary words that appear in that paragraph.
-3. **Natural Integration**: Words must fit naturally in context, not forced.
-4. **Professional Tone**: Business-appropriate language and scenarios.
+2. DO NOT wrap in \`\`\`json or \`\`\`.
+3. DO NOT output any text outside the JSON object.
+4. **Highlights Array**: Must include only the actual vocabulary words that appear in that paragraph.
+5. **Natural Integration**: Words must fit naturally in context, not forced.
+6. **Professional Tone**: Business-appropriate language and scenarios.
 
 # Example Output
 {

@@ -109,6 +109,10 @@ const config: Config = {
 					to: {
 						height: '0'
 					}
+				},
+				music: {
+					'0%, 100%': { height: '10%', opacity: '0.5' },
+					'50%': { height: '100%', opacity: '1' }
 				}
 			},
 			animation: {

@@ -26,6 +26,7 @@ describe('Blitz Session Logic', () => {
                 vocabId: 1,
                 word: 'TEST_strategy',
                 frequency_score: 100,
+                track: 'VISUAL',
                 context: {
                     text: 'marketing strategy is important',
                     maskedText: 'marketing _______ is important',

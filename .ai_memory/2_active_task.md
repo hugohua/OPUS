@@ -22,3 +22,4 @@ Task 1.5: Topic Briefing & Phase 1.5 Features
 - 实施了 "Drill Cache" 机制 (Schema + Logic)。
 - 实现了 "生产者-消费者" 模型：首页进入 `simulate` 时预热缓存，`session` 页面优先消费缓存。
 - 验证脚本 `scripts/verify-drill-cache.ts` 通过。
+- [Fix] 修复了 Audio 模式下由于 Inventory 缺失导致 100% Fallback 时，Session 进度无法保存导致刷新重置的问题。

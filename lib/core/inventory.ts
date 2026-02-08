@@ -48,6 +48,61 @@ export const inventory = {
     },
 
     /**
+     * 批量消费 Drill (Only for Mixed Mode)
+     * 解决 N+1 查询问题，一次性获取所有场景的 Drill
+     * 
+     * @param userId 
+     * @param scenarioGroups { "SYNTAX": [vid1, vid2], "PHRASE": [vid3] }
+     */
+    async popDrillBatch(userId: string, scenarioGroups: Record<string, number[]>): Promise<Record<number, BriefingPayload>> {
+        const pipeline = connection.pipeline();
+        const orderedRequests: { mode: string, vocabId: number }[] = [];
+
+        // 1. 构建 Pipeline
+        for (const [mode, vids] of Object.entries(scenarioGroups)) {
+            for (const vid of vids) {
+                const key = keys.drillList(userId, mode, vid);
+                pipeline.lpop(key);
+                orderedRequests.push({ mode, vocabId: vid });
+            }
+        }
+
+        if (orderedRequests.length === 0) return {};
+
+        // 2. 执行批量操作
+        const results = await pipeline.exec();
+        const resultMap: Record<number, BriefingPayload> = {};
+        const replenishTriggers: Promise<void>[] = [];
+
+        // 3. 处理结果
+        orderedRequests.forEach((req, index) => {
+            const [err, data] = results?.[index] || [null, null];
+
+            if (!err && data) {
+                // 如果成功获取数据
+                resultMap[req.vocabId] = JSON.parse(data as string);
+
+                // 异步递减统计（不阻塞主流程）
+                connection.hincrby(keys.stats(userId), req.mode, -1).catch(e =>
+                    log.error({ error: e, ...req }, 'Stats decrement failed')
+                );
+            }
+
+            // 检查水位（无论是否 Cache Miss，都要检查，保持库存健康）
+            replenishTriggers.push(
+                this.checkAndTriggerReplenish(userId, req.mode, req.vocabId).catch(e =>
+                    log.error({ error: e.message, ...req }, 'Batch replenish trigger failed')
+                )
+            );
+        });
+
+        // 异步等待所有水位检查触发（不阻塞返回）
+        Promise.all(replenishTriggers).catch(e => log.error(e));
+
+        return resultMap;
+    },
+
+    /**
      * 消费一个 Drill (原子操作)
      * Side Effect: 如果库存水位低 (<2)，触发后台补充
      */
@@ -217,6 +272,8 @@ export const inventory = {
             AUDIO: parseInt(raw.AUDIO || '0'),
             NUANCE: parseInt(raw.NUANCE || '0'),
             READING: parseInt(raw.READING || '0'),
+            BLITZ: parseInt(raw.BLITZ || '0'),
+            VISUAL: parseInt(raw.VISUAL || '0'),
             total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
         };
     },
@@ -304,5 +361,36 @@ export const inventory = {
         log.info({ userId, deletedCount, keyCount: keysToDelete.length }, '🗑️ Inventory cleared');
 
         return deletedCount;
+    },
+
+    /**
+     * 清空指定 Mode 的库存
+     */
+    async clearMode(userId: string, mode: string): Promise<number> {
+        // 1. Find keys for this specific mode
+        const pattern = `user:${userId}:mode:${mode}:vocab:*:drills`;
+        let cursor = '0';
+        const keysToDelete: string[] = [];
+
+        do {
+            const [nextCursor, foundKeys] = await connection.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+            cursor = nextCursor;
+            keysToDelete.push(...foundKeys);
+        } while (cursor !== '0');
+
+        if (keysToDelete.length > 0) {
+            // Delete in batches
+            const BATCH_SIZE = 100;
+            for (let i = 0; i < keysToDelete.length; i += BATCH_SIZE) {
+                const batch = keysToDelete.slice(i, i + BATCH_SIZE);
+                await connection.del(...batch);
+            }
+        }
+
+        // 2. Reset stats for this mode
+        await connection.hset(keys.stats(userId), mode, 0);
+
+        log.info({ userId, mode, deletedCount: keysToDelete.length }, '🗑️ Mode inventory cleared');
+        return keysToDelete.length;
     }
 };
