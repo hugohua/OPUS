@@ -42,10 +42,7 @@ const BATCH_LIMIT = 10;   // 每批加载数量
 const PREFETCH_LOOKAHEAD = 3; // 音频预加载前瞻数量
 
 export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {
-    if (mode === 'BLITZ') {
-        return <BlitzSession userId={userId} />;
-    }
-
+    // ✅ 移除提前返回，确保所有hooks调用顺序一致
     const router = useRouter();
 
     // --- State Management ---
@@ -65,6 +62,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
 
     // [Time-Based Grading] Response Timer
     const startTime = useRef<number>(Date.now());
+
 
     // TTS Hook for Audio Mode
     const tts = useTTS();
@@ -245,6 +243,11 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
             return () => clearTimeout(timer);
         }
     }, [index, mode, queue.length, completed, prefetchNextItems]);
+
+    // ✅ 所有hooks调用完毕后，处理BLITZ模式
+    if (mode === 'BLITZ') {
+        return <BlitzSession userId={userId} />;
+    }
 
     const loadMore = async () => {
         setIsLoadingMore(true);

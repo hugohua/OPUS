@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { BriefingPayload } from "@/types/briefing";
+import { BriefingPayload, TextSegment, InteractionSegment } from "@/types/briefing";
 import paper from "canvas-confetti";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, CheckCircle, XCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GradingHelp } from "./grading-help";
 import { boldToHtml } from "@/lib/utils/markdown";
@@ -19,7 +19,7 @@ interface AudioScriptDrillProps {
     total?: number;
 }
 
-// Define types for Audio Task
+// 音频任务的类型定义
 interface AudioTask {
     style: "swipe_card" | "bubble_select";
     question_markdown: string;
@@ -28,9 +28,17 @@ interface AudioTask {
     explanation?: {
         correct_logic?: string;
         definition_cn?: string;
+        phonetic?: string;
         [key: string]: any;
     };
     [key: string]: any;
+}
+
+// 类型守卫：安全提取 AudioTask
+function isAudioTask(task: any): task is AudioTask {
+    return task &&
+        typeof task.answer_key === 'string' &&
+        Array.isArray(task.options);
 }
 
 export function AudioScriptDrill({
@@ -44,16 +52,28 @@ export function AudioScriptDrill({
     const [status, setStatus] = useState<"listening" | "revealed">("listening");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
-    const segment = drill.segments.find(s => s.type === 'interaction');
-    // Assert task type
-    const task = segment?.task as unknown as AudioTask;
-    const answerKey = task?.answer_key;
-    const options = task?.options || [];
+    // 提取音频脚本（优先使用 audio_text，并移除 XML 标签）
+    const textSegment = drill.segments.find((s): s is TextSegment => s.type === 'text');
+    let rawScript = textSegment?.audio_text || textSegment?.content_markdown || "";
+    const segment = drill.segments.find((s): s is InteractionSegment => s.type === 'interaction');
+
+    // 安全提取任务数据
+    const task = segment?.task && isAudioTask(segment.task) ? segment.task : null;
+    if (!task) {
+        console.error('AudioScriptDrill: 无效的任务数据');
+        return <div className="p-4 text-red-500">数据加载失败</div>;
+    }
+
+    const answerKey = task.answer_key;
+    const options = task.options || [];
 
     useEffect(() => {
         setStatus("listening");
         setSelectedOption(null);
     }, [drill]);
+
+    // 统一的字符串标准化逻辑
+    const normalize = (s: string) => s?.trim().toLowerCase() || "";
 
     const handleSelect = (option: string) => {
         if (status === "revealed") return;
@@ -61,7 +81,7 @@ export function AudioScriptDrill({
         setSelectedOption(option);
         setStatus("revealed");
 
-        const isCorrect = option === answerKey;
+        const isCorrect = normalize(option) === normalize(answerKey);
         if (isCorrect) {
             paper({
                 particleCount: 100,
@@ -74,139 +94,111 @@ export function AudioScriptDrill({
     const targetWord = drill.meta.target_word;
     const explanation = task?.explanation;
 
-    // Correctly extract audio script using audio_text priority and strip XML tags
-    const textSegment = drill.segments.find(s => s.type === 'text');
-    let rawScript = (textSegment as any)?.audio_text || textSegment?.content_markdown || "";
+    // 提取音标和分析内容
+    const phonetic = textSegment?.phonetic || explanation?.phonetic || "";
+    const finalScript = rawScript.replace(/<[^>]+>/g, ''); // 移除 XML 标签
+    const finalAnalysis = explanation?.correct_logic || "";
 
-    // 1. Strip XML
-    rawScript = rawScript.replace(/<[^>]+>/g, '').trim();
-
-    // 2. Handle "Analysis:" merge (Fallback if backend sends merged text)
-    let finalScript = rawScript;
-    let fallbackAnalysis = "";
-
-    // Remove leading "Script:" label if present
-    if (finalScript.match(/^(Script:|脚本:)/i)) {
-        finalScript = finalScript.replace(/^(Script:|脚本:)\s*/i, '');
-    }
-
-    // Split Analysis/Explanation if merged
-    const splitMatch = finalScript.match(/(Analysis:|解析:|Explanation:)/i);
-    if (splitMatch && splitMatch.index !== undefined) {
-        fallbackAnalysis = finalScript.substring(splitMatch.index + splitMatch[0].length).trim();
-        finalScript = finalScript.substring(0, splitMatch.index).trim();
-    }
-
-    const finalAnalysis = explanation?.correct_logic || fallbackAnalysis;
-
-    const phonetic = (textSegment as any)?.phonetic;
-
+    // 获取定义的辅助函数
     const getDefinition = () => {
-        if (['string', 'undefined'].includes(typeof explanation)) return "";
-        return explanation?.definition_cn || "";
+        return explanation?.definition_cn || (drill.meta as any).definition_cn || "";
     };
 
     return (
-        <div className="relative w-full h-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans antialiased overflow-hidden flex flex-col selection:bg-brand-core/30">
-
-            {/* Ambient Background - Dark Mode "Deep Space" ONLY */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#22d3ee05_1px,transparent_1px),linear-gradient(to_bottom,#22d3ee05_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none hidden dark:block"></div>
-            <div className="absolute top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none hidden dark:block"></div>
-
-            {/* Header */}
-            <header className="absolute top-0 w-full z-50 px-6 py-6 flex justify-between items-center opacity-80">
-                <div className="flex items-center gap-2">
-                    <div className={cn("w-1.5 h-1.5 rounded-full bg-cyan-600 dark:bg-cyan-500", isPlaying ? "animate-pulse" : "")}></div>
-                    <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-500 uppercase tracking-widest">LIVE AUDIO</span>
+        <div className="relative w-full h-screen bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 flex flex-col items-center justify-between p-6">
+            {/* 进度条 */}
+            <div className="w-full max-w-sm">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Audio Training</span>
+                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">{index}/{total}</span>
                 </div>
-                <div className="bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-full px-3 py-1 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
-                    {String(index).padStart(2, '0')} / {total}
+                <div className="h-1 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-600 transition-all duration-300"
+                        style={{ width: `${(index / total) * 100}%` }}
+                    />
                 </div>
-            </header>
+            </div>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col items-center justify-center relative z-10 w-full max-w-md mx-auto">
+            {/* 音频波形可视化 */}
+            <div className="flex items-center gap-1 h-24 opacity-80 cursor-pointer" onClick={onTogglePlay}>
+                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-8", isPlaying && "animate-pulse")}></div>
+                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-16", isPlaying && "animate-pulse")}></div>
+                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-12", isPlaying && "animate-pulse")}></div>
+                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-20", isPlaying && "animate-pulse")}></div>
+                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-10", isPlaying && "animate-pulse")}></div>
+            </div>
 
-                {/* Visualizer */}
-                <div
-                    className="relative flex items-center justify-center h-40 w-full mb-12 cursor-pointer group"
-                    onClick={onTogglePlay}
-                >
-                    <div className={cn(
-                        "absolute inset-0 bg-cyan-500/10 blur-3xl rounded-full transition-transform duration-1000",
-                        isPlaying ? "scale-75" : "scale-50"
-                    )}></div>
+            {/* 问题提示 */}
+            <div className="text-center mb-8">
+                <p className="text-sm font-mono text-zinc-400 dark:text-zinc-500 mb-2 uppercase tracking-wider">What did you hear?</p>
+            </div>
 
-                    {isPlaying ? (
-                        <div className="flex items-center gap-1.5 h-20">
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-8 animate-[music_1.2s_ease-in-out_infinite]"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-12 animate-[music_0.8s_ease-in-out_infinite] delay-75"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-16 animate-[music_1.5s_ease-in-out_infinite] delay-150"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-10 animate-[music_1.0s_ease-in-out_infinite] delay-300"></div>
-                            <div className="w-1.5 bg-cyan-500 dark:bg-cyan-300 rounded-full h-20 animate-[music_1.3s_ease-in-out_infinite] delay-75 shadow-[0_0_15px_#22d3ee]"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-14 animate-[music_0.9s_ease-in-out_infinite] delay-200"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-8 animate-[music_1.1s_ease-in-out_infinite] delay-100"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-4 animate-[music_1.4s_ease-in-out_infinite] delay-500"></div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 h-20 opacity-30">
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-4"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-8"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-12"></div>
-                            <div className="w-1.5 bg-cyan-500 dark:bg-cyan-300 rounded-full h-6"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-10"></div>
-                            <div className="w-1.5 bg-cyan-600 dark:bg-cyan-400 rounded-full h-5"></div>
-                        </div>
-                    )}
+            {/* 选项网格 */}
+            <div className="w-full max-w-sm grid grid-cols-2 gap-3 mb-4">
+                {options.map((opt, idx) => {
+                    const optionText = typeof opt === 'string' ? opt : opt.text;
+                    const optionKey = typeof opt === 'string' ? opt : opt.text;
+                    const isSelected = selectedOption === optionKey;
+                    const isCorrectOption = normalize(optionKey) === normalize(answerKey);
+                    const showResult = status === "revealed";
 
-                    <div className={cn(
-                        "absolute -bottom-12 text-[10px] font-mono text-cyan-600/50 dark:text-cyan-500/50 uppercase tracking-[0.2em]",
-                        isPlaying ? "animate-pulse" : ""
-                    )}>
-                        {isPlaying ? "Listening..." : "Paused"}
-                    </div>
-                </div>
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => handleSelect(optionKey)}
+                            disabled={status === "revealed"}
+                            className={cn(
+                                "p-4 rounded-2xl border-2 transition-all text-lg font-medium",
+                                !showResult && !isSelected && "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-cyan-400 dark:hover:border-cyan-500",
+                                !showResult && isSelected && "bg-cyan-50 dark:bg-cyan-950/30 border-cyan-400 dark:border-cyan-500",
+                                showResult && isSelected && isCorrectOption && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-700 dark:text-emerald-400",
+                                showResult && isSelected && !isCorrectOption && "bg-rose-50 dark:bg-rose-950/30 border-rose-500 text-rose-700 dark:text-rose-400",
+                                showResult && !isSelected && isCorrectOption && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-700 dark:text-emerald-400 opac ity-60"
+                            )}
+                        >
+                            {optionText}
+                        </button>
+                    );
+                })}
+            </div>
 
-                {/* Interaction Options */}
-                <div className="w-full px-6 space-y-4 animate-in slide-in-from-bottom-8 duration-700 fade-in">
-                    {options.map((opt: any, idx: number) => {
-                        const label = String.fromCharCode(65 + idx);
-                        const text = typeof opt === 'string' ? opt : opt.text;
-                        const key = typeof opt === 'string' ? opt : opt.id || text;
-
-                        return (
-                            <button
-                                key={idx}
-                                onClick={() => handleSelect(key)}
-                                className="w-full p-4 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/40 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:border-cyan-500/30 active:scale-[0.98] transition-all group text-left backdrop-blur-sm shadow-sm dark:shadow-none"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-6 h-6 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-[10px] font-mono text-zinc-400 dark:text-zinc-500 group-hover:border-cyan-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-500">
-                                        {label}
-                                    </div>
-                                    <span className="text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-50 font-medium">{text}</span>
-                                </div>
-                            </button>
-                        );
-                    })}
-
-                    <Button
-                        variant="ghost"
-                        onClick={() => { setSelectedOption('GIVE_UP'); setStatus('revealed'); }}
-                        className="w-full text-zinc-400 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-400 h-10 font-mono text-xs"
-                    >
-                        [ REVEAL ]
-                    </Button>
-                </div>
-
-            </main>
-
-            {/* Reveal Overlay */}
+            {/* 答案揭示层 */}
             {status === "revealed" && (
                 <div className="absolute inset-0 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl flex flex-col pt-24 pb-12 px-6 animate-in fade-in duration-300">
-
-
                     <div className="flex-1 flex flex-col items-center text-center">
+                        {/* 结果反馈徽章 */}
+                        {(() => {
+                            const isGivenUp = selectedOption === 'GIVE_UP';
+                            const isCorrect = !isGivenUp && normalize(selectedOption || "") === normalize(answerKey || "");
+
+                            return (
+                                <div className={cn(
+                                    "mb-6 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase shadow-sm flex items-center gap-2 animate-in zoom-in-50 duration-300",
+                                    isCorrect ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" :
+                                        isGivenUp ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" :
+                                            "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
+                                )}>
+                                    {isCorrect ? (
+                                        <>
+                                            <CheckCircle className="w-4 h-4" />
+                                            <span>Correct</span>
+                                        </>
+                                    ) : isGivenUp ? (
+                                        <>
+                                            <HelpCircle className="w-4 h-4" />
+                                            <span>Missed</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <XCircle className="w-4 h-4" />
+                                            <span>Incorrect</span>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         <div className="flex items-center gap-1 h-8 mb-8 opacity-50 cursor-pointer" onClick={onTogglePlay}>
                             <div className={cn("w-1 bg-cyan-600 dark:bg-cyan-500 rounded-full h-4", isPlaying && "animate-pulse")}></div>
                             <div className={cn("w-1 bg-cyan-600 dark:bg-cyan-500 rounded-full h-8", isPlaying && "animate-pulse")}></div>
@@ -217,8 +209,7 @@ export function AudioScriptDrill({
                         <p className="text-xl font-mono text-zinc-400 dark:text-zinc-500 mb-8">{phonetic || ""}</p>
 
                         <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 max-w-sm w-full text-left space-y-4">
-
-                            {/* Script Section */}
+                            {/* 脚本区域 */}
                             <div>
                                 <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Script</span>
                                 <div className="text-lg text-zinc-700 dark:text-zinc-200 leading-relaxed font-serif whitespace-pre-wrap"
@@ -226,7 +217,7 @@ export function AudioScriptDrill({
                                 />
                             </div>
 
-                            {/* Analysis Section (If exists) */}
+                            {/* 分析区域（如果存在）*/}
                             {finalAnalysis && (
                                 <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
                                     <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-500 uppercase tracking-wider block mb-1">Analysis</span>
@@ -236,7 +227,7 @@ export function AudioScriptDrill({
                                 </div>
                             )}
 
-                            {/* Definition Section (If exists) */}
+                            {/* 定义区域（如果存在）*/}
                             {getDefinition() && (
                                 <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
                                     <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Meaning</span>
@@ -248,7 +239,7 @@ export function AudioScriptDrill({
                         </div>
                     </div>
 
-                    {/* Grading Buttons - FSRS */}
+                    {/* 评分按钮 - FSRS */}
                     <div className="w-full flex justify-between items-center px-1 mb-3 animate-in slide-in-from-bottom-4 duration-500 delay-100">
                         <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-70">Rate Accuracy</span>
                         <GradingHelp />

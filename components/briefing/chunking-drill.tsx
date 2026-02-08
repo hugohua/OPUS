@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 interface ChunkingDrillProps {
     drill: ChunkingDrillOutput;
-    onComplete: () => void;
+    onComplete: (success: boolean) => void;
 }
 
 // --- Sortable Chunk Component ---
@@ -120,75 +120,92 @@ export function ChunkingDrill({ drill, onComplete }: ChunkingDrillProps) {
     // console.log('[ChunkingDrill] Received drill:', drill);
 
     // State
-    const [items, setItems] = useState(() => {
-        if (!drill?.chunks) return [];
-        return [...drill.chunks].sort(() => Math.random() - 0.5);
-    });
+    const [items, setItems] = useState(drill.chunks);
+    // status: idle | success | error | gave_up
+    const [status, setStatus] = useState<"idle" | "success" | "error" | "gave_up">("idle");
     const [isXRayMode, setIsXRayMode] = useState(false);
-    const [status, setStatus] = useState<"sorting" | "success" | "error">("sorting");
     const [activeId, setActiveId] = useState<number | null>(null);
-
-    // Sync state when drill changes
-    useEffect(() => {
-        if (drill?.chunks) {
-            setItems([...drill.chunks].sort(() => Math.random() - 0.5));
-            setIsXRayMode(false);
-            setStatus("sorting");
-        }
-    }, [drill?.full_sentence]);
 
     // DnD Sensors
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
     );
 
+    // Reset when drill changes
+    useEffect(() => {
+        // Randomize order initially
+        const shuffled = [...drill.chunks].sort(() => Math.random() - 0.5);
+        setItems(shuffled);
+        setStatus("idle");
+        setIsXRayMode(false);
+    }, [drill]);
+
     const handleDragStart = (event: any) => {
+        if (status === "success" || status === "gave_up") return;
         setActiveId(event.active.id);
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        setActiveId(null);
 
-        if (over && active.id !== over.id) {
+        if (active.id !== over?.id) {
             setItems((items) => {
-                const oldIndex = items.findIndex((i) => i.id === active.id);
-                const newIndex = items.findIndex((i) => i.id === over.id);
+                const oldIndex = items.findIndex(i => i.id === active.id);
+                const newIndex = items.findIndex(i => i.id === over?.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
-            if (status === 'error') setStatus('sorting');
         }
+        setActiveId(null);
+        setStatus("idle"); // Reset error state on move
     };
 
     const handleCheck = () => {
-        const currentIds = items.map(i => i.id);
-        const correctIds = [...drill.chunks].sort((a, b) => a.id - b.id).map(i => i.id);
-        const isCorrect = currentIds.every((id, index) => id === correctIds[index]);
+        const currentOrder = items.map(c => c.id).join(",");
+        const correctOrder = [...drill.chunks].sort((a, b) => a.id - b.id).map(c => c.id).join(",");
 
-        if (isCorrect) {
+        if (currentOrder === correctOrder) {
             setStatus("success");
-            setIsXRayMode(true);
+            setIsXRayMode(true); // Auto-enable X-Ray on success
         } else {
             setStatus("error");
-            setTimeout(() => setStatus("sorting"), 1000);
+            // Shake animation can be triggered here via state or ref
         }
+    };
+
+    const handleGiveUp = () => {
+        // 1. Sort to correct order
+        const correctOrder = [...drill.chunks].sort((a, b) => a.id - b.id);
+        setItems(correctOrder);
+
+        // 2. Set status to gave_up and show insight
+        setStatus("gave_up");
+        setIsXRayMode(true);
     };
 
     return (
         <div className="w-full h-full flex flex-col relative bg-background overflow-hidden transition-colors duration-300">
 
             {/* Top Toolbar (Floating Capsule) */}
+            <div className="absolute top-6 left-6 z-50">
+                <div className="flex items-center gap-3 px-4 py-2 rounded-full border bg-white/80 border-zinc-200 text-zinc-500 backdrop-blur-md shadow-sm dark:bg-zinc-900/40 dark:border-white/10 dark:text-zinc-400">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">TARGET</span>
+                    <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{drill.target_word}</span>
+                </div>
+            </div>
+
             <div className="absolute top-6 right-6 z-50">
                 <button
-                    onClick={() => status === "success" && setIsXRayMode(!isXRayMode)}
+                    onClick={() => (status === "success" || status === "gave_up") && setIsXRayMode(!isXRayMode)}
                     className={cn(
                         "flex items-center gap-3 px-4 py-2 rounded-full border transition-all duration-300 backdrop-blur-md shadow-sm",
                         isXRayMode
                             ? "bg-cyan-50 border-cyan-200 text-cyan-700 dark:bg-cyan-950/30 dark:border-cyan-500/50 dark:text-cyan-400"
                             : "bg-white/80 border-zinc-200 text-zinc-500 hover:bg-zinc-50 dark:bg-zinc-900/40 dark:border-white/10 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
                     )}
-                    disabled={status !== "success"}
+                    disabled={status === "idle" || status === "error"}
                 >
                     <span className="text-[10px] font-mono font-bold uppercase tracking-widest">X-RAY</span>
                     <div className={cn(
@@ -249,8 +266,8 @@ export function ChunkingDrill({ drill, onComplete }: ChunkingDrillProps) {
             {/* Footer / Controls */}
             <footer className="w-full max-w-md mx-auto pb-safe pt-8 px-6 z-20">
                 <AnimatePresence mode="wait">
-                    {/* Insight Panel (Dual Theme) */}
-                    {isXRayMode && drill.analysis && (
+                    {/* Insight Panel */}
+                    {(status === "success" || status === "gave_up") && isXRayMode && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -261,38 +278,81 @@ export function ChunkingDrill({ drill, onComplete }: ChunkingDrillProps) {
                                 "dark:bg-zinc-900/80 dark:backdrop-blur-xl dark:border-white/10" // Dark
                             )}
                         >
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-500"></div>
-                            <h3 className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-                                Boardroom Insight
+                            <div className={cn(
+                                "absolute left-0 top-0 bottom-0 w-1",
+                                status === "gave_up" ? "bg-amber-500" : "bg-cyan-500"
+                            )}></div>
+
+                            <h3 className={cn(
+                                "text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2",
+                                status === "gave_up" ? "text-amber-600 dark:text-amber-400" : "text-cyan-600 dark:text-cyan-400"
+                            )}>
+                                <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full",
+                                    status === "gave_up" ? "bg-amber-500" : "bg-cyan-500"
+                                )}></span>
+                                {status === "gave_up" ? "Analysis" : "Boardroom Insight"}
                             </h3>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-serif relative z-10">
-                                {drill.analysis.business_insight}
-                            </p>
+
+                            {drill.analysis && (
+                                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-serif relative z-10 mb-4">
+                                    {drill.analysis.business_insight}
+                                </p>
+                            )}
+
+                            <div className="border-t border-zinc-100 dark:border-white/5 pt-4 mt-4">
+                                <div className="flex flex-col gap-2">
+                                    <div className="text-xs text-zinc-400 dark:text-zinc-500 font-mono uppercase tracking-wider">MEANING</div>
+                                    <p className="text-sm text-zinc-800 dark:text-zinc-200">{drill.translation_cn}</p>
+
+                                    {drill.grammar_point && (
+                                        <>
+                                            <div className="text-xs text-zinc-400 dark:text-zinc-500 font-mono uppercase tracking-wider mt-2">GRAMMAR</div>
+                                            <p className="text-xs text-cyan-600 dark:text-cyan-400 font-medium">{drill.grammar_point}</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                <div className="flex justify-center pb-8">
-                    {status === 'success' ? (
-                        <Button
-                            onClick={onComplete}
-                            className="w-full h-14 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 font-bold tracking-widest shadow-lg transition-all hover:-translate-y-0.5"
-                        >
-                            NEXT PUZZLE
-                        </Button>
+                <div className="flex gap-3 pb-8">
+                    {status === "idle" || status === "error" ? (
+                        <>
+                            {/* Give Up Button */}
+                            <Button
+                                onClick={handleGiveUp}
+                                variant="outline"
+                                className="flex-1 h-12 bg-transparent border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400"
+                            >
+                                <span className="text-xs font-bold tracking-widest uppercase">I Don't Know</span>
+                            </Button>
+
+                            {/* Check Button */}
+                            <Button
+                                onClick={handleCheck}
+                                className={cn(
+                                    "flex-[2] h-12 relative overflow-hidden transition-all",
+                                    status === "error"
+                                        ? "bg-red-500 hover:bg-red-600 text-white border-red-400"
+                                        : "bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                                )}
+                            >
+                                <span className={cn(
+                                    "relative z-10 text-xs font-bold tracking-widest uppercase",
+                                    status === "error" && "animate-shake"
+                                )}>
+                                    {status === "error" ? "Try Again" : "Check Order"}
+                                </span>
+                            </Button>
+                        </>
                     ) : (
                         <Button
-                            onClick={handleCheck}
-                            variant="secondary"
-                            className={cn(
-                                "w-full h-14 rounded-full font-bold tracking-widest transition-all text-sm border",
-                                status === 'error'
-                                    ? "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-500/30 shake"
-                                    : "bg-white border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:bg-zinc-900 dark:border-white/10 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-                            )}
+                            onClick={() => onComplete(status === "success")}
+                            className="w-full h-12 bg-cyan-500 hover:bg-cyan-400 text-white shadow-lg shadow-cyan-500/20"
                         >
-                            {status === 'error' ? 'TRY AGAIN' : 'CHECK ORDER'}
+                            <span className="text-xs font-bold tracking-widest uppercase">Next Puzzle</span>
                         </Button>
                     )}
                 </div>

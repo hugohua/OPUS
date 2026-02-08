@@ -158,11 +158,12 @@ export async function getNextDrillBatch(
 
         if (drills.length > 0) {
             const preview = drills[0];
-            const interaction = preview.segments.find((s: any) => s.type === 'interaction');
+            // 使用类型守卫安全访问 InteractionSegment
+            const interaction = preview.segments.find((s): s is import('@/types/briefing').InteractionSegment => s.type === 'interaction');
             log.info({
                 firstDrillWord: preview.meta.target_word || 'unknown',
                 source: (preview.meta as any).source,
-                question: (interaction?.task as any)?.question_markdown || 'N/A'
+                question: interaction?.task?.question_markdown || 'N/A'
             }, '👀 Drill Content Preview');
         }
 

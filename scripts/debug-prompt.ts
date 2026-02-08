@@ -72,6 +72,11 @@ import {
     getL2NuanceBatchPrompt
 } from '@/lib/generators/l2/nuance';
 import {
+    L1_CHUNKING_SYSTEM_PROMPT,
+    getL1ChunkingBatchPrompt,
+    ChunkingGeneratorInput
+} from '@/lib/generators/l1/chunking';
+import {
     buildSyntaxInputSimple,
     buildPhraseInput,
     buildBlitzInputWithTraps
@@ -281,6 +286,24 @@ const Adapters: Record<string, GeneratorAdapter> = {
         }),
         getBatchPrompts: (inputs: any[]) => {
             return getL2NuanceBatchPrompt(inputs);
+        }
+    },
+    'l1-chunking': {
+        name: 'L1.5 语块排序 / Chunking Gym',
+        dataRequirements: '需要: 释义 (可选: 搭配词)',
+        buildInput: (vocab: VocabItem) => {
+            return {
+                targetWord: vocab.word,
+                meaning: vocab.definition_cn || '',
+                context: extractCollocations(vocab.collocations)[0] // 尝试使用第一个搭配词作为上下文
+            } as ChunkingGeneratorInput;
+        },
+        getPrompts: (input: ChunkingGeneratorInput) => ({
+            system: L1_CHUNKING_SYSTEM_PROMPT,
+            user: JSON.stringify([input]) // 单条也包装成数组，匹配 System Prompt 格式
+        }),
+        getBatchPrompts: (inputs: ChunkingGeneratorInput[]) => {
+            return getL1ChunkingBatchPrompt(inputs);
         }
     }
 };

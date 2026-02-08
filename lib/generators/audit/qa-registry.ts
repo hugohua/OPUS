@@ -241,6 +241,50 @@ export const L1_QA_PROMPT = `
 `.trim();
 
 // ============================================
+// L1 Chunking QA Prompt (语块排序型)
+// ============================================
+
+export const L1_CHUNKING_QA_PROMPT = `
+# Role
+你是 **L1.5 语块排序模块 QA 工程师** (Chunking Gym Auditor)。
+你的任务是评估 CHUNKING 模式生成的长难句拆解质量。
+
+# 评分维度 (总分 10 分)
+
+## A) Schema & 结构 (0-2 分)
+- JSON 结构符合 Briefing Payload 规范 (drills -> segments)
+- 包含 full_sentence, chunks, analysis (skeleton, links, business_insight)
+- chunks 数组长度 3-5 个
+- links 数组长度必须 = chunks 长度 - 1
+
+## B) 句型复杂度 (0-3 分)
+- **长度严格控制**: 15 - 25 词 (太短或太长扣分)
+- **必须包含复杂句式**: 从句 (Although/Which/Who)、分词短语 (Doing/Done) 或多重介词链
+- 语体必须是 Formal/Professional
+
+## C) 切分逻辑 (Chunking) (0-3 分)
+- **禁止切分单个单词** (除非是虚词连接词)
+- 必须按意群 (Sense Groups) 切分
+- 示例: [The marketing manager,] (Yes) vs [The] [marketing] [manager] (No)
+
+## D) 解析深度 (Linkage) (0-2 分)
+- Linkage Analysis 必须解释 "前一个块的尾" 如何连接 "后一个块的头"
+- 解释必须基于语法逻辑 (Grammatical Glue) 而非纯翻译
+- Business Insight 提供有价值的职场场景说明
+
+# Fail-Fast 规则 (自动 0 分)
+1. JSON 解析失败
+2. 句子长度 < 12 或 > 30 (严重偏离)
+3. 出现 Markdown code fence
+4. Linkage 数量不正确
+
+# 输出格式 (Markdown, 简体中文)
+## 📊 评分
+## 🧾 Issues Found
+## 🩹 Prompt Patch
+`.trim();
+
+// ============================================
 // L2 QA Prompt (真实度型) - Placeholder
 // ============================================
 
@@ -267,13 +311,15 @@ export const L2_QA_PROMPT = `
 // ============================================
 
 const QA_PROMPTS: Record<string, string> = {
-    // L0 按模式分离
-    'l0-syntax': L0_SYNTAX_QA_PROMPT,
-    'l0-phrase': L0_PHRASE_QA_PROMPT,
-    'l0-blitz': L0_BLITZ_QA_PROMPT,
-    // L1/L2 Placeholder
-    'l1': L1_QA_PROMPT,
-    'l2': L2_QA_PROMPT,
+  // L0 按模式分离
+  'l0-syntax': L0_SYNTAX_QA_PROMPT,
+  'l0-phrase': L0_PHRASE_QA_PROMPT,
+  'l0-blitz': L0_BLITZ_QA_PROMPT,
+  // L1
+  'l1': L1_QA_PROMPT,
+  'l1-chunking': L1_CHUNKING_QA_PROMPT,
+  // L2
+  'l2': L2_QA_PROMPT,
 };
 
 /**
@@ -282,19 +328,19 @@ const QA_PROMPTS: Record<string, string> = {
  * @returns 对应 Level 的 QA Prompt
  */
 export function getQAPromptForGenerator(genKey: string): string {
-    // 精确匹配 generator key (e.g., 'l0-syntax', 'l0-phrase')
-    if (QA_PROMPTS[genKey]) {
-        return QA_PROMPTS[genKey];
-    }
+  // 精确匹配 generator key (e.g., 'l0-syntax', 'l0-phrase')
+  if (QA_PROMPTS[genKey]) {
+    return QA_PROMPTS[genKey];
+  }
 
-    // Fallback: 按 level 匹配 (e.g., 'l1' -> L1_QA_PROMPT)
-    const level = genKey.split('-')[0];
-    return QA_PROMPTS[level] || QA_PROMPTS['l0-syntax'];
+  // Fallback: 按 level 匹配 (e.g., 'l1' -> L1_QA_PROMPT)
+  const level = genKey.split('-')[0];
+  return QA_PROMPTS[level] || QA_PROMPTS['l0-syntax'];
 }
 
 /**
  * 获取所有可用的 Level Keys
  */
 export function getAvailableLevels(): string[] {
-    return Object.keys(QA_PROMPTS);
+  return Object.keys(QA_PROMPTS);
 }

@@ -40,6 +40,41 @@ const child = spawn(cmd, args, {
     },
 });
 
+// 子进程退出时,父进程也退出
 child.on('exit', (code) => {
+    console.log(`\nTTS service exited with code ${code ?? 0}`);
     process.exit(code ?? 0);
+});
+
+// 处理父进程退出信号,确保子进程被正确关闭
+const cleanup = (signal: string) => {
+    console.log(`\n收到 ${signal} 信号,正在关闭 TTS 服务...`);
+
+    if (!child.killed) {
+        // 先尝试优雅关闭 (SIGTERM)
+        child.kill('SIGTERM');
+
+        // 如果 2 秒后还没退出,强制杀死
+        const killTimeout = setTimeout(() => {
+            if (!child.killed) {
+                console.log('TTS 服务未响应,强制终止...');
+                child.kill('SIGKILL');
+            }
+        }, 2000);
+
+        child.on('exit', () => {
+            clearTimeout(killTimeout);
+            process.exit(0);
+        });
+    }
+};
+
+// 监听常见的退出信号
+process.on('SIGINT', () => cleanup('SIGINT'));   // Ctrl+C
+process.on('SIGTERM', () => cleanup('SIGTERM')); // kill 命令
+process.on('exit', () => {
+    // 最后的保险,确保子进程被杀死
+    if (!child.killed) {
+        child.kill('SIGKILL');
+    }
 });

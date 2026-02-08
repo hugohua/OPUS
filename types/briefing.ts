@@ -21,23 +21,45 @@ export type InteractionStyle = "swipe_card" | "bubble_select" | "slot_machine";
 
 export type InteractionDimension = "V" | "C" | "M" | "X" | "A";
 
-export interface BriefingSegment {
-    type: "text" | "interaction";
+// 共享基础字段
+interface BaseSegment {
     content_markdown?: string;
-    audio_text?: string;
     translation_cn?: string;
-    phonetic?: string; // [New] Explicit phonetic field
+}
+
+export interface TextSegment extends BaseSegment {
+    type: "text";
+    audio_text?: string;
+    phonetic?: string;
+}
+
+export interface InteractionSegment extends BaseSegment {
+    type: "interaction";
     dimension?: InteractionDimension;
     task?: {
         style: InteractionStyle;
         question_markdown: string;
-        options: string[] | any[]; // Support string[] or complex object[]
+        options: string[] | any[];
         answer_key: string;
         explanation_markdown?: string;
-        explanation?: any; // Support rich explanation structure
-        socraticHint?: string; // [L2] Socratic Tutor 引导提示
+        explanation?: any;
+        socraticHint?: string;
     };
 }
+
+export interface ChunkingSegment {
+    type: "chunking_drill";
+    full_sentence: string;
+    chunks: any[];
+    distractor_chunk?: string | null;
+    analysis?: {
+        skeleton: any;
+        links: any[];
+        business_insight: string;
+    };
+}
+
+export type BriefingSegment = TextSegment | InteractionSegment | ChunkingSegment;
 
 export interface BriefingPayload {
     meta: {
@@ -45,13 +67,17 @@ export interface BriefingPayload {
         mode: SessionMode;
         batch_size: number;
         sys_prompt_version: string;
-        vocabId?: number; // Needed to track progress
+        vocabId?: number;
         target_word?: string;
-        source?: string; // Track origin (cache, deterministic, llm)
-        nuance_goal?: string; // PHRASE mode: semantic goal (e.g., "Describe quality")
-        etymology?: any; // [New] Etymology data (Prisma Type or generic object)
-        stability?: number; // 用于混合模式 Stability 统计
-        sender_voice?: string; // [New] Dynamic voice for TTS (from Drive Constants)
+        target_zh?: string; // [Optional] Chinese translation
+        source?: string;
+        nuance_goal?: string;
+        etymology?: any;
+        stability?: number;
+        sender_voice?: string;
+        // [New] Dynamic fields from Generative output
+        translation_cn?: string;
+        grammar_point?: string;
     };
     segments: BriefingSegment[];
 }

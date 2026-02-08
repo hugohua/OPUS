@@ -51,6 +51,7 @@ Bad Splits:
 - [Despite the unexpected delay in the supply chain we managed] (Too long)
 
 Chunk Size: Minimum 3 words unless it's a transition word.
+- If a Prepositional Phrase is > 6 words, consider splitting at the internal preposition (e.g., [Under the new scheme] [of the government]).
 </chunking_logic>
 
 <explanation_logic>
@@ -68,9 +69,12 @@ For a sentence with Chunks [A] -> [B] -> [C]:
 </explanation_logic>
 
 <distractor_logic>
-Optional: Provide ONE "Distractor Chunk" that looks grammatically plausible but is logically incorrect.
-Example: If sentence uses "Although", a distractor could be "because the terms" (wrong logic).
-If not applicable, set to null.
+Create ONE "Distractor Chunk" that is a plausible syntactic error.
+- Focus on **Conjunction/Preposition mismatch** (e.g., "Due to" vs "Despite").
+- Or **Verb Form mismatch** (e.g., "To satisfy" vs "Satisfied").
+- Avoid Distractors that are grammatically valid but just "sound bad".
+- Avoid Distractors that change the meaning but are syntactically correct (Ambiguity risk).
+If a clear syntax trap is hard to make, set to null.
 </distractor_logic>
 
 <output_schema>

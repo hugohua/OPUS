@@ -28,10 +28,15 @@ const result = buildSimpleDrill(mockVocab as any, "PHRASE");
 console.log(JSON.stringify(result, null, 2));
 
 const segment = result.segments[0];
-if (segment.content_markdown === "a defense attorney") {
-    console.log("SUCCESS: Selected collocation.");
-} else if (segment.content_markdown === mockVocab.commonExample) {
-    console.log("FAILURE: Selected commonExample.");
+// 使用类型守卫确保segment有content_markdown属性
+if (segment.type === 'text' || segment.type === 'interaction') {
+    if (segment.content_markdown === "a defense attorney") {
+        console.log("SUCCESS: Selected collocation.");
+    } else if (segment.content_markdown === mockVocab.commonExample) {
+        console.log("FAILURE: Selected commonExample.");
+    } else {
+        console.log("UNKNOWN: " + segment.content_markdown);
+    }
 } else {
-    console.log("UNKNOWN: " + segment.content_markdown);
+    console.log("SKIP: Segment type is " + segment.type);
 }
