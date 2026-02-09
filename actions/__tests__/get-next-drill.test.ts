@@ -453,3 +453,51 @@ describe('Suite E: 元数据与统计', () => {
         );
     });
 });
+
+// ============================================
+// Suite F: Auth 安全性 (待实现后启用)
+// ============================================
+//
+// 注意：当前 get-next-drill.ts 缺少 Auth 校验
+// 这些测试用于验证修复后的行为
+//
+// describe('Suite F: Auth 安全性', () => {
+//     beforeEach(() => {
+//         vi.clearAllMocks();
+//     });
+//
+//     it('F1: 未认证用户应返回 401', async () => {
+//         // Mock auth 返回 null
+//         vi.mocked(auth).mockResolvedValue(null);
+//
+//         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX' });
+//
+//         expect(result.status).toBe('error');
+//         expect(result.message).toBe('Unauthorized');
+//     });
+//
+//     it('F2: userId 不匹配应返回 403 (IDOR Prevention)', async () => {
+//         // Mock auth 返回不同的 userId
+//         vi.mocked(auth).mockResolvedValue({ user: { id: 'hacker-id' } });
+//
+//         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX' });
+//
+//         expect(result.status).toBe('error');
+//         expect(result.message).toContain('Forbidden');
+//     });
+//
+//     it('F3: 合法用户应正常获取数据', async () => {
+//         vi.mocked(auth).mockResolvedValue({ user: { id: TEST_USER_ID } });
+//         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
+//         const { inventory } = await import('@/lib/core/inventory');
+//
+//         vi.mocked(fetchOMPSCandidates).mockResolvedValue([createCandidate(1)]);
+//         vi.mocked(inventory.popDrill).mockResolvedValue(createCachedDrill(1));
+//
+//         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX' });
+//
+//         expect(result.status).toBe('success');
+//         expect(result.data).toHaveLength(1);
+//     });
+// });
+

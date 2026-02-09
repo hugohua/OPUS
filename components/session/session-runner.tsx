@@ -1,35 +1,35 @@
 /**
- * SessionRunner - 会话运行器组件
+ * SessionRunner - 会话运行器组件 (重构版)
+ * 
  * 功能：
- *   管理 Drill 队列、用户交互、进度追踪
- *   支持客户端异步加载（避免 SSR 阻塞）
- *   实现无限流式加载（Lazy Loading）
- *   [New] 支持客户端进度持久化（刷新恢复）
+ *   - 组装层，协调 Hooks 和 Renderers
+ *   - 支持客户端异步加载
+ *   - 实现无限流式加载
+ *   - 支持客户端进度持久化
+ * 
+ * 重构自原 711 行版本，现约 150 行
  */
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import { BriefingPayload, SessionMode } from '@/types/briefing';
-import { EditorialDrill } from "@/components/briefing/editorial-drill";
+import { SessionMode } from '@/types/briefing';
 
-import { ChunkingDrill } from '@/components/briefing/chunking-drill';
-import { SessionSkeleton } from "@/components/session/session-skeleton";
-import { BlitzSession } from "@/components/session/blitz-session";
-import { PhraseCard } from "@/components/briefing/phrase-card";
-import { PhraseFooter } from "@/components/briefing/phrase-footer";
-import { ContextDrillCard } from "@/components/drill/context-drill-card"; // [Phase 4] Import
-import { AudioScriptDrill } from "@/components/drill/audio-script-drill"; // [New] Audio Drill UI
-import { useTTS } from "@/hooks/use-tts";
-import { recordOutcome } from '@/actions/record-outcome';
-import { getNextDrillBatch } from '@/actions/get-next-drill';
-import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from "@/lib/utils";
+// --- Hooks ---
+import { useDrillSession } from '@/hooks/use-drill-session';
+import { useDrillAudio } from '@/hooks/use-drill-audio';
+
+// --- Renderers ---
+import { SyntaxRenderer, SyntaxFooter } from './renderers/syntax-renderer';
+import { ChunkingRenderer } from './renderers/chunking-renderer';
+import { AudioRenderer } from './renderers/audio-renderer';
+import { ContextRenderer } from './renderers/context-renderer';
+
+// --- UI Components ---
+import { SessionSkeleton } from './session-skeleton';
+import { BlitzSession } from './blitz-session';
 import { UniversalCard } from '@/components/drill/universal-card';
+import { Button } from '@/components/ui/button';
+import { BriefingPayload } from '@/types/briefing';
 
 interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
@@ -37,381 +37,50 @@ interface SessionRunnerProps {
     mode: SessionMode;
 }
 
-const LOAD_THRESHOLD = 10; // 剩余 10 张时触发加载更多
-const BATCH_LIMIT = 10;   // 每批加载数量
-const PREFETCH_LOOKAHEAD = 3; // 音频预加载前瞻数量
+// --- Mode to Variant Mapping ---
+const variantMap: Record<string, 'violet' | 'emerald' | 'amber' | 'rose' | 'blue' | 'pink'> = {
+    SYNTAX: 'emerald',
+    CHUNKING: 'blue',
+    NUANCE: 'pink',
+    BLITZ: 'violet',
+    AUDIO: 'amber',
+    READING: 'emerald',
+    VISUAL: 'pink',
+    PHRASE: 'violet',
+    CONTEXT: 'rose',
+};
 
 export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {
-    // ✅ 移除提前返回，确保所有hooks调用顺序一致
     const router = useRouter();
 
-    // --- State Management ---
-    const [queue, setQueue] = useState<BriefingPayload[]>(initialPayload || []);
-    // isInitialLoading: 如果没有 active queue，则为 true
-    const [isInitialLoading, setIsInitialLoading] = useState(queue.length === 0);
+    // --- Core State Machine ---
+    const session = useDrillSession({
+        userId,
+        mode,
+        initialPayload,
+    });
 
-    const [index, setIndex] = useState(0);
-    const [completed, setCompleted] = useState(false);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [status, setStatus] = useState<"idle" | "correct" | "wrong">("idle");
-    const [selectedOption, setSelectedOption] = useState<string | null>(null);
-    const [hasMore, setHasMore] = useState(true); // Prevent infinite loop if no more items
+    // --- Audio Control (只在 AUDIO 模式激活) ---
+    const audio = useDrillAudio({
+        enabled: mode === 'AUDIO',
+        currentDrill: session.currentDrill,
+        queue: session.queue,
+        index: session.index,
+        completed: session.completed,
+    });
 
-    // Track loaded VocabIDs to exclude them in next fetch
-    const loadedVocabIds = useRef<Set<number>>(new Set());
-
-    // [Time-Based Grading] Response Timer
-    const startTime = useRef<number>(Date.now());
-
-
-    // TTS Hook for Audio Mode
-    const tts = useTTS();
-
-    // ==================== 音频预加载 ====================
-    const prefetchedIndicesRef = useRef<Set<number>>(new Set());
-    const preloadedAudiosRef = useRef<Map<string, HTMLAudioElement>>(new Map());
-
-    const generateAndPreload = useCallback(async (script: string, voice: string) => {
-        try {
-            const res = await fetch('/api/tts/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: script, voice, language: 'en-US', speed: 1.0 })
-            });
-            if (!res.ok) return;
-
-            const { url } = await res.json();
-            if (!url || preloadedAudiosRef.current.has(url)) return;
-
-            const audio = new Audio(url);
-            audio.preload = 'auto';
-            audio.load();
-            preloadedAudiosRef.current.set(url, audio);
-
-            console.log(`[Audio Prefetch] 已预加载: ${script.slice(0, 30)}...`);
-        } catch {
-            // 静默失败
-        }
-    }, []);
-
-    const prefetchNextItems = useCallback(() => {
-        if (mode !== 'AUDIO') return;
-
-        for (let offset = 1; offset <= PREFETCH_LOOKAHEAD; offset++) {
-            const targetIndex = index + offset;
-            if (targetIndex >= queue.length) break;
-            if (prefetchedIndicesRef.current.has(targetIndex)) continue;
-
-            const nextDrill = queue[targetIndex];
-            const textSeg = nextDrill?.segments.find(s => s.type === 'text');
-            const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
-            const voice = (nextDrill?.meta?.sender_voice as any) || "Cherry";
-
-            if (script) {
-                prefetchedIndicesRef.current.add(targetIndex);
-                generateAndPreload(script, voice);
-            }
-        }
-    }, [mode, index, queue, generateAndPreload]);
-
-    // ⚠️ 关键：这两个函数必须在使用它们的 useEffect 之前定义
-    // 原因：JavaScript TDZ - const 声明不会提升到定义之前
-    // 参考：Line 230 useEffect 懒加载逻辑中调用 loadMore()
-
-    // 初始化 vocab ID 集合的辅助函数
-    const initVocabSet = useCallback((items: BriefingPayload[]) => {
-        if (items.length === 0) return;
-
-        for (const p of items) {
-            // ✅ 从类型定义确认正确的属性名
-            const vid = p.meta.vocabId;
-            if (vid && typeof vid === 'number') {
-                loadedVocabIds.current.add(vid);
-            }
-        }
-    }, []);
-
-    // loadMore 函数定义（必须在使用它的 useEffect 之前）
-    const loadMore = useCallback(async () => {
-        setIsLoadingMore(true);
-        try {
-            const excludeIds = Array.from(loadedVocabIds.current);
-            const res = await getNextDrillBatch({
-                userId,
-                mode,
-                limit: BATCH_LIMIT,
-                excludeVocabIds: excludeIds
-            });
-
-            if (res.status === 'success' && res.data && res.data.length > 0) {
-                const newItems = res.data;
-                console.log(`[loadMore] ✅ Loaded ${newItems.length} new drills, total: ${queue.length + newItems.length}`);
-                initVocabSet(newItems);
-                setQueue(prev => [...prev, ...newItems]);
-                toast.success('新弹药已就位！', { duration: 1000 });
-            } else {
-                console.warn('[loadMore] ⚠️ No more drills available');
-                setHasMore(false);
-            }
-        } catch (e) {
-            console.error('[loadMore] ❌ Failed to fetch drill batch:', e);
-            // ✅ Fail-Safe: 友好提示，不让用户感到"失败"
-            toast.error('网络不稳定，请稍后再试', { duration: 3000 });
-            setHasMore(false); // 防止无限重试
-        } finally {
-            setIsLoadingMore(false);
-        }
-    }, [userId, mode, initVocabSet, queue.length]); // setState functions are stable by React guarantee
-
-    // --- 1. 挂载时：恢复状态 or 初始加载 ---
-    useEffect(() => {
-        // 如果外部传入了 payload (SSR case, unlikely now but possible)，则不恢复
-        if (initialPayload && initialPayload.length > 0) {
-            initVocabSet(initialPayload);
-            return;
-        }
-
-        const restore = () => {
-            const saved = loadSession(userId, mode);
-            if (saved && saved.queue.length > 0 && saved.currentIndex < saved.queue.length) {
-                console.log('Session restored from storage', saved);
-                setQueue(saved.queue);
-                setIndex(saved.currentIndex);
-                initVocabSet(saved.queue);
-                setIsInitialLoading(false);
-                toast.success('已恢复上次进度', { duration: 2000 });
-            } else {
-                // 无存档或已过期，发起新请求
-                loadInitialData();
-            }
-        };
-
-        restore();
-    }, []); // Run once on mount
-
-    // --- 2. 状态变更同步到 Storage ---
-    // [P0 Anti-Fallback] 如果大部分是兜底数据，不缓存，让用户刷新时能获取新题
-    useEffect(() => {
-        if (queue.length > 0 && !completed) {
-            saveSession(userId, mode, queue, index);
-        }
-    }, [queue, index, completed, userId, mode]);
-
-    const loadInitialData = async () => {
-        try {
-            // 标准路径：使用 OMPS + Inventory
-            const res = await getNextDrillBatch({
-                userId,
-                mode,
-                limit: BATCH_LIMIT,
-                excludeVocabIds: []
-            });
-
-            if (res.status === 'success' && res.data && res.data.length > 0) {
-                const newItems = res.data;
-                initVocabSet(newItems);
-                setQueue(newItems);
-                // 保存数据来源
-                console.log('🔍 API Response meta:', res.meta); // 调试日志
-            } else {
-                toast.error('加载训练数据失败');
-            }
-        } catch (e) {
-            toast.error('网络错误，请重试');
-        } finally {
-            setIsInitialLoading(false);
-        }
-    };
-
-    const currentDrill = queue[index];
-    const countDisplay = index + 1;
-
-    // 切换到下一题时重置状态
-    useEffect(() => {
-        setStatus("idle");
-        setSelectedOption(null);
-        // Reset Timer
-        startTime.current = Date.now();
-    }, [index]);
-
-    // --- 懒加载逻辑 ---
-    useEffect(() => {
-        if (isInitialLoading) return; // 初始加载完成后才启用
-
-        const remaining = queue.length - index;
-        // Disable lazy load for simulation (fixed batch size)
-        if (remaining <= LOAD_THRESHOLD && !isLoadingMore && hasMore) {
-            loadMore();
-        }
-    }, [index, queue.length, isLoadingMore, isInitialLoading]);
-
-    // --- Audio Auto-Play Logic ---
-    useEffect(() => {
-        if (mode === 'AUDIO' && currentDrill && !completed) {
-            // Stop previous audio immediately
-            tts.stop();
-
-            const textSeg = currentDrill.segments.find(s => s.type === 'text');
-            const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
-
-            if (script) {
-                // Short delay to allow UI transition
-                const timer = setTimeout(() => {
-                    tts.play({
-                        text: script,
-                        voice: (currentDrill.meta.sender_voice as any) || "Cherry",
-                        speed: 1.0,
-                    });
-                }, 500);
-
-                // Cleanup: Stop audio AND clear timeout on re-run/unmount
-                return () => {
-                    clearTimeout(timer);
-                    tts.stop();
-                };
-            }
-        }
-
-        // Cleanup for non-script cases
-        return () => {
-            tts.stop();
-        };
-    }, [index, mode, currentDrill]);
-
-    // --- Audio Prefetch Trigger ---
-    useEffect(() => {
-        if (mode === 'AUDIO' && !completed && queue.length > 0) {
-            const timer = setTimeout(prefetchNextItems, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [index, mode, queue.length, completed, prefetchNextItems]);
-
-    // ✅ 所有hooks调用完毕后，处理BLITZ模式
+    // --- Early Return: BLITZ Mode ---
     if (mode === 'BLITZ') {
         return <BlitzSession userId={userId} />;
     }
 
-    const textSegment = currentDrill?.segments.find(s => s.type === 'text');
-    const interactSegment = currentDrill?.segments.find(s => s.type === 'interaction');
-
-    // [Compatibility] Handle rich explanation object -> string for legacy components
-    const task = interactSegment?.task as any;
-    let explanationMarkdown = task?.explanation_markdown || "";
-
-    if (!explanationMarkdown && task?.explanation) {
-        // Reconstruct markdown from rich object (Phrase/Blitz style)
-        const e = task.explanation;
-        const traps = Array.isArray(e.trap_analysis) ? e.trap_analysis.join('\n') : "";
-        explanationMarkdown = `## ${e.title || "Note"}\n\n${e.correct_logic || e.content || ""}\n\n${traps}`;
-    }
-
-    const handleComplete = async (result: boolean | number) => {
-        const vocabId = (currentDrill.meta as any).vocabId || 0;
-
-        let grade = 1;
-        let isCorrect = false;
-
-        if (typeof result === 'number') {
-            grade = result;
-            isCorrect = grade >= 3;
-        } else {
-            isCorrect = result;
-            grade = isCorrect ? 3 : 1;
-        }
-
-        const duration = Date.now() - startTime.current;
-        const isRetry = (currentDrill.meta as any).isRetry;
-
-        // 静默记录结果
-        recordOutcome({
-            userId,
-            vocabId,
-            grade: grade as any,
-            mode,
-            duration,
-            isRetry
-        }).catch(() => { });
-
-        // [Session Loop] 错题闭环逻辑
-        if (!isCorrect) {
-            // 1. Clone Current Drill
-            const retryDrill = JSON.parse(JSON.stringify(currentDrill)) as BriefingPayload;
-
-            // 2. Mark as Retry
-            if (!retryDrill.meta) retryDrill.meta = {} as any;
-            (retryDrill.meta as any).isRetry = true;
-
-            // 3. Insert into Queue (Expansion)
-            // Insert at current + 5, or end of queue if length < 5
-            const insertIndex = Math.min(queue.length, index + 5);
-
-            setQueue(prev => {
-                const next = [...prev];
-                next.splice(insertIndex, 0, retryDrill);
-                return next;
-            });
-
-            // Optional: Toast feedback for "Review later"
-            // toast.info('Missed! Added to review queue.', { duration: 1500 });
-        }
-
-        // 进入下一题
-        if (index < queue.length - 1) {
-            // [Critical] Reset state synchronously to prevent Next Card from rendering with Old Status (Spoiler Fix)
-            setStatus("idle");
-            setSelectedOption(null);
-            setIndex(i => i + 1);
-        } else {
-            // 队列结束 -> 清除 Storage
-            clearSession(userId, mode);
-            setCompleted(true);
-        }
-    };
-
-    const handleOptionSelect = (option: string) => {
-        if (status !== "idle") return;
-        const answerKey = interactSegment?.task?.answer_key;
-        if (!answerKey) return;
-
-        setSelectedOption(option);
-
-        // Robust comparison: Trim + Lowercase
-        const normalize = (s: string) => s.trim().toLowerCase();
-        const isCorrect = normalize(option) === normalize(answerKey);
-
-        // Debug Log
-        console.log(`[Grading] Selected: "${option}" | Key: "${answerKey}" | Match: ${isCorrect}`);
-
-        setStatus(isCorrect ? "correct" : "wrong");
-    };
-
-    const handleNextDrill = () => {
-        const answerKey = interactSegment?.task?.answer_key;
-        if (!answerKey) return;
-
-        const isCorrect = selectedOption === answerKey;
-        handleComplete(isCorrect);
-    };
-
-    // [New] For ChunkingDrill
-    const handleNext = () => {
-        if (index < queue.length - 1) {
-            setStatus("idle");
-            setSelectedOption(null);
-            setIndex(i => i + 1);
-        } else {
-            clearSession(userId, mode);
-            setCompleted(true);
-        }
-    };
-
-    // --- 初始加载中显示骨架屏 ---
-    if (isInitialLoading) {
+    // --- Early Return: Initial Loading ---
+    if (session.isInitialLoading) {
         return <SessionSkeleton mode={mode} />;
     }
 
-    // --- 队列为空（加载失败）---
-    if (queue.length === 0) {
+    // --- Early Return: Empty Queue ---
+    if (session.queue.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center space-y-4">
                 <h2 className="text-xl font-bold text-destructive">任务失败</h2>
@@ -423,8 +92,8 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         );
     }
 
-    // --- 会话完成 ---
-    if (completed) {
+    // --- Early Return: Completed ---
+    if (session.completed) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -433,7 +102,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                     </svg>
                 </div>
                 <h2 className="text-xl font-bold">训练完成！</h2>
-                <p className="text-muted-foreground">今日已掌握 {index + 1} 个训练。</p>
+                <p className="text-muted-foreground">今日已掌握 {session.index + 1} 个训练。</p>
                 <Button onClick={() => router.push('/dashboard')}>
                     返回控制台
                 </Button>
@@ -441,270 +110,102 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         );
     }
 
-    if (!currentDrill) return <SessionSkeleton mode={mode} />;
-
-    // [Phase 4] CONTEXT Mode Integration
-    // ContextDrillCard is self-contained (includes UniversalCard)
-    if (mode === 'CONTEXT') {
-        return (
-            <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
-                <ContextDrillCard
-                    drill={currentDrill}
-                    progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
-                    onGrade={(g) => handleComplete(g)}
-                    onExit={() => router.push('/dashboard')}
-                />
-            </div>
-        );
+    // --- Safety Check ---
+    if (!session.currentDrill) {
+        return <SessionSkeleton mode={mode} />;
     }
 
-    if (mode === 'AUDIO') {
+    const variant = variantMap[mode] || 'violet';
+
+    // --- CONTEXT Mode: Self-contained ---
+    if (mode === 'CONTEXT') {
         return (
-            <AudioScriptDrill
-                drill={currentDrill}
-                isPlaying={tts.isPlaying}
-                onTogglePlay={() => {
-                    if (tts.isPlaying) tts.stop();
-                    else {
-                        const textSeg = currentDrill.segments.find(s => s.type === 'text');
-                        const script = (textSeg as any)?.audio_text || textSeg?.content_markdown || "";
-                        if (script) tts.play({ text: script, voice: "Cherry" });
-                    }
-                }}
-                onGrade={(g) => handleComplete(g)}
-                index={index + 1}
-                total={queue.length}
+            <ContextRenderer
+                drill={session.currentDrill}
+                progress={session.progress}
+                onGrade={(g) => session.handleComplete(g)}
             />
         );
     }
 
-    // Map mode to color variant
-    const variantMap: Record<string, "violet" | "emerald" | "amber" | "rose" | "blue" | "pink"> = {
-        SYNTAX: "emerald",
-        CHUNKING: "blue",
-        NUANCE: "pink",
-        BLITZ: "violet",
-        AUDIO: "amber",
-        READING: "emerald",
-        VISUAL: "pink"
-    };
+    // --- AUDIO Mode: Self-contained ---
+    if (mode === 'AUDIO') {
+        return (
+            <AudioRenderer
+                drill={session.currentDrill}
+                index={session.index}
+                total={session.queue.length}
+                isPlaying={audio.isPlaying}
+                onTogglePlay={audio.togglePlay}
+                onGrade={(g) => session.handleComplete(g)}
+            />
+        );
+    }
 
-    const variant = variantMap[mode] || "violet";
-
-    // [Fix] Dynamic UI Switching
-    // Check if current card requests 'bubble_select' style (Phrase Mode UI)
-    // This allows Fallback cards in SYNTAX mode to render as Phrase Cards
-    const userInteraction = currentDrill?.segments.find(s => s.type === 'interaction');
-    const interactionStyle = (userInteraction?.task as any)?.style;
-    const isPhraseMode = mode === 'PHRASE' || interactionStyle === 'bubble_select';
-
-    // --- Definition Extraction Helper ---
-    // Extract real definition from flexible structure
-    const getDefinition = () => {
-        // 0. [P0] Try meta.definition_cn first (used by CHUNKING, etc.)
-        if (currentDrill?.meta && (currentDrill.meta as any).definition_cn) {
-            return (currentDrill.meta as any).definition_cn;
-        }
-
-        if (!interactSegment?.task) return "";
-        const task = interactSegment.task as any;
-
-        // 1. Try structured definition_cn (if available in rich object)
-        if (task.explanation && typeof task.explanation === 'object') {
-            if (task.explanation.definition_cn) return task.explanation.definition_cn;
-        }
-
-        // 2. Fallback: Parse markdown string
-        // Format assumption: `## Title\n\n[pos] Definition\n\n...`
-        if (explanationMarkdown) {
-            const lines = explanationMarkdown.split('\n');
-            // Try to find a line that looks like definition (often line 2 or 3)
-            // Skip title (##) and lines starting with "**" (Chunks:, etc.)
-            const cleanLines = lines.filter((l: string) =>
-                l.trim().length > 0 &&
-                !l.startsWith('##') &&
-                !l.startsWith('**')
-            );
-            if (cleanLines.length > 0) return cleanLines[0];
-        }
-
-        return "Definition not available";
-    };
-
-    const wordDefinition = getDefinition();
-
-    // Extract POS from definition string if possible: "[v.] xxx" -> "v."
-    const posMatch = wordDefinition.match(/^\[(.*?)\]/);
-    const partOfSpeech = posMatch ? posMatch[1] : "";
-    const cleanDefinition = posMatch ? wordDefinition.replace(/^\[.*?\]\s*/, "") : wordDefinition;
-
-    // Use PhraseFooter component
-    const PhraseFooterComponent = (
-        <PhraseFooter
-            status={status === 'idle' ? 'idle' : 'revealed'}
-            onReveal={() => setStatus('correct')}
-            onGrade={(g) => handleComplete(g)}
-        />
-    );
-
-    // --- Standard Mode Footer (2x2 Grid) ---
-
-    // Footer Content (Buttons)
-    const FooterContent = (
-        <div className="w-full flex flex-col items-center justify-end">
-            {status === "idle" && (
-                <p className="text-center text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-6">Select the best option</p>
-            )}
-
-            <div className="w-full grid grid-cols-2 gap-4 h-48">
-                {status === "idle" ? (
-                    // Options Grid
-                    interactSegment?.task?.options?.map((opt: any, idx) => {
-                        const indexLabel = String.fromCharCode(65 + idx); // A, B, C...
-                        // Handle both string and object options
-                        const optionText = typeof opt === 'string' ? opt : opt.text;
-                        const optionKey = typeof opt === 'string' ? opt : opt.text; // Use text as key for now
-
-                        return (
-                            <button
-                                key={idx} // Use index as key to be safe with objects
-                                onClick={() => handleOptionSelect(optionKey)}
-                                className="group relative h-full w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] shadow-sm hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-3"
-                            >
-                                <span className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-xs font-mono text-zinc-400 flex items-center justify-center group-hover:border-emerald-200 group-hover:text-emerald-600 transition-colors">
-                                    {indexLabel}
-                                </span>
-                                <span className="font-serif text-xl md:text-2xl font-medium text-zinc-800 dark:text-zinc-200">
-                                    {optionText}
-                                </span>
-                            </button>
-                        );
-                    })
-                ) : (
-                    // Next Button (Full Width)
-                    <div className="col-span-2 flex items-center justify-center h-full">
-                        <Button
-                            onClick={handleNextDrill}
-                            className={cn(
-                                "w-full h-20 text-xl font-semibold text-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-[2rem]",
-                                variant === 'violet' ? "bg-violet-600 hover:bg-violet-500 shadow-violet-900/20" :
-                                    variant === 'emerald' ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20" :
-                                        variant === 'blue' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/20" :
-                                            "bg-zinc-900 text-white hover:bg-zinc-800"
-                            )}
-                        >
-                            Next Challenge <ArrowLeft className="w-6 h-6 ml-2 rotate-180" />
-                        </Button>
-                    </div>
-                )}
+    // --- CHUNKING Mode: Special layout ---
+    if (mode === 'CHUNKING') {
+        return (
+            <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
+                <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-violet-900/20 from-transparent via-transparent to-transparent pointer-events-none z-0" />
+                <div className="relative z-10 h-full">
+                    <UniversalCard
+                        variant="blue"
+                        category={`${mode} DRILL`}
+                        progress={session.progress}
+                        onExit={() => router.push('/dashboard')}
+                        footer={null}
+                        clean={true}
+                        contentClassName="p-0 bg-transparent border-none shadow-none max-w-none w-full h-full"
+                    >
+                        <ChunkingRenderer
+                            drill={session.currentDrill}
+                            index={session.index}
+                            onComplete={session.handleNext}
+                        />
+                    </UniversalCard>
+                </div>
             </div>
-        </div>
-    );
+        );
+    }
 
-    // Choose Footer based on mode
-    const ActiveFooter = isPhraseMode ? PhraseFooterComponent : FooterContent;
-
+    // --- Standard Modes: SYNTAX, PHRASE, etc. ---
     return (
         <div className="bg-zinc-50 dark:bg-zinc-950 h-screen w-full relative">
-            {/* Dark Mode Ambient Glow */}
-            {/* Dark Mode Ambient Glow */}
             <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-violet-900/20 from-transparent via-transparent to-transparent pointer-events-none z-0" />
 
-            {/* Fallback/Loading Layer if needed, but UniversalCard handles the main shell */}
             <div className="relative z-10 h-full">
-
                 <UniversalCard
-                    variant={mode === 'CHUNKING' ? 'blue' : variant}
+                    variant={variant}
                     category={`${mode} DRILL`}
-                    progress={queue.length > 0 ? ((index + 1) / queue.length) * 100 : 0}
+                    progress={session.progress}
                     onExit={() => router.push('/dashboard')}
-                    footer={mode === 'CHUNKING' ? null : ActiveFooter}
-                    clean={mode === 'CHUNKING'}
-                    contentClassName={mode === 'CHUNKING'
-                        ? "p-0 bg-transparent border-none shadow-none max-w-none w-full h-full"
-                        : "h-[60dvh] w-full flex flex-col justify-center"
+                    footer={
+                        <SyntaxFooter
+                            drill={session.currentDrill}
+                            status={session.status}
+                            selectedOption={session.selectedOption}
+                            onOptionSelect={session.handleOptionSelect}
+                            onNext={session.handleNext}
+                            onComplete={session.handleComplete}
+                            setStatus={session.setStatus}
+                            variant={variant}
+                        />
                     }
+                    contentClassName="h-[60dvh] w-full flex flex-col justify-center"
                 >
-                    {/* Body Content */}
-                    {/* CHUNKING mode has its own data structure, render separately */}
-                    {mode === 'CHUNKING' && currentDrill && (
-                        <div className="w-full h-full">
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 1.05 }}
-                                    transition={{ duration: 0.4 }}
-                                    className="w-full h-full"
-                                >
-                                    <ChunkingDrill
-                                        drill={(currentDrill.segments.find((s: any) => s.type === 'chunking_drill') || currentDrill) as any}
-                                        onComplete={handleNext}
-                                    />
-                                </motion.div>
-                            </AnimatePresence>
-                        </div>
-                    )}
-
-                    {/* Standard modes (PHRASE, SYNTAX, AUDIO, etc.) */}
-                    {mode !== 'CHUNKING' && textSegment && interactSegment && (
-                        <div className="w-full">
-                            {/* Standard Modes (PHRASE, SYNTAX, EDITORIAL) */}
-                            {isPhraseMode ? (
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.05, y: -10 }}
-                                        transition={{ duration: 0.4 }}
-                                        className="w-full flex-1 flex flex-col items-center justify-center"
-                                    >
-                                        <PhraseCard
-                                            phraseMarkdown={textSegment.content_markdown || ""}
-                                            translation={(textSegment as any).translation_cn || ""}
-                                            wordDefinition={cleanDefinition}
-                                            status={status as any}
-                                            phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
-                                            partOfSpeech={partOfSpeech || ""}
-                                            targetWord={currentDrill.meta.target_word}
-                                            etymology={(currentDrill.meta as any).etymology}
-                                        />
-                                    </motion.div>
-                                </AnimatePresence>
-                            ) : (
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.05, y: -10 }}
-                                        transition={{ duration: 0.4 }}
-                                        className="w-full flex-1 flex flex-col items-center justify-center"
-                                    >
-                                        <EditorialDrill
-                                            content={textSegment.content_markdown || ""}
-                                            questionMarkdown={(interactSegment.task as any)?.question_markdown}
-                                            translation={(textSegment as any).translation_cn}
-                                            explanation={explanationMarkdown}
-                                            answer={interactSegment.task?.answer_key || ""}
-                                            status={status}
-                                            selected={selectedOption}
-                                        />
-                                        {/* Prompt */}
-                                        {status === "idle" && (
-                                            <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
-                                                Select the best option
-                                            </p>
-                                        )}
-                                    </motion.div>
-                                </AnimatePresence>
-                            )}
-                        </div>
-                    )}
+                    <SyntaxRenderer
+                        drill={session.currentDrill}
+                        index={session.index}
+                        status={session.status}
+                        selectedOption={session.selectedOption}
+                        onOptionSelect={session.handleOptionSelect}
+                        onNext={session.handleNext}
+                        onComplete={session.handleComplete}
+                        setStatus={session.setStatus}
+                        variant={variant}
+                    />
                 </UniversalCard>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
