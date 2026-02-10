@@ -23,3 +23,4 @@ reports/
 prisma/migrations
 dockers
 other-project-demo
+build-and-export.sh

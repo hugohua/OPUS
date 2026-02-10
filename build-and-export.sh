@@ -26,11 +26,30 @@ SERVICES="web:opus-web worker:opus-worker tts:opus-tts"
 BASE_IMAGES="nginx:nginx:alpine pgvector:ankane/pgvector:latest redis:redis:7-alpine"
 
 # ==================== 部署配置 ====================
-NAS_USER=""
-NAS_IP=""
-NAS_PORT=""
+NAS_USER="None"
+NAS_IP="192.168.5.23"
+NAS_PORT="2002"
 NAS_PATH="/volume1/docker/opus"
+NAS_PASSWORD="@Baofen13964332"
 DEPLOY_TO_NAS=false
+
+# SSH/SCP 命令封装 (自动使用 sshpass)
+remote_ssh() {
+    if [ -n "$NAS_PASSWORD" ]; then
+        sshpass -p "$NAS_PASSWORD" ssh -o StrictHostKeyChecking=no -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "$@"
+    else
+        ssh -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "$@"
+    fi
+}
+
+remote_scp() {
+    # -O: 使用传统 SCP 协议，避免 SFTP subsystem 报错
+    if [ -n "$NAS_PASSWORD" ]; then
+        sshpass -p "$NAS_PASSWORD" scp -O -o StrictHostKeyChecking=no -P "${NAS_PORT}" "$@"
+    else
+        scp -O -P "${NAS_PORT}" "$@"
+    fi
+}
 
 # ==================== 代理管理 ====================
 
@@ -98,49 +117,81 @@ deploy_to_nas() {
 
     print_info "连接目标: ${NAS_USER}@${NAS_IP}:${NAS_PORT} -> ${NAS_PATH}"
     
+    # 检查 sshpass 是否安装 (如果使用密码)
+    if [ -n "$NAS_PASSWORD" ]; then
+        if ! command -v sshpass &> /dev/null; then
+            print_error "使用密码登录需要安装 sshpass"
+            print_info "请运行: brew install sshpass 或 brew install hudochenkov/sshpass/sshpass"
+            exit 1
+        fi
+        print_info "使用密码模式连接..."
+    fi
+    
     # 检查 SSH 连接
-    if ! ssh -p "${NAS_PORT}" -o ConnectTimeout=5 "${NAS_USER}@${NAS_IP}" "echo 'SSH Connection Success'" >/dev/null 2>&1; then
-        print_error "SSH 连接失败！请检查 IP、端口、用户名或 SSH 密钥配置。"
-        print_warning "建议配置 SSH 免密登录: ssh-copy-id -p ${NAS_PORT} ${NAS_USER}@${NAS_IP}"
+    if ! remote_ssh "echo 'SSH Connection Success'" >/dev/null 2>&1; then
+        print_error "SSH 连接失败！请检查 IP、端口、用户名或密码。"
         exit 1
     fi
 
-    # 1. 创建远程目录
+    # 1. 创建远程目录 (含数据持久化目录)
     print_info "创建远程目录..."
-    ssh -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "mkdir -p ${NAS_PATH}"
+    remote_ssh "mkdir -p ${NAS_PATH}/{data/postgres,data/redis,data/audio,data/logs,nginx}"
 
     # 2. 传输配置文件
     print_info "传输配置文件..."
-    scp -P "${NAS_PORT}" docker-compose.prod.yml "${NAS_USER}@${NAS_IP}:${NAS_PATH}/"
+    # 使用 NAS 专用的 compose 文件 (预构建镜像，无需 build context)
+    remote_scp docker-compose.nas.yml "${NAS_USER}@${NAS_IP}:${NAS_PATH}/docker-compose.yml"
     if [ -f .env ]; then
-        scp -P "${NAS_PORT}" .env "${NAS_USER}@${NAS_IP}:${NAS_PATH}/"
+        remote_scp .env "${NAS_USER}@${NAS_IP}:${NAS_PATH}/"
     fi
     if [ -f nginx/nginx.conf ]; then
-        ssh -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "mkdir -p ${NAS_PATH}/nginx"
-        scp -P "${NAS_PORT}" nginx/nginx.conf "${NAS_USER}@${NAS_IP}:${NAS_PATH}/nginx/"
+        remote_ssh "mkdir -p ${NAS_PATH}/nginx"
+        remote_scp nginx/nginx.conf "${NAS_USER}@${NAS_IP}:${NAS_PATH}/nginx/"
     fi
 
-    # 3. 传输并加载镜像 (使用流式传输，不占用 NAS 磁盘空间)
+    # 3. 传输并加载镜像 (先传文件，再加载)
     print_info "开始传输并加载镜像 (这可能需要几分钟)..."
     
     for item in $SERVICES; do
         service="${item%%:*}"
         tagged_name="opus/${service}:${VERSION}"
+        tar_file="${OUTPUT_DIR}/opus-${service}-${VERSION}.tar"
+        remote_tar="/tmp/opus-${service}-${VERSION}.tar"
+        
         print_info "  正在部署 ${service}..."
         
-        # 使用管道直接传输并加载，避免在 NAS 上产生临时 tar 文件
-        # 注意: 需要 NAS 上有 docker 命令
-        if docker save "$tagged_name" | ssh -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "docker load"; then
-            print_info "  ✓ ${service} 部署成功"
+        # 步骤 1: 传输 tar 文件到 NAS
+        print_info "    传输文件..."
+        remote_scp "$tar_file" "${NAS_USER}@${NAS_IP}:${remote_tar}"
+        
+        # 步骤 2: 在 NAS 上加载镜像
+        print_info "    加载镜像..."
+        if [ -n "$NAS_PASSWORD" ]; then
+            if remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker load -i ${remote_tar} && rm -f ${remote_tar}"; then
+                print_info "  ✓ ${service} 部署成功"
+            else
+                print_error "  ✗ ${service} 部署失败"
+                exit 1
+            fi
         else
-            print_error "  ✗ ${service} 部署失败"
-            exit 1
+            if remote_ssh "sudo /usr/local/bin/docker load -i ${remote_tar} && rm -f ${remote_tar}"; then
+                print_info "  ✓ ${service} 部署成功"
+            else
+                print_error "  ✗ ${service} 部署失败"
+                exit 1
+            fi
         fi
     done
 
-    # 4. 重启服务
+    # 4. 重启服务 (群晖使用 docker-compose v1)
     print_info "重启远程服务..."
-    ssh -p "${NAS_PORT}" "${NAS_USER}@${NAS_IP}" "cd ${NAS_PATH} && docker compose -f docker-compose.prod.yml up -d"
+    if [ -n "$NAS_PASSWORD" ]; then
+        remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker-compose up -d" 2>/dev/null || \
+        remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker compose up -d"
+    else
+        remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker-compose up -d" 2>/dev/null || \
+        remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker compose up -d"
+    fi
 
     print_info "✅ 部署完成！"
     print_info "服务地址: http://${NAS_IP}"
@@ -167,11 +218,12 @@ print_warning() {
 }
 
 print_usage() {
-    echo -e "${BLUE}用法:${NC} $0 [版本号] [--with-base]"
+    echo -e "${BLUE}用法:${NC} $0 [版本号] [选项]"
     echo -e "${BLUE}示例:${NC}"
-    echo -e "  $0 v1.0.0           # 只导出 Opus 自定义镜像"
-    echo -e "  $0 latest --with-base  # 包含基础镜像（nginx/redis/pgvector）"
-    echo -e "  $0 v1.0.0 --deploy  # 构建后自动部署到 NAS"
+    echo -e "  $0 v1.0.0             # 构建并导出镜像"
+    echo -e "  $0 v1.0.0 --deploy      # 构建后自动部署到 NAS"
+    echo -e "  $0 v1.0.0 --deploy-only # 跳过构建，直接部署已构建的镜像"
+    echo -e "  $0 latest --with-base   # 包含基础镜像（nginx/redis/pgvector）"
 }
 
 # ==================== 主流程 ====================
@@ -186,11 +238,13 @@ for arg in "$@"; do
     case $arg in
         --deploy)
             DEPLOY_TO_NAS=true
-            shift # Remove --deploy from processing
+            ;;
+        --deploy-only)
+            DEPLOY_TO_NAS=true
+            DEPLOY_ONLY=true
             ;;
         --with-base)
             EXPORT_BASE=true
-            shift
             ;;
         -*)
             # Handle other flags if necessary
@@ -223,13 +277,18 @@ setup_proxy
 
 # ==================== 步骤 1: 构建镜像 ====================
 
-print_info "开始构建 Opus 服务镜像..."
-
-if DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build; then
-    print_info "所有镜像构建成功！"
+if [ "$DEPLOY_ONLY" = true ]; then
+    print_warning "跳过构建步骤 (--deploy-only)"
 else
-    print_error "镜像构建失败！"
-    exit 1
+    print_info "开始构建 Opus 服务镜像 (平台: linux/amd64)..."
+
+    # 使用 DOCKER_DEFAULT_PLATFORM 构建适用于 NAS (x86_64) 的镜像
+    if DOCKER_BUILDKIT=1 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.prod.yml build; then
+        print_info "所有镜像构建成功！"
+    else
+        print_error "镜像构建失败！"
+        exit 1
+    fi
 fi
 
 # ==================== 步骤 2: 标记版本 ====================

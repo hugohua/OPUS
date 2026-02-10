@@ -1,7 +1,7 @@
 const nextConfig = {
     experimental: {
         serverActions: {
-            allowedOrigins: ["localhost:3000"],
+            allowedOrigins: ["*"],
         },
     },
     output: "standalone",
