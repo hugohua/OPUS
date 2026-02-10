@@ -12,6 +12,9 @@
 
 import { z } from "zod";
 import { auth } from "@/auth";
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:weaver:v2');
 import { handleOpenAIStream, buildMessages } from "@/lib/streaming/sse";
 import { WeaverV2InputSchema } from "@/lib/validations/weaver-wand-schemas";
 import { fetchOMPSCandidates } from "@/lib/services/omps-core";
@@ -107,7 +110,7 @@ export async function POST(req: Request) {
 
             // ✅ [W3 Fix] 完成后记录 L2 Context Exposure
             onComplete: async (text) => {
-                console.log(`[WeaverV2] Generated article for scenario=${scenario} (${text.length} chars)`);
+                log.info({ scenario, length: text.length }, 'Article generated');
 
                 // 为每个目标词记录「语境曝光」
                 await Promise.all(candidates.map(c =>
@@ -118,7 +121,7 @@ export async function POST(req: Request) {
                         mode: "CONTEXT", // L2 Track
                         track: "CONTEXT"
                     }).catch(err => {
-                        console.error(`[WeaverV2] Failed to record exposure for vocab ${c.id}:`, err);
+                        log.error({ vocabId: c.id, error: err }, 'Failed to record exposure');
                     })
                 ));
 
@@ -128,7 +131,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error("[WeaverV2] Request Error:", error);
+        log.error({ error }, 'WeaverV2 request error');
 
         if (error instanceof z.ZodError) {
             return new Response(JSON.stringify({

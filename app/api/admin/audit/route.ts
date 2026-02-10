@@ -4,17 +4,27 @@ import { ProviderRegistry } from '@/lib/ai/providers';
 import OpenAI from 'openai';
 import { AUDIT_SYSTEM_PROMPT, getAuditUserPrompt, AuditResult } from '@/lib/generators/audit/quality-auditor';
 import { createAuditRecord } from '@/actions/audit-actions';
+import { auth } from '@/auth';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:admin:audit');
 
 export async function POST(req: NextRequest) {
     try {
+        // [Security Fix] Auth 校验
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await req.json();
         const { targetWord, contextMode, payload } = body;
 
-        console.log('[AuditAPI] Request:', {
+        log.info({
             hasTarget: !!targetWord,
             hasPayload: !!payload,
             keys: Object.keys(body)
-        });
+        }, 'Audit request received');
 
         if (!targetWord || !payload) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -51,7 +61,7 @@ export async function POST(req: NextRequest) {
         }
 
         const provider = providers[0];
-        console.log('[AuditAPI] Using provider:', provider.id, provider.modelId);
+        log.info({ provider: provider.id, model: provider.modelId }, 'Using provider');
 
         // 3. Create OpenAI Client
         const client = new OpenAI({
@@ -67,7 +77,7 @@ export async function POST(req: NextRequest) {
             errorContext: "Audit Stream",
             onComplete: async (fullText) => {
                 try {
-                    console.log('[AuditAPI] Stream complete. Parsing JSON...');
+                    log.info('Stream complete, parsing JSON');
                     const jsonMatch = fullText.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const result = JSON.parse(jsonMatch[0]) as AuditResult;
@@ -81,18 +91,18 @@ export async function POST(req: NextRequest) {
                             auditReason: result.reason,
                             isRedundant: result.redundancy_detected
                         });
-                        console.log('[AuditAPI] Audit record saved.');
+                        log.info('Audit record saved');
                     } else {
-                        console.error('[AuditAPI] Failed to extract JSON from response:', fullText);
+                        log.error({ responseLength: fullText.length }, 'Failed to extract JSON from response');
                     }
                 } catch (e) {
-                    console.error('[AuditAPI] Failed to save audit record:', e);
+                    log.error({ error: e }, 'Failed to save audit record');
                 }
             }
         });
 
     } catch (error) {
-        console.error('[AuditAPI] Error:', error);
+        log.error({ error }, 'Audit API error');
         return NextResponse.json({ error: String(error) }, { status: 500 });
     }
 }

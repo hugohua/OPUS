@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { VocabularyAIService } from '@/lib/ai';
 import { VocabularyInputSchema } from '@/lib/validations/ai';
 import { z } from 'zod';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:ai:enrich');
 
 const RequestSchema = z.object({
     inputs: z.array(VocabularyInputSchema),
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ status: 'success', data: result });
     } catch (error) {
-        console.error('[API /ai/enrich Error]', error);
+        log.error({ error }, 'AI enrich failed');
 
         const message = error instanceof Error ? error.message : 'Unknown error';
         const status = error instanceof z.ZodError ? 400 : 500;

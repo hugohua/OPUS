@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { auth } from "@/auth";
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:weaver:generate');
 import { handleOpenAIStream, buildMessages } from "@/lib/streaming/sse";
 import {
     WEAVER_SYSTEM_PROMPT,
@@ -49,12 +52,12 @@ export async function POST(req: Request) {
             errorContext: "WeaverLab Generation",
             // 可选: 添加回调用于日志或指标收集
             onComplete: (text) => {
-                console.log(`[WeaverLab] Generated story for "${target.word}" (${text.length} chars)`);
+                log.info({ word: target.word, length: text.length }, 'Story generated');
             }
         });
 
     } catch (error) {
-        console.error("[WeaverAPI] Request Error:", error);
+        log.error({ error }, 'Weaver request error');
         return new Response(JSON.stringify({
             error: error instanceof Error ? error.message : String(error)
         }), {

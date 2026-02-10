@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
-import Redis from 'ioredis';
+import { redis } from '@/lib/queue/connection';
+import { auth } from '@/auth';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:admin:history');
 
 // GET /api/admin/history
 // Fetch recent drill generations from Redis List
 export async function GET() {
     try {
-        const redis = new Redis(process.env.REDIS_URL!);
+        // [Security Fix] Auth 校验
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         // Fetch last 50 items
         const rawItems = await redis.lrange('admin:drill-history', 0, 49);
@@ -19,11 +27,9 @@ export async function GET() {
             }
         }).filter(Boolean);
 
-        redis.quit();
-
         return NextResponse.json({ success: true, items });
     } catch (error) {
-        console.error('Failed to fetch history:', error);
+        log.error({ error }, 'Failed to fetch history');
         return NextResponse.json({ success: false, items: [] }, { status: 500 });
     }
 }
@@ -32,11 +38,16 @@ export async function GET() {
 // Clear history buffer
 export async function DELETE() {
     try {
-        const redis = new Redis(process.env.REDIS_URL!);
+        // [Security Fix] Auth 校验
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await redis.del('admin:drill-history');
-        redis.quit();
         return NextResponse.json({ success: true });
     } catch (error) {
+        log.error({ error }, 'Failed to clear history');
         return NextResponse.json({ success: false }, { status: 500 });
     }
 }

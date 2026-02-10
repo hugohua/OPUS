@@ -20,6 +20,9 @@
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:wand:word');
 import {
     WandWordQuerySchema,
     WandWordOutputSchema,
@@ -121,7 +124,7 @@ export async function GET(req: Request) {
         );
 
     } catch (error) {
-        console.error("[MagicWand] Request Error:", error);
+        log.error({ error }, 'Wand request error');
 
         if (error instanceof z.ZodError) {
             return new Response(JSON.stringify({

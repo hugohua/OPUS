@@ -41,34 +41,32 @@ HTTP 401
 # ============================================
 # Test 2: 基础查询 (Cache-First)
 # ============================================
-# 注意: 此测试需要手动配置 session cookie
-#       取消注释并填入有效 token 后运行
-#
-# GET {{BASE_URL}}/api/wand/word?word=strategy
-# Cookie: next-auth.session-token={{SESSION_TOKEN}}
-#
-# HTTP 200
-# [Asserts]
-# jsonpath "$.vocab" exists
-# jsonpath "$.vocab.phonetic" exists
-# jsonpath "$.etymology" exists
-# jsonpath "$.ai_insight" == null
+# 需要配置: SESSION_TOKEN 环境变量
+GET {{BASE_URL}}/api/wand/word?word=strategy
+Cookie: next-auth.session-token={{SESSION_TOKEN}}
+
+HTTP 200
+[Asserts]
+jsonpath "$.vocab" exists
+jsonpath "$.vocab.phonetic" exists
+jsonpath "$.etymology" exists
+jsonpath "$.ai_insight" == null
 
 # ============================================
 # Test 3: 带上下文查询
 # ============================================
-# GET {{BASE_URL}}/api/wand/word?word=forecast&context_id=article_123
-# Cookie: next-auth.session-token={{SESSION_TOKEN}}
-#
-# HTTP 200
-# [Asserts]
-# jsonpath "$.vocab" exists
-# jsonpath "$.etymology" exists
+GET {{BASE_URL}}/api/wand/word?word=forecast&context_id=article_123
+Cookie: next-auth.session-token={{SESSION_TOKEN}}
+
+HTTP 200
+[Asserts]
+jsonpath "$.vocab" exists
+jsonpath "$.etymology" exists
 
 # ============================================
 # Test 4: 不存在的单词应返回 404
 # ============================================
-# GET {{BASE_URL}}/api/wand/word?word=nonexistentword12345
-# Cookie: next-auth.session-token={{SESSION_TOKEN}}
-#
-# HTTP 404
+GET {{BASE_URL}}/api/wand/word?word=nonexistentword12345
+Cookie: next-auth.session-token={{SESSION_TOKEN}}
+
+HTTP 404

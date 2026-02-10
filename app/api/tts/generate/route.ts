@@ -7,6 +7,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getTTSAudioCore } from '@/lib/tts/service';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('api:tts:generate');
 
 export async function POST(request: NextRequest) {
     try {
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error('[TTS API Route] Error:', error.message);
+        log.error({ error: error.message }, 'TTS generation failed');
         return NextResponse.json(
             { success: false, error: error.message },
             { status: 500 }

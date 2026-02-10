@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Redis from 'ioredis';
+import { auth } from '@/auth';
 
 // SSE Route: GET /api/admin/stream
 export async function GET(req: NextRequest) {
+    // [Security Fix] Auth 校验
+    const session = await auth();
+    if (!session?.user?.id) {
+        return new NextResponse('Unauthorized', { status: 401 });
+    }
+
     const encoder = new TextEncoder();
 
     // Create a dedicated Redis connection for subscription

@@ -75,6 +75,7 @@ Content-Type: application/json
     "voice": "Cherry"
 }
 
-HTTP 500
+HTTP 400
 [Asserts]
+jsonpath "$.success" == false
 jsonpath "$.error" exists

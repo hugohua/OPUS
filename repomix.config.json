@@ -1,0 +1,47 @@
+{
+    "output": {
+        "filePath": "opus-context.xml",
+        "style": "xml",
+        "removeComments": false,
+        "removeEmptyLines": true,
+        "topChars": 200000
+    },
+    "ignore": {
+        "useGitignore": true,
+        "customPatterns": [
+            "**/node_modules/**",
+            "**/.next/**",
+            "**/dist/**",
+            "**/coverage/**",
+            "**/*.lock",
+            "**/pnpm-lock.yaml",
+            "**/public/**",
+            "**/prisma/migrations/**",
+            "**/*.test.ts",
+            "**/*.spec.ts",
+            "components/ui/icon/**",
+            "scripts/**"
+        ]
+    },
+    "include": [
+        "app/**/*",
+        "components/**/*",
+        "lib/**/*",
+        "prisma/schema.prisma",
+        "actions/**/*",
+        "tailwind.config.ts",
+        "components.json",
+        "hooks/**/*",
+        "workers/**/*",
+        "types/**/*",
+        "middleware.ts",
+        "auth.ts",
+        "auth.config.ts",
+        "vitest.config.ts",
+        "docs/PRDV2.md",
+        "docs/TASK1.md",
+        "docs/TASK2.md",
+        "docs/TASK3.md",
+        "docs/PRD-L2-WEAVER-WAND.md"
+    ]
+}
