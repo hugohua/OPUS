@@ -21,6 +21,19 @@ import { auditInventoryEvent, auditSessionFallback, auditMixedModeDistribution }
 
 const log = createLogger('actions:get-next-drill');
 
+// 辅助: 从 reviewData 构建客户端 FSRS 预览元数据
+function buildFsrsCardMeta(reviewData: any) {
+    if (!reviewData) return undefined;
+    return {
+        stability: reviewData.stability || 0,
+        difficulty: reviewData.difficulty || 0,
+        reps: reviewData.reps || 0,
+        lapses: reviewData.lapses || 0,
+        state: reviewData.state || 0,
+        lastReview: reviewData.last_review_at?.toISOString?.(),
+    };
+}
+
 // --- Main Action ---
 export async function getNextDrillBatch(
     input: GetBriefingInput
@@ -128,6 +141,7 @@ export async function getNextDrillBatch(
                     ...drill.meta,
                     source,
                     vocabId: candidate.vocabId,
+                    fsrsCard: buildFsrsCardMeta(candidate.reviewData),
                 };
                 drills.push(drill);
             }
@@ -308,6 +322,7 @@ async function getMixedDrillBatch(
                 source,
                 vocabId: candidate.vocabId,
                 stability: candidate.reviewData?.stability || 0, // ✅ BLOCKER-02 修复: 传递 Stability 用于日志统计
+                fsrsCard: buildFsrsCardMeta(candidate.reviewData),
             };
             drills.push(drill);
         }

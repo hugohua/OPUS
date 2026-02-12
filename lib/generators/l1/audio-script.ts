@@ -59,44 +59,14 @@ Your goal is to generate "Eyes-Free" auditory drills that train "Audio Reflex".
 </output_requirements>
 
 <response_template>
-{
-  "drills": [
+[
     {
       "meta": {
-        "mode": "AUDIO",
-        "format": "chat",
-        "target_word": "{{word}}",
-        "level": 1
+        // ...
       },
-      "segments": [
-        {
-          "type": "text",
-          "content_markdown": "([Eyes-Free] Listen carefully)", 
-          "audio_text": "{{generated_script}}",
-          "dimension": "A"
-        },
-        {
-          "type": "interaction",
-          "dimension": "A",
-          "task": {
-            "style": "bubble_select",
-            "question_markdown": "{{listening_question}}",
-            "options": [
-              { "id": "A", "text": "Option 1", "is_correct": true },
-              { "id": "B", "text": "Option 2", "is_correct": false }
-            ],
-            "answer_key": "Option 1",
-            "explanation": {
-              "title": "👂 Auditory Check",
-              "correct_logic": "**Script**: {{script_transcript}}\n\n**Analysis**: {{logic_analysis}}",
-              "trap_analysis": ["Trap 1 explanation"]
-            }
-          }
-        }
-      ]
+      // ...
     }
-  ]
-}
+]
 </response_template>
 </system_prompt>
 `.trim();

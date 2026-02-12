@@ -37,12 +37,15 @@
 - **未来升级**: 在 Phase 2 (Nuance Mode) 中，这种随机选择将被向量搜索 (`pgvector`) 取代，以增加干扰性。
 
 ### 2.3 批量生成与 Prompt 工程
-- **位置**: `lib/prompts/drill.ts`
+- **位置**: `lib/generators/l0/syntax.ts`, `lib/generators/l0/blitz.ts`, `lib/generators/l0/phrase.ts` 等
 - **逻辑**: 我们从单卡片生成转向 **批量生成 (Batch Generation)**，以节省 Token 并提高一致性。
+- **输出协议**: **Array-First** — 所有生成器直接输出 JSON 数组 `[...]`，由 `safeParse` 自动封装为 `{ items: [...] }` 以适配 Zod Schema。
 - **约束**:
     - 严格的 S-V-O 结构 (Level 0)。
     - 句法标记 (`<s>`, `<v>`, `<o>`) 用于 UI 高亮。
     - 通过 Zod Schema 强制执行 JSON 输出。
+
+> **⚠️ 重要**: 新增生成器时，Prompt 模板中的 `<response_template>` 必须直接输出数组，禁止使用 `{ "drills": [...] }` 包裹。参见 `prompt-structure-v2.md` 第 6 节。
 
 ### 2.4 FSRS 智能路由 (Smart Dispatch)
 > 更新于 V2.1 (2026-01-30)
@@ -91,6 +94,7 @@
 - **脚本**: 验证了 Node.js 脚本的维护性 (如 `scripts/db-vocab-stats.ts`)。
 
 ## 6. 后续步骤
-- **Chunking Mode**: 实现 Phase 2 功能。
-- **Vector Search**: 升级 `getContextWords` 以使用语义相似度。
-- **Audio**: 集成 TTS (Dimension A)。
+- ~~**Chunking Mode**: 实现 Phase 2 功能。~~ ✅ 已完成 (`lib/generators/l1/chunking.ts`)
+- ~~**Vector Search**: 升级 `getContextWords` 以使用语义相似度。~~ ✅ 已完成 (`pgvector`)
+- ~~**Audio**: 集成 TTS (Dimension A)。~~ ✅ 已完成 (`lib/generators/l1/audio-script.ts`)
+- **Nuance Mode**: L2 语义辨析，已补全 Prompt (`lib/generators/l2/nuance.ts`)。

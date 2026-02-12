@@ -78,7 +78,19 @@ export interface BriefingPayload {
         // [New] Dynamic fields from Generative output
         translation_cn?: string;
         grammar_point?: string;
+        // [Fixed] Type Safety improvements
+        level?: number;
+        isRetry?: boolean;
+        definition_cn?: string; // For Definition Extractor
+        /** @internal 仅用于客户端 FSRS 预览计算 */
+        fsrsCard?: {
+            stability: number;
+            difficulty: number;
+            reps: number;
+            lapses: number;
+            state: number;  // 0=New, 1=Learning, 2=Review, 3=Relearning
+            lastReview?: string; // ISO 字符串
+        };
     };
     segments: BriefingSegment[];
 }
-

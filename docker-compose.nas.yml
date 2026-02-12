@@ -22,6 +22,27 @@ services:
       - opus-net
 
   # ----------------------------------------------------------------------------
+  # LLM API Manager (Antigravity)
+  # ----------------------------------------------------------------------------
+  antigravity-manager:
+    image: lbjlaq/antigravity-manager:latest
+    container_name: antigravity-manager-prod
+    restart: always
+    ports:
+      - "8045:8045"
+    environment:
+      - API_KEY=${ETL_API_KEY}
+      - WEB_PASSWORD=${ABV_WEB_PASSWORD:-}
+      - ABV_MAX_BODY_SIZE=104857600
+      - HTTP_PROXY=http://192.168.5.251:1888
+      - HTTPS_PROXY=http://192.168.5.251:1888
+      - NO_PROXY=localhost,127.0.0.1,opus-db,opus-redis,opus-web,opus-worker,opus-tts
+    volumes:
+      - ./data/antigravity:/root/.antigravity_tools
+    networks:
+      - opus-net
+
+  # ----------------------------------------------------------------------------
   # 核心业务 (Next.js) - 使用预构建镜像
   # ----------------------------------------------------------------------------
   opus-web:
@@ -32,8 +53,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
       - REDIS_URL=redis://opus-redis:6379
       - PYTHON_TTS_URL=http://opus-tts:8000
-      - AUTH_URL=${AUTH_URL:-http://192.168.5.23:30010}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://192.168.5.23:30010}
+      - ETL_BASE_URL=http://antigravity-manager:8045/v1
     env_file:
       - .env
     volumes:
@@ -45,6 +65,8 @@ services:
       opus-redis:
         condition: service_healthy
       opus-tts:
+        condition: service_started
+      antigravity-manager:
         condition: service_started
     networks:
       - opus-net
@@ -60,6 +82,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@opus-db:5432/opus
       - REDIS_URL=redis://opus-redis:6379
+      - ETL_BASE_URL=http://antigravity-manager:8045/v1
+      - ETL_HTTPS_PROXY=
     env_file:
       - .env
     depends_on:
@@ -67,6 +91,8 @@ services:
         condition: service_healthy
       opus-redis:
         condition: service_healthy
+      antigravity-manager:
+        condition: service_started
     networks:
       - opus-net
 

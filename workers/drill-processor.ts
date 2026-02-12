@@ -42,7 +42,7 @@ const SingleDrillSchema = z.object({
 });
 
 const BatchDrillOutputSchema = z.object({
-    drills: z.array(SingleDrillSchema),
+    items: z.array(SingleDrillSchema),
 });
 
 /**
@@ -218,7 +218,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                 // Map results back to candidates 
                 // Assumes LLM respects order. Drill output is array.
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     // Safety check index
                     if (idx < syntaxGroup.length) {
                         generatedDrills.push({
@@ -252,7 +252,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     prompt: p.user
                 });
 
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     if (idx < blitzGroup.length) {
                         generatedDrills.push({
                             drill,
@@ -318,7 +318,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     prompt: p.user
                 });
 
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     if (idx < llmCandidates.length) {
                         generatedDrills.push({
                             drill,
@@ -349,7 +349,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     prompt: p.user
                 });
 
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     if (idx < chunkingGroup.length) {
                         generatedDrills.push({
                             drill,
@@ -382,7 +382,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     prompt: p.user
                 });
 
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     if (idx < nuanceGroup.length) {
                         generatedDrills.push({
                             drill,
@@ -409,7 +409,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     prompt: p.user
                 });
 
-                result.drills.forEach((drill, idx) => {
+                result.items.forEach((drill, idx) => {
                     if (idx < audioGroup.length) {
                         generatedDrills.push({
                             drill,
@@ -480,7 +480,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                             prompt: p.user
                         });
 
-                        result.drills.forEach((drill, idx) => {
+                        result.items.forEach((drill, idx) => {
                             if (idx < inputs.length) {
                                 generatedDrills.push({ drill, candidate: inputs[idx].candidate, systemPrompt: p.system, userPrompt: p.user, provider });
                             }

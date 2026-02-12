@@ -68,32 +68,14 @@ Example: "Look at the word 'penalty' in the sentence. What usually helps avoid a
 </socratic_tutor>
 
 <response_template>
-{
-  "drills": [
+[
     {
       "meta": { "format": "email", "target_word": "compliance", "stage": 1 },
       "segments": [
-        {
-          "type": "text",
-          "content_markdown": "To avoid the penalty, we must ensure strict [___] with the new regulations.",
-          "audio_text": "To avoid the penalty, we must ensure strict blank with the new regulations."
-        },
-        {
-          "type": "interaction",
-          "dimension": "X",
-          "task": {
-            "style": "slot_machine",
-            "question_markdown": "Which word completes the sentence?",
-            "options": ["compliance", "alliance", "resistance", "distance"],
-            "answer_key": "compliance",
-            "explanation_markdown": "## Why 'compliance'?\\n'Compliance with regulations' is the standard collocation for following rules.",
-            "socraticHint": "The sentence mentions 'penalty' and 'regulations'. What action typically helps avoid penalties related to rules?"
-          }
-        }
+        // ... (rest of segments)
       ]
     }
-  ]
-}
+]
 </response_template>
 </system_prompt>
 `;
@@ -132,31 +114,14 @@ Point to specific words in Sentence 1 that signal the answer.
 </socratic_tutor>
 
 <response_template>
-{
-  "drills": [
+[
     {
       "meta": { "format": "email", "target_word": "strategy", "stage": 2 },
       "segments": [
-        {
-          "type": "text",
-          "content_markdown": "Subject: Q3 Marketing Review\\n\\nAfter analyzing last quarter's declining sales in the youth segment, we need to revise our [___] to better engage this demographic. The current approach is no longer effective."
-        },
-        {
-          "type": "interaction",
-          "dimension": "X",
-          "task": {
-            "style": "slot_machine",
-            "question_markdown": "Which word best completes the email?",
-            "options": ["strategy", "budget", "schedule", "inventory"],
-            "answer_key": "strategy",
-            "explanation_markdown": "## Why 'strategy'?\\n- 'Revise our strategy to engage' is semantically correct.\\n- Budget relates to money, not engagement approach.\\n- Schedule relates to timing, not marketing approach.",
-            "socraticHint": "The email mentions 'declining sales' and 'engage demographic'. What would you revise to change HOW you reach customers?"
-          }
-        }
+        // ...
       ]
     }
-  ]
-}
+]
 </response_template>
 </system_prompt>
 `;
@@ -191,31 +156,14 @@ Focus on subtle meaning differences, not just dictionary definitions.
 </socratic_tutor>
 
 <response_template>
-{
-  "drills": [
+[
     {
       "meta": { "format": "memo", "target_word": "strategy", "stage": 3 },
       "segments": [
-        {
-          "type": "text",
-          "content_markdown": "MEMO: Five-Year Growth Plan\\n\\nThe board has approved a comprehensive [___] to expand into Asian markets over the next five years."
-        },
-        {
-          "type": "interaction",
-          "dimension": "X",
-          "task": {
-            "style": "slot_machine",
-            "question_markdown": "Which word creates the most precise meaning?",
-            "options": ["strategy", "tactic", "approach", "method"],
-            "answer_key": "strategy",
-            "explanation_markdown": "## Nuance Analysis\\n- **strategy**: Long-term, comprehensive plan (matches 'five-year' and 'comprehensive')\\n- **tactic**: Short-term, specific action (❌ wrong scope)\\n- **approach**: General way of doing things (✓ grammatical but lacks precision)\\n- **method**: Specific procedure (❌ too operational)",
-            "socraticHint": "Notice the timeframe: 'five-year' and 'comprehensive'. Which word implies that level of long-term, big-picture planning?"
-          }
-        }
+        // ...
       ]
     }
-  ]
-}
+]
 </response_template>
 </system_prompt>
 `;
@@ -262,7 +210,7 @@ CRITICAL RULES:
 2. Use distractor_candidates or synonyms as options (mix with Target Word).
 3. Include "socraticHint" in each task for wrong-answer guidance.
 4. Shuffle option order (correct answer should not always be first).
-5. REQUIRED OUTPUT COUNT: You MUST generate exactly ${inputs.length} drills in the "drills" array.
+5. REQUIRED OUTPUT COUNT: You MUST generate exactly ${inputs.length} drills in a JSON Array.
 
 <input_words>
 ${JSON.stringify(inputData, null, 2)}

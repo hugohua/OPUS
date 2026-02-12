@@ -257,8 +257,7 @@ REGENERATE if:
 CRITICAL: Follow this JSON structure exactly.
 
 Example 1 (Verb):
-{
-  "drills": [
+[
     {
       "input_index": 0,
       "meta": {
@@ -286,12 +285,10 @@ Example 1 (Verb):
         }
       ]
     }
-  ]
-}
+]
 
 Example 2 (Adjective):
-{
-  "drills": [
+[
     {
       "input_index": 1,
       "meta": {
@@ -319,8 +316,7 @@ Example 2 (Adjective):
         }
       ]
     }
-  ]
-}
+]
 </response_template>
 
 <output_format>
@@ -354,7 +350,7 @@ ${JSON.stringify(inputs, null, 2)}
 `.trim();
 
   return {
-    system: L0_SYNTAX_SYSTEM_PROMPT + "\n\nIMPORTANT: Output an object with a 'drills' array containing the cards.",
+    system: L0_SYNTAX_SYSTEM_PROMPT + "\n\nIMPORTANT: Output a JSON Array containing the cards.",
     user: userPrompt
   };
 }

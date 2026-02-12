@@ -282,8 +282,16 @@ if [ "$DEPLOY_ONLY" = true ]; then
 else
     print_info "开始构建 Opus 服务镜像 (平台: linux/amd64)..."
 
+    # 自动转换代理地址 (127.0.0.1 -> host.docker.internal)
+    BUILD_ARGS=""
+    if [ -n "$PROXY_HOST" ]; then
+        DOCKER_PROXY_HOST=$(echo "$PROXY_HOST" | sed 's/127.0.0.1/host.docker.internal/g' | sed 's/localhost/host.docker.internal/g')
+        BUILD_ARGS="--build-arg http_proxy=$DOCKER_PROXY_HOST --build-arg https_proxy=$DOCKER_PROXY_HOST"
+        print_info "注入构建代理: $DOCKER_PROXY_HOST"
+    fi
+
     # 使用 DOCKER_DEFAULT_PLATFORM 构建适用于 NAS (x86_64) 的镜像
-    if DOCKER_BUILDKIT=1 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.prod.yml build; then
+    if DOCKER_BUILDKIT=1 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose -f docker-compose.prod.yml build $BUILD_ARGS; then
         print_info "所有镜像构建成功！"
     else
         print_error "镜像构建失败！"

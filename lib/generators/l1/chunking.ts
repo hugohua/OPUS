@@ -80,23 +80,6 @@ If a clear syntax trap is hard to make, set to null.
 <output_schema>
 Return strict JSON. NO markdown wrapping.
 
-{
-  "drills": [
-    {
-      "meta": {
-        "format": "memo",
-        "target_word": "string",
-        "translation_cn": "string",
-        "grammar_point": "string",
-        "complexity_level": "Medium | High"
-      },
-      "segments": [
-        {
-          "type": "header",
-          "content": "RE: Project Update"
-        },
-        {
-          "type": "text",
           "content_markdown": "string (The full context sentence)"
         },
         {
@@ -123,18 +106,17 @@ Return strict JSON. NO markdown wrapping.
 INPUT: { "targetWord": "negotiate", "context": "Contract renewal" }
 
 OUTPUT:
-{
-  "drills": [
-    {
-      "meta": {
-        "format": "memo",
-        "target_word": "negotiate",
-        "translation_cn": "虽然最初的条款不利，但我们成功通过谈判达成了一个让双方都满意的折中方案。",
-        "grammar_point": "Adverbial Clause of Concession (Although)",
-        "complexity_level": "Medium"
-      },
-      "segments": [
-        {
+[
+  {
+    "meta": {
+      "format": "memo",
+      "target_word": "negotiate",
+      "translation_cn": "虽然最初的条款不利，但我们成功通过谈判达成了一个让双方都满意的折中方案。",
+      "grammar_point": "Adverbial Clause of Concession (Although)",
+      "complexity_level": "Medium"
+    },
+    "segments": [
+      {
           "type": "chunking_drill",
           "full_sentence": "Although the initial terms were unfavorable, we successfully negotiated a compromise that satisfied both parties.",
           "chunks": [

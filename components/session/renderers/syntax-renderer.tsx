@@ -1,30 +1,28 @@
 /**
- * SyntaxRenderer - SYNTAX/PHRASE 模式渲染器
+ * SyntaxRenderer - Focus Shell Implementation
  * 
- * 功能：
- *   - 渲染 EditorialDrill (SYNTAX) 或 PhraseCard (PHRASE)
- *   - 处理选项选择和状态显示
- *   - 统一的 Footer 交互
+ * Replaces the old UniversalCard implementation with the new Focus Shell & Control Deck.
  */
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BriefingPayload } from '@/types/briefing';
 import { EditorialDrill } from '@/components/briefing/editorial-drill';
 import { PhraseCard } from '@/components/briefing/phrase-card';
-import { PhraseFooter } from '@/components/briefing/phrase-footer';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { FocusShell, FocusShellVariant } from '@/components/drill/focus-shell';
+import { ControlDeck, ControlDeckMode } from '@/components/drill/control-deck';
+import { previewIntervals } from '@/lib/client/fsrs-preview';
+import { useRouter } from 'next/navigation';
 
-// --- 动画常量 ---
-const CARD_ANIMATION = {
-    initial: { opacity: 0, scale: 0.95, y: 10 },
+// --- Animations ---
+// Using strict bezier curve for type safety
+const STAGE_ANIMATION = {
+    initial: { opacity: 0, scale: 0.98, y: 10 },
     animate: { opacity: 1, scale: 1, y: 0 },
-    exit: { opacity: 0, scale: 1.05, y: -10 },
-    transition: { duration: 0.4 }
+    exit: { opacity: 0, scale: 1.02, y: -10 },
+    transition: { duration: 0.4, ease: [0.42, 0, 0.58, 1] as [number, number, number, number] }
 };
 
 // --- Types ---
@@ -37,7 +35,8 @@ export interface SyntaxRendererProps {
     onNext: () => void;
     onComplete: (result: boolean | number) => void;
     setStatus: (status: 'idle' | 'correct' | 'wrong') => void;
-    variant?: 'violet' | 'emerald' | 'amber' | 'rose' | 'blue' | 'pink';
+    variant?: FocusShellVariant; // [Fixed] Explicit type
+    totalDrills?: number;
 }
 
 export function SyntaxRenderer({
@@ -46,208 +45,167 @@ export function SyntaxRenderer({
     status,
     selectedOption,
     onOptionSelect,
-    onNext,
     onComplete,
     setStatus,
-    variant = 'emerald',
+    variant = 'L0',
+    totalDrills = 20 // Default batch size
 }: SyntaxRendererProps) {
+    const router = useRouter();
+
+    // FSRS 预览间隔 (仅 Phrase/Grade 模式使用)
+    const fsrsKey = drill.meta?.fsrsCard
+        ? `${drill.meta.fsrsCard.stability}_${drill.meta.fsrsCard.difficulty}_${drill.meta.fsrsCard.reps}_${drill.meta.fsrsCard.state}`
+        : 'new';
+    const gradeIntervals = useMemo(() =>
+        previewIntervals(drill.meta?.fsrsCard ?? undefined),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [fsrsKey]
+    );
+
+    // Data Extraction
     const textSegment = drill.segments.find(s => s.type === 'text');
     const interactSegment = drill.segments.find(s => s.type === 'interaction');
 
-    // Check if bubble_select style (Phrase Mode UI)
-    const interactionStyle = (interactSegment?.task as any)?.style;
+    // [Fixed] Safer typing with optional chain
+    const task = interactSegment?.task;
+    const interactionStyle = task?.style;
     const isPhraseMode = interactionStyle === 'bubble_select';
 
-    // Handle explanation markdown
-    const task = interactSegment?.task as any;
-    let explanationMarkdown = task?.explanation_markdown || "";
+    // Helper: Progress Calculation
+    const progress = Math.min(100, Math.max(0, ((index + 1) / totalDrills) * 100));
 
+    // Helper: Logic Extractor (Reused logic)
+    let explanationMarkdown = task?.explanation_markdown || "";
     if (!explanationMarkdown && task?.explanation) {
         const e = task.explanation;
         const traps = Array.isArray(e.trap_analysis) ? e.trap_analysis.join('\n') : "";
         explanationMarkdown = `## ${e.title || "Note"}\n\n${e.correct_logic || e.content || ""}\n\n${traps}`;
     }
 
-    // Extract definition
+    // Helper: Definition Extractor
     const getDefinition = () => {
-        if (drill.meta && (drill.meta as any).definition_cn) {
-            return (drill.meta as any).definition_cn;
+        // [Fixed] Type safe access
+        if (drill.meta?.definition_cn) {
+            return drill.meta.definition_cn;
         }
         if (!interactSegment?.task) return "";
-        const task = interactSegment.task as any;
 
-        if (task.explanation && typeof task.explanation === 'object') {
-            if (task.explanation.definition_cn) return task.explanation.definition_cn;
-        }
+        const t = interactSegment.task;
+        if (t.explanation?.definition_cn) return t.explanation.definition_cn;
 
         if (explanationMarkdown) {
-            const lines = explanationMarkdown.split('\n');
-            const cleanLines = lines.filter((l: string) =>
-                l.trim().length > 0 &&
-                !l.startsWith('##') &&
-                !l.startsWith('**')
-            );
-            if (cleanLines.length > 0) return cleanLines[0];
+            const line = explanationMarkdown.split('\n').find((l: string) => l.trim().length > 0 && !l.startsWith('##'));
+            return line || "Definition not available";
         }
-
         return "Definition not available";
     };
 
     const wordDefinition = getDefinition();
     const posMatch = wordDefinition.match(/^\[(.*?)\]/);
-    const partOfSpeech = posMatch ? posMatch[1] : "";
     const cleanDefinition = posMatch ? wordDefinition.replace(/^\[.*?\]\s*/, "") : wordDefinition;
 
-    const handleNextDrill = () => {
-        const answerKey = interactSegment?.task?.answer_key;
-        if (!answerKey) return;
-        const isCorrect = selectedOption === answerKey;
-        onComplete(isCorrect);
+    // --- Handlers ---
+
+    const handleDeckAction = (action: string) => {
+        // PHRASE MODE (Flashcard Logic)
+        if (isPhraseMode) {
+            if (action === 'reveal') {
+                setStatus('correct'); // Reveal state
+            } else if (['1', '2', '3', '4'].includes(action)) {
+                // Grade -> Complete
+                const gradeMap: any = { '1': 1, '2': 2, '3': 3, '4': 4 };
+                onComplete(gradeMap[action]);
+            }
+        }
+        // SYNTAX MODE (Multiple Choice Logic)
+        else {
+            if (['1', '2', '3', '4'].includes(action)) {
+                // Select Option Logic
+                const options = task?.options || [];
+                const idx = parseInt(action) - 1;
+
+                // Safety check
+                if (options && options[idx]) {
+                    const optText = typeof options[idx] === 'string' ? options[idx] : options[idx].text;
+                    onOptionSelect(optText);
+                }
+            } else if (action === 'continue') {
+                // Move to next drill
+                const isCorrect = selectedOption === task?.answer_key;
+                onComplete(isCorrect);
+            }
+        }
     };
 
-    if (!textSegment || !interactSegment) {
-        return <div className="text-center text-muted-foreground">Loading...</div>;
+    // Determine Deck Mode
+    let deckMode: ControlDeckMode = 'reveal';
+    if (isPhraseMode) {
+        deckMode = status === 'idle' ? 'reveal' : 'grade';
+    } else {
+        // Syntax Mode: Options (Idle) -> Continue (Result)
+        deckMode = status === 'idle' ? 'options' : 'continue';
+    }
+
+    // Determine Shell Variant
+    // Use prop or fallback to L0
+    const shellVariant = variant || 'L0';
+    const label = `${shellVariant} • ${isPhraseMode ? 'PHRASE' : 'SYNTAX'}`;
+
+    if (!textSegment || !interactSegment) return null;
+
+    // Prep Labels for Options Mode
+    const optionLabels: any = {};
+    if (deckMode === 'options' && task?.options) {
+        task.options.forEach((opt: any, i: number) => {
+            optionLabels[String(i + 1)] = typeof opt === 'string' ? opt : opt.text;
+        });
     }
 
     return (
-        <div className="w-full">
-            {isPhraseMode ? (
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={index}
-                        {...CARD_ANIMATION}
-                        className="w-full flex-1 flex flex-col items-center justify-center"
-                    >
+        <FocusShell
+            variant={shellVariant}
+            progress={progress}
+            onExit={() => router.push('/dashboard')}
+            label={label}
+            footer={
+                <ControlDeck
+                    mode={deckMode}
+                    onAction={handleDeckAction}
+                    labels={deckMode === 'options' ? optionLabels : {}}
+                    gradeIntervals={deckMode === 'grade' ? gradeIntervals : undefined}
+                />
+            }
+        >
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={index}
+                    {...STAGE_ANIMATION}
+                    className="w-full flex-1 flex flex-col items-center justify-center py-4"
+                >
+                    {isPhraseMode ? (
                         <PhraseCard
                             phraseMarkdown={textSegment.content_markdown || ""}
-                            translation={(textSegment as any).translation_cn || ""}
+                            translation={textSegment.translation_cn || ""}
                             wordDefinition={cleanDefinition}
                             status={status as any}
-                            phonetic={textSegment.phonetic || explanationMarkdown?.match(/\[(.*?)\]/)?.[0] || ""}
-                            partOfSpeech={partOfSpeech || ""}
+                            phonetic={textSegment.phonetic || ""}
+                            partOfSpeech={posMatch ? posMatch[1] : ""}
                             targetWord={drill.meta?.target_word || ""}
-                            etymology={(drill.meta as any).etymology}
+                            etymology={drill.meta?.etymology}
                         />
-                    </motion.div>
-                </AnimatePresence>
-            ) : (
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={index}
-                        {...CARD_ANIMATION}
-                        className="w-full flex-1 flex flex-col items-center justify-center"
-                    >
+                    ) : (
                         <EditorialDrill
                             content={textSegment.content_markdown || ""}
-                            questionMarkdown={(interactSegment.task as any)?.question_markdown}
-                            translation={(textSegment as any).translation_cn}
+                            questionMarkdown={task?.question_markdown}
+                            translation={textSegment.translation_cn}
                             explanation={explanationMarkdown}
-                            answer={interactSegment.task?.answer_key || ""}
+                            answer={task?.answer_key || ""}
                             status={status}
                             selected={selectedOption}
                         />
-                        {status === "idle" && (
-                            <p className="mt-8 text-center font-mono text-[10px] text-zinc-500 uppercase tracking-widest animate-pulse">
-                                Select the best option
-                            </p>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
-            )}
-        </div>
-    );
-}
-
-// --- Footer Component ---
-export interface SyntaxFooterProps {
-    drill: BriefingPayload;
-    status: 'idle' | 'correct' | 'wrong';
-    onOptionSelect: (option: string) => void;
-    onNext: () => void;
-    onComplete: (result: boolean | number) => void;
-    setStatus: (status: 'idle' | 'correct' | 'wrong') => void;
-    selectedOption: string | null;
-    variant?: 'violet' | 'emerald' | 'amber' | 'rose' | 'blue' | 'pink';
-}
-
-export function SyntaxFooter({
-    drill,
-    status,
-    onOptionSelect,
-    onNext,
-    onComplete,
-    setStatus,
-    selectedOption,
-    variant = 'emerald',
-}: SyntaxFooterProps) {
-    const interactSegment = drill.segments.find(s => s.type === 'interaction');
-    const interactionStyle = (interactSegment?.task as any)?.style;
-    const isPhraseMode = interactionStyle === 'bubble_select';
-
-    const handleNextDrill = () => {
-        const answerKey = interactSegment?.task?.answer_key;
-        if (!answerKey) return;
-        const isCorrect = selectedOption === answerKey;
-        onComplete(isCorrect);
-    };
-
-    if (isPhraseMode) {
-        return (
-            <PhraseFooter
-                status={status === 'idle' ? 'idle' : 'revealed'}
-                onReveal={() => setStatus('correct')}
-                onGrade={(g) => onComplete(g)}
-            />
-        );
-    }
-
-    return (
-        <div className="w-full flex flex-col items-center justify-end">
-            {status === "idle" && (
-                <p className="text-center text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-6">
-                    Select the best option
-                </p>
-            )}
-
-            <div className="w-full grid grid-cols-2 gap-4 h-48">
-                {status === "idle" ? (
-                    interactSegment?.task?.options?.map((opt: any, idx: number) => {
-                        const indexLabel = String.fromCharCode(65 + idx);
-                        const optionText = typeof opt === 'string' ? opt : opt.text;
-                        const optionKey = typeof opt === 'string' ? opt : opt.text;
-
-                        return (
-                            <button
-                                key={idx}
-                                onClick={() => onOptionSelect(optionKey)}
-                                className="group relative h-full w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] shadow-sm hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 active:scale-[0.96] transition-all flex flex-col items-center justify-center gap-3"
-                            >
-                                <span className="w-8 h-8 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-xs font-mono text-zinc-400 flex items-center justify-center group-hover:border-emerald-200 group-hover:text-emerald-600 transition-colors">
-                                    {indexLabel}
-                                </span>
-                                <span className="font-serif text-xl md:text-2xl font-medium text-zinc-800 dark:text-zinc-200">
-                                    {optionText}
-                                </span>
-                            </button>
-                        );
-                    })
-                ) : (
-                    <div className="col-span-2 flex items-center justify-center h-full">
-                        <Button
-                            onClick={handleNextDrill}
-                            className={cn(
-                                "w-full h-20 text-xl font-semibold text-white shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300 rounded-[2rem]",
-                                variant === 'violet' ? "bg-violet-600 hover:bg-violet-500 shadow-violet-900/20" :
-                                    variant === 'emerald' ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20" :
-                                        variant === 'blue' ? "bg-blue-600 hover:bg-blue-500 shadow-blue-900/20" :
-                                            "bg-zinc-900 text-white hover:bg-zinc-800"
-                            )}
-                        >
-                            Next Challenge <ArrowLeft className="w-6 h-6 ml-2 rotate-180" />
-                        </Button>
-                    </div>
-                )}
-            </div>
-        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+        </FocusShell>
     );
 }

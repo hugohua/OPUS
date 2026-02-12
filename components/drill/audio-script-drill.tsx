@@ -1,13 +1,23 @@
+/**
+ * AudioScriptDrill - Focus Shell Implementation
+ * 
+ * Major Refactor:
+ * - Uses FocusShell for layout (L1 Cyan).
+ * - Moves Options to ControlDeck (Footer).
+ * - transforms Feedback Overlay into Inline Stage content.
+ */
+
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { BriefingPayload, TextSegment, InteractionSegment } from "@/types/briefing";
 import paper from "canvas-confetti";
-import { RotateCcw, CheckCircle, XCircle, HelpCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { GradingHelp } from "./grading-help";
+import { FocusShell } from "@/components/drill/focus-shell";
+import { ControlDeck, ControlDeckMode } from "@/components/drill/control-deck";
+import { motion, AnimatePresence } from "framer-motion";
 import { boldToHtml } from "@/lib/utils/markdown";
+import { useRouter } from "next/navigation";
 
 interface AudioScriptDrillProps {
     drill: BriefingPayload;
@@ -19,26 +29,9 @@ interface AudioScriptDrillProps {
     total?: number;
 }
 
-// 音频任务的类型定义
-interface AudioTask {
-    style: "swipe_card" | "bubble_select";
-    question_markdown: string;
-    options: (string | { id: string; text: string })[];
-    answer_key: string;
-    explanation?: {
-        correct_logic?: string;
-        definition_cn?: string;
-        phonetic?: string;
-        [key: string]: any;
-    };
-    [key: string]: any;
-}
-
-// 类型守卫：安全提取 AudioTask
-function isAudioTask(task: any): task is AudioTask {
-    return task &&
-        typeof task.answer_key === 'string' &&
-        Array.isArray(task.options);
+// Type Guard
+function isAudioTask(task: any): boolean {
+    return task && typeof task.answer_key === 'string' && Array.isArray(task.options);
 }
 
 export function AudioScriptDrill({
@@ -49,233 +42,189 @@ export function AudioScriptDrill({
     index = 1,
     total = 20
 }: AudioScriptDrillProps) {
+    const router = useRouter();
     const [status, setStatus] = useState<"listening" | "revealed">("listening");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
-    // 提取音频脚本（优先使用 audio_text，并移除 XML 标签）
+    // Data Extraction
     const textSegment = drill.segments.find((s): s is TextSegment => s.type === 'text');
     let rawScript = textSegment?.audio_text || textSegment?.content_markdown || "";
     const segment = drill.segments.find((s): s is InteractionSegment => s.type === 'interaction');
-
-    // 安全提取任务数据
     const task = segment?.task && isAudioTask(segment.task) ? segment.task : null;
-    if (!task) {
-        console.error('AudioScriptDrill: 无效的任务数据');
-        return <div className="p-4 text-red-500">数据加载失败</div>;
-    }
-
-    const answerKey = task.answer_key;
-    const options = task.options || [];
 
     useEffect(() => {
         setStatus("listening");
         setSelectedOption(null);
     }, [drill]);
 
-    // 统一的字符串标准化逻辑
+    if (!task) return <div className="p-4 text-rose-500">Invalid Task Data</div>;
+
+    const answerKey = task.answer_key;
+    const options = task.options || [];
+
+    // Normalization
     const normalize = (s: string) => s?.trim().toLowerCase() || "";
 
-    const handleSelect = (option: string) => {
-        if (status === "revealed") return;
+    // Handlers
+    const handleDeckAction = (action: string) => {
+        if (status === 'listening') {
+            // Options Mode: 1, 2, 3, 4
+            if (['1', '2', '3', '4'].includes(action)) {
+                const idx = parseInt(action) - 1;
+                const opt = options[idx];
+                if (opt) {
+                    const optText = typeof opt === 'string' ? opt : opt.text;
+                    const optKey = typeof opt === 'string' ? opt : opt.id || opt.text; // Use ID if available, else Text
 
-        setSelectedOption(option);
-        setStatus("revealed");
+                    setSelectedOption(optKey);
+                    setStatus('revealed');
 
-        const isCorrect = normalize(option) === normalize(answerKey);
-        if (isCorrect) {
-            paper({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+                    // Confetti if correct
+                    if (normalize(optKey) === normalize(answerKey)) {
+                        paper({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    }
+                }
+            } else if (action === 'reveal') {
+                // Fallback or "Don't Know" -> Reveal directly? 
+                // Current ControlDeck logic for 'options' mode doesn't show Reveal button.
+                // Maybe mapped to Space? Space -> Reveal?
+                // Let's allow Space to Reveal (Give Up)
+                setSelectedOption('GIVE_UP');
+                setStatus('revealed');
+            }
+        } else {
+            // Grade Mode
+            if (['1', '2', '3', '4'].includes(action)) {
+                onGrade(parseInt(action) as any);
+            }
         }
     };
 
-    const targetWord = drill.meta.target_word;
+    // Derived State
+    const deckMode: ControlDeckMode = status === 'listening' ? 'options' : 'grade';
+    const progress = ((index) / total) * 100;
+
+    // Process Script & Analysis
+    const finalScript = rawScript.replace(/<[^>]+>/g, '');
     const explanation = task?.explanation;
-
-    // 提取音标和分析内容
-    const phonetic = textSegment?.phonetic || explanation?.phonetic || "";
-    const finalScript = rawScript.replace(/<[^>]+>/g, ''); // 移除 XML 标签
     const finalAnalysis = explanation?.correct_logic || "";
+    const phonetic = textSegment?.phonetic || explanation?.phonetic || "";
+    const getDefinition = () => explanation?.definition_cn || (drill.meta as any).definition_cn || "";
 
-    // 获取定义的辅助函数
-    const getDefinition = () => {
-        return explanation?.definition_cn || (drill.meta as any).definition_cn || "";
-    };
+    // Prepare Option Labels for ControlDeck
+    const optionLabels: any = {};
+    options.forEach((opt: any, i: number) => {
+        optionLabels[String(i + 1)] = typeof opt === 'string' ? opt : opt.text;
+    });
 
     return (
-        <div className="relative w-full h-screen bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 flex flex-col items-center justify-between p-6">
-            {/* 进度条 */}
-            <div className="w-full max-w-sm">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Audio Training</span>
-                    <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">{index}/{total}</span>
-                </div>
-                <div className="h-1 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-600 transition-all duration-300"
-                        style={{ width: `${(index / total) * 100}%` }}
-                    />
-                </div>
-            </div>
+        <FocusShell
+            variant="L1" // Cyan for Listening
+            label="L1 • LISTENING"
+            progress={progress}
+            onExit={() => router.push('/dashboard')}
+            footer={
+                <ControlDeck
+                    mode={deckMode}
+                    onAction={handleDeckAction}
+                    labels={deckMode === 'options' ? optionLabels : {}}
+                />
+            }
+        >
+            <div className="w-full flex-1 flex flex-col items-center justify-center gap-8 py-4">
 
-            {/* 音频波形可视化 */}
-            <div className="flex items-center gap-1 h-24 opacity-80 cursor-pointer" onClick={onTogglePlay}>
-                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-8", isPlaying && "animate-pulse")}></div>
-                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-16", isPlaying && "animate-pulse")}></div>
-                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-12", isPlaying && "animate-pulse")}></div>
-                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-20", isPlaying && "animate-pulse")}></div>
-                <div className={cn("w-1.5 bg-cyan-600 dark:bg-cyan-500 rounded-full h-10", isPlaying && "animate-pulse")}></div>
-            </div>
-
-            {/* 问题提示 */}
-            <div className="text-center mb-8">
-                <p className="text-sm font-mono text-zinc-400 dark:text-zinc-500 mb-2 uppercase tracking-wider">What did you hear?</p>
-            </div>
-
-            {/* 选项网格 */}
-            <div className="w-full max-w-sm grid grid-cols-2 gap-3 mb-4">
-                {options.map((opt, idx) => {
-                    const optionText = typeof opt === 'string' ? opt : opt.text;
-                    const optionKey = typeof opt === 'string' ? opt : opt.text;
-                    const isSelected = selectedOption === optionKey;
-                    const isCorrectOption = normalize(optionKey) === normalize(answerKey);
-                    const showResult = status === "revealed";
-
-                    return (
-                        <button
-                            key={idx}
-                            onClick={() => handleSelect(optionKey)}
-                            disabled={status === "revealed"}
+                {/* 1. Visualizer (Always Visible, maybe shrinks on reveal) */}
+                <div
+                    onClick={onTogglePlay}
+                    className="flex items-center gap-1.5 h-24 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <motion.div
+                            key={i}
+                            animate={isPlaying ? { height: [24, 48 + Math.random() * 32, 24] } : { height: 24 }}
+                            transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.1 }}
                             className={cn(
-                                "p-4 rounded-2xl border-2 transition-all text-lg font-medium",
-                                !showResult && !isSelected && "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-cyan-400 dark:hover:border-cyan-500",
-                                !showResult && isSelected && "bg-cyan-50 dark:bg-cyan-950/30 border-cyan-400 dark:border-cyan-500",
-                                showResult && isSelected && isCorrectOption && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-700 dark:text-emerald-400",
-                                showResult && isSelected && !isCorrectOption && "bg-rose-50 dark:bg-rose-950/30 border-rose-500 text-rose-700 dark:text-rose-400",
-                                showResult && !isSelected && isCorrectOption && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-500 text-emerald-700 dark:text-emerald-400 opac ity-60"
+                                "w-2 rounded-full",
+                                status === 'revealed' ? "bg-zinc-300 dark:bg-zinc-700" : "bg-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.5)]"
                             )}
+                        />
+                    ))}
+                </div>
+
+                {/* 2. Content Area (Switch between Question and Script) */}
+                <AnimatePresence mode="wait">
+                    {status === 'listening' ? (
+                        <motion.div
+                            key="question"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="text-center space-y-4 max-w-sm"
                         >
-                            {optionText}
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* 答案揭示层 */}
-            {status === "revealed" && (
-                <div className="absolute inset-0 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl flex flex-col pt-24 pb-12 px-6 animate-in fade-in duration-300">
-                    <div className="flex-1 flex flex-col items-center text-center">
-                        {/* 结果反馈徽章 */}
-                        {(() => {
-                            const isGivenUp = selectedOption === 'GIVE_UP';
-                            const isCorrect = !isGivenUp && normalize(selectedOption || "") === normalize(answerKey || "");
-
-                            return (
-                                <div className={cn(
-                                    "mb-6 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase shadow-sm flex items-center gap-2 animate-in zoom-in-50 duration-300",
-                                    isCorrect ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" :
-                                        isGivenUp ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" :
-                                            "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
-                                )}>
-                                    {isCorrect ? (
-                                        <>
-                                            <CheckCircle className="w-4 h-4" />
-                                            <span>Correct</span>
-                                        </>
-                                    ) : isGivenUp ? (
-                                        <>
-                                            <HelpCircle className="w-4 h-4" />
-                                            <span>Missed</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <XCircle className="w-4 h-4" />
-                                            <span>Incorrect</span>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })()}
-
-                        <div className="flex items-center gap-1 h-8 mb-8 opacity-50 cursor-pointer" onClick={onTogglePlay}>
-                            <div className={cn("w-1 bg-cyan-600 dark:bg-cyan-500 rounded-full h-4", isPlaying && "animate-pulse")}></div>
-                            <div className={cn("w-1 bg-cyan-600 dark:bg-cyan-500 rounded-full h-8", isPlaying && "animate-pulse")}></div>
-                            <div className={cn("w-1 bg-cyan-600 dark:bg-cyan-500 rounded-full h-5", isPlaying && "animate-pulse")}></div>
-                        </div>
-
-                        <h1 className="text-4xl md:text-5xl font-sans font-bold text-zinc-900 dark:text-zinc-50 mb-2 tracking-tight">{targetWord}</h1>
-                        <p className="text-xl font-mono text-zinc-400 dark:text-zinc-500 mb-8">{phonetic || ""}</p>
-
-                        <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 max-w-sm w-full text-left space-y-4">
-                            {/* 脚本区域 */}
-                            <div>
-                                <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Script</span>
-                                <div className="text-lg text-zinc-700 dark:text-zinc-200 leading-relaxed font-serif whitespace-pre-wrap"
-                                    dangerouslySetInnerHTML={{ __html: boldToHtml(finalScript, "text-cyan-600 dark:text-cyan-400 font-bold") }}
-                                />
+                            <p className="font-mono text-xs text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                                Listen & Identify
+                            </p>
+                            <h2 className="font-serif text-2xl text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                                What did you hear?
+                            </h2>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="script"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="w-full max-w-md space-y-6"
+                        >
+                            {/* Result Badge */}
+                            <div className="flex justify-center">
+                                {(() => {
+                                    const isGivenUp = selectedOption === 'GIVE_UP';
+                                    const isCorrect = !isGivenUp && normalize(selectedOption || "") === normalize(answerKey);
+                                    return (
+                                        <div className={cn(
+                                            "px-4 py-1.5 rounded-full text-xs font-bold font-mono tracking-wider uppercase border",
+                                            isCorrect ? "bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400" :
+                                                "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400"
+                                        )}>
+                                            {isCorrect ? "Correct" : isGivenUp ? "Missed" : "Incorrect"}
+                                        </div>
+                                    )
+                                })()}
                             </div>
 
-                            {/* 分析区域（如果存在）*/}
-                            {finalAnalysis && (
-                                <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
-                                    <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-500 uppercase tracking-wider block mb-1">Analysis</span>
-                                    <div className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans"
-                                        dangerouslySetInnerHTML={{ __html: boldToHtml(finalAnalysis, "text-cyan-600 dark:text-cyan-400 font-bold") }}
-                                    />
+                            {/* Script Box */}
+                            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Target</span>
+                                            <span className="text-xs font-serif italic text-zinc-500">{phonetic}</span>
+                                        </div>
+                                        <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{drill.meta.target_word}</p>
+                                    </div>
+
+                                    <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
+
+                                    <div>
+                                        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Context</span>
+                                        <div
+                                            className="text-base text-zinc-600 dark:text-zinc-300 font-serif leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: boldToHtml(finalScript, "text-cyan-600 dark:text-cyan-400 font-bold") }}
+                                        />
+                                    </div>
+
+                                    {finalAnalysis && (
+                                        <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans mt-2">
+                                            <span className="font-bold text-cyan-600 text-xs uppercase mr-2">Logic</span>
+                                            {finalAnalysis}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-
-                            {/* 定义区域（如果存在）*/}
-                            {getDefinition() && (
-                                <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
-                                    <span className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block mb-1">Meaning</span>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                        {getDefinition()}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 评分按钮 - FSRS */}
-                    <div className="w-full flex justify-between items-center px-1 mb-3 animate-in slide-in-from-bottom-4 duration-500 delay-100">
-                        <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-70">Rate Accuracy</span>
-                        <GradingHelp />
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-3 mt-auto">
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={() => onGrade(1)} variant="outline" className="h-14 bg-zinc-50 dark:bg-zinc-900 border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700 dark:hover:text-rose-400 border-2">
-                                <RotateCcw className="w-5 h-5" />
-                            </Button>
-                            <span className="text-[10px] text-center font-mono text-zinc-400 dark:text-zinc-500 uppercase">Again</span>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={() => onGrade(2)} variant="outline" className="h-14 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-2">
-                                <span className="font-bold">2</span>
-                            </Button>
-                            <span className="text-[10px] text-center font-mono text-zinc-400 dark:text-zinc-500 uppercase">Hard</span>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={() => onGrade(3)} variant="outline" className="h-14 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-2">
-                                <span className="font-bold">3</span>
-                            </Button>
-                            <span className="text-[10px] text-center font-mono text-zinc-400 dark:text-zinc-500 uppercase">Good</span>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Button onClick={() => onGrade(4)} variant="outline" className="h-14 bg-zinc-50 dark:bg-zinc-900 border-cyan-200 dark:border-cyan-900/30 text-cyan-600 dark:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 hover:text-cyan-700 dark:hover:text-cyan-400 border-2">
-                                <span className="font-bold">4</span>
-                            </Button>
-                            <span className="text-[10px] text-center font-mono text-zinc-400 dark:text-zinc-500 uppercase">Easy</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </FocusShell>
     );
 }

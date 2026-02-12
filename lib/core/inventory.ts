@@ -2,7 +2,6 @@ import { redis as connection } from '@/lib/queue/connection';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { createLogger } from '@/lib/logger';
 import { inventoryQueue } from '@/lib/queue';
-import { auditInventoryEvent } from '@/lib/services/audit-service';
 
 const log = createLogger('lib:inventory');
 
@@ -25,20 +24,26 @@ export const inventory = {
      * 将生成的 Drill 推入库存
      */
     async pushDrill(userId: string, mode: string, vocabId: number | string, drill: BriefingPayload) {
-        // [Fix] Capacity Guard - Prevent Overflow
         const stats: any = await this.getInventoryStats(userId);
         const currentCount = stats[mode] || 0;
-        const capacity = await this.getCapacity(mode);
+        const hardCap = await this.getHardCapacity(mode);
 
-        if (currentCount >= capacity) {
-            log.warn({ userId, mode, vocabId, currentCount, capacity }, '⛔ pushDrill blocked - inventory full');
-            auditInventoryEvent(userId, 'ADD', mode, { currentCount, capacity, source: 'auto' });
-            return; // Early exit
+        // Hard Cap: 绝对上限，极端竞态才触发
+        if (currentCount >= hardCap) {
+            log.warn({ userId, mode, vocabId, currentCount, hardCap },
+                '⛔ Hard cap reached - discarding');
+            return;
         }
 
-        const key = keys.drillList(userId, mode, vocabId);
+        // Soft Cap: 溢出容忍，接受但打日志（竞态正常现象）
+        const softCap = await this.getCapacity(mode);
+        if (currentCount >= softCap) {
+            log.info({ userId, mode, vocabId, currentCount, softCap, hardCap },
+                '📦 Overflow accepted (race condition)');
+        }
 
-        // Multi-exec for atomicity
+        // 正常入库
+        const key = keys.drillList(userId, mode, vocabId);
         const pipeline = connection.pipeline();
         pipeline.rpush(key, JSON.stringify(drill));
         pipeline.hincrby(keys.stats(userId), mode, 1);
@@ -303,9 +308,9 @@ export const inventory = {
     },
 
     /**
-     * 检查库存是否已满 (Single Source of Truth)
-     * @param userId
-     * @param mode
+     * 检查库存是否已满 (基于 Soft Cap)
+     * 用于控制是否触发新的 LLM 生成，不控制入库。
+     * 入库由 pushDrill 的 Hard Cap 控制。
      */
     async isFull(userId: string, mode: string): Promise<boolean> {
         const stats: any = await this.getInventoryStats(userId);
@@ -315,12 +320,23 @@ export const inventory = {
     },
 
     /**
-     * 获取最大容量 (Drills)
+     * 获取 Soft Cap (正常容量上限)
+     * 控制 isFull() 判断，决定是否触发新生成
      */
     async getCapacity(mode: string): Promise<number> {
         const { CACHE_LIMIT_MAP, DRILLS_PER_BATCH } = await import('@/lib/drill-cache');
-        // Max Limit = Limit (Batches) * DRILLS_PER_BATCH 
+        // Soft Cap = Limit (Batches) * DRILLS_PER_BATCH
         return (CACHE_LIMIT_MAP[mode as SessionMode] || 5) * DRILLS_PER_BATCH;
+    },
+
+    /**
+     * 获取 Hard Cap (绝对上限 = Soft Cap × 1.5)
+     * 仅在 pushDrill 中使用，防止 Redis 内存膨胀
+     * 正常情况下不应触发，仅在极端竞态时生效
+     */
+    async getHardCapacity(mode: string): Promise<number> {
+        const softCap = await this.getCapacity(mode);
+        return Math.ceil(softCap * 1.5);
     },
 
     /**

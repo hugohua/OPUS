@@ -106,5 +106,33 @@ interface BriefingPayload {
 "explanation_markdown": "## Logic Check\n\nCorrect logic...\n\n- B: ..."
 ```
 
-## 5. 校验规则 (Zod)
+## 6. 输出协议 (Output Protocol) [NEW]
+
+为了兼容 `safeParse` 的自动封装机制并减少 Token 消耗，所有生成器必须遵循 **Array-First** 协议。
+
+### 6.1 规则
+1.  **直接输出数组**: 生成器必须返回 JSON 数组 `[...]`。
+2.  **禁止外层包裹**: 严禁使用 `{ "drills": [...] }` 或 `{ "items": [...] }` 等对象包裹。
+3.  **解析层行为**: `safeParse` 收到数组后，会自动将其封装为 `{ items: [...] }` 以适配 Zod Schema。
+
+### 6.2 示例 (Example)
+
+**✅ 正确 (Correct):**
+```json
+[
+  { "meta": { ... }, "segments": [ ... ] },
+  { "meta": { ... }, "segments": [ ... ] }
+]
+```
+
+**❌ 错误 (Incorrect):**
+```json
+{
+  "drills": [
+     { ... }
+  ]
+}
+```
+
+## 7. 校验规则 (Zod)
 请参考 `lib/validations/briefing.ts` 获取最新的 Zod Schema 定义。所有生成器 Output 必须通过此 Schema 验证。

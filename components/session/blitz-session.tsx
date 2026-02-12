@@ -1,16 +1,21 @@
+/**
+ * BlitzSession - Focus Shell Implementation
+ * 
+ * Replaces UniversalCard with FocusShell and ControlDeck.
+ */
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { BlitzCard, type BlitzCardState } from '@/components/blitz/blitz-card';
-import { InteractionZone } from '@/components/blitz/interaction-zone';
 import { getBlitzSession } from '@/actions/get-blitz-session';
 import { recordOutcome } from '@/actions/record-outcome';
 import { BlitzItem } from '@/lib/validations/blitz';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UniversalCard } from '@/components/drill/universal-card';
+import { FocusShell } from '@/components/drill/focus-shell';
+import { ControlDeck, ControlDeckMode } from '@/components/drill/control-deck';
 
 interface BlitzSessionProps {
     userId: string;
@@ -32,7 +37,7 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
             if (res.status === 'success' && res.data?.items && res.data.items.length > 0) {
                 setQueue(res.data.items);
             } else {
-                // Handle empty state
+                // Handle empty state if needed
             }
             setLoading(false);
         }
@@ -41,7 +46,8 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
 
     const handleReveal = () => {
         setCardState('REVEALED');
-        // small delay before allowing grading? No, instant is better.
+        // Immediate transition to grading is typical for Blitz?
+        // Original code: setCardState('GRADING');
         setCardState('GRADING');
     };
 
@@ -51,14 +57,14 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
         // Optimistic update
         setStats(prev => ({ ...prev, [result]: prev[result] + 1 }));
 
-        // [Track Persistence] Record outcome with explicit track from BlitzItem
+        // [Track Persistence] Record outcome
         const grade = result === 'pass' ? 3 : 1;
         recordOutcome({
             userId,
             vocabId: currentItem.vocabId,
             grade: grade as any,
             mode: 'BLITZ',
-            track: currentItem.track, // [NEW] Pass source track for FSRS integrity
+            track: currentItem.track,
         }).catch(err => {
             console.error('Failed to record outcome:', err);
         });
@@ -72,76 +78,113 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
         }
     };
 
+    // --- Control Deck Handler ---
+    const handleDeckAction = (action: string) => {
+        if (action === 'reveal') {
+            handleReveal();
+        } else if (['1', '2'].includes(action)) {
+            // Binary Grade: 1=Fail, 2=Pass
+            if (action === '1') handleGrade('fail');
+            if (action === '2') handleGrade('pass');
+        }
+    };
+
+    // --- Loading State ---
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[80vh] text-slate-400 animate-pulse">
+            <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950 text-slate-400 animate-pulse">
                 加载中...
             </div>
         );
     }
 
+    // --- Empty State ---
     if (queue.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4">
-                <h2 className="text-xl font-bold">暂无可用项目</h2>
-                <p className="text-slate-500">请先在其他模式中学习新词。</p>
-                <Link href="/dashboard">
-                    <Button variant="outline">返回主页</Button>
-                </Link>
-            </div>
+            <FocusShell variant="L0" progress={0} onExit={() => router.push('/dashboard')}>
+                <div className="flex flex-col items-center justify-center gap-4 text-center">
+                    <h2 className="text-xl font-bold font-serif text-zinc-800 dark:text-zinc-200">暂无可用项目</h2>
+                    <p className="text-zinc-500 font-mono text-sm">请先在其他模式中学习新词。</p>
+                    <Link href="/dashboard">
+                        <Button variant="outline" className="mt-4">返回主页</Button>
+                    </Link>
+                </div>
+            </FocusShell>
         )
     }
 
+    // --- Finished State ---
     if (finished) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8 p-6">
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-center space-y-2"
-                >
-                    <h1 className="text-4xl font-bold text-indigo-600">闪电战完成！</h1>
-                    <p className="text-xl text-slate-600">结束本次训练。</p>
-                </motion.div>
+            <FocusShell variant="L2" progress={100} onExit={() => router.push('/dashboard')}>
+                <div className="flex flex-col items-center justify-center gap-8 p-6 w-full max-w-sm">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-center space-y-2"
+                    >
+                        <h1 className="text-4xl font-bold font-serif text-indigo-600 dark:text-indigo-400">闪电战完成！</h1>
+                        <p className="text-xl text-zinc-600 dark:text-zinc-400 font-serif italic">Session Complete.</p>
+                    </motion.div>
 
-                <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
-                    <div className="bg-green-50 p-4 rounded-xl text-center border border-green-100">
-                        <div className="text-3xl font-bold text-green-600">{stats.pass}</div>
-                        <div className="text-xs text-green-800/60 uppercase tracking-wider">通过</div>
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-center border border-emerald-100 dark:border-emerald-800">
+                            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stats.pass}</div>
+                            <div className="text-[10px] text-emerald-800/60 dark:text-emerald-400/60 uppercase tracking-widest font-mono">Passed</div>
+                        </div>
+                        <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl text-center border border-rose-100 dark:border-rose-800">
+                            <div className="text-3xl font-bold text-rose-600 dark:text-rose-400 font-mono">{stats.fail}</div>
+                            <div className="text-[10px] text-rose-800/60 dark:text-rose-400/60 uppercase tracking-widest font-mono">Failed</div>
+                        </div>
                     </div>
-                    <div className="bg-rose-50 p-4 rounded-xl text-center border border-rose-100">
-                        <div className="text-3xl font-bold text-rose-600">{stats.fail}</div>
-                        <div className="text-xs text-rose-800/60 uppercase tracking-wider">未通过</div>
-                    </div>
+
+                    <Link href="/dashboard" className="w-full">
+                        <Button
+                            size="lg"
+                            className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none"
+                        >
+                            Back to Dashboard
+                        </Button>
+                    </Link>
                 </div>
-
-                <Link href="/dashboard">
-                    <Button size="lg" className="w-full max-w-xs">完成 & 返回</Button>
-                </Link>
-            </div>
+            </FocusShell>
         )
     }
 
     const currentItem = queue[currentIndex];
+    const deckMode: ControlDeckMode = cardState === 'LOCKED' ? 'reveal' : 'binary';
+    // Progress loop
+    const progress = ((currentIndex) / queue.length) * 100;
 
     return (
-        <UniversalCard
-            variant="violet"
-            category="DAILY BLITZ"
-            progress={queue.length > 0 ? ((currentIndex) / queue.length) * 100 : 0}
+        <FocusShell
+            variant="L2" // Violet for Blitz
+            label="DAILY BLITZ"
+            progress={progress}
             onExit={() => router.push('/dashboard')}
             footer={
-                <InteractionZone
-                    state={cardState}
-                    onReveal={handleReveal}
-                    onGrade={handleGrade}
+                <ControlDeck
+                    mode={deckMode}
+                    onAction={handleDeckAction}
+                    labels={{ '1': 'Forgotten', '2': 'Got it' }}
                 />
             }
         >
-            <BlitzCard
-                item={currentItem}
-                state={cardState}
-            />
-        </UniversalCard>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentItem.vocabId}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full h-full flex items-center justify-center p-4 relative"
+                >
+                    <BlitzCard
+                        item={currentItem}
+                        state={cardState}
+                    />
+                </motion.div>
+            </AnimatePresence>
+        </FocusShell>
     );
 }

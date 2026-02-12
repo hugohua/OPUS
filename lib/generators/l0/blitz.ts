@@ -27,7 +27,7 @@ Teach users to recognize a **Target Word** within its most natural **Collocation
 
 <batch_processing>
 1. Process Input Array strictly 1:1.
-2. Output format: JSON object with a "drills" array.
+2. Output format: JSON Array containing drill objects.
 </batch_processing>
 
 <processing_logic>
@@ -105,8 +105,7 @@ REGENERATE card if:
 CRITICAL: Return raw JSON only.
 DO NOT wrap in \`\`\`json or \`\`\`.
 DO NOT output any text outside the JSON object.
-{
-  "drills": [
+[
     {
       "meta": {
         "mode": "BLITZ",
@@ -145,8 +144,7 @@ DO NOT output any text outside the JSON object.
         }
       ]
     }
-  ]
-}
+]
 </response_template>
 
 </system_prompt>

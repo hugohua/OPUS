@@ -37,7 +37,7 @@ Teach users to modify a **Core Word** with the correct **Modifier** based on Par
 
 <batch_processing>
 1. Process Input Array strictly 1:1.
-2. Output format: JSON object with a "drills" array.
+2. Output format: JSON Array containing drill objects.
 </batch_processing>
 
 <processing_logic>

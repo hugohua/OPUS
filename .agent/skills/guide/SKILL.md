@@ -92,6 +92,12 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Report Script**: `scripts/audit-report.ts` (健康检查报告)
 - **Config**: `.env` (`AUDIT_ENABLED`, `AUDIT_SAMPLE_RATE`)
 
+### 10. NAS 部署 (Synology)
+- **部署指南**: `docs/dev-notes/nas-deployment-guide.md` (**完整**: 架构、一键部署、数据库迁移、网络踩坑)
+- **构建脚本**: `build-and-export.sh` (Mac ARM → NAS AMD64 跨平台构建 + 自动部署)
+- **NAS Compose**: `docker-compose.nas.yml` (预构建镜像 + 绑定挂载)
+- **Nginx 配置**: `nginx/nginx.conf` (反向代理、静态缓存、音频直出)
+
 
 ## 🚦 Decision Routing
 - **If implementing Mixed Mode / L0_MIXED / L1_MIXED / DAILY_BLITZ** -> Read `mixed-mode-architecture.md` (**Stability 阈值、Track 隔离、批量操作**).
@@ -111,4 +117,5 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If 新增 Server Action** -> **必须先创建** `.test.ts` 测试文件 (See `.agent/rules/testing-protocol.md`).
 - **If 需要追踪算法行为 / 排查异常** -> Read `panoramic-audit-system.md` (审计服务) AND 运行 `npx tsx scripts/audit-report.ts`.
 - **If 修改选词/评分/生成逻辑** -> **必须使用** `audit-service.ts` 中的埋点方法，而非直接操作 `DrillAudit` 表.
+- **If 部署到 NAS / 修改 Docker 配置 / 排查部署问题** -> Read `nas-deployment-guide.md` (**完整踩坑记录**).
 

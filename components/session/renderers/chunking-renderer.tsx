@@ -3,7 +3,7 @@
  * 
  * 功能：
  *   - 包装 ChunkingDrill 组件
- *   - 处理拖拽排序完成回调
+ *   - 传递进度信息
  */
 
 'use client';
@@ -16,10 +16,11 @@ import { ChunkingDrill } from '@/components/briefing/chunking-drill';
 export interface ChunkingRendererProps {
     drill: BriefingPayload;
     index: number;
-    onComplete: () => void;
+    total?: number;
+    onComplete: (success: boolean) => void;
 }
 
-export function ChunkingRenderer({ drill, index, onComplete }: ChunkingRendererProps) {
+export function ChunkingRenderer({ drill, index, total = 20, onComplete }: ChunkingRendererProps) {
     // Extract chunking_drill segment or use entire drill
     const chunkingDrill = drill.segments.find((s: any) => s.type === 'chunking_drill') || drill;
 
@@ -36,6 +37,8 @@ export function ChunkingRenderer({ drill, index, onComplete }: ChunkingRendererP
                 >
                     <ChunkingDrill
                         drill={chunkingDrill as any}
+                        index={index}
+                        total={total}
                         onComplete={onComplete}
                     />
                 </motion.div>

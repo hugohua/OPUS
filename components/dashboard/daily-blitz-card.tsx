@@ -1,72 +1,32 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Play, Volume2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Play, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 export function DailyBlitzCard() {
-    const [audioEnabled, setAudioEnabled] = useState(true);
-
     return (
         <section>
             <Link href="/dashboard/session/DAILY_BLITZ">
-                <div className="relative group cursor-pointer w-full">
-                    {/* Ambient Glow (Dark only) - Sunlight Theme */}
-                    <div className="hidden dark:block absolute -inset-0.5 bg-gradient-to-r from-yellow-300 to-amber-500 rounded-3xl opacity-60 blur transition duration-1000 group-hover:opacity-100 animate-pulse"></div>
-
-                    <div className="relative bg-white dark:bg-zinc-950 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xl dark:shadow-none h-[220px] flex flex-col justify-between overflow-hidden transition-colors">
-                        {/* Background Texture (Dark Only) */}
-                        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none hidden dark:block">
-                            <div className="w-64 h-64 bg-amber-500/15 blur-3xl rounded-full"></div>
-                        </div>
-
-                        <div>
-                            <div className="flex justify-between items-start">
-                                <span className="inline-flex items-center rounded-md bg-yellow-100 dark:bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-300 ring-1 ring-inset ring-yellow-500/20 dark:ring-yellow-400/20 font-mono">
+                <div className="w-full group relative overflow-hidden rounded-xl bg-white dark:bg-zinc-900/60 dark:backdrop-blur-xl border border-zinc-200 dark:border-white/15 py-4 transition-all active:scale-[0.99] hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <div className="relative z-10 flex items-center justify-between px-5">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-violet-100 dark:bg-violet-500/20 rounded-full">
+                                <Play className="w-5 h-5 text-violet-600 dark:text-violet-400 fill-current" />
+                            </div>
+                            <div className="flex flex-col items-start gap-0.5">
+                                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                                     每日闪电战
                                 </span>
-
-                                {/* Audio Toggle (Functional) */}
-                                <div
-                                    className="flex items-center gap-2 cursor-pointer group/toggle z-10"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        setAudioEnabled(!audioEnabled);
-                                    }}
-                                >
-                                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider group-hover/toggle:text-zinc-700 dark:group-hover/toggle:text-zinc-300 transition-colors">
-                                        语音
-                                    </span>
-                                    <div className={cn(
-                                        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-                                        audioEnabled ? "bg-zinc-200 dark:bg-zinc-700" : "bg-zinc-100 dark:bg-zinc-800"
-                                    )}>
-                                        <span className={cn(
-                                            "inline-block h-3 w-3 transform rounded-full transition duration-200 ease-in-out font-sans flex items-center justify-center text-[8px]",
-                                            audioEnabled ? "translate-x-4 bg-emerald-500" : "translate-x-1 bg-zinc-400 dark:bg-zinc-600"
-                                        )}>
-                                        </span>
-                                    </div>
-                                </div>
+                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                    20 词 • 混合模式
+                                </span>
                             </div>
-
-                            <h2 className="mt-4 text-3xl font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
-                                开始训练
-                                <Volume2
-                                    className={cn(
-                                        "w-6 h-6 ml-1 transition-all duration-300",
-                                        audioEnabled ? "opacity-100 translate-x-0 fill-zinc-900 dark:fill-white text-zinc-900 dark:text-white" : "opacity-0 -translate-x-2"
-                                    )}
-                                />
-                            </h2>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">20 项待复习 · 混合模式</p>
                         </div>
-
-                        <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            准备就绪
+                        <div className="flex items-center gap-3">
+                            <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-400 font-mono ring-1 ring-inset ring-amber-500/20">
+                                待复习
+                            </span>
+                            <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                         </div>
                     </div>
                 </div>
