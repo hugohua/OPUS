@@ -46,7 +46,7 @@ services:
   # 核心业务 (Next.js) - 使用预构建镜像
   # ----------------------------------------------------------------------------
   opus-web:
-    image: opus/web:v1.0.1
+    image: opus/web:latest
     container_name: opus-web-prod
     restart: always
     environment:
@@ -75,7 +75,7 @@ services:
   # 异步任务 (Node.js Worker) - 使用预构建镜像
   # ----------------------------------------------------------------------------
   opus-worker:
-    image: opus/worker:v1.0.1
+    image: opus/worker:latest
     container_name: opus-worker-prod
     restart: always
     environment:
@@ -100,7 +100,7 @@ services:
   # TTS 服务 (Python FastAPI) - 使用预构建镜像
   # ----------------------------------------------------------------------------
   opus-tts:
-    image: opus/tts:v1.0.1
+    image: opus/tts:latest
     container_name: opus-tts-prod
     restart: always
     environment:
