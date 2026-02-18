@@ -18,6 +18,7 @@ import { ContextSelector } from '@/lib/ai/context-selector';
 import { buildSyntaxInput, buildPhraseInput, buildBlitzInputWithTraps } from '@/lib/generators/input-builders';
 import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
+import { DRILLS_PER_BATCH } from '@/lib/drill-cache';
 import { getL1AudioScriptPrompt, AudioScriptInput } from '@/lib/generators/l1/audio-script';
 import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
 import { buildSimpleDrill } from '@/lib/templates/deterministic-drill'; // [B1 Fix] Pivot Fallback
@@ -64,32 +65,29 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         // 1. 确定生成目标 (Candidates)
         // ============================================
 
-        // [Fix] Early Interception - Before ANY processing (Token Saver)
-        if (await inventory.isFull(userId, mode)) {
-            log.warn({ userId, mode }, '🛑 Inventory Full - Early Exit (Token Saved)');
-            return { success: true, count: 0, reason: 'inventory_full_early' };
-        }
-
         let candidates: DrillCandidate[] = [];
 
         if (vocabIds && vocabIds.length > 0) {
-            // Plan C: Batch Replenishment
+            // Plan C: Batch Replenishment (不检查 isFull，Emergency 优先)
             log.info({ count: vocabIds.length }, '👉 策略: Plan C (Batch IDs)');
             candidates = await fetchSpecificCandidates(userId, vocabIds);
         } else if (vocabId) {
-            // Plan B: Single Emergency Replenishment
+            // Plan B: Single Emergency (不检查 isFull，Emergency 优先)
             log.info({ vocabId }, '👉 策略: Plan B (Single ID)');
             candidates = await fetchSpecificCandidates(userId, [Number(vocabId)]);
         } else {
-            // [Fix] V2 Generic Fetch (Schedule-Driven)
+            // Generic Fetch: 自动预生成，受 isFull() 限制
             if (job.name.startsWith('generate-')) {
+                // [Fix] isFull() 仅拦截自动生成，不影响 Plan B/C Emergency
+                if (await inventory.isFull(userId, mode)) {
+                    log.warn({ userId, mode }, '🛑 Inventory Full - Early Exit (Token Saved)');
+                    return { success: true, count: 0, reason: 'inventory_full_early' };
+                }
+
                 log.info({ mode }, '👉 策略: V2 Generic Fetch (Scheduled)');
 
-                // [Fix] Enforce Inventory Cap (Defense in Depth)
-                // [Fix] Enforce Inventory Cap (Defense in Depth)
-                // Use unified inventory method
+                // [Defense in Depth] 二次检查 + 审计日志
                 if (await inventory.isFull(userId, mode)) {
-                    // Logging stats for debugging context
                     const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
                     const currentCount = stats[mode] || 0;
                     const maxDrills = await inventory.getCapacity(mode);
@@ -114,7 +112,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                 const stats = await inventory.getInventoryStats(userId) as Record<string, number>;
                 const currentCount = stats[mode] || 0;
 
-                const forceLimit = job.data.forceLimit || 10; // Default force limit is 10 (one batch)
+                const forceLimit = job.data.forceLimit || DRILLS_PER_BATCH; // Default force limit = one batch
                 const effectiveLimit = Math.min(forceLimit, capacity - currentCount);
 
                 if (effectiveLimit <= 0) {

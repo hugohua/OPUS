@@ -5,17 +5,34 @@
  */
 
 import { z } from "zod";
+import { WEAVER_SCENARIOS } from "@/lib/constants/weaver-scenario-map";
+
+import { WEAVER_DENSITY_IDS } from "@/lib/constants/weaver-density";
 
 // ============================================
 // Weaver V2 API Schemas
 // ============================================
 
 export const WeaverV2InputSchema = z.object({
-    scenario: z.enum(["finance", "hr", "marketing", "rnd"]).describe("业务场景"),
-    target_word_ids: z.array(z.number()).optional().describe("可选：手动指定目标词 ID，不传则 OMPS 自动装填")
+    scenario: z.enum(WEAVER_SCENARIOS as [string, ...string[]]).describe("业务场景"),
+    density: z.enum(WEAVER_DENSITY_IDS).default("balanced").describe("文章篇幅密度"),
+    target_word_ids: z.array(z.number()).optional().describe("可选：手动指定目标词 ID，不传则场景优先自动装填")
 });
 
 export type WeaverV2Input = z.infer<typeof WeaverV2InputSchema>;
+
+// ============================================
+// 幻觉检测结果 Schema (Audit W-3 Fix)
+// ============================================
+
+export const HallucinationCheckSchema = z.object({
+    totalTargets: z.number(),
+    missingWords: z.array(z.string()),
+    missingRate: z.number(),
+    isHallucinated: z.boolean(),
+});
+
+export type HallucinationCheckResult = z.infer<typeof HallucinationCheckSchema>;
 
 // ============================================
 // Magic Wand API Schemas

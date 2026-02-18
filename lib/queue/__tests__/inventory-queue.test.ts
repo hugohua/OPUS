@@ -30,10 +30,10 @@ describe('inventory-queue', () => {
     });
 
     describe('enqueueDrillGeneration', () => {
-        it('should enqueue correct number of batches for SYNTAX mode (2 batches)', async () => {
-            // SYNTAX target 20, batch size 10 -> 2 batches
+        it('should enqueue correct number of batches for SYNTAX mode (4 batches)', async () => {
+            // SYNTAX target 20, batch size 5 -> 4 batches
             await enqueueDrillGeneration('user1', 'SYNTAX');
-            expect(inventoryQueue.add).toHaveBeenCalledTimes(2);
+            expect(inventoryQueue.add).toHaveBeenCalledTimes(4);
             expect(inventoryQueue.add).toHaveBeenCalledWith(
                 'generate-SYNTAX',
                 expect.objectContaining({
@@ -45,16 +45,16 @@ describe('inventory-queue', () => {
             );
         });
 
-        it('should enqueue correct number of batches for NUANCE mode (5 batches)', async () => {
-            // NUANCE target 50, batch size 10 -> 5 batches
+        it('should enqueue correct number of batches for NUANCE mode (10 batches)', async () => {
+            // NUANCE target 50, batch size 5 -> 10 batches
             await enqueueDrillGeneration('user1', 'NUANCE');
-            expect(inventoryQueue.add).toHaveBeenCalledTimes(5);
+            expect(inventoryQueue.add).toHaveBeenCalledTimes(10);
         });
 
         it('should handle priority correctly (cron -> priority 5)', async () => {
             await enqueueDrillGeneration('user1', 'BLITZ', 'cron');
-            // BLITZ target 10 -> 1 batch
-            expect(inventoryQueue.add).toHaveBeenCalledTimes(1);
+            // BLITZ target 10, batch size 5 -> 2 batches
+            expect(inventoryQueue.add).toHaveBeenCalledTimes(2);
             expect(inventoryQueue.add).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({ priority: 'cron' }),

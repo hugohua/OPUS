@@ -1,51 +1,225 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+/**
+ * Weaver Article Reader (v2.1)
+ * 
+ * 功能：
+ *   1. B2: 全屏深色加载态 + Step Loader (无百分比)
+ *   2. B3: Serif 衬线阅读 + 毛玻璃 nav + 哑光下划线
+ *   3. B5: 浮出工具栏 (划词/划句)
+ *   4. C3: 审计埋点 (article_finish)
+ * 
+ * 作者: Hugo
+ * 日期: 2026-02-15
+ */
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import { useSSEStream } from "@/hooks/use-sse-stream";
-import { cn } from "@/lib/utils";
+import { useTextSelection } from "@/hooks/use-text-selection";
+import { useTTS } from "@/hooks/use-tts";
+import { FloatingToolbar } from "@/components/weaver/FloatingToolbar";
 import { MagicWandSheet } from "@/components/wand/MagicWandSheet";
+import { useWeaverToolbar } from "@/hooks/use-weaver-toolbar";
+import { Header } from "@/components/ui/header";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Share2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { createAuditRecord } from "@/actions/audit-actions";
+import { toast } from "sonner";
+import { Copy, Check, Share2 } from "lucide-react";
 
 interface ArticleReaderProps {
     scenario: string;
+    density?: string;
     targetWordIds: number[];
     targetWords: Array<{ id: number; word: string; meaning: string }>;
     onBack: () => void;
 }
 
+// 加载步骤
+type LoadingStep = "selecting" | "injecting" | "weaving";
+
 /**
  * Weaver Article Reader
- * 功能：
- * 1. 触发 SSE 生成文章
- * 2. 实时渲染 + 打字机效果
- * 3. 目标词高亮 (Rose Underline)
- * 4. 单词交互 -> 打开 Magic Wand
  */
-export function ArticleReader({ scenario, targetWordIds, targetWords, onBack }: ArticleReaderProps) {
-    const [wandWord, setWandWord] = useState<string | null>(null);
-    const [isWandOpen, setIsWandOpen] = useState(false);
+export function ArticleReader({
+    scenario,
+    density = "balanced",
+    targetWordIds,
+    targetWords,
+    onBack
+}: ArticleReaderProps) {
+    const searchParams = useSearchParams();
+    const initialArticleId = searchParams.get("id");
 
-    // ✅ Use custom SSE Hook
-    const { text: completion, isLoading, error, startStream } = useSSEStream({
-        onComplete: (text) => {
-            console.log(`[ArticleReader] Generation completed: ${text.length} chars`);
+
+    const [loadingStep, setLoadingStep] = useState<LoadingStep>("selecting");
+    const [sessionStartTime] = useState(Date.now());
+    const [articleId, setArticleId] = useState<string | null>(initialArticleId);
+
+    // Scroll container ref for FloatingToolbar positioning
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Local state to track if we are loading from ID (skip generation animation)
+    const [isLoadingFromId, setIsLoadingFromId] = useState(!!initialArticleId);
+
+    // ✅ Metadata State (Hydrated from props or API)
+    const [currentScenario, setCurrentScenario] = useState(scenario);
+    const [currentTargetWords, setCurrentTargetWords] = useState(targetWords);
+
+    const articleRef = useRef<HTMLDivElement>(null);
+
+    // ✅ Memoize target word set for O(1) lookup (prevents flicker from slow comparison)
+    const targetWordSet = useMemo(
+        () => new Set(currentTargetWords.map(t => t.word.toLowerCase())),
+        [currentTargetWords]
+    );
+
+    // ✅ B5: 文本选择 Hook
+    const { selection, selectWord, clearSelection, setSelection } = useTextSelection(articleRef, scrollContainerRef);
+
+    // ✅ TTS: 使用项目通用 TTS 服务
+    const tts = useTTS();
+
+    // ✅ SSE Hook
+    const { text: completion, isLoading, error, startStream, setText } = useSSEStream({
+        onComplete: () => {
+            // C3: 审计 article_finish 事件 (Server Action)
+            const duration = Date.now() - sessionStartTime;
+            createAuditRecord({
+                targetWord: currentScenario,
+                contextMode: "WEAVER:FINISH",
+                status: "GOOD",
+                payload: {
+                    context: { scenario: currentScenario, density, duration, wordCount: currentTargetWords.length, articleId },
+                    event: "article_finish"
+                }
+            }).catch(console.error);
         },
-        onError: (err) => {
-            console.error(`[ArticleReader] Stream error:`, err);
+        onError: () => { },
+        onResponse: (res) => {
+            const newId = res.headers.get("X-Weaver-Id");
+            if (newId) {
+                setArticleId(newId);
+                // 无感更新 URL
+                const url = new URL(window.location.href);
+                url.searchParams.set("id", newId);
+                window.history.replaceState(null, "", url.toString());
+            }
         }
     });
 
-    // Auto-start generation on mount
+    // 模拟加载步骤
     useEffect(() => {
-        startStream("/api/weaver/v2/generate", {
-            scenario,
-            target_word_ids: targetWordIds
-        });
+        if (!isLoading) return;
+        const t1 = setTimeout(() => setLoadingStep("injecting"), 800);
+        const t2 = setTimeout(() => setLoadingStep("weaving"), 1600);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+    }, [isLoading]);
+
+    // 启动生成 或 加载缓存
+    useEffect(() => {
+        if (initialArticleId) {
+            // Load from Cache/DB
+            setIsLoadingFromId(true);
+            fetch(`/api/weaver/v2/article/${initialArticleId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Article not found");
+                    return res.json();
+                })
+                .then(data => {
+                    setText(data.content);
+                    // Hydrate Metadata
+                    if (data.scenario) setCurrentScenario(data.scenario);
+                    if (data.targetWords) setCurrentTargetWords(data.targetWords);
+                })
+                .catch(err => {
+                    toast.error("Failed to load article", { description: err.message });
+                })
+                .finally(() => {
+                    setIsLoadingFromId(false);
+                });
+        } else {
+            // Start Generation
+            startStream("/api/weaver/v2/generate", {
+                scenario,
+                density,
+                target_word_ids: targetWordIds
+            });
+        }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ✅ 错误状态 UI
+    // ✅ V2.0: 使用 ===TITLE=== / ===BODY=== 分隔符解析标题和正文
+    // ❗ 必须在 early return 之前调用，确保 Hooks 调用顺序稳定
+    const parsedContent = useMemo(() => {
+        if (!completion) return null;
+        const cleaned = completion.replace(/\*\*/g, "");
+
+        const titleMatch = cleaned.match(/===TITLE===\s*([\s\S]*?)\s*===BODY===/);
+        const titleText = titleMatch ? titleMatch[1].trim() : "";
+
+        const bodyText = cleaned.split("===BODY===")[1]?.trim();
+        const bodyParts = bodyText ? bodyText.split("\n\n").filter(Boolean) : [];
+
+        // Fallback for streaming incomplete states or legacy format
+        if (!titleMatch && !bodyText && cleaned.length > 0) {
+            // Maybe it's just raw text?
+            return { titleText: "", bodyParts: cleaned.split("\n\n").filter(Boolean) };
+        }
+
+        if (!titleText && bodyParts.length === 0) return null;
+
+        return {
+            titleText: titleText || "",
+            bodyParts
+        };
+    }, [completion]);
+
+    // ✅ B5: 浮出工具栏逻辑 (Refactored to Hook)
+    const {
+        wandTarget,
+        wandType,
+        wandContext,
+        setWandContext,
+        isWandOpen,
+        setIsWandOpen,
+        handleAnalyze,
+        handlePlay,
+        handleCopy,
+        handleExpandToSentence
+    } = useWeaverToolbar({
+        scenario: currentScenario,
+        parsedContent, // Note: parsedContent might be null initially
+        tts,
+        selection,
+        clearSelection,
+        setSelection
+    });
+
+    // 单词点击处理
+    const handleWordClick = (word: string, context: string, e: React.MouseEvent<HTMLSpanElement>) => {
+        const cleanWord = word.replace(/[^a-zA-Z]/g, "");
+        if (cleanWord) {
+            setWandContext(context); // Capture context
+            selectWord(cleanWord, e.currentTarget);
+        }
+    };
+
+    // ✅ V2.0: 使用 ===TITLE=== / ===BODY=== 分隔符解析标题和正文
+    // ❗ 必须在 early return 之前调用，确保 Hooks 调用顺序稳定
+
+
+    const handleCopyLink = () => {
+        if (typeof window !== "undefined") {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("链接已复制", { description: "已复制到剪贴板，有效期 1 小时（缓存）或永久（已保存）" });
+        }
+    };
+
+    // ============================================
+    // 错误状态
+    // ============================================
     if (error) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -57,8 +231,7 @@ export function ArticleReader({ scenario, targetWordIds, targetWords, onBack }: 
                     <div className="flex gap-2">
                         <Button
                             onClick={() => startStream("/api/weaver/v2/generate", {
-                                scenario,
-                                target_word_ids: targetWordIds
+                                scenario, density, target_word_ids: targetWordIds
                             })}
                             variant="destructive"
                         >
@@ -73,61 +246,149 @@ export function ArticleReader({ scenario, targetWordIds, targetWords, onBack }: 
         );
     }
 
-    // Word Interaction Handler
-    const handleWordClick = (word: string) => {
-        // Clean word (remove punctuation)
-        const cleanWord = word.replace(/[^a-zA-Z]/g, "");
-        setWandWord(cleanWord);
-        setIsWandOpen(true);
-    };
+    // ============================================
+    // B2: 全屏加载态 (The Weaving) - Deep Space Mode
+    // Only show if loading via stream (not ID fetch) OR if ID fetch is in progress
+    // ============================================
+    if (isLoadingFromId) {
+        return (
+            <div className="w-full max-w-3xl mx-auto min-h-screen flex flex-col bg-white dark:bg-zinc-950 overflow-y-scroll">
+                <Header variant="reader" title="加载中..." onBack={onBack} />
+                <main className="flex-1 px-8 py-12 md:px-12 md:py-16 relative animate-pulse">
+                    <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded-md w-3/4 mb-8" />
+                    <div className="space-y-4">
+                        <div className="h-4 bg-zinc-100 dark:bg-zinc-900 rounded w-full" />
+                        <div className="h-4 bg-zinc-100 dark:bg-zinc-900 rounded w-full" />
+                        <div className="h-4 bg-zinc-100 dark:bg-zinc-900 rounded w-5/6" />
+                        <div className="h-4 bg-zinc-100 dark:bg-zinc-900 rounded w-full" />
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
-    // ✅ 优化: 添加 Loading 和 Empty States
+    if (isLoading && !completion) {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center relative overflow-hidden">
+                {/* 模糊光晕 (Ambient Glow) */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-96 h-96 rounded-full bg-indigo-500/10 blur-[100px] animate-pulse" />
+                </div>
+
+                {/* 旋转 Visualizer */}
+                <div className="relative w-24 h-24 mb-12">
+                    <div className="absolute inset-0 rounded-full border border-zinc-700 animate-spin" style={{ animationDuration: '8s' }} />
+                    <div className="absolute inset-2 rounded-full border border-zinc-600 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
+                    <div className="absolute inset-4 rounded-full border border-indigo-500/30 animate-spin" style={{ animationDuration: '4s' }} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                    </div>
+                </div>
+
+                {/* Step Loader (Audit W-4: 无百分比) */}
+                <div className="space-y-3 text-sm font-mono relative z-10">
+                    <StepIndicator
+                        done={loadingStep !== "selecting"}
+                        active={loadingStep === "selecting"}
+                        label={`正在选取 ${targetWords.length} 个词汇`}
+                    />
+                    <StepIndicator
+                        done={loadingStep === "weaving"}
+                        active={loadingStep === "injecting"}
+                        label={`注入「${scenario}」情境`}
+                    />
+                    <StepIndicator
+                        done={false}
+                        active={loadingStep === "weaving"}
+                        label="生成简报中..."
+                    />
+                </div>
+
+                {/* 底部 Skeleton 文本预览 */}
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 w-80 space-y-2 opacity-20 z-0">
+                    <div className="h-3 bg-zinc-700 rounded w-full" />
+                    <div className="h-3 bg-zinc-700 rounded w-4/5" />
+                    <div className="h-3 bg-zinc-700 rounded w-3/5" />
+                </div>
+            </div>
+        );
+    }
+
+    // ============================================
+    // B3: 沉浸阅读态 (The Reader)
+    // ============================================
+
+
+    // 段落渲染
     const renderContent = () => {
-        if (isLoading && !completion) {
-            return (
-                <div className="text-center py-12">
-                    <Progress value={33} className="w-64 mx-auto mb-4" />
-                    <p className="text-muted-foreground">正在生成文章...</p>
-                </div>
-            );
-        }
-        if (!completion) {
-            return (
-                <div className="text-center py-12 text-muted-foreground">
-                    暂无内容
-                </div>
-            );
-        }
+        if (!parsedContent) return null;
+        const { titleText, bodyParts } = parsedContent;
 
-        const paragraphs = completion.split("\n\n");
-
-        return paragraphs.map((para, pIdx) => (
-            <p key={pIdx} className="mb-6 leading-relaxed text-lg md:text-xl text-primary font-serif">
-                {renderParagraph(para)}
-            </p>
-        ));
+        return (
+            <>
+                {titleText && (
+                    <h1 className="font-serif text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-8 leading-tight">
+                        {titleText}
+                    </h1>
+                )}
+                {bodyParts.map((para, pIdx) => (
+                    <p key={`p-${pIdx}`} className="mb-6 leading-loose text-lg text-zinc-700 dark:text-zinc-300 font-serif break-words">
+                        {isLoading ? para : renderInteractiveParagraph(para, pIdx)}
+                        {/* ✅ 光标跟随最后一个段落末尾，不独立占位 */}
+                        {isLoading && pIdx === bodyParts.length - 1 && (
+                            <span className="inline-block w-0.5 h-5 bg-indigo-500 dark:bg-indigo-400 animate-pulse ml-1 align-text-bottom" />
+                        )}
+                    </p>
+                ))}
+            </>
+        );
     };
 
-    const renderParagraph = (text: string) => {
+    // ✅ 仅在生成完成后使用：逐词可交互渲染 (支持 Word + Sentence 高亮)
+    const renderInteractiveParagraph = (text: string, pIdx: number) => {
         const words = text.split(" ");
+
+        // 预计算句子高亮的词索引范围 (避免在 map 内重复计算)
+        let sentenceRange: [number, number] | null = null;
+        if (selection?.type === "sentence" && text.includes(selection.text)) {
+            const sentenceWords = selection.text.split(" ");
+            for (let i = 0; i <= words.length - sentenceWords.length; i++) {
+                let match = true;
+                for (let j = 0; j < sentenceWords.length; j++) {
+                    if (words[i + j] !== sentenceWords[j]) { match = false; break; }
+                }
+                if (match) { sentenceRange = [i, i + sentenceWords.length - 1]; break; }
+            }
+        }
+
         return words.map((word, wIdx) => {
-            const isBold = word.startsWith("**") && word.endsWith("**");
-            const cleanText = word.replace(/\*\*/g, "");
-            const cleanWord = cleanText.replace(/[^a-zA-Z]/g, "").toLowerCase();
+            const alphaOnly = word.replace(/[^a-zA-Z]/g, "").toLowerCase();
+            const isTarget = alphaOnly.length > 0 && targetWordSet.has(alphaOnly);
+            const uniqueId = `${pIdx}-${wIdx}`;
 
-            const isTarget = targetWords.some(t => t.word.toLowerCase() === cleanWord);
+            // 高亮判断
+            let isFocused = false;
 
-            if (isBold || isTarget) {
+            if (selection?.type === "sentence") {
+                // 句子模式：仅高亮落在句子词索引范围内的单词
+                isFocused = sentenceRange !== null && wIdx >= sentenceRange[0] && wIdx <= sentenceRange[1];
+            } else if (selection?.type === "word") {
+                // 单词模式：通过 data-index 精确匹配被点击的 span
+                isFocused = selection.domNode?.getAttribute("data-index") === uniqueId;
+            }
+
+            if (isTarget) {
                 return (
                     <span
                         key={wIdx}
-                        onClick={() => handleWordClick(cleanText)}
+                        data-index={uniqueId}
+                        onClick={(e) => handleWordClick(word, text, e)}
                         className={cn(
-                            "cursor-pointer font-semibold text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors mx-1 px-0.5 rounded-sm select-none",
-                            isBold && "animate-in fade-in duration-700"
+                            "cursor-pointer underline decoration-indigo-300 dark:decoration-indigo-500 decoration-2 underline-offset-4 transition-colors px-0.5 rounded-sm",
+                            isFocused ? "bg-indigo-200 dark:bg-indigo-500/30" : "hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                         )}
                     >
-                        {cleanText}
+                        {word}{" "}
                     </span>
                 );
             }
@@ -135,8 +396,12 @@ export function ArticleReader({ scenario, targetWordIds, targetWords, onBack }: 
             return (
                 <span
                     key={wIdx}
-                    onClick={() => handleWordClick(cleanText)}
-                    className="cursor-pointer hover:bg-muted rounded px-0.5 transition-colors mx-0.5 select-none"
+                    data-index={uniqueId}
+                    onClick={(e) => handleWordClick(word, text, e)}
+                    className={cn(
+                        "cursor-text rounded px-0.5 transition-colors",
+                        isFocused ? "bg-amber-100 dark:bg-amber-900/30" : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    )}
                 >
                     {word}{" "}
                 </span>
@@ -145,69 +410,89 @@ export function ArticleReader({ scenario, targetWordIds, targetWords, onBack }: 
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto min-h-screen flex flex-col bg-background">
+        <div ref={scrollContainerRef} className="w-full max-w-3xl mx-auto min-h-screen flex flex-col bg-white dark:bg-zinc-950 overflow-y-scroll [scrollbar-gutter:stable] [overflow-anchor:auto]">
 
-            {/* Top Bar */}
-            <nav className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border px-4 py-4 flex items-center justify-between">
-                <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-primary">
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
+            {/* 统一 Header 组件 (reader variant) */}
+            <Header
+                variant="reader"
+                title={`${scenario.toUpperCase()} 简报`}
+                subtitle={isLoading ? "生成中..." : "阅读就绪"}
+                onBack={onBack}
+            />
 
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-secondary">
-                        {scenario.toUpperCase()} BRIEF
-                    </span>
-                    {isLoading && (
-                        <span className="flex h-2 w-2 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                        </span>
-                    )}
-                </div>
-
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                    <BookOpen className="w-5 h-5" />
-                </Button>
-            </nav>
-
-            {/* Reading Progress */}
-            {isLoading && (
-                <Progress value={30} className="h-0.5 w-full bg-transparent rounded-none" indicatorClassName="bg-brand-core animate-pulse" />
-            )}
-
-            {/* Main Content */}
-            <main className="flex-1 px-6 py-10 md:px-12 md:py-16">
-
-                {/* Generated Article */}
-                <article className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    {completion ? renderContent() : (
-                        <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground gap-4">
-                            <Share2 className="w-8 h-8 animate-pulse text-border" />
-                            <span className="text-sm font-mono tracking-widest uppercase">Weaving context...</span>
-                        </div>
-                    )}
+            {/* 文章主体 */}
+            <main ref={articleRef} className="flex-1 px-8 py-12 md:px-12 md:py-16 relative">
+                <article>
+                    {renderContent()}
                 </article>
 
                 {/* Footer */}
-                {!isLoading && completion && (
-                    <div className="mt-16 pt-8 border-t border-border text-center animate-in fade-in slide-in-from-bottom-8 delay-500">
-                        <p className="text-secondary text-sm font-serif italic mb-6">
-                            "Language is the dress of thought."
+                {(!isLoading && !isLoadingFromId) && completion && (
+                    <div className="mt-16 pt-8 border-t border-zinc-100 dark:border-zinc-800 text-center animate-in fade-in slide-in-from-bottom-8 delay-500 flex flex-col items-center gap-4">
+                        <p className="text-zinc-400 text-sm font-serif italic">
+                            "语言是思想的衣裳。"
                         </p>
-                        <Button onClick={onBack} variant="outline" className="rounded-full px-8 border-border">
-                            Finish Session
-                        </Button>
+
+                        <div className="flex gap-3">
+                            <Button onClick={onBack} variant="outline" className="rounded-full px-6 border-zinc-200 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                                完成阅读
+                            </Button>
+
+                            <Button onClick={handleCopyLink} variant="ghost" size="icon" className="rounded-full text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                                <Share2 className="w-4 h-4" />
+                            </Button>
+                        </div>
                     </div>
                 )}
             </main>
+
+            {/* B5: 浮出工具栏 */}
+            <AnimatePresence>
+                {selection && (
+                    <FloatingToolbar
+                        selection={selection}
+                        onAnalyze={handleAnalyze}
+                        onPlay={handlePlay}
+                        onCopy={handleCopy}
+                        onExpandToSentence={handleExpandToSentence}
+                        scrollContainerRef={scrollContainerRef}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Magic Wand Sheet */}
             <MagicWandSheet
                 isOpen={isWandOpen}
                 onOpenChange={setIsWandOpen}
-                word={wandWord}
+                target={wandTarget}
+                type={wandType}
+                context={wandContext}
             />
 
+            {/* 底部提示 */}
+            <div className="fixed bottom-4 w-full text-center pointer-events-none">
+                <p className="text-[10px] font-mono text-zinc-400 tracking-widest opacity-30">
+                    选中文字触发操作
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// ============================================
+// Step 指示器子组件
+// ============================================
+
+function StepIndicator({ done, active, label }: { done: boolean; active: boolean; label: string }) {
+    return (
+        <div className={cn(
+            "flex items-center gap-3 transition-colors",
+            done ? "text-emerald-400" : active ? "text-zinc-200" : "text-zinc-600"
+        )}>
+            <span className="w-5 text-center">
+                {done ? "✅" : active ? "⟳" : "○"}
+            </span>
+            <span>{label}</span>
         </div>
     );
 }

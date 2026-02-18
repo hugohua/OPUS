@@ -39,7 +39,7 @@ export function FlashcardSection() {
                     <Link
                         key={mode.id}
                         href={mode.href}
-                        className="block col-span-2 md:col-span-1"
+                        className="block col-span-1"
                     >
                         <button className="w-full bg-white dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700 p-4 rounded-xl text-left transition-all active:scale-95 group shadow-sm dark:shadow-none h-full relative overflow-hidden">
 

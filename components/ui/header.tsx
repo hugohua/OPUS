@@ -14,6 +14,7 @@ interface HeaderProps {
     stepLabel?: string; // "05 / 20"
     rightAction?: React.ReactNode;
     onBack?: () => void;
+    backPath?: string;
     className?: string; // 支持额外样式覆盖
 }
 
@@ -21,7 +22,9 @@ export function Header({ variant = 'default', title, className, ...props }: Head
     const router = useRouter();
 
     const handleBack = () => {
-        if (props.onBack) {
+        if (props.backPath) {
+            router.push(props.backPath);
+        } else if (props.onBack) {
             props.onBack();
         } else {
             router.back();

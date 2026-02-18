@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: opus
     ports:
-      - "5432:5432"
+      - "5455:5432"
     volumes:
       - opus_data:/var/lib/postgresql/data
     networks:
@@ -46,6 +46,25 @@ services:
     depends_on:
       - opus-db
       - opus-redis
+    networks:
+      - opus-net
+
+  # Antigravity Manager (本地开发)
+  antigravity-manager:
+    image: lbjlaq/antigravity-manager:latest
+    container_name: antigravity-manager
+    restart: always
+    ports:
+      - "8045:8045"
+    environment:
+      - API_KEY=${ETL_API_KEY}
+      - WEB_PASSWORD=${ABV_WEB_PASSWORD:-admin}
+      - HTTP_PROXY=http://host.docker.internal:10809
+      - HTTPS_PROXY=http://host.docker.internal:10809
+
+      - NO_PROXY=localhost,127.0.0.1
+    volumes:
+      - ./data/antigravity:/root/.antigravity_tools
     networks:
       - opus-net
 

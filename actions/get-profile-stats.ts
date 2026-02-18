@@ -34,6 +34,9 @@ export interface ProfileStats {
 
     /** 低分词/高遗忘词数量 */
     errorWords: number;
+
+    /** 薄弱词汇判定标准说明 */
+    weakWordsCriteria: string;
 }
 
 // ────────────────────────────────────────
@@ -47,6 +50,7 @@ const EMPTY_STATS: ProfileStats = {
     loadForecast: [],
     activeDays: [],
     errorWords: 0,
+    weakWordsCriteria: "暂无数据",
 };
 
 // ────────────────────────────────────────
@@ -186,6 +190,7 @@ export async function getProfileStats(): Promise<ProfileStats> {
             loadForecast,
             activeDays,
             errorWords: errorWordsCount,
+            weakWordsCriteria: "掌握度 < 30% 或遗忘次数 > 3 的词汇",
         };
     } catch (error) {
         console.error("[getProfileStats] Failed:", error);

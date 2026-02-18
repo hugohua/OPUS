@@ -122,7 +122,7 @@ export default function SimulatePage() {
                 </div>
                 <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-100/50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/50">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-500">READY</span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-500">就绪</span>
                 </div>
             </header>
 
@@ -157,7 +157,7 @@ export default function SimulatePage() {
 
                                     <div className="mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-col items-start w-full gap-1">
                                         <span className="text-[10px] text-zinc-500 dark:text-zinc-600">{item.desc}</span>
-                                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-500">Queue: {item.queue}</span>
+                                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-500">队列: {item.queue}</span>
                                     </div>
                                 </button>
                             );
@@ -247,7 +247,7 @@ export default function SimulatePage() {
                                 <p className="text-[10px] text-zinc-500 dark:text-zinc-600 font-mono mt-0.5">文章编织引擎</p>
                             </div>
                         </div>
-                        <span className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono text-zinc-500">PENDING</span>
+                        <span className="px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-[10px] font-mono text-zinc-500">待开发</span>
                     </div>
                 </section>
 

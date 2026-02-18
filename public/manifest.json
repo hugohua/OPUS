@@ -1,0 +1,31 @@
+{
+    "name": "Opus | AI 职场英语训练",
+    "short_name": "Opus",
+    "description": "AI 驱动的职场英语认知康复训练台",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#09090B",
+    "theme_color": "#09090B",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -23,7 +23,7 @@ export function FocusShell({
     children,
     footer,
     onExit,
-    label = "DRILL",
+    label = "训练",
     className
 }: FocusShellProps) {
 
@@ -80,7 +80,7 @@ export function FocusShell({
                 {/* Exit Button */}
                 <button
                     onClick={onExit}
-                    title="Exit Session"
+                    title="退出训练"
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all active:scale-95 active:bg-zinc-300/50"
                 >
                     <X className="w-5 h-5" strokeWidth={2.5} />

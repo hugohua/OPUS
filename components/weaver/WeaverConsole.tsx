@@ -1,216 +1,174 @@
-"use client";
+﻿"use client";
+
+/**
+ * Weaver Console (The Lab) v2.2 - Refactored
+ * 
+ * 功能：
+ *   1. 界面风格：参考 Demo 优化，移除网格，使用 Slate-50 背景
+ *   2. layout：全屏 Flex 布局，Sticky Header/Footer
+ *   3. 组件：Raw Materials (Queue), Context Selection, Density
+ *   4. 重构：拆分为子组件
+ * 
+ * 作者: Hugo
+ * 日期: 2026-02-15
+ */
 
 import React, { useEffect, useState } from "react";
-import { getWeaverIngredients } from "@/actions/weaver-selection"; // Server Action
+import { getWeaverIngredients } from "@/actions/weaver-selection";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Briefcase, Users, TrendingUp, Cpu, Loader2, Sparkles, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { Loader2, Sparkles, History } from "lucide-react";
+import Link from "next/link";
+
+import { RawMaterials, WordItem } from "./console/RawMaterials";
+import { ContextSelector } from "./console/ContextSelector";
+import { DensitySelector } from "./console/DensitySelector";
+import { DEFAULT_WEAVER_DENSITY, WEAVER_DENSITY_CONFIGS } from "@/lib/constants/weaver-density";
+import { WEAVER_SCENARIOS } from "@/lib/constants/weaver-scenarios";
 
 // ============================================
-// Types & Constants
+// Types
 // ============================================
-
-type ScenarioType = "finance" | "hr" | "marketing" | "rnd";
-
-const SCENARIOS = [
-    { id: "finance", label: "Finance", icon: TrendingUp, desc: "Mergers, IPOs, Audit", color: "text-emerald-500", bg: "bg-emerald-500/10 dark:bg-emerald-500/20" },
-    { id: "hr", label: "Human Resources", icon: Users, desc: "Hiring, Culture, Policy", color: "text-blue-500", bg: "bg-blue-500/10 dark:bg-blue-500/20" },
-    { id: "marketing", label: "Marketing", icon: Sparkles, desc: "Branding, Growth, Ads", color: "text-violet-500", bg: "bg-violet-500/10 dark:bg-violet-500/20" },
-    { id: "rnd", label: "R&D", icon: Cpu, desc: "Innovation, Tech Stack", color: "text-amber-500", bg: "bg-amber-500/10 dark:bg-amber-500/20" },
-] as const;
-
-interface WordItem {
-    id: number;
-    word: string;
-    meaning: string;
-}
-
 interface WeaverConsoleProps {
-    onStart: (scenario: string, words: WordItem[]) => void;
+    onStart: (scenario: string, density: string, words: WordItem[]) => void;
 }
 
 /**
- * Weaver Console (Setup Phase)
- * 功能：
- * 1. 自动加载 FSRS 推荐词汇 (Priority Queue)
- * 2. 选择商务场景 (Scenario)
- * 3. 启动生成 (Start Weaver)
+ * Weaver Console - Light Mode & Dark Mode Support
  */
 export function WeaverConsole({ onStart }: WeaverConsoleProps) {
     const { data: session } = useSession();
-    const [selectedScenario, setSelectedScenario] = useState<ScenarioType>("finance");
+    const [selectedScenario, setSelectedScenario] = useState("finance_group");
+    const [selectedDensity, setSelectedDensity] = useState(DEFAULT_WEAVER_DENSITY);
     const [priorityWords, setPriorityWords] = useState<WordItem[]>([]);
     const [fillerWords, setFillerWords] = useState<WordItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // 1. Load Ingredients on Mount
+    // 加载词汇
     useEffect(() => {
         if (!session?.user?.id) return;
-
         loadIngredients(session.user.id, selectedScenario);
     }, [session?.user?.id, selectedScenario]);
 
-    async function loadIngredients(userId: string, scenario: string) {
+    async function loadIngredients(userId: string, scenario: string, forceRefresh = false) {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await getWeaverIngredients(userId, scenario);
+            const res = await getWeaverIngredients(userId, scenario, forceRefresh);
             if (res.status === "success" && res.data) {
                 setPriorityWords(res.data.priorityWords);
                 setFillerWords(res.data.fillerWords);
             } else {
-                setError(res.message || "Failed to load ingredients");
-                toast.error("Failed to load vocabulary");
+                setError(res.message || "加载失败");
+                toast.error("词汇加载失败");
             }
-        } catch (err) {
-            console.error(err);
-            setError("Network Error");
+        } catch {
+            setError("网络错误");
         } finally {
             setIsLoading(false);
         }
     }
 
-    const totalCount = priorityWords.length + fillerWords.length;
+    const handleWeave = () => {
+        onStart(selectedScenario, selectedDensity, [...priorityWords, ...fillerWords]);
+    };
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="relative w-full h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased flex flex-col overflow-hidden selection:bg-violet-100 dark:selection:bg-violet-900/30">
 
-            {/* Header */}
-            <header className="text-center space-y-2 mb-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold tracking-wider uppercase mb-2">
-                    <Briefcase className="w-3 h-3" />
-                    Opus Weaver Lab v2
+            {/* Ambient Glow for Dark Mode */}
+            <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none hidden dark:block"></div>
+
+
+
+            {/* Header - Sticky Top */}
+            <header className="px-6 py-6 flex justify-between items-center bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-100 dark:border-white/5 sticky top-0 z-20 backdrop-blur-md transition-colors duration-300">
+                <div>
+                    <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">简报生成</h1>
+                    <div className="flex items-center gap-1.5 mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                            Engine Ready
+                        </span>
+                    </div>
                 </div>
-                <h1 className="text-4xl font-serif font-black text-primary tracking-tight">
-                    Design Your Briefing
-                </h1>
-                <p className="text-secondary max-w-md mx-auto">
-                    Select a context. Opus will weave your due words into a professional reading session.
-                </p>
+                {/* History Link */}
+                <Link
+                    href="/weaver/history"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm hover:shadow active:scale-95 group"
+                    title="查看历史记录"
+                >
+                    <History className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors" />
+                    <span className="text-sm font-medium text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">简报中心</span>
+                </Link>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            <main className="flex-1 overflow-y-auto pb-32 relative z-10">
 
-                {/* LEFT: Ingredients (Data Flow) */}
-                <div className="md:col-span-5 space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                        <h3 className="font-bold text-secondary text-xs uppercase tracking-wider">Queue Payload</h3>
-                        <Badge variant="outline" className="font-mono text-[10px] text-zinc-400 border-border">
-                            {isLoading ? "SYNCING..." : `${totalCount} WORDS`}
-                        </Badge>
+                <RawMaterials
+                    isLoading={isLoading}
+                    error={error}
+                    priorityWords={priorityWords}
+                    fillerWords={fillerWords}
+                    onRefresh={() => session?.user?.id && loadIngredients(session.user.id, selectedScenario, true)}
+                />
+
+                <ContextSelector
+                    selectedScenario={selectedScenario}
+                    onSelect={setSelectedScenario}
+                    disabled={isLoading}
+                />
+
+                <DensitySelector
+                    selectedDensity={selectedDensity}
+                    onSelect={setSelectedDensity}
+                    disabled={isLoading}
+                />
+
+            </main>
+
+            {/* Footer / Floating Bar */}
+            <div className="fixed bottom-0 left-0 w-full px-6 py-4 bg-white/90 dark:bg-zinc-900/90 border-t border-zinc-200 dark:border-zinc-800 backdrop-blur-lg z-30">
+                <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest mb-1">
+                            Estimated Output
+                        </span>
+                        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                            <span>~{WEAVER_DENSITY_CONFIGS.find(d => d.id === selectedDensity)?.wordCount || 300} 词</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>
+                            <span>{priorityWords.length + fillerWords.length} 目标词</span>
+                        </div>
                     </div>
 
-                    <Card className="p-4 bg-muted/30 border-border shadow-sm min-h-[320px] relative overflow-hidden backdrop-blur-sm">
-                        {isLoading ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/50 backdrop-blur-sm z-10">
-                                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                                <span className="text-xs font-mono text-muted-foreground">Fetching due words...</span>
-                            </div>
-                        ) : error ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-rose-500">
-                                <AlertCircle className="w-8 h-8" />
-                                <span className="text-xs font-bold">{error}</span>
-                                <Button variant="outline" size="sm" onClick={() => session?.user?.id && loadIngredients(session.user.id, selectedScenario)}>Retry</Button>
-                            </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {/* Priority Queue */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-rose-500">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
-                                        <span className="text-[10px] font-bold uppercase tracking-wide">Priority (Due)</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {priorityWords.map(w => (
-                                            <Badge key={w.id} variant="secondary" className="bg-background hover:bg-rose-50 dark:hover:bg-rose-900/20 border border-transparent hover:border-rose-200 dark:hover:border-rose-800 text-foreground font-normal transition-colors">
-                                                {w.word}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Filler Queue */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600"></div>
-                                        <span className="text-[10px] font-bold uppercase tracking-wide">Context Fillers</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {fillerWords.map(w => (
-                                            <Badge key={w.id} variant="outline" className="border-border text-muted-foreground font-normal">
-                                                {w.word}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                    <button
+                        onClick={handleWeave}
+                        disabled={isLoading || (priorityWords.length === 0 && fillerWords.length === 0)}
+                        className={cn(
+                            "relative group px-8 py-3 rounded-full font-bold text-sm tracking-wide transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 disabled:transform-none disabled:shadow-none",
+                            isLoading || (priorityWords.length === 0 && fillerWords.length === 0)
+                                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-300 dark:text-zinc-600 cursor-not-allowed border border-zinc-200 dark:border-zinc-700"
+                                : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-violet-500/20 dark:shadow-violet-500/40 hover:shadow-violet-500/40 dark:hover:shadow-violet-500/20"
                         )}
-                    </Card>
-                </div>
-
-                {/* RIGHT: Scenario Selector (Control Flow) */}
-                <div className="md:col-span-7 space-y-4">
-                    <h3 className="font-bold text-secondary text-xs uppercase tracking-wider px-1">Target Scenario</h3>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        {SCENARIOS.map(s => {
-                            const Icon = s.icon;
-                            const isSelected = selectedScenario === s.id;
-
-                            return (
-                                <button
-                                    key={s.id}
-                                    onClick={() => setSelectedScenario(s.id as ScenarioType)}
-                                    className={cn(
-                                        "relative group flex flex-col items-start gap-3 p-4 rounded-xl border-2 transition-all duration-300 text-left",
-                                        isSelected
-                                            ? `border-${s.color.split('-')[1]}-500 bg-card shadow-md ring-1 ring-${s.color.split('-')[1]}-200 dark:ring-0`
-                                            : "border-transparent bg-card hover:border-border hover:bg-muted/50"
-                                    )}
-                                >
-                                    <div className={cn("p-2 rounded-lg transition-colors", s.bg, s.color)}>
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <span className={cn("block font-bold text-sm", isSelected ? "text-primary" : "text-muted-foreground")}>
-                                            {s.label}
-                                        </span>
-                                        <span className="text-xs text-secondary font-medium">
-                                            {s.desc}
-                                        </span>
-                                    </div>
-
-                                    {isSelected && (
-                                        <div className="absolute top-3 right-3 text-indigo-500 animate-in zoom-in-50">
-                                            <div className="w-2 h-2 rounded-full bg-current"></div>
-                                        </div>
-                                    )}
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    <div className="pt-6">
-                        <Button
-                            className="w-full h-12 text-lg font-serif font-bold tracking-wide bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-xl shadow-zinc-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01] active:scale-[0.99]"
-                            disabled={isLoading || totalCount === 0}
-                            onClick={() => onStart(selectedScenario, [...priorityWords, ...fillerWords])}
-                        >
+                    >
+                        <span className="relative z-10 flex items-center gap-2">
                             {isLoading ? (
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>生成中...</span>
+                                </>
                             ) : (
-                                <Sparkles className="mr-2 h-5 w-5 fill-current" />
+                                <>
+                                    <Sparkles className="w-4 h-4 text-violet-400 dark:text-violet-500 group-hover:text-violet-300 dark:group-hover:text-violet-600 transition-colors" />
+                                    <span>开始生成</span>
+                                </>
                             )}
-                            Initialize Weaver
-                        </Button>
-                    </div>
+                        </span>
+                    </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

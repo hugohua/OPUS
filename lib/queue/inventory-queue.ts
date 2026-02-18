@@ -9,6 +9,7 @@
 import { Queue } from 'bullmq';
 import { redis } from './connection';
 import { SessionMode } from '@/types/briefing';
+import { DRILLS_PER_BATCH } from '@/lib/drill-cache';
 
 // Job 数据结构
 export interface DrillJobData {
@@ -68,7 +69,7 @@ export async function enqueueDrillGeneration(
     });
 
     const targetCount = MODE_TARGET_COUNT[mode] || 20;
-    const batches = Math.ceil(targetCount / 10);
+    const batches = Math.ceil(targetCount / DRILLS_PER_BATCH);
 
     // 批量入队 (Pipeline)
     const jobs = [];

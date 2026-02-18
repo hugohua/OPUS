@@ -83,9 +83,9 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center space-y-4 bg-zinc-50 dark:bg-zinc-950">
                 <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-200">暂无可用训练</h2>
-                <p className="text-zinc-500">Please try again later.</p>
+                <p className="text-zinc-500">请稍后再试。</p>
                 <Button onClick={() => router.push('/dashboard')}>
-                    Back to Dashboard
+                    返回主页
                 </Button>
             </div>
         );
@@ -100,10 +100,10 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-200">Session Complete!</h2>
-                <p className="text-zinc-500">You mastered {session.index + 1} items.</p>
+                <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-200">训练完成！</h2>
+                <p className="text-zinc-500">本次掌握 {session.index + 1} 个词汇。</p>
                 <Button onClick={() => router.push('/dashboard')}>
-                    Return to Dashboard
+                    返回主页
                 </Button>
             </div>
         );

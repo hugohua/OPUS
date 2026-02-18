@@ -11,8 +11,8 @@ import { redirect } from 'next/navigation';
 import { InspectorClient } from './_components/inspector-client';
 
 export const metadata: Metadata = {
-    title: 'Opus Inspector | God View',
-    description: 'Real-time generator monitoring and feedback loop.',
+    title: 'Opus 审查器 | 全视模式',
+    description: '实时生成器监控与反馈回路',
 };
 
 export default async function InspectorPage() {

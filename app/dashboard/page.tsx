@@ -4,9 +4,11 @@ import { SkillGym } from "@/components/dashboard/skill-gym";
 import { ContextEngine } from "@/components/dashboard/context-engine";
 import { FloatingDock } from "@/components/dashboard/floating-dock";
 import { getDashboardStats } from "@/actions/get-dashboard-stats";
+import { getLatestBriefing } from "@/actions/weaver-actions";
 import { auth } from "@/auth";
 import { FsrsHud } from "@/components/dashboard/fsrs-hud";
 import { FlashcardSection } from "@/components/dashboard/flashcard-section";
+import { WEAVER_SCENARIOS } from "@/lib/constants/weaver-scenarios";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +16,22 @@ export default async function DashboardPage() {
     // We might keep fetching stats for future dynamic updates, though currently cards are static shell.
     const stats = await getDashboardStats();
     const session = await auth();
+
+    // Fetch Latest Briefing for Context Engine (Lightweight Query)
+    const briefing = await getLatestBriefing();
+
+    let latestArticle = null;
+    if (briefing) {
+        const scenarioDef = WEAVER_SCENARIOS.find(s => s.id === briefing.scenario);
+        latestArticle = {
+            id: briefing.id,
+            title: briefing.title,
+            scenario: briefing.scenario,
+            createdAt: briefing.createdAt,
+            contextLabel: scenarioDef ? scenarioDef.label : briefing.scenario,
+            iconName: scenarioDef ? scenarioDef.icon : 'BookOpen'
+        };
+    }
 
     return (
         <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 pb-32 flex flex-col gap-8 relative overflow-x-hidden selection:bg-violet-500/30">
@@ -39,7 +57,7 @@ export default async function DashboardPage() {
                     <SkillGym />
 
                     {/* Stream: Context Engine (Restored) */}
-                    <ContextEngine />
+                    <ContextEngine latestArticle={latestArticle} />
                 </div>
             </div>
 

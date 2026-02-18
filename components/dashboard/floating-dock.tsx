@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, ShieldCheck, User, Zap } from "lucide-react";
+import { Layers, Zap, User, Sparkles } from "lucide-react";
 
 interface FloatingDockProps {
     hasDue?: boolean;
@@ -32,9 +32,9 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
             hasDot: hasDue
         },
         {
-            href: "/admin",
-            icon: ShieldCheck,
-            label: "后台"
+            href: "/weaver",
+            icon: Sparkles,
+            label: "简报"
         },
         {
             href: "/dashboard/profile",
@@ -56,15 +56,15 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
                         className={cn(
                             "flex flex-col items-center justify-center w-16 h-full transition-all duration-300 relative group",
                             active
-                                ? "text-indigo-600 dark:text-indigo-400"
+                                ? "text-violet-600 dark:text-violet-400"
                                 : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
                         )}
                     >
                         <div className={cn(
                             "p-1.5 rounded-xl transition-all duration-300 mb-0.5",
-                            active ? "bg-indigo-50 dark:bg-indigo-500/10 scale-110" : "group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800"
+                            active ? "bg-violet-50 dark:bg-violet-500/10 scale-110" : "group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800"
                         )}>
-                            <Icon className={cn("w-5 h-5 stroke-[2px]", active && "fill-indigo-500/20")} />
+                            <Icon className={cn("w-5 h-5 stroke-[2px]", active && "fill-violet-500/20")} />
                         </div>
                         <span className="text-[10px] font-medium scale-90 origin-top">{item.label}</span>
 

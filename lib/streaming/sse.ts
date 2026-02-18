@@ -56,9 +56,11 @@ export interface HandleOpenAIStreamOptions {
     /** 内容回调（每个 chunk） */
     onContent?: (content: string) => void;
     /** 完成回调（全部内容） */
-    onComplete?: (fullContent: string) => void;
+    onComplete?: (fullContent: string) => Promise<void> | void;
     /** 自定义 OpenAI 客户端 (可选) */
     client?: OpenAI;
+    /** 自定义响应头 (可选) */
+    headers?: Record<string, string>;
 }
 
 /**
@@ -92,7 +94,8 @@ export async function handleOpenAIStream(
         errorContext = "OpenAI Stream",
         onContent,
         onComplete,
-        client
+        client,
+        headers
     } = options;
 
     // 优先使用传入的 client，否则使用单例 client
@@ -177,6 +180,7 @@ export async function handleOpenAIStream(
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            ...headers
         }
     });
 }

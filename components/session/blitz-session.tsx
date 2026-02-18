@@ -124,17 +124,17 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
                         className="text-center space-y-2"
                     >
                         <h1 className="text-4xl font-bold font-serif text-indigo-600 dark:text-indigo-400">闪电战完成！</h1>
-                        <p className="text-xl text-zinc-600 dark:text-zinc-400 font-serif italic">Session Complete.</p>
+                        <p className="text-xl text-zinc-600 dark:text-zinc-400 font-serif italic">训练结束</p>
                     </motion.div>
 
                     <div className="grid grid-cols-2 gap-4 w-full">
                         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-center border border-emerald-100 dark:border-emerald-800">
                             <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stats.pass}</div>
-                            <div className="text-[10px] text-emerald-800/60 dark:text-emerald-400/60 uppercase tracking-widest font-mono">Passed</div>
+                            <div className="text-[10px] text-emerald-800/60 dark:text-emerald-400/60 uppercase tracking-widest font-mono">通过</div>
                         </div>
                         <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl text-center border border-rose-100 dark:border-rose-800">
                             <div className="text-3xl font-bold text-rose-600 dark:text-rose-400 font-mono">{stats.fail}</div>
-                            <div className="text-[10px] text-rose-800/60 dark:text-rose-400/60 uppercase tracking-widest font-mono">Failed</div>
+                            <div className="text-[10px] text-rose-800/60 dark:text-rose-400/60 uppercase tracking-widest font-mono">未通过</div>
                         </div>
                     </div>
 
@@ -143,7 +143,7 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
                             size="lg"
                             className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none"
                         >
-                            Back to Dashboard
+                            返回主页
                         </Button>
                     </Link>
                 </div>
@@ -159,14 +159,14 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     return (
         <FocusShell
             variant="L2" // Violet for Blitz
-            label="DAILY BLITZ"
+            label="每日闪电战"
             progress={progress}
             onExit={() => router.push('/dashboard')}
             footer={
                 <ControlDeck
                     mode={deckMode}
                     onAction={handleDeckAction}
-                    labels={{ '1': 'Forgotten', '2': 'Got it' }}
+                    labels={{ '1': '忘了', '2': '记得' }}
                 />
             }
         >

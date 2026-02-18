@@ -30,17 +30,17 @@ export default async function BlitzPage() {
         return (
             <div className="container max-w-md mx-auto min-h-[80vh] flex flex-col items-center justify-center space-y-6 text-center">
                 <div className="space-y-2">
-                    <h1 className="text-2xl font-bold tracking-tight">All Caught Up!</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">已全部完成！</h1>
                     <p className="text-muted-foreground">
                         {message === 'No items due for review'
-                            ? "You've reviewed all your due words for now."
-                            : "Could not load session. Please try again."}
+                            ? "你已复习完所有待复习词汇。"
+                            : "无法加载训练。请稍后重试。"}
                     </p>
                 </div>
                 <Button asChild variant="outline">
                     <Link href="/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Dashboard
+                        返回主页
                     </Link>
                 </Button>
             </div>

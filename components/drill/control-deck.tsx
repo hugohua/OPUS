@@ -90,8 +90,8 @@ export function ControlDeck({
     // ============================================
     if (mode === "reveal" || mode === "continue") {
         const isContinue = mode === "continue";
-        const label = labels.main || (isContinue ? "Next Challenge" : "Show Answer");
-        const subLabel = isContinue ? "Press Space" : "Tap Space to Reveal";
+        const label = labels.main || (isContinue ? "下一题" : "显示答案");
+        const subLabel = isContinue ? "按空格键" : "按空格键揭晓";
 
         return (
             <div className={cn("w-full transition-all duration-300", className)}>
@@ -148,7 +148,7 @@ export function ControlDeck({
                         <XIcon className="w-4 h-4" />
                     </div>
                     <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 group-hover:text-rose-600 dark:group-hover:text-rose-400">
-                        {labels["1"] || "Incorrect"}
+                        {labels["1"] || "未通过"}
                     </span>
                 </button>
 
@@ -163,7 +163,7 @@ export function ControlDeck({
                         <Check className="w-4 h-4" />
                     </div>
                     <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                        {labels["2"] || "Correct"}
+                        {labels["2"] || "通过"}
                     </span>
                 </button>
             </div>
@@ -244,11 +244,11 @@ export function ControlDeck({
                                     {letter}
                                 </span>
                                 <span className="text-[9px] font-mono text-zinc-300 dark:text-zinc-600 group-hover:text-indigo-300">
-                                    KEY: {key}
+                                    键: {key}
                                 </span>
                             </div>
                             <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 line-clamp-1">
-                                {labels[key] || `Option ${letter}`}
+                                {labels[key] || `选项 ${letter}`}
                             </span>
                         </button>
                     );

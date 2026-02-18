@@ -1,119 +1,79 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
     Sheet,
     SheetContent,
     SheetHeader,
     SheetTitle
 } from "@/components/ui/sheet";
-import { WandContent } from "./WandContent";
-import { type WandWordOutput } from "@/lib/validations/weaver-wand-schemas";
-import { Loader2 } from "lucide-react";
+import { useSSEStream } from "@/hooks/use-sse-stream";
+import { MagicWandContent } from "./MagicWandContent";
 import { toast } from "sonner";
 
 interface MagicWandSheetProps {
-    word: string | null; // null means closed
-    contextId?: string;
+    target: string | null; // Selected word or sentence
+    type: "word" | "sentence";
+    context?: string; // Context sentence for word mode
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
 /**
- * Magic Wand Bottom Sheet (交互容器)
+ * Magic Wand Bottom Sheet
  * 
- * 功能:
- * - 监听 isOpen 变化，自动触发 API 查询
- * - 管理 Loading / Error 状态
- * - 渲染 WandContent
+ * Functions:
+ * - Manages Sheet visibility
+ * - Triggers AI streaming analysis via useSSEStream (统一协议)
+ * - Renders streaming markdown output via MagicWandContent
  */
-export function MagicWandSheet({ word, contextId, isOpen, onOpenChange }: MagicWandSheetProps) {
-    const [data, setData] = useState<WandWordOutput | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isAILoading, setIsAILoading] = useState(false);
+export function MagicWandSheet({ target, type, context, isOpen, onOpenChange }: MagicWandSheetProps) {
 
-    useEffect(() => {
-        if (isOpen && word) {
-            fetchData(word);
-        } else {
-            // Reset on close
-            // setData(null); // Optional: keep cache for faster reopen?
-        }
-    }, [isOpen, word]);
-
-    async function fetchData(targetWord: string) {
-        try {
-            setIsLoading(true);
-            setIsAILoading(true); // AI start loading implicitly
-
-            // 1. Fetch Local Data (Cache-First)
-            const params = new URLSearchParams({ word: targetWord });
-            if (contextId) params.append("context_id", contextId);
-
-            const res = await fetch(`/api/wand/word?${params.toString()}`);
-            if (!res.ok) {
-                if (res.status === 404) throw new Error("Word not found");
-                throw new Error("Failed to fetch word data");
-            }
-
-            const json = await res.json() as WandWordOutput;
-            setData(json);
-            setIsLoading(false);
-
-            // 2. TODO: Handle SSE for AI Insight if enabled (Phase 3.5)
-            // Currently API returns ai_insight as null, simulating async nature
-            // Assume AI finishes loading later or immediately if cached?
-            // For MVP, we stop loading after fetch as API doesn't confirm async trigger yet.
-            // Or we simulate a delay for "demo" effect if ai_insight is null.
-
-            if (json.ai_insight === null && contextId) {
-                // Mock AI loading delay for demo
-                setTimeout(() => {
-                    setIsAILoading(false);
-                }, 1500);
-            } else {
-                setIsAILoading(false); // Finished if data present or no context
-            }
-
-        } catch (error) {
-            console.error("Magic Wand Error:", error);
-            toast.error("Magic Wand broke", {
-                description: "Could not retrieve spell info."
+    const { text: completion, isLoading, error, startStream } = useSSEStream({
+        onError: (err) => {
+            toast.error("Magic Wand failed", {
+                description: err || "Something went wrong."
             });
-            setIsLoading(false);
-            setIsAILoading(false);
         }
-    }
+    });
+
+    // Trigger analysis when sheet opens with valid target
+    useEffect(() => {
+        if (isOpen && target) {
+            startStream("/api/wand/analyze", { text: target, type, context });
+        }
+    }, [isOpen, target]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <Sheet open={isOpen} onOpenChange={onOpenChange}>
-            <SheetContent side="bottom" className="h-[85vh] rounded-t-[32px] px-0 pb-0 overflow-hidden bg-background border-t border-border">
-                <div className="h-full flex flex-col">
-                    {/* Header */}
-                    <div className="px-6 pt-6 pb-2 border-b border-border flex items-center justify-between bg-surface/50 backdrop-blur-sm sticky top-0 z-10">
-                        <SheetTitle className="text-2xl font-serif font-bold text-primary flex items-center gap-3">
-                            {word}
-                            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                        </SheetTitle>
-                    </div>
+            <SheetContent side="bottom" className="h-[85vh] rounded-t-[32px] px-0 pb-0 overflow-hidden bg-background border-t border-border flex flex-col">
 
-                    {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar">
-                        {data && !isLoading ? (
-                            <WandContent
-                                data={data}
-                                isAILoading={isAILoading}
-                            />
-                        ) : (
-                            // Initial Loading State
-                            isLoading && (
-                                <div className="space-y-8 animate-pulse">
-                                    <div className="h-32 bg-muted rounded-xl" />
-                                    <div className="h-48 bg-muted rounded-xl" />
-                                </div>
-                            )
-                        )}
+                {/* Header Area */}
+                <SheetHeader className="px-6 pr-10 pt-6 pb-2 border-b border-zinc-100 dark:border-white/5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10 space-y-0">
+                    <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mx-auto mb-3" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-indigo-500 animate-pulse' : 'bg-green-500'}`} />
+                            <SheetTitle className="text-[10px] font-mono font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest">
+                                AI 解析
+                            </SheetTitle>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-300 dark:text-zinc-600">
+                            由 Qwen-Turbo 生成
+                        </span>
                     </div>
+                </SheetHeader>
+
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar">
+                    {target && (
+                        <MagicWandContent
+                            completion={completion}
+                            isLoading={isLoading}
+                            type={type}
+                            target={target}
+                        />
+                    )}
                 </div>
             </SheetContent>
         </Sheet>

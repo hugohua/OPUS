@@ -34,13 +34,13 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
         return (
             <div className="w-full flex flex-col items-center justify-center pb-8 min-h-[120px]">
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em] animate-pulse mb-4">
-                    Tap to reveal
+                    点击揭晓
                 </p>
                 <Button
                     onClick={onReveal}
                     className="w-full max-w-xs h-14 rounded-full text-base font-semibold tracking-wide shadow-lg active:scale-95 transition-all bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:scale-105 hover:bg-zinc-800 dark:hover:bg-zinc-200"
                 >
-                    Show Answer
+                    显示答案
                 </Button>
             </div>
         );
@@ -52,7 +52,7 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
         <div className="w-full shrink-0 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="text-center mb-6">
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em]">
-                    How well did you know this?
+                    你对这个词的掌握程度？
                 </p>
             </div>
 
@@ -60,7 +60,7 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
                 {/* 1. Forgot (1) - Red/Rose */}
                 <GradeButton
                     grade={1}
-                    label="Forgot"
+                    label="忘了"
                     subLabel="1m"
                     icon={<CircleX className="w-5 h-5" strokeWidth={1.5} />}
                     colorClass="border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 hover:border-rose-500/40 text-rose-500 dark:text-rose-400"
@@ -72,7 +72,7 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
                 {/* 2. Hazy (2) - Amber */}
                 <GradeButton
                     grade={2}
-                    label="Hazy"
+                    label="模糊"
                     subLabel="10m"
                     icon={<Cloud className="w-5 h-5" strokeWidth={1.5} />}
                     colorClass="border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/40 text-amber-500 dark:text-amber-400"
@@ -84,7 +84,7 @@ export function PhraseFooter({ onGrade, onReveal, status, disabled }: PhraseFoot
                 {/* 3. Know (3) - Emerald */}
                 <GradeButton
                     grade={3}
-                    label="Know"
+                    label="记得"
                     subLabel="4d"
                     icon={<CircleCheck className="w-5 h-5" strokeWidth={1.5} />}
                     colorClass="border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-500 dark:text-emerald-400"

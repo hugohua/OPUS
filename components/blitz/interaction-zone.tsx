@@ -28,7 +28,7 @@ export function InteractionZone({ state, onReveal, onGrade }: InteractionZonePro
                     >
                         <div className="flex flex-col items-center gap-2 text-slate-400 animate-pulse">
                             <Eye className="w-8 h-8" />
-                            <span className="text-sm tracking-widest uppercase font-medium">Tap to Reveal</span>
+                            <span className="text-sm font-bold">点击揭晓</span>
                         </div>
                     </motion.div>
                 ) : (
@@ -45,7 +45,7 @@ export function InteractionZone({ state, onReveal, onGrade }: InteractionZonePro
                             onClick={() => onGrade('fail')}
                         >
                             <X className="w-5 h-5 mr-2" />
-                            Forgot
+                            忘了
                         </Button>
 
                         <Button
@@ -55,7 +55,7 @@ export function InteractionZone({ state, onReveal, onGrade }: InteractionZonePro
                             onClick={() => onGrade('pass')}
                         >
                             <Check className="w-5 h-5 mr-2" />
-                            Got it
+                            记得
                         </Button>
                     </motion.div>
                 )}

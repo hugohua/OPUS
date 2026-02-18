@@ -79,26 +79,26 @@ export async function getCacheCount(userId: string, mode: string) {
 
 /**
  * 缓存上限配置（测试友好配置：Limit = 批次数）
- * 1 批 = 10 题
+ * 1 批 = 5 题
  */
 /**
  * 缓存上限配置 (Single Source of Truth)
  * Keys: SessionMode
- * Values: Max Batch Count (1 Batch = 10 Drills)
- * Example: SYNTAX: 5 => 50 Drills Max
+ * Values: Max Batch Count (1 Batch = 5 Drills)
+ * Example: SYNTAX: 5 => 25 Drills Max
  */
-export const DRILLS_PER_BATCH = 10;
+export const DRILLS_PER_BATCH = 5;
 
 import { createSessionModeRecord } from '@/lib/config/mixed-mode-config';
 
 export const CACHE_LIMIT_MAP = createSessionModeRecord({
-    SYNTAX: 5,      // 50 drills
-    CHUNKING: 5,    // 50 drills
-    NUANCE: 3,      // 30 drills
-    BLITZ: 3,       // 30 drills
-    PHRASE: 5,      // 50 drills
-    AUDIO: 5,       // 50 drills
-    READING: 5,     // 50 drills
-    VISUAL: 5,      // 50 drills
-    CONTEXT: 3      // [L2] 30 drills (lower volume, higher quality)
+    SYNTAX: 10,      // 50 drills (10 * 5)
+    CHUNKING: 10,    // 50 drills
+    NUANCE: 6,      // 30 drills (6 * 5)
+    BLITZ: 6,       // 30 drills
+    PHRASE: 10,      // 50 drills
+    AUDIO: 10,       // 50 drills
+    READING: 10,     // 50 drills
+    VISUAL: 10,      // 50 drills
+    CONTEXT: 6      // [L2] 30 drills
 });

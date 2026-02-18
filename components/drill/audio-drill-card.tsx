@@ -102,13 +102,13 @@ export function AudioDrillCard({
                         className="h-24 flex items-center justify-center"
                     >
                         <p className="text-sm font-medium text-zinc-400 uppercase tracking-widest animate-pulse">
-                            Listening Mode
+                            聆听模式
                         </p>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-        </div>
+        </div >
     );
 
     /**
@@ -124,7 +124,7 @@ export function AudioDrillCard({
                         className="h-14 w-full bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 rounded-2xl font-semibold text-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                     >
                         <Eye className="w-5 h-5" />
-                        Reveal
+                        揭晓
                     </button>
                 </div>
             ) : (
@@ -137,7 +137,7 @@ export function AudioDrillCard({
                         className="h-16 w-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl font-bold text-lg hover:bg-rose-200 dark:hover:bg-rose-900/50 active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-1"
                     >
                         <RotateCcw className="w-6 h-6" />
-                        <span className="text-xs uppercase tracking-wider">Forgot</span>
+                        <span className="text-xs uppercase tracking-wider">忘了</span>
                     </button>
 
                     <button
@@ -145,7 +145,7 @@ export function AudioDrillCard({
                         className="h-16 w-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl font-bold text-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-1"
                     >
                         <Check className="w-6 h-6" />
-                        <span className="text-xs uppercase tracking-wider">Got it</span>
+                        <span className="text-xs uppercase tracking-wider">记得</span>
                     </button>
 
                     {/* Easy Button (Hidden or strictly for expert users? Let's stick to 2-button flow for simplicity per PRD) */}
@@ -157,7 +157,7 @@ export function AudioDrillCard({
     return (
         <UniversalCard
             variant="violet"
-            category="AUDIO GYM"
+            category="听力训练"
             progress={progress}
             onExit={onExit}
             footer={ZoneB}

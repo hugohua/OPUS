@@ -1,20 +1,22 @@
 # Weaver Lab & Magic Wand - 技术架构文档
 
-> **版本**: v2.0  
-> **最后更新**: 2026-02-05  
-> **状态**: ✅ 完成 (Phase 1-4 + Code Review 修复)
+> **版本**: v2.1  
+> **最后更新**: 2026-02-16  
+> **状态**: ✅ 完成 (Phase 1-5 + Refactor + Code Review)
 
 ---
 
 ## 📋 概述
 
-Weaver Lab 与 Magic Wand 是 Opus L2 Track 的核心功能模块，实现了基于 FSRS 队列的沉浸式商务阅读材料生成（Weaver）和即时词汇解析（Magic Wand）。
+Weaver Lab 与 Magic Wand 是 Opus L2 Track 的核心功能模块，实现了基于 **场景优先选词** 的沉浸式商务阅读材料生成（Weaver）和即时词汇解析（Magic Wand）。
 
 **核心价值**:
-- **Zero-Wait**: 流式生成 + 缓存优先，无阻塞体验
-- **AI-Native**: LLM 驱动的内容生成 + 智能选词
-- **Fail-Safe**: 完整的错误处理和兜底机制
-- **Audit-Ready**: 全链路审计埋点，支持行为分析
+- **Scenario-First**: 6 大场景驱动选词，21 个 DB 标签映射
+- **Density Control**: 三挡篇幅控制 (Light / Balanced / Dense)
+- **Zero-Wait**: 流式生成 + Redis 缓存 + Force Refresh
+- **AI-Native**: LLM 驱动的内容生成 + 幻觉检测
+- **Fail-Safe**: 零候选词 → 自由阅读模式
+- **Audit-Ready**: 全链路审计埋点 (Selection / Generation / Hallucination)
 
 ---
 
@@ -23,312 +25,267 @@ Weaver Lab 与 Magic Wand 是 Opus L2 Track 的核心功能模块，实现了基
 ### 整体架构图
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React)                         │
-│  ┌────────────────┐         ┌──────────────────┐            │
-│  │ WeaverConsole  │────────▶│ ArticleReader    │            │
-│  │ (选词界面)      │         │ (SSE 流式渲染)    │            │
-│  └────────────────┘         └──────────────────┘            │
-│         │                            │                       │
-│         │ useSSEStream Hook          │ MagicWandSheet       │
-│         ▼                            ▼                       │
-└─────────┼────────────────────────────┼───────────────────────┘
-          │                            │
-┌─────────┼────────────────────────────┼───────────────────────┐
-│         │        Backend (Next.js)   │                       │
-│  ┌──────▼────────┐          ┌────────▼────────┐             │
-│  │ Weaver V2 API │          │ Magic Wand API  │             │
-│  │ /api/weaver/  │          │ /api/wand/word  │             │
-│  │ v2/generate   │          │                 │             │
-│  └───────────────┘          └─────────────────┘             │
-│         │                            │                       │
-│         │ handleOpenAIStream         │ Cache-First          │
-│         ▼                            ▼                       │
-│  ┌──────────────┐          ┌─────────────────┐              │
-│  │ SSE Streaming│          │ Vocab Lookup    │              │
-│  │ (OpenAI SDK) │          │ (Prisma)        │              │
-│  └──────────────┘          └─────────────────┘              │
-│         │                            │                       │
-│         │ onComplete                 │                       │
-│         ▼                            ▼                       │
-│  ┌────────────────────────────────────────┐                 │
-│  │      Audit Service (Fire-and-Forget)   │                 │
-│  │  • WEAVER:SELECTION                    │                 │
-│  │  • WAND:LOOKUP                         │                 │
-│  └────────────────────────────────────────┘                 │
-│         │                                                    │
-│         ▼                                                    │
-│  ┌─────────────┐                                            │
-│  │  DrillAudit │ (Prisma)                                   │
-│  └─────────────┘                                            │
-└────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Data Layer (PostgreSQL + Redis)                 │
-│  • Vocab (词汇库)                                            │
-│  • UserProgress (FSRS 状态)                                  │
-│  • DrillAudit (审计日志)                                     │
-│  • Redis Cache (Weaver Ingredients)                         │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       Frontend (React)                              │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │              WeaverConsole (Orchestrator)                       │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐           │  │
+│  │  │ RawMaterials │ │ContextSelector│ │DensitySelector│           │  │
+│  │  │ (词汇展示)    │ │ (场景选择)    │ │ (篇幅控制)    │           │  │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘           │  │
+│  └──────────┬─────────────────────────────────────────────────────┘  │
+│             │ useSSEStream Hook                                      │
+│  ┌──────────▼──────────────────────────────────────────────────┐     │
+│  │  ArticleReader (SSE 流式渲染) ──► FloatingToolbar            │     │
+│  │                                 ──► MagicWandSheet           │     │
+│  └─────────────────────────────────────────────────────────────┘     │
+└──────────────┬───────────────────────────────────────────────────────┘
+               │
+┌──────────────┼───────────────────────────────────────────────────────┐
+│              │         Backend (Next.js)                              │
+│  ┌───────────▼───────┐                ┌──────────────────┐           │
+│  │  Weaver V2 API    │                │  Magic Wand API  │           │
+│  │  /api/weaver/     │                │  /api/wand/word  │           │
+│  │  v2/generate      │                └──────────────────┘           │
+│  └───────────────────┘                                               │
+│         │                                                            │
+│  ┌──────▼──────────┐   ┌──────────────────────┐                     │
+│  │ weaver-selection │   │ weaver-context.ts     │                     │
+│  │ (4 层瀑布选词)    │   │ (Prompt + Density)    │                     │
+│  └──────┬──────────┘   └──────────────────────┘                     │
+│         │                     │                                      │
+│  ┌──────▼──────────┐   ┌─────▼────────────────┐                     │
+│  │ scenario-map.ts │   │  SSE Streaming        │                     │
+│  │ (6→21 映射)      │   │  (handleOpenAIStream) │                     │
+│  └─────────────────┘   └──────────────────────┘                     │
+│                              │ onComplete                            │
+│                       ┌──────▼──────────────────┐                    │
+│                       │  幻觉检测 + 审计埋点      │                    │
+│                       └─────────────────────────┘                    │
+└──────────────────────────────────────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                Data Layer (PostgreSQL + Redis)                        │
+│  • Vocab (词汇库 + scenarios 标签)                                    │
+│  • UserProgress (FSRS 状态)                                          │
+│  • DrillAudit (审计日志)                                              │
+│  • Redis Cache (Weaver Ingredients, 30s TTL)                         │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🔌 核心模块
 
-### 1. Weaver Lab (文章生成)
+### 1. 智能选词引擎 (v2.1 场景优先)
 
-#### 1.1 API 端点
+#### 1.1 文件
+
+| 文件 | 职责 |
+|------|------|
+| `actions/weaver-selection.ts` | Server Action — 4 层瀑布选词 |
+| `lib/constants/weaver-scenario-map.ts` | 场景 → DB 标签映射 (6 → 21) |
+| `lib/constants/weaver-density.ts` | Density 枚举 + UI 配置 |
+
+#### 1.2 4 层瀑布选词策略
+
+> **v2.0 → v2.1 变更**: 弃用 `fetchOMPSCandidates` 通用选词，改为 Prisma 直查 + 场景过滤
+
+| 层 | 策略 | Source 标记 | 目标数 |
+|----|------|-------------|:------:|
+| 1 | Due 词 + 场景匹配 | `due_matched` | 10 |
+| 2 | New 词 + 场景匹配 | `new_matched` | 补位 |
+| 3 | Due 词 + 跨场景兜底 | `due_fallback` | 补位 |
+| 4 | Filler 词 + 场景匹配 | filler | 4 |
+
+#### 1.3 场景映射
+
+```typescript
+// lib/constants/weaver-scenario-map.ts
+const WEAVER_SCENARIO_MAP = {
+    finance:    ["finance", "investment", "tax_accounting"],
+    hr:         ["recruitment", "personnel", "management"],
+    marketing:  ["marketing", "sales", "customer_service"],
+    operations: ["logistics", "manufacturing", "procurement", "quality_control"],
+    office:     ["office_admin", "business_travel", "dining_events", "general_business"],
+    tech:       ["technology", "negotiation", "legal", "real_estate"],
+};
+```
+
+#### 1.4 缓存策略
+
+| 参数 | v2.0 | v2.1 |
+|------|------|------|
+| TTL | 5 分钟 | **30 秒** |
+| Key | `weaver:ingredients:{userId}:{scenario}` | + `timeWindow` 或 `manual_` prefix |
+| Force Refresh | ❌ 不支持 | ✅ `forceRefresh` 参数绕过缓存 |
+| Shuffle | `sort(() => Math.random() - 0.5)` | ✅ **Fisher-Yates Shuffle** |
+
+#### 1.5 API 签名
+
+```typescript
+// actions/weaver-selection.ts
+export async function getWeaverIngredients(
+    userId: string,
+    scenario: string,
+    forceRefresh: boolean = false
+): Promise<ActionState<{
+    priorityWords: Array<{ id: number; word: string; meaning: string; source: string }>;
+    fillerWords: Array<{ id: number; word: string; meaning: string }>;
+}>>
+```
+
+---
+
+### 2. Weaver V2 API
+
+#### 2.1 端点
 
 **路径**: `POST /api/weaver/v2/generate`
 
 **输入** (Zod Schema: `WeaverV2InputSchema`):
 ```typescript
 {
-  scenario: "finance" | "product_launch" | "team_meeting" | ...,
-  target_word_ids?: number[] // 可选，手动指定词汇
+  scenario: "finance" | "hr" | "marketing" | "operations" | "office" | "tech",
+  density: "light" | "balanced" | "dense",  // ✅ v2.1 新增, 默认 "balanced"
+  target_word_ids?: number[]               // 可选，手动指定词汇
 }
 ```
 
-**输出**: SSE Stream
+**输出**: SSE Stream (标准格式)
+
+#### 2.2 核心流程
+
+```mermaid
+flowchart TD
+    A[POST Request] --> B{Auth 校验}
+    B -->|❌| C[401 Unauthorized]
+    B -->|✅| D{手动指定 or 自动?}
+    D -->|手动| E[Prisma 查词]
+    D -->|自动| F[4 层瀑布选词]
+    E --> G{候选词 > 0?}
+    F --> G
+    G -->|是| H[构建 Prompt + Density]
+    G -->|否| I[自由阅读模式]
+    I --> H
+    H --> J[SSE Stream]
+    J --> K[onComplete]
+    K --> L[幻觉检测]
+    K --> M[审计埋点]
+```
+
+#### 2.3 幻觉检测 (v2.1 新增)
+
 ```typescript
-data: {"type":"content","data":"Hello"}
-data: {"type":"content","data":" world"}
-data: {"type":"done"}
+// 检测 LLM 生成的文本中是否遗漏了目标词
+const missingRate = missingWords.length / candidates.length;
+if (missingRate > 0.2) {
+    recordAudit({ auditTags: ['weaver_hallucination'] });
+}
 ```
 
-#### 1.2 智能装填逻辑 (Server Action)
-
-**文件**: `actions/weaver-selection.ts`
-
-**流程**:
-1. **Redis 缓存检查** (`weaver:ingredients:{userId}:{scenario}`)
-2. **OMPS 选词** (Priority Queue):
-   - `fetchOMPSCandidates(userId, 10, { reviewRatio: 0.8 }, [], "CONTEXT")`
-   - 80% Due 词 + 20% New 词
-3. **Filler Queue** (补充词汇):
-   - 从 `UserProgress` 查询 L2 Track 高频词
-   - 限制 5 个
-
-**缓存策略**:
-- TTL: 5 分钟
-- Key Format: `weaver:ingredients:{userId}:{scenario}`
-
-#### 1.3 LLM Prompt 生成
-
-**文件**: `lib/generators/l2/weaver-context.ts`
-
-**System Prompt**:
-```
-你是商务英语教练。根据场景 ({scenario}) 生成 200-250 词文章。
-要求：
-- 自然融入目标词汇（加粗）
-- 符合商务场景语境
-- 难度适配 L2 水平
+**Schema**: `HallucinationCheckSchema` (Zod)
+```typescript
+{ totalTargets: number, missingWords: string[], missingRate: number, isHallucinated: boolean }
 ```
 
-**User Prompt**:
-```
+#### 2.4 零候选词处理 (v2.1 新增)
+
+候选词为 0 时不返回 400，进入 **自由阅读模式**：SSE 正常生成文章（无目标词高亮）。
+
+---
+
+### 3. Prompt 引擎
+
+#### 3.1 文件
+
+| 文件 | 职责 |
+|------|------|
+| `lib/generators/l2/weaver-context.ts` | System + User Prompt 构建 |
+| `lib/validations/weaver-wand-schemas.ts` | 输入/输出 Zod Schema |
+
+#### 3.2 System Prompt 特性
+
+| 特性 | 描述 |
+|------|------|
+| 场景上下文 | 6 场景各有专属描述指令 |
+| Density 控制 | `light: 120-180w` / `balanced: 200-300w` / `dense: 350-450w` |
+| XML 标签 | `<target_words>` 包裹目标词表 (幻觉检测增强) |
+| 输出格式 | 标题行 + 空行 + 正文，目标词 **粗体** |
+
+#### 3.3 User Prompt 结构
+
+```xml
 场景: {scenario}
-目标词汇: negotiate, stakeholder, ...
-生成文章，目标词加粗。
-```
 
-#### 1.4 FSRS 记录
+<target_words>
+- negotiate (谈判)
+- stakeholder (利益相关者)
+</target_words>
 
-**触发时机**: `onComplete` 回调
-
-**实现**:
-```typescript
-await Promise.all(candidates.map(c =>
-    recordOutcome({
-        userId,
-        vocabId: c.id,
-        grade: 1, // Again (曝光)
-        mode: "CONTEXT",
-        track: "CONTEXT"
-    })
-));
+请撰写文章，确保上述全部词汇自然嵌入文中。
 ```
 
 ---
 
-### 2. Magic Wand (即时查词)
+### 4. Magic Wand (即时查词)
 
-#### 2.1 API 端点
+#### 4.1 API 端点
 
 **路径**: `GET /api/wand/word`
 
-**查询参数**:
-```typescript
-{
-  word: string,        // 目标词汇
-  context_id?: string  // 可选，上下文 ID
-}
-```
+**查询参数**: `{ word: string, context_id?: string }`
 
 **输出** (Zod Schema: `WandWordOutputSchema`):
 ```typescript
 {
-  word: string,
-  phonetic: string,
-  definition_cn: string,
-  definition_en: string,
-  example_sentences: string[],
-  collocations: string[],
-  difficulty_level: number,
-  frequency_score: number,
-  ai_insight?: {
-    etymology: string,
-    usage_tips: string[]
-  }
+  vocab: { phonetic: string, meaning: string },
+  etymology: { mode: "ROOTS"|"DERIVATIVE"|"ASSOCIATION"|"NONE", memory_hook: string, data: object } | null,
+  ai_insight: { collocation: string, nuance: string, example?: string } | null
 }
 ```
 
-#### 2.2 Cache-First 策略
+#### 4.2 前端集成
 
-**查询逻辑**:
-```typescript
-// 1. 本地 Vocab 表查询
-const vocab = await prisma.vocab.findFirst({
-    where: { word: { equals: word, mode: 'insensitive' } },
-    select: { /* ... */ }
-});
-
-// 2. 如果未找到，返回 404（未来可扩展为 LLM 生成）
-```
-
-#### 2.3 前端集成
-
-**组件**: `components/wand/MagicWandSheet.tsx`
-
-**触发方式**:
-- 点击 `ArticleReader` 中的高亮词汇
-- 打开 Bottom Sheet，显示词汇详情
-
-**UI 分层**:
-- **Layer 1**: Local DNA (实线边框，0ms 响应)
-- **Layer 2**: AI Context (虚线边框，呼吸动画，异步加载)
+- **触发**: 点击 `ArticleReader` 中高亮词 → `FloatingToolbar` → `MagicWandSheet`
+- **分层**: Layer 1 (Local DNA, 0ms) + Layer 2 (AI Context, async)
 
 ---
 
-### 3. SSE 流式处理
+### 5. SSE 流式处理
 
-#### 3.1 后端实现
+#### 5.1 后端
 
-**核心文件**: `lib/streaming/sse.ts`
-
-**函数**: `handleOpenAIStream(messages, options)`
+**核心**: `lib/streaming/sse.ts` → `handleOpenAIStream(messages, options)`
 
 **特性**:
 - ✅ 单例 OpenAI 客户端
 - ✅ 标准 SSE 格式 `{type, data}`
-- ✅ Try-Catch 错误处理 + Client Disconnect 检测
-- ✅ `onComplete` 回调支持（Await Promise）
+- ✅ Try-Catch Client Disconnect 检测
+- ✅ `onComplete` 回调 (幻觉检测 + 审计)
 
-**关键代码**:
-```typescript
-try {
-    controller.enqueue(encoder.encode(sseData));
-} catch (err) {
-    console.warn(`Client disconnected during stream`);
-    return; // 优雅退出
-}
-```
+#### 5.2 前端
 
-#### 3.2 前端 Hook
-
-**文件**: `hooks/use-sse-stream.ts`
-
-**函数**: `useSSEStream(options)`
+**核心**: `hooks/use-sse-stream.ts` → `useSSEStream(options)`
 
 **特性**:
 - ✅ AbortController 超时保护 (60s)
-- ✅ 精确依赖管理 (`onComplete`, `onError`)
-- ✅ 错误状态管理
-
-**用法**:
-```typescript
-const { text, isLoading, error, startStream } = useSSEStream({
-    onComplete: (text) => console.log('Done:', text.length),
-    onError: (err) => console.error('Error:', err)
-});
-
-startStream('/api/weaver/v2/generate', { scenario: 'finance' });
-```
+- ✅ RAF-buffered 帧对齐渲染 (防抖动)
+- ✅ 精确依赖管理
 
 ---
 
-### 4. 审计系统 (Panoramic Audit)
+### 6. 审计系统
 
-#### 4.1 新增审计类型
+#### 6.1 审计事件类型
 
-**扩展**: `lib/services/audit-service.ts`
-
-```typescript
-type AuditContextMode =
-    | 'OMPS:SELECTION'
-    | 'FSRS:TRANSITION'
-    | 'WEAVER:SELECTION' // ✅ 新增
-    | 'WAND:LOOKUP'      // ✅ 新增
-    | ...
-```
-
-#### 4.2 Weaver Selection 审计
-
-**函数**: `auditWeaverSelection(userId, scenario, inputs)`
-
-**记录内容**:
-```typescript
-{
-  targetWord: "WEAVER:FINANCE",
-  contextMode: "WEAVER:SELECTION",
-  userId: "xxx",
-  payload: {
-    context: { scenario: "finance" },
-    decision: {
-      priorityCount: 8,
-      fillerCount: 5,
-      priorityIds: [1, 2, ...],
-      fillerIds: [10, 11, ...]
-    }
-  },
-  auditTags: ["weaver_starved"] // 如果 priorityCount === 0
-}
-```
-
-#### 4.3 Wand Lookup 审计
-
-**函数**: `auditWandLookup(userId, word, contextId, result)`
-
-**记录内容**:
-```typescript
-{
-  targetWord: "negotiate", // ✅ 限制 100 字符
-  contextMode: "WAND:LOOKUP",
-  userId: "xxx",
-  payload: {
-    context: { contextId: "gen_123" },
-    decision: { vocabId: 42, found: true }
-  },
-  auditTags: ["contextual_lookup"] // 如果有 contextId
-}
-```
-
-#### 4.4 安全保护
-
-**校验逻辑**:
-```typescript
-// ✅ User ID 校验
-if (!userId || userId.trim() === '') {
-    log.warn('[AuditService] Invalid userId, skipping audit');
-    return;
-}
-
-// ✅ 词汇长度限制
-const sanitizedWord = word.trim().slice(0, 100);
-```
+| 事件 | 上下文 | 触发时机 |
+|------|--------|----------|
+| `WEAVER:SELECTION` | 选词决策 | Server Action 完成 |
+| `WEAVER:GENERATION` | 生成开始/完成 | API 入口 / onComplete |
+| `weaver_hallucination` | 幻觉检测 | 缺失率 > 20% |
+| `WAND:LOOKUP` | 查词 | Wand API 调用 |
 
 ---
 
@@ -336,156 +293,59 @@ const sanitizedWord = word.trim().slice(0, 100);
 
 ### API 测试 (Hurl)
 
-**文件**:
-- `tests/l2-weaver-fsrs.hurl` - Weaver V2 API 完整规格
-- `tests/l2-magic-wand.hurl` - Magic Wand API 完整规格
-
-**覆盖场景**:
-- 认证测试 (401 Unauthorized)
-- 输入验证 (400 Bad Request)
-- 正常流程 (200 OK)
-- 边界条件 (空词汇库、未登录)
+| 文件 | 覆盖 |
+|------|------|
+| `tests/l2-weaver-fsrs.hurl` | Weaver V2 API (Auth/Zod/SSE) |
+| `tests/l2-magic-wand.hurl` | Magic Wand API |
 
 ### 单元测试 (Vitest)
 
-**文件**: `actions/__tests__/weaver-selection.test.ts`
-
-**覆盖场景**:
-- Redis Cache Hit
-- Redis Cache Miss + OMPS 调用
-- 审计埋点验证
-- 错误处理
-
----
-
-## 🎨 UI/UX 规范
-
-### 主题支持
-
-**文件**: `components/providers.tsx`
-
-```tsx
-<SessionProvider>
-    <NextThemesProvider {...props}>
-        {children}
-    </NextThemesProvider>
-</SessionProvider>
-```
-
-### Weaver Console
-
-**组件**: `components/weaver/WeaverConsole.tsx`
-
-**特性**:
-- Scenario 选择器 (Tabs)
-- Priority Queue 展示 (Badge 显示数量)
-- "Initialize Weaver" 按钮
-- Linear 质感设计
-
-### Article Reader
-
-**组件**: `components/weaver/ArticleReader.tsx`
-
-**特性**:
-- ✅ 流式打字机效果
-- ✅ 目标词高亮（Indigo 下划线）
-- ✅ 点击触发 Magic Wand
-- ✅ 错误状态 UI + 重试按钮
-- ✅ Loading State (Progress Bar)
-- ✅ Empty State
-
-### Magic Wand Sheet
-
-**组件**: `components/wand/MagicWandSheet.tsx`
-
-**特性**:
-- Bottom Sheet (Shadcn UI)
-- Layer 1: Local DNA (实线边框)
-- Layer 2: AI Context (虚线边框 + 呼吸动画)
-- 词源、搭配、例句展示
-
----
-
-## 🔒 安全与校验
-
-### 认证保护
-
-**所有 API 端点**:
-```typescript
-const session = await auth();
-if (!session?.user?.id) {
-    return new Response("Unauthorized", { status: 401 });
-}
-```
-
-### 输入校验
-
-**Zod Schema**:
-- `WeaverV2InputSchema` - Weaver 输入
-- `WandWordOutputSchema` - Wand 输出
-- `AIInsightSchema` - AI 洞察
-
-### 错误处理
-
-**层级**:
-1. **API 层**: Try-Catch + Zod 校验
-2. **SSE 层**: Stream Error Event `{type: 'error'}`
-3. **前端层**: Error State UI + 重试机制
+| 文件 | 覆盖 |
+|------|------|
+| `actions/__tests__/weaver-selection.test.ts` | 场景选词 + Cache + 审计 |
 
 ---
 
 ## 📈 性能优化
 
-### 缓存策略
-
-| 层级 | 策略 | TTL |
-|------|------|-----|
-| Weaver Ingredients | Redis | 5 分钟 |
+| 层级 | 策略 | v2.1 参数 |
+|------|------|-----------|
+| Weaver Ingredients | Redis Cache | **30s TTL**, Force Refresh |
 | Vocab Lookup | Prisma 查询优化 | N/A |
-| SSE Stream | 无缓存（实时生成） | N/A |
-
-### 并发优化
-
-**FSRS 记录**:
-```typescript
-await Promise.all(candidates.map(c => recordOutcome(...)));
-```
-
-**审计记录**:
-```typescript
-void db.drillAudit?.create({...}).catch(err => {...}); // Fire-and-Forget
-```
+| SSE Rendering | RAF Buffer | 16ms 帧对齐 |
+| Shuffle | Fisher-Yates | O(n) 均匀分布 |
 
 ---
 
-## 🛠️ 环境变量
+## 📚 文件清单
 
-```env
-# OpenAI / DashScope
-   - **Model**: `AI_MODEL_NAME` (Global Config)
-   - **Protocol**: OpenAI Compatible (SSE Stream)
+### Backend
 
-# 审计系统
-AUDIT_ENABLED=true
-AUDIT_SAMPLE_RATE=1.0
+| 文件 | 类型 | 描述 |
+|------|------|------|
+| `actions/weaver-selection.ts` | Server Action | 4 层瀑布选词 |
+| `app/api/weaver/v2/generate/route.ts` | API Route | SSE 生成 + 幻觉检测 |
+| `lib/generators/l2/weaver-context.ts` | Prompt | System/User Prompt + Density |
+| `lib/constants/weaver-scenario-map.ts` | Config | 6 场景 → 21 DB 标签 |
+| `lib/constants/weaver-density.ts` | Config | 三挡 Density 枚举 |
+| `lib/validations/weaver-wand-schemas.ts` | Schema | Zod 输入/输出校验 |
+| `lib/streaming/sse.ts` | Utility | SSE 流式处理工具 |
 
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=xxx
-```
+### Frontend
 
----
-
-## 📚 相关文档
-
-| 文档 | 描述 |
-|------|------|
-| `docs/PRD-L2-WEAVER-WAND.md` | 产品需求文档 |
-| `docs/dev-notes/sse-streaming-architecture.md` | SSE 流式处理架构 |
-| `docs/dev-notes/panoramic-audit-system.md` | 审计系统设计 |
-| `lib/streaming/README.md` | SSE 工具使用文档 |
-| `tests/l2-weaver-fsrs.hurl` | Weaver API 规格 |
-| `tests/l2-magic-wand.hurl` | Wand API 规格 |
+| 文件 | 类型 | 描述 |
+|------|------|------|
+| `components/weaver/WeaverConsole.tsx` | Orchestrator | 主控组件 (状态管理 + 编排) |
+| `components/weaver/console/RawMaterials.tsx` | Sub-Component | 词汇展示 (Top 3 + Dialog) |
+| `components/weaver/console/ContextSelector.tsx` | Sub-Component | 场景选择卡片 |
+| `components/weaver/console/DensitySelector.tsx` | Sub-Component | 篇幅控制选择器 |
+| `components/weaver/ArticleReader.tsx` | Page | 流式阅读器 + 沉浸UI |
+| `components/weaver/FloatingToolbar.tsx` | Widget | 文本选择工具栏 |
+| `components/wand/MagicWandSheet.tsx` | Sheet | Magic Wand 底部面板 |
+| `components/wand/WandContent.tsx` | Content | Wand 内容层 |
+| `hooks/use-sse-stream.ts` | Hook | SSE 流式 Hook |
+| `hooks/use-text-selection.ts` | Hook | 文本选择 Hook |
+| `config/weaver-scenarios.ts` | Config | 场景 UI 配置 (icon/label/color) |
 
 ---
 
@@ -493,33 +353,15 @@ NEXTAUTH_SECRET=xxx
 
 | 版本 | 日期 | 问题 | 修复 |
 |------|------|------|------|
-| v2.0 | 2026-02-05 | SSE Controller 竞态条件 | Try-Catch 包裹 enqueue |
-| v2.0 | 2026-02-05 | useSSEStream 依赖问题 | 解构 options 避免闭包 |
-| v2.0 | 2026-02-05 | SessionProvider 缺失 | 创建 `/api/auth/[...nextauth]/route.ts` |
-| v2.0 | 2026-02-05 | 审计缺少校验 | 添加 userId 和字段长度校验 |
-
----
-
-## 🚀 未来扩展
-
-### Phase 5 候选特性
-
-1. **Wand AI 洞察增强**:
-   - 动态生成 `ai_insight` (当前仅支持静态数据)
-   - 使用 `lib/ai/client.ts` + `generateObject`
-
-2. **Weaver 模板系统**:
-   - 支持用户自定义场景模板
-   - Prompt 参数化配置
-
-3. **批量生成优化**:
-   - Worker 预生成热门场景文章
-   - 缓存至 Redis
-
-4. **多语言支持**:
-   - 支持生成非中文解释（如日语、西班牙语）
+| v2.0 | 02-05 | SSE Controller 竞态条件 | Try-Catch 包裹 enqueue |
+| v2.0 | 02-05 | useSSEStream 依赖问题 | 解构 options 避免闭包 |
+| v2.1 | 02-15 | Shuffle 偏差 (Math.random-0.5) | Fisher-Yates Shuffle |
+| v2.1 | 02-15 | 缓存 5 分钟过旧 | 30s TTL + Force Refresh |
+| v2.1 | 02-15 | OMPS 选词无场景感知 | 4 层瀑布 + 场景映射 |
+| v2.1 | 02-15 | console.log 泄漏 | 替换为 `createLogger` |
+| v2.1 | 02-16 | WeaverConsole 过于臃肿 | 拆分为 3 个子组件 |
 
 ---
 
 **维护者**: Hugo (Opus Team)  
-**最后审计**: 2026-02-05 (Code Review v1.0 通过)
+**最后审计**: 2026-02-16 (v2.1 Feature Complete)

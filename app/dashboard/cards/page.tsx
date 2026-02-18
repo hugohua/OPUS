@@ -45,11 +45,11 @@ export default function CardsPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-2 px-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Review Deck</h1>
-                    <p className="text-sm text-muted-foreground">Swipe left to review later.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">复习卡组</h1>
+                    <p className="text-sm text-muted-foreground">左滑稍后复习</p>
                 </div>
                 <div className="text-sm font-mono text-muted-foreground bg-secondary/50 px-2 py-1 rounded">
-                    {MOCK_CARDS.length} Cards
+                    {MOCK_CARDS.length} 张卡片
                 </div>
             </div>
 

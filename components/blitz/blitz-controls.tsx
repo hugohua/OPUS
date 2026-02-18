@@ -28,7 +28,7 @@ export function BlitzControls({ isRevealed, onRate, onReveal }: BlitzControlsPro
                     className="pointer-events-auto opacity-50 hover:opacity-100 transition-opacity"
                     onClick={onReveal}
                  >
-                    Tap to Reveal
+                    点击揭晓
                  </Button> */}
             </div>
         );
@@ -44,7 +44,7 @@ export function BlitzControls({ isRevealed, onRate, onReveal }: BlitzControlsPro
                 onClick={() => onRate(1)}
             >
                 <X className="w-5 h-5 mr-2" />
-                Forgot
+                忘了
                 <span className="ml-2 text-xs opacity-50 font-mono">[1]</span>
             </Button>
 
@@ -56,7 +56,7 @@ export function BlitzControls({ isRevealed, onRate, onReveal }: BlitzControlsPro
                 onClick={() => onRate(3)}
             >
                 <Check className="w-5 h-5 mr-2" />
-                Got it
+                记得
                 <span className="ml-2 text-xs opacity-50 font-mono">[2]</span>
             </Button>
         </div>

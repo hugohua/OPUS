@@ -40,9 +40,8 @@ export default async function ProfilePage() {
                     <ArrowLeft className="w-6 h-6" strokeWidth={2} />
                 </Link>
 
-                <button className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 transition-all active:scale-95 -mr-2">
-                    <Settings className="w-5 h-5" strokeWidth={2} />
-                </button>
+
+                {/* Setting button removed as per user request */}
             </header>
 
             {/* ═══════════════════════ Hero Section ═══════════════════════ */}
@@ -106,7 +105,7 @@ export default async function ProfilePage() {
                 </h2>
 
                 <div className="grid grid-cols-1 gap-3">
-                    <button className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-rose-500/50 transition-all active:scale-[0.98]">
+                    <Link href="/dashboard/cards?filter=weak" className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-rose-500/50 transition-all active:scale-[0.98]">
                         <div className="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition-all" />
                         <div className="flex justify-between items-start mb-2 relative z-10">
                             <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500">
@@ -125,10 +124,10 @@ export default async function ProfilePage() {
                                 <span className="text-[10px] text-zinc-400">词</span>
                             </div>
                             <p className="text-[9px] text-zinc-400 mt-2 leading-tight">
-                                掌握度 &lt; 30% 或遗忘次数 &gt; 3 的词汇
+                                {stats.weakWordsCriteria}
                             </p>
                         </div>
-                    </button>
+                    </Link>
                 </div>
             </section>
 
@@ -194,7 +193,6 @@ export default async function ProfilePage() {
 
                     <div className="mt-6 flex gap-4 justify-center">
                         <Link href="/dashboard/cards" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 underline decoration-zinc-500/50">词汇本</Link>
-                        <a href="#" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 underline decoration-zinc-500/50">帮助与反馈</a>
                     </div>
                 </div>
             </section>

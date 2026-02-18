@@ -119,7 +119,7 @@ export function AudioSessionRunner() {
             setCurrentIndex(prev => prev + 1);
         } else {
             // Session Complete
-            toast.success("Session Complete!");
+            toast.success("训练完成！");
             router.push("/dashboard");
         }
     };
@@ -137,7 +137,7 @@ export function AudioSessionRunner() {
     if (!currentItem) {
         // This case should ideally be handled by the `isLoading` check and redirect
         // but as a fallback, if queue is empty after loading.
-        return <div>No items in the current drill session.</div>;
+        return <div>当前训练无可用项目。</div>;
     }
 
     return (

@@ -20,14 +20,15 @@ This skill acts as an index for the project's documentation. When you are asked 
 | **Architecture** | `docs/architecture-rules.md` | Tech Stack, Folder Structure, Coding Standards, Anti-Patterns. |
 | **Critical Rules** | `.agent/rules/000-critical-language.md` | Language (Chinese for reasoning), etc. |
 | **L2 PRD (Weaver + Wand)** | `docs/PRD-L2-WEAVER-WAND.md` | Weaver Lab 文章生成 + Magic Wand 即时解析。 |
-| **L2 架构 (Weaver + Wand)** | `docs/dev-notes/weaver-wand-technical-architecture.md` | **完整技术架构**：API、SSE、审计、前端 Hook。 |
+| **L2 架构 (Weaver + Wand)** | `docs/dev-notes/weaver-wand-technical-architecture.md` | **v2.1 技术架构**：4 层瀑布选词、Density 控制、幻觉检测、审计。 |
 
 ## 🗺️ Feature Map
 
 ### 1. User Interface (UI/UX)
 - **Rules**: `docs/ui-rules.md` (Design tokens, layout principles)
 - **System**: `docs/dev-notes/unified-ui-system-v1.md` (Component library, Shadcn/Aceternity integration)
-- **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**NEW**: Linear 质感、Cache-First 分层)
+- **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**v2.0**: 组件架构重构、Zinc Glassmorphism、Config-Driven)
+- **Weaver Config**: `config/weaver-scenarios.ts` (场景 UI 配置) + `lib/constants/weaver-scenario-map.ts` (6→21 DB 标签映射) + `lib/constants/weaver-density.ts` (Density 枚举)
 - **中文化术语规范**: `docs/dev-notes/ui-localization-terminology.md` (**NEW**: 全站翻译一致性标准)
 - **Slash Command**: Use `/ui-opus` to access UI guidelines quickly.
 
@@ -110,7 +111,9 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
 - **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
 - **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).
-- **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts`.
+- **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts` (**注意**: Weaver 使用独立的 4 层瀑布选词，见 `actions/weaver-selection.ts`).
+- **If 修改 Weaver Lab 选词/场景/密度** -> Read `weaver-wand-technical-architecture.md` (v2.1) AND `weaver-wand-ui-spec.md` (v2.0).
+- **If 新增 Weaver 场景** -> Update `lib/constants/weaver-scenario-map.ts` (DB 映射) + `config/weaver-scenarios.ts` (UI 配置) + `lib/generators/l2/weaver-context.ts` (Prompt 上下文).
 - **If modifying AI 内容生成 (L2 例句等)** -> Read `smart-content-architecture.md` (批量生成策略).
 - **If 实现新的流式 LLM 场景 (如对话、实时生成等)** -> Read `sse-streaming-architecture.md` (标准 SSE 工具) AND `lib/streaming/README.md` (API 使用).
 - **If 新增 API 端点** -> **必须先创建** `.hurl` 规格文件 (See `.agent/rules/testing-protocol.md`).

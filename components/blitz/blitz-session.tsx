@@ -81,12 +81,12 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
             mode: 'SYNTAX', // Blitz counts as Syntax Drill for now
         }).catch(err => {
             console.error('Failed to record outcome', err);
-            toast.error('Sync failed, check connection');
+            toast.error('同步失败，请检查网络');
         });
 
         // Feedback Toast
         if (rating === 1) {
-            toast('Forgot', { description: 'Scheduled for review soon.', duration: 1000 });
+            toast('忘了', { description: '已安排复习。', duration: 1000 });
             // Vibrate if mobile
             if (navigator.vibrate) navigator.vibrate(50);
         }
@@ -95,7 +95,7 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
         setTimeout(() => {
             if (nextIndex >= items.length) {
                 // Session Complete
-                toast.success('Session Complete!', { description: 'Great job!' });
+                toast.success('训练完成！', { description: '干得漂亮！' });
                 router.push('/dashboard');
             } else {
                 setCurrentIndex(nextIndex);
@@ -108,8 +108,8 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
     if (!currentItem) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <h2 className="text-xl font-semibold">All Done!</h2>
-                <p className="text-muted-foreground mt-2">Redirecting...</p>
+                <h2 className="text-xl font-semibold">已完成！</h2>
+                <p className="text-muted-foreground mt-2">正在跳转...</p>
             </div>
         );
     }
@@ -119,7 +119,7 @@ export function BlitzSession({ initialData, userId }: BlitzSessionProps) {
             {/* Zone A: Progress */}
             <div className="w-full py-4 px-2 space-y-2">
                 <div className="flex justify-between items-end text-xs text-muted-foreground font-mono">
-                    <span>PROGRESS</span>
+                    <span>进度</span>
                     <span>{currentIndex + 1} / {items.length}</span>
                 </div>
                 <Progress value={progress} className="h-1 bg-muted" indicatorClassName="bg-primary/50" />

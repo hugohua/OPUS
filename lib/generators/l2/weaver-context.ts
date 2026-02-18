@@ -1,87 +1,176 @@
 /**
- * Weaver Context Generator - L2 商务阅读材料生成
+ * Weaver Context Generator - L2 商务阅读材料生成 (v2.0)
  * 
  * 功能：
- *   为 Weaver Lab V2 提供 Scenario-Driven Prompt 生成逻辑
+ *   为 Weaver Lab V2 提供 Production-Ready Prompt
+ *   - 静态 System Prompt (角色/语调/工程红线/输出格式)
+ *   - 动态 User Prompt (场景/篇幅/词表 + POS 标注)
  * 
- * 使用方法：
- *   import { WEAVER_CONTEXT_SYSTEM_PROMPT, buildWeaverContextUserPrompt } from '@/lib/generators/l2/weaver-context';
+ * v2.0 三大改进 (vs v1.0):
+ *   1. 结构化分隔符 (===TITLE=== / ===BODY===) — 解决流式解析风险
+ *   2. 词形控制 (Morphology Control) — 防止词性漂移导致魔法棒查不到数据
+ *   3. No Meta-Talk — 禁止 LLM 输出废话前缀
  * 
  * 作者: Hugo
- * 日期: 2026-02-05
+ * 日期: 2026-02-16
  */
 
 import { z } from "zod";
+import { WEAVER_SCENARIOS } from "@/lib/constants/weaver-scenario-map";
 
 // ============================================
 // Type Definitions
 // ============================================
 
-export const WeaverScenarioSchema = z.enum(["finance", "hr", "marketing", "rnd"]);
+export const WeaverScenarioSchema = z.enum(WEAVER_SCENARIOS as [string, ...string[]]);
 export type WeaverScenario = z.infer<typeof WeaverScenarioSchema>;
 
+export type WeaverDensity = "light" | "balanced" | "dense";
+
 export interface WeaverContextInput {
-    targetWords: Array<{ id: number; word: string; definition_cn: string }>;
-    scenario: WeaverScenario;
+    targetWords: Array<{ id: number; word: string; definition_cn: string; pos?: string }>;
+    scenario: string;
+    density?: WeaverDensity;
 }
 
 // ============================================
-// System Prompt (Static)
+// System Prompt (固定常量 — v2.0)
+// ============================================
+
+export const WEAVER_CONTEXT_SYSTEM_PROMPT = `
+# Role
+You are the "Opus AI Writer", an expert in TOEIC Business English.
+Your goal is to generate a professional reading passage based on specific vocabulary constraints.
+
+# Tone & Style
+- **Register**: Formal Business English (Standard TOEIC Part 6/7 style).
+- **Structure**: Logical flow, clear paragraphing.
+- **Audience**: Business professionals or job seekers.
+
+# Critical Constraints (MUST FOLLOW)
+1. **Vocabulary Embedding**: You MUST use ALL words listed in \`<target_words>\`.
+2. **Morphology Control**:
+   - Keep the **Part of Speech (POS)** consistent with the input.
+   - ALLOW: Verb tense changes (predict -> predicted), Plural forms (asset -> assets).
+   - **FORBID**: Changing the word family (predict -> prediction/unpredictable is BANNED).
+3. **Highlighting**: Wrap target words in double asterisks, e.g., **targetWord**.
+4. **No Meta-Talk**: Do not output "Here is the article". Start directly with the content.
+
+# Output Format
+You must output in a strict format with separators:
+
+===TITLE===
+(Write a concise, professional title here)
+===BODY===
+(Write the article content here. Use paragraphs.)
+`.trim();
+
+// ============================================
+// 场景上下文映射 (静态常量)
+// ============================================
+
+// ============================================
+// 场景上下文映射 (优化版 - 融入 TOEIC 文体)
+// ============================================
+
+const SCENARIO_CONTEXT: Record<string, string> = {
+    finance_group: `
+        Context: A formal financial document.
+        Type: An internal audit report, a quarterly earnings memo, or an investment proposal email.
+        Focus: Budget cuts, revenue forecasts, tax compliance, or merger details.
+    `.trim(),
+
+    hr_group: `
+        Context: Human Resources communication.
+        Type: A job advertisement, an internal policy memo, a resignation letter, or a performance review email.
+        Focus: Recruitment, benefits, conflict resolution, or training schedules.
+    `.trim(),
+
+    market_group: `
+        Context: Marketing & Sales strategy.
+        Type: A press release, a product launch announcement, a customer survey email, or a sales performance report.
+        Focus: Brand awareness, market share, advertising campaigns, or customer retention.
+    `.trim(),
+
+    ops_group: `
+        Context: Production & Logistics.
+        Type: A supply chain update, a quality control checklist, a factory safety notice, or a shipping delay apology email.
+        Focus: Inventory levels, manufacturing defects, procurement delays, or logistics optimization.
+    `.trim(),
+
+    office_group: `
+        Context: General Business Administration.
+        Type: An inter-office memo, a meeting agenda, a business travel itinerary, or a facility maintenance notice.
+        Focus: Office relocation, equipment upgrades, conference planning, or administrative procedures.
+    `.trim(),
+
+    travel_group: `
+        Context: Business Travel & Events.
+        Type: An itinerary confirmation, a conference schedule, a hotel booking email, or a post-event summary.
+        Focus: Flight delays, dietary restrictions, keynote speakers, or networking opportunities.
+    `.trim(),
+
+    // Fallback for sub-contexts if passed directly (legacy support)
+    general_business: "A general business memo or email regarding daily operations.",
+};
+
+// ============================================
+// Density 篇幅约束
+// ============================================
+
+const DENSITY_CONFIG: Record<WeaverDensity, { wordRange: string; paragraphs: string }> = {
+    light: { wordRange: "120-180", paragraphs: "2" },
+    balanced: { wordRange: "200-300", paragraphs: "2-3" },
+    dense: { wordRange: "350-450", paragraphs: "3-4" },
+};
+
+// ============================================
+// User Prompt Builder (v2.0)
 // ============================================
 
 /**
- * Weaver Context 系统 Prompt
+ * 构建 Weaver Context 用户 Prompt (v2.0)
  * 
- * 根据 Scenario 动态调整上下文，但核心写作规范保持一致
- */
-export function buildWeaverContextSystemPrompt(scenario: WeaverScenario): string {
-    const scenarioContext = {
-        finance: "主题：财务管理、审计、IPO、并购、预算控制。语境：正式商务财经报告。",
-        hr: "主题：招聘、绩效管理、薪酬福利、团队建设。语境：人力资源政策文档。",
-        marketing: "主题：市场营销、品牌策略、用户增长、广告投放。语境：营销方案报告。",
-        rnd: "主题：研发管理、技术创新、产品迭代、专利申请。语境：R&D 项目复盘。"
-    };
-
-    return `
-你是一位专业的商务英语写作专家。你的任务是撰写一篇简洁、连贯的商务短文。
-
-## 场景要求
-${scenarioContext[scenario]}
-
-## 写作规范
-1. **目标词嵌入**: 必须自然嵌入所有提供的目标词汇
-2. **语调**: 正式、专业 (TOEIC B2-C1 级别)
-3. **长度**: 200-300 词
-4. **结构**: 逻辑清晰，分 2-3 段
-5. **格式**: 使用 **粗体** 标记目标词 (例如：The **merger** was successful.)
-
-## 输出格式
-直接输出文章正文，无需标题。文章必须是英文，不要翻译。
-    `.trim();
-}
-
-// ============================================
-// User Prompt Builder
-// ============================================
-
-/**
- * 构建 Weaver Context 用户 Prompt
+ * 改进点:
+ *   - 场景描述和篇幅约束从 System Prompt 下移到此处
+ *   - 目标词带 POS 标注 (e.g., "negotiate (verb)")
+ *   - 使用 XML 标签包裹词表 (便于幻觉检测)
+ *   - 支持 "Slot Machine" 逻辑
  * 
- * @param input - 包含目标词和场景信息
- * @returns 用户 Prompt 字符串
+ * @param input 包含目标词、场景(Group)和 Sub-Context
  */
-export function buildWeaverContextUserPrompt(input: WeaverContextInput): string {
+export function buildWeaverContextUserPrompt(input: WeaverContextInput & { subContext?: string }): string {
+    const density = input.density || "balanced";
+    const densityCfg = DENSITY_CONFIG[density];
+
+    // 1. Get Base Context (from Group ID)
+    let scenarioCtx = SCENARIO_CONTEXT[input.scenario] || SCENARIO_CONTEXT.office_group || "General business context";
+
+    // 2. Append Specific Focus (from Sub-Tag) if present
+    if (input.subContext && input.subContext !== input.scenario) {
+        scenarioCtx += `\nSPECIFIC TOPIC: Focus includes **${input.subContext.replace('_', ' ')}**.`;
+    }
+
     const wordList = input.targetWords
-        .map(w => `- ${w.word} (${w.definition_cn})`)
+        .map(w => {
+            const posTag = w.pos ? ` (${w.pos})` : '';
+            return `- ${w.word}${posTag}`;
+        })
         .join('\n');
 
     return `
-场景: ${input.scenario}
+## Context Scenario
+${scenarioCtx}
 
-目标词汇 (必须全部嵌入):
+## Constraints
+- Length: ${densityCfg.wordRange} words.
+- Structure: ${densityCfg.paragraphs} paragraphs.
+
+<target_words>
 ${wordList}
+</target_words>
 
-请撰写文章。
+Generate the article now.
     `.trim();
 }
 
@@ -89,14 +178,13 @@ ${wordList}
 // Validation Schema
 // ============================================
 
-/**
- * 验证输入参数
- */
 export const WeaverContextInputSchema = z.object({
     targetWords: z.array(z.object({
         id: z.number(),
         word: z.string(),
-        definition_cn: z.string()
-    })).min(1).max(15),
-    scenario: WeaverScenarioSchema
+        definition_cn: z.string(),
+        pos: z.string().optional()
+    })).max(15),
+    scenario: WeaverScenarioSchema,
+    density: z.enum(["light", "balanced", "dense"]).default("balanced")
 });

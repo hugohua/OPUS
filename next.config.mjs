@@ -1,3 +1,13 @@
+import withSerwistInit from "@serwist/next";
+
+// Serwist PWA 配置
+const withSerwist = withSerwistInit({
+    swSrc: "app/sw.ts",
+    swDest: "public/sw.js",
+    // 开发环境禁用 Service Worker，避免干扰热更新
+    disable: process.env.NODE_ENV === "development",
+});
+
 const nextConfig = {
     experimental: {
         serverActions: {
@@ -23,4 +33,4 @@ const nextConfig = {
     },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

@@ -1,7 +1,9 @@
 # Weaver Lab & Magic Wand UI 规范
 
-> **设计风格**: Linear 质感、Vercel 数据流、沉浸式极客黑  
-> **版本**: 1.0
+> **设计风格**: Zinc Glassmorphism + Linear 质感  
+> **版本**: 2.0  
+> **最后更新**: 2026-02-16  
+> **UI 规范**: 遵循 `docs/ui-rules.md` (Opus v1.6 Design System)
 
 ---
 
@@ -9,190 +11,220 @@
 
 | PRD ID | 功能点 | UI 组件 | 状态 |
 |--------|--------|---------|------|
-| **WL-01** | Priority Queue (Due) | `WeaverConsole` 左侧面板 | ✅ 已设计 |
-| **WL-02** | Scenario 选择 | `WeaverConsole` 右侧卡片 | ✅ 已设计 |
-| **WL-03** | 流式生成 | "WEAVE CONTEXT" 按钮触发 | ✅ 已设计 |
-| **WL-04** | 目标词高亮 | `ArticleReader` 下划线样式 | ✅ 已设计 |
-| **MW-01** | Bottom Sheet | `MagicWandSheet` 弹窗 | ✅ 已设计 |
-| **MW-02** | Local DNA (Cache-First) | 实线边框，0ms 标签 | ✅ 已设计 |
-| **MW-03** | AI Context (Fallback) | 虚线边框，呼吸点动画 | ✅ 已设计 |
+| **WL-01** | Priority Queue (Due) | `RawMaterials.tsx` (Top 3 + Dialog) | ✅ v2.1 |
+| **WL-02** | Scenario 选择 | `ContextSelector.tsx` (卡片网格) | ✅ v2.1 |
+| **WL-03** | Density 控制 | `DensitySelector.tsx` (三挡选择器) | ✅ v2.1 |
+| **WL-04** | 流式生成 | "WEAVE (V2.0)" 按钮触发 | ✅ v2.1 |
+| **WL-05** | 目标词高亮 | `ArticleReader` 下划线样式 | ✅ v2.0 |
+| **WL-06** | 文本选择工具栏 | `FloatingToolbar.tsx` | ✅ v2.0 |
+| **MW-01** | Bottom Sheet | `MagicWandSheet.tsx` 弹窗 | ✅ v2.0 |
+| **MW-02** | Local DNA (Cache-First) | 实线边框，0ms 标签 | ✅ v2.0 |
+| **MW-03** | AI Context (Fallback) | 虚线边框，呼吸点动画 | ✅ v2.0 |
 
 ---
 
-## 2. 设计 Token 摘要
+## 2. 组件架构 (v2.1 Refactored)
 
-```css
-/* 背景 */
---bg-base: #050505;
---bg-card: rgba(24, 24, 27, 0.3);  /* zinc-900/30 */
+```
+components/weaver/
+├── WeaverConsole.tsx          ← Orchestrator (状态管理 + 编排)
+├── console/
+│   ├── RawMaterials.tsx       ← 词汇展示 (Top 3 + Dialog 全量)
+│   ├── ContextSelector.tsx    ← 场景选择卡片 (Config-Driven)
+│   └── DensitySelector.tsx    ← 篇幅控制 (Light/Balanced/Dense)
+├── ArticleReader.tsx          ← 流式阅读器 (沉浸 UI)
+└── FloatingToolbar.tsx        ← 文本选择工具栏
 
-/* 边框 */
---border-default: rgba(39, 39, 42, 0.5);  /* zinc-800/50 */
---border-active: rgba(99, 102, 241, 0.5);  /* indigo-500/50 */
+components/wand/
+├── MagicWandSheet.tsx         ← Bottom Sheet (Shadcn Dialog)
+└── WandContent.tsx            ← Wand 内容层
 
-/* 高亮样式 */
---highlight-due: rgba(244, 63, 94, 0.1);  /* rose-500/10 */
---highlight-target: rgba(99, 102, 241, 0.1);  /* indigo-500/10 */
+hooks/
+├── use-sse-stream.ts          ← SSE 流式 Hook
+└── use-text-selection.ts      ← 文本选择 Hook
 
-/* 状态指示 */
---status-sync: #6366f1;  /* indigo-500, glow effect */
---status-loading: #8b5cf6;  /* violet-500, animate-ping */
+config/
+└── weaver-scenarios.ts        ← 场景 UI 配置 (icon/label/colorClass)
+
+lib/constants/
+├── weaver-scenario-map.ts     ← 场景 → DB 标签映射
+└── weaver-density.ts          ← Density 枚举 + UI config
 ```
 
 ---
 
-## 3. 核心组件规范
+## 3. 设计 Token
 
-### 3.1 WeaverConsole
+> **规范**: 遵循 `docs/ui-rules.md` Zinc 色系 + Brand Violet
+
+### Surface & Borders
+
+| Token | Light Mode | Dark Mode |
+|-------|------------|-----------|
+| Background | `bg-zinc-50` | `bg-zinc-950` + Ambient Glow |
+| Surface | `bg-white` | `bg-zinc-900/60 backdrop-blur-xl` |
+| Card | `bg-white border-zinc-200 shadow-sm` | Glassmorphism + `border-white/15` |
+| Border | `border-zinc-200` | `border-white/5` |
+
+### Ambient Glow (Dark Mode 必选)
+
+```html
+<div class="fixed top-0 left-0 w-full h-[600px]
+  bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))]
+  from-violet-900/20 via-transparent to-transparent
+  pointer-events-none hidden dark:block">
+</div>
+```
+
+### Brand & Interactive
+
+| Token | Light | Dark | 用途 |
+|-------|-------|------|------|
+| Brand Core | `violet-600` | `violet-500` | 按钮、Active 状态 |
+| Selection | `selection:bg-violet-100` | `selection:bg-violet-900` | 文字选中 |
+| Highlight | `text-violet-600` | `text-violet-400` | 交互元素 |
+
+---
+
+## 4. 核心组件规范
+
+### 4.1 WeaverConsole (Orchestrator)
 
 **路径**: `components/weaver/WeaverConsole.tsx`
 
-- 左侧: Priority Queue (Due 词汇，rose 色调)
-- 左侧: Filler Context (已熟记词汇，zinc 色调)
-- 右侧: Scenario 卡片 (2 列网格)
-- 底部: "WEAVE CONTEXT" CTA 按钮
+**职责**: 
+- 状态管理 (priorityWords, fillerWords, scenario, density)
+- useSession 认证
+- loadIngredients Server Action 调用
+- handleWeave 触发 SSE
 
-### 3.2 MagicWandSheet
+**不做**: 
+- UI 渲染细节（委托给子组件）
+
+### 4.2 RawMaterials
+
+**路径**: `components/weaver/console/RawMaterials.tsx`
+
+**Props**: `{ isLoading, error, priorityWords, fillerWords, onRefresh }`
+
+**UI 特性**:
+- SVG 图标标题 + "Raw Materials" + 刷新按钮
+- **Top 3 展示**: 只显示前 3 个 Priority Word chips
+  - 每个 chip: `font-mono text-xs` + source 状态点
+  - 状态点颜色: `due_matched` → emerald, `new_matched` → blue, `due_fallback` → amber
+- **"+N more"按钮**: 触发 Dialog 显示全量词汇
+- **Dialog 内容**: Priority 区 + Filler 区，分组展示
+- **Loading**: Skeleton shimmer
+- **Error**: 错误信息 + 重试
+- **Free Reading**: 无候选词时显示自由阅读提示
+
+### 4.3 ContextSelector
+
+**路径**: `components/weaver/console/ContextSelector.tsx`
+
+**Props**: `{ selectedScenario, onSelect, disabled }`
+
+**数据源**: `config/weaver-scenarios.ts` → `WEAVER_SCENARIO_CONFIGS`
+
+**UI 特性**:
+- Config-Driven 卡片渲染 (不硬编码)
+- 2 列网格布局
+- 每张卡片: icon + label + description
+- 选中态: `border-violet-500 bg-violet-50 dark:bg-violet-950/20`
+- Lucide 图标映射: key → icon component
+
+### 4.4 DensitySelector
+
+**路径**: `components/weaver/console/DensitySelector.tsx`
+
+**Props**: `{ selectedDensity, onSelect, disabled }`
+
+**数据源**: `lib/constants/weaver-density.ts` → `WEAVER_DENSITY_CONFIGS`
+
+**UI 特性**:
+- 三挡横排按钮: Light / Balanced / Dense
+- 每项: icon + label + desc
+- 选中态: 与 ContextSelector 一致
+
+### 4.5 ArticleReader
+
+**路径**: `components/weaver/ArticleReader.tsx`
+
+**UI 特性**:
+- ✅ RAF-buffered 流式打字机效果 (防抖动)
+- ✅ 目标词高亮 (Violet 下划线)
+- ✅ 点击目标词 → FloatingToolbar → MagicWand
+- ✅ 错误状态 UI + 重试按钮
+- ✅ 沉浸式加载态 (旋转 Visualizer, Step Loader)
+- ✅ Empty State
+
+### 4.6 FloatingToolbar
+
+**路径**: `components/weaver/FloatingToolbar.tsx`
+
+| 触发 | 工具栏选项 |
+|------|-----------|
+| 单词点击 | ⚡ Analyze · 🔊 Play · 📄 Copy |
+| 句子划选 | 💡 Syntax · 🔊 Read · 📄 Copy |
+
+### 4.7 MagicWandSheet
 
 **路径**: `components/wand/MagicWandSheet.tsx`
 
-分层结构 (体现 Cache-First 策略):
-
-1. **Header**: 单词 + 音标 + 词性
-2. **Layer 1 - Local DNA**: 实线边框，"0ms" 标签，词源树
-3. **Layer 2 - AI Context**: 虚线边框，呼吸点动画，Skeleton 加载态
-
-### 3.3 高亮样式
-
-**目标词 (Target)**:
-```html
-<span class="border-b border-indigo-500/50 text-indigo-100 bg-indigo-500/10 px-1 rounded">
-  strategy
-</span>
-```
-
-**Due 词 (优先复习)**:
-```html
-<span class="border-b border-rose-500/50 text-rose-100 bg-rose-500/10 px-1 rounded">
-  audit
-</span>
-```
+**分层结构**:
+- **Header**: 单词 + 音标 (Serif 大字) + TTS 按钮
+- **Layer 1 - Source Code**: 词根拆解 (实线边框)
+- **Layer 2 - Context Insight**: Collocation / Tone & Nuance (虚线边框 + 呼吸动画)
+- 全暗模式适配
 
 ---
 
-## 4. HTML Demo 参考
+## 5. 图标库
 
-### 4.1 Weaver Console
+| 库 | 用途 | 规范 |
+|----|------|------|
+| **Lucide React** | 全站图标 | `stroke-width={1.5}` (Thin) |
+| **Shadcn UI** | Dialog, Sheet, Button | Radix 无障碍基础组件 |
 
-```html
-<div class="relative min-h-screen w-full bg-[#050505] text-zinc-300 font-sans antialiased flex flex-col selection:bg-indigo-500/30">
-  
-  <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+### 场景图标映射
 
-  <header class="border-b border-zinc-800/50 bg-[#050505]/80 backdrop-blur-md px-6 h-14 flex items-center justify-between sticky top-0 z-50">
-    <div class="flex items-center gap-2">
-      <div class="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]"></div>
-      <span class="font-mono text-sm font-bold text-zinc-100 tracking-tight">WEAVER LAB v2.0</span>
-    </div>
-    <div class="flex items-center gap-3">
-      <span class="text-[10px] font-mono text-zinc-500">FSRS SYNC: 12ms</span>
-      <div class="px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-[10px] font-mono text-zinc-400">HUGO</div>
-    </div>
-  </header>
+| 场景 | 图标 | 色调 |
+|------|------|------|
+| finance | `TrendingUp` | `text-emerald-500` |
+| hr | `Users` | `text-blue-500` |
+| marketing | `Megaphone` | `text-orange-500` |
+| operations | `Settings` | `text-slate-500` |
+| office | `Building2` | `text-violet-500` |
+| tech | `Code` | `text-indigo-500` |
 
-  <main class="flex-1 max-w-5xl mx-auto w-full p-8 grid grid-cols-1 md:grid-cols-12 gap-8 relative z-10">
-    <!-- Priority Queue -->
-    <div class="md:col-span-5 flex flex-col gap-6">
-      <div class="border border-zinc-800 rounded-xl bg-zinc-900/30 overflow-hidden">
-        <div class="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50 flex justify-between items-center">
-          <h3 class="text-xs font-mono font-bold text-zinc-400 uppercase">Priority Queue (Due)</h3>
-          <span class="text-[10px] font-mono text-rose-500 bg-rose-500/10 px-1.5 rounded">12 Items</span>
-        </div>
-        <div class="p-4 flex flex-wrap gap-2">
-          <span class="px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-xs font-mono text-rose-400">strategy</span>
-          <span class="px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-xs font-mono text-rose-400">compile</span>
-          <!-- ... more words -->
-        </div>
-      </div>
-    </div>
+---
 
-    <!-- Scenario Selection -->
-    <div class="md:col-span-7 flex flex-col gap-6">
-      <h3 class="text-xs font-mono font-bold text-zinc-500 uppercase mb-3">Select Context Scenario</h3>
-      <div class="grid grid-cols-2 gap-3">
-        <button class="relative group p-4 rounded-xl border border-indigo-500/50 bg-indigo-500/5">
-          <div class="font-bold text-zinc-100">Finance & Banking</div>
-          <div class="text-xs text-zinc-500 mt-1">Focus: Reporting, Audit, IPO</div>
-        </button>
-        <!-- ... more scenarios -->
-      </div>
-      
-      <!-- CTA -->
-      <button class="w-full rounded-lg bg-zinc-100 py-3.5 text-sm font-bold text-black">
-        <span>WEAVE CONTEXT</span>
-        <span class="ml-2 px-1.5 py-0.5 rounded bg-black/10 text-[10px] font-mono">~300 TOKENS</span>
-      </button>
-    </div>
-  </main>
-</div>
+## 6. 交互规范
+
+### 移动优先
+
+- 所有交互元素: `min-h-[44px]` 触摸目标
+- 主按钮 (WEAVE): 固定底部 `sticky bottom-0`, `rounded-full`, 带 shadow
+
+### 状态流转
+
+```
+Console (选词/配置)
+  ↓ WEAVE 按钮
+Loading (沉浸式 Visualizer)
+  ↓ 流式完成
+Reader (阅读 + 高亮 + 工具栏)
+  ↓ 点击目标词
+FloatingToolbar → MagicWandSheet
 ```
 
-### 4.2 Reader & Magic Wand Sheet
+### 刷新机制
 
-```html
-<!-- Article with Highlights -->
-<div class="prose prose-invert prose-lg leading-relaxed text-zinc-300">
-  <p>
-    The board has decided to adopt a more aggressive marketing 
-    <span class="border-b border-indigo-500/50 text-indigo-100 bg-indigo-500/10 px-1 rounded cursor-pointer">
-      strategy
-    </span> 
-    to capture the emerging market share.
-  </p>
-</div>
+- RawMaterials 刷新按钮: `RefreshCcw` 图标
+- 调用 `loadIngredients(userId, scenario, forceRefresh=true)`
+- Force Refresh 绕过 Redis 缓存
 
-<!-- Magic Wand Bottom Sheet -->
-<div class="fixed inset-x-0 bottom-0 z-50">
-  <div class="bg-[#0A0A0A]/95 backdrop-blur-xl border-t border-zinc-800 rounded-t-3xl p-6 pb-10">
-    
-    <!-- Header -->
-    <div class="flex items-baseline gap-3 mb-1">
-      <h2 class="text-3xl font-bold text-zinc-50 font-serif">strategy</h2>
-      <span class="font-mono text-zinc-500">/ˈstrætədʒi/</span>
-    </div>
+---
 
-    <!-- Layer 1: Local DNA (Cache-First, 0ms) -->
-    <div class="mb-6">
-      <span class="text-[10px] font-mono text-zinc-500 uppercase">Local DNA (0ms)</span>
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <!-- Etymology Tree -->
-        <div class="font-mono text-sm flex items-center gap-3">
-          <span class="text-indigo-400 font-bold">stratos</span>
-          <span class="text-zinc-600">+</span>
-          <span class="text-indigo-400 font-bold">agein</span>
-        </div>
-        <div class="pl-3 border-l-2 border-indigo-500/30 text-xs text-zinc-400">
-          <span class="text-indigo-500 font-mono">// Logic:</span>
-          The art of leading an army -> Overall plan.
-        </div>
-      </div>
-    </div>
-
-    <!-- Layer 2: AI Context (Async, Skeleton) -->
-    <div class="relative">
-      <span class="relative flex h-2 w-2">
-        <span class="animate-ping absolute h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-        <span class="relative rounded-full h-2 w-2 bg-violet-500"></span>
-      </span>
-      <span class="text-[10px] font-mono text-zinc-500 uppercase">AI Context Analysis</span>
-      
-      <div class="bg-zinc-900/50 border border-zinc-800/50 border-dashed rounded-xl p-4">
-        <p class="text-sm text-zinc-300">
-          In this sentence, <span class="text-indigo-300">"aggressive strategy"</span> implies a proactive approach.
-        </p>
-      </div>
-    </div>
-
-  </div>
-</div>
-```
+**维护者**: Hugo (Opus Team)  
+**关联文档**: `docs/ui-rules.md` (Design System), `docs/dev-notes/weaver-wand-technical-architecture.md`

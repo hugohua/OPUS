@@ -1,115 +1,147 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plane, Handshake, ChevronRight, Sparkles } from "lucide-react";
+import { Sparkles, Briefcase, Users, Factory, Megaphone, Monitor, Plane, BookOpen, Plus, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 
-// --- Sub-Component: Topic Card ---
+const SCENARIO_ICONS: Record<string, typeof Briefcase> = {
+    "Briefcase": Briefcase,
+    "Users": Users,
+    "Factory": Factory,
+    "Megaphone": Megaphone,
+    "Monitor": Monitor,
+    "Plane": Plane,
+    "BookOpen": BookOpen
+};
 
-interface TopicCardProps {
+// Simplified Article Type for Dashboard
+interface BriefingPreview {
+    id: string;
     title: string;
-    icon: React.ElementType;
-    status: "new" | "drafting";
-    preview: React.ReactNode;
+    scenario: string;
+    createdAt: Date;
+    contextLabel: string; // Pre-resolved label
+    iconName: string; // Icon key from WEAVER_SCENARIOS
 }
 
-function TopicCard({ title, icon: Icon, status, preview }: TopicCardProps) {
-    return (
-        <motion.div
-            whileTap={{ scale: 0.98 }}
-            className="group relative flex items-start gap-4 p-4 rounded-xl border border-border bg-surface dark:bg-zinc-900/60 dark:border-white/15 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
-        >
-            <div className="flex-shrink-0 p-3 rounded-lg bg-background border border-border">
-                <Icon className="w-5 h-5 text-foreground" />
-            </div>
-
-            <div className="flex-1 space-y-2 min-w-0">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground truncate">{title}</h3>
-                    {status === "new" && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-brand-core bg-brand-core/10 rounded-md">
-                            新
-                        </span>
-                    )}
-                    {status === "drafting" && (
-                        <span className="flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-medium text-secondary bg-zinc-100 dark:bg-zinc-800 rounded-md">
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-core animate-pulse" />
-                            AI 撰写中
-                        </span>
-                    )}
-                </div>
-
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-serif line-clamp-2">
-                    {preview}
-                </div>
-            </div>
-
-            {/* Draft State Overlay or Arrow */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
-        </motion.div>
-    );
+interface ContextEngineProps {
+    latestArticle?: BriefingPreview | null;
 }
 
-// --- Main Component ---
+export function ContextEngine({ latestArticle }: ContextEngineProps) {
+    const router = useRouter();
 
-export function ContextEngine() {
+    const handleCreate = () => {
+        router.push("/weaver");
+    };
+
+    const handleViewArticle = () => {
+        if (latestArticle) {
+            router.push(`/weaver?id=${latestArticle.id}`);
+        }
+    };
+
+    const handleViewAll = () => {
+        router.push("/weaver/history");
+    };
+
+    const Icon = latestArticle
+        ? (SCENARIO_ICONS[latestArticle.iconName] || BookOpen)
+        : Sparkles;
+
     return (
         <section className="relative z-10 mt-9 space-y-4">
             <div className="flex items-center justify-between pl-1">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Context Engine</h2>
+                    <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                        简报中心
+                    </h2>
                     <Sparkles className="w-3 h-3 text-violet-500" />
                 </div>
-                <button className="text-[10px] font-medium text-violet-600 dark:text-violet-400 hover:underline">View All</button>
+
+                <div className="flex items-center gap-3">
+                    {/* Quick Action: New Briefing */}
+                    <button
+                        onClick={handleCreate}
+                        className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-md hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
+                    >
+                        <Plus className="w-3 h-3" strokeWidth={2} />
+                        NEW
+                    </button>
+
+                    <button
+                        onClick={handleViewAll}
+                        className="text-[10px] font-medium text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                    >
+                        View All
+                    </button>
+                </div>
             </div>
 
             <div className="space-y-3">
-                {/* Item A: Ready */}
-                <div className="group relative w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm active:scale-[0.99] transition-all cursor-pointer">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-zinc-100/50 dark:to-zinc-800/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                    <div className="relative p-4 flex gap-4">
-                        <div className="shrink-0 flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/5">
-                            <Plane className="w-6 h-6 stroke-[1.5px]" />
+                {latestArticle ? (
+                    /* Existing Article Card */
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleViewArticle}
+                        className="group relative w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/60 dark:backdrop-blur-xl shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] cursor-pointer hover:border-violet-300 dark:hover:border-violet-500/50 transition-colors"
+                    >
+                        {/* Highlights */}
+                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Sparkles className="w-24 h-24 text-violet-500 -rotate-12" />
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start">
-                                <h3 className="font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Topic: Business Travel</h3>
-                                <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium bg-violet-50 dark:bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-100 dark:border-violet-500/20">NEW</span>
+                        <div className="relative p-5">
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-lg bg-violet-50 dark:bg-zinc-800 flex items-center justify-center text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-white/5">
+                                        <Icon className="w-5 h-5" strokeWidth={1.5} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold font-mono text-zinc-400 uppercase tracking-wider">LATEST BRIEFING</span>
+                                            <span className="w-1 h-1 rounded-full bg-violet-500"></span>
+                                        </div>
+                                        <h3 className="font-serif font-bold text-base text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                                            {latestArticle.title}
+                                        </h3>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-mono text-zinc-400 shrink-0 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+                                    {formatDistanceToNow(new Date(latestArticle.createdAt), { addSuffix: true })}
+                                </span>
                             </div>
-                            <p className="font-serif text-sm text-zinc-800 dark:text-zinc-200 leading-snug truncate">
-                                "Please note the <span className="text-violet-600 dark:text-violet-400 font-medium italic">mandatory</span> changes to the itinerary..."
+
+                            <div className="flex items-center gap-2 mt-4">
+                                <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                                    <Quote className="w-3 h-3 text-zinc-400" />
+                                    <span className="font-medium">{latestArticle.contextLabel}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    /* Empty State Card */
+                    <motion.div
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleCreate}
+                        className="group relative w-full rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 hover:bg-violet-50/50 dark:hover:bg-violet-900/10 hover:border-violet-300 dark:hover:border-violet-500/30 cursor-pointer transition-all p-6 flex flex-col items-center justify-center gap-3 text-center"
+                    >
+                        <div className="h-12 w-12 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-violet-500 transition-colors">
+                            <Plus className="w-6 h-6" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300">构建第一份简报</h3>
+                            <p className="text-xs text-zinc-500 mt-1">
+                                为你的日常学习生成语境内容
                             </p>
-                            <div className="mt-2 flex items-center gap-2">
-                                <span className="text-[10px] text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-1 rounded">itinerary</span>
-                                <span className="text-[10px] text-zinc-400 border border-zinc-200 dark:border-zinc-700 px-1 rounded">reimbursement</span>
-                                <span className="text-[10px] text-zinc-500">+3</span>
-                            </div>
                         </div>
-                    </div>
-                </div>
-
-                {/* Item B: Drafting */}
-                <div className="group relative w-full overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm active:scale-[0.99] transition-all cursor-pointer">
-                    <div className="relative p-4 flex gap-4">
-                        <div className="shrink-0 flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/5">
-                            <Handshake className="w-6 h-6 stroke-[1.5px]" />
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Topic: Negotiation</h3>
-                            <div className="flex items-center gap-2">
-                                <p className="font-serif text-sm text-zinc-400 dark:text-zinc-500 leading-snug italic">
-                                    AI Agent is drafting a memo...
-                                </p>
-                                <span className="block w-1.5 h-4 bg-violet-500 animate-pulse" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </motion.div>
+                )}
             </div>
         </section>
     );

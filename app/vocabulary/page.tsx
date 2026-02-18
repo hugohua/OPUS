@@ -3,8 +3,8 @@ import { VocabularyList } from "@/components/vocabulary/vocabulary-list";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Vocabulary Inventory | Opus",
-    description: "FSRS Memory Command Center",
+    title: "词库 | Opus",
+    description: "FSRS 记忆管理中心",
 };
 
 export default function VocabularyPage() {

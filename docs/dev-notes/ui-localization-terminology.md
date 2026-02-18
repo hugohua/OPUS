@@ -41,7 +41,7 @@
 |------|------|------|
 | `Dashboard` | **主页** | FloatingDock |
 | `Inventory` | **词库** | FloatingDock |
-| `Admin` | **后台** | FloatingDock |
+| `Briefing` | **简报** | FloatingDock |
 | `Profile` | **我的** | FloatingDock |
 
 ### 训练模式术语
@@ -65,6 +65,21 @@
 | `Sort: Due` | **排序: 待复习** | VocabFilters |
 | `AI Context` | **AI 情境** | VocabFilters |
 | `Clear all filters` | **清除筛选** | VocabularyList |
+
+### Weaver 模块术语
+
+| 英文 | 中文 | 组件 | 备注 |
+|------|------|------|------|
+| `Weaver Archives` | **简报中心** | WeaverArchives | 历史简报列表页 |
+| `Weaver Console` | **简报生成** | WeaverConsole | 简报生成控制台 |
+| `New Briefing` | **新建简报** | WeaverArchives | 跳转至生成页 |
+| `Generate` | **开始生成** | WeaverConsole | 触发 LLM 生成 |
+| `Generating...` | **生成中...** | WeaverConsole | 生成加载状态 |
+| `Generating Briefing...` | **生成简报中...** | ArticleReader | 流式加载状态 |
+| `Filter` | **筛选** | WeaverArchives | 状态/语境筛选 |
+| `New / Unread` | **新生成 / 未读** | WeaverArchives | 24h 内状态 |
+| `Archived` | **已归档** | WeaverArchives | 超过 24h 状态 |
+| `Context` | **语境** | WeaverArchives | 场景筛选维度 |
 
 ---
 
@@ -116,6 +131,11 @@
 - `app/admin/inspector/_components/*.tsx`
 - `components/admin/*.tsx`
 
+### Weaver 模块
+- `components/weaver/WeaverArchives.tsx`
+- `components/weaver/WeaverConsole.tsx`
+- `components/weaver/ArticleReader.tsx`
+
 ---
 
 ## 🔄 更新历史
@@ -123,3 +143,4 @@
 | 日期 | 版本 | 变更内容 |
 |------|------|----------|
 | 2026-02-07 | v1.0 | 初始版本，建立核心术语表 |
+| 2026-02-16 | v1.1 | 新增 Weaver 模块术语，"编织" → "简报" 全局替换 |

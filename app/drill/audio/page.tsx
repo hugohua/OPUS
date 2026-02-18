@@ -2,8 +2,8 @@ import React from "react";
 import { AudioSessionRunner } from "@/components/session/audio-session-runner";
 
 export const metadata = {
-    title: "Audio Gym | Opus",
-    description: "Eyes-free audio practice session."
+    title: "听力训练 | Opus",
+    description: "闭眼模式听力练习"
 };
 
 export default function AudioDrillPage() {
