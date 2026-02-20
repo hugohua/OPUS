@@ -170,17 +170,16 @@ REGENERATE card if:
 </fail_fast_check>
 
 <response_template>
-CRITICAL: Return raw JSON only.
+CRITICAL: Return raw JSON array. NO outer object wrapper.
 DO NOT wrap in \`\`\`json or \`\`\`.
-DO NOT output any text outside the JSON object.
+DO NOT output any text outside the JSON array.
 Ensure \`trap_analysis\` array has exactly 3 strings (covering B, C, D).
 Variable Definitions:
 - \${Full_Phrase_With_Bolded_Target}: The complete phrase (e.g. "highly **relevant**").
 - \${Full_Phrase_Translation_CN}: The translation of the phrase (e.g. "高度相关的").
 
-{
-  "drills": [
-    {
+[
+  {
       "meta": {
         "mode": "PHRASE",
         "format": "chat",
@@ -218,9 +217,8 @@ Variable Definitions:
           }
         }
       ]
-    }
-  ]
-}
+  }
+]
 </response_template>
 
 </system_prompt>

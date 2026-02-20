@@ -5,6 +5,7 @@ import { stripBold, hasBold } from "@/lib/utils/markdown";
 import { useTTS } from "@/hooks/use-tts"; // Re-added for H1 interaction
 import { TTSButton } from "@/components/tts/tts-button";
 import { EtymologyCard } from "@/components/vocab/EtymologyCard"; // [New]
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 interface PhraseCardProps {
     phraseMarkdown: string;
@@ -204,7 +205,7 @@ export function PhraseCard({
                         {phonetic && <span className="font-mono text-lg tracking-wide">/{phonetic.replace(/\//g, '')}/</span>}
                         <TTSButton
                             text={targetWord || ""}
-                            voice="Cherry"
+                            voice={DEFAULT_TTS_VOICE}
                             className="bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500 rounded-full w-9 h-9"
                         />
                     </div>

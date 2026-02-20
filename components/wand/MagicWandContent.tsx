@@ -19,6 +19,8 @@ interface ParsedSection {
 }
 
 type SectionType =
+    | "definition"
+    | "etymology"
     | "meaning"
     | "nuance"
     | "collocation"
@@ -44,11 +46,19 @@ function identifySectionType(titleLine: string): { type: SectionType, icon: stri
 
     const lower = titleLine.toLowerCase();
 
-    if (lower.includes("meaning") || lower.includes("语境义")) {
+    if (lower.includes("释义")) {
+        type = "definition";
+        icon = "📖";
+        label = "释义";
+    } else if (lower.includes("词源") || lower.includes("etymology")) {
+        type = "etymology";
+        icon = "🧬";
+        label = "词源记忆";
+    } else if (lower.includes("meaning") || lower.includes("语境义")) {
         type = "meaning";
         icon = "🎯";
         label = "Meaning in Context";
-    } else if (lower.includes("nuance") || lower.includes("深度辨析")) {
+    } else if (lower.includes("nuance") || lower.includes("辨析")) {
         type = "nuance";
         icon = "💡";
         label = "Nuance";
@@ -85,6 +95,45 @@ const SectionHeader = ({ icon, label, colorClass }: { icon: string, label: strin
         </span>
     </div>
 );
+
+// 0. Definition (释义：中文含义 + 语境义)
+const DefinitionRenderer = ({ content }: { content: string }) => {
+    // Split into lines for structured display
+    const lines = content.split('\n').filter(l => l.trim());
+
+    return (
+        <div>
+            <SectionHeader icon="📖" label="释义" colorClass="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" />
+            <div className="space-y-2">
+                {lines.map((line, idx) => {
+                    const clean = line.replace(/^-\s*/, '').trim();
+                    const htmlLine = clean.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-slate-900 dark:text-zinc-100">$1</span>');
+                    return (
+                        <p
+                            key={idx}
+                            className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed pl-3 border-l-2 border-blue-200 dark:border-blue-500/30"
+                            dangerouslySetInnerHTML={{ __html: htmlLine }}
+                        />
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// 0b. Etymology (词源记忆：词根拆解 / 记忆线索)
+const EtymologyRenderer = ({ content }: { content: string }) => {
+    return (
+        <div>
+            <SectionHeader icon="🧬" label="词源记忆" colorClass="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400" />
+            <div className="bg-violet-50/50 dark:bg-violet-500/10 rounded-lg p-4 border border-violet-100/50 dark:border-violet-500/20">
+                <p className="font-mono text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                    {content}
+                </p>
+            </div>
+        </div>
+    );
+};
 
 // 1. Meaning (Standard Text with Highlight)
 const MeaningRenderer = ({ content }: { content: string }) => {
@@ -317,6 +366,8 @@ export function MagicWandContent({ completion, isLoading, type, target }: MagicW
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1, duration: 0.4 }}
                     >
+                        {section.type === "definition" && <DefinitionRenderer content={section.content} />}
+                        {section.type === "etymology" && <EtymologyRenderer content={section.content} />}
                         {section.type === "meaning" && <MeaningRenderer content={section.content} />}
                         {section.type === "nuance" && <NuanceRenderer content={section.content} />}
                         {section.type === "collocation" && <CollocationRenderer content={section.content} />}

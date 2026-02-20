@@ -223,15 +223,28 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         const duration = Date.now() - startTime.current;
         const isRetry = (currentDrill.meta as any)?.isRetry;
 
-        // 静默记录，但打印错误日志 (FSRS Integrity)
-        recordOutcome({
+        const outcomeInput: any = {
             userId,
             vocabId,
             grade: grade as any,
             mode,
             duration,
             isRetry
-        }).catch((e) => {
+        };
+
+        // [Phase 5] Extract Context Sentence for CONTEXT mode
+        if (mode === 'CONTEXT') {
+            const textSeg = currentDrill.segments.find(s => s.type === "text");
+            const interactSeg = currentDrill.segments.find(s => s.type === "interaction");
+            if (textSeg?.content_markdown && interactSeg?.task?.answer_key) {
+                // Replace [___] with answer (Simple replacement)
+                const sentence = textSeg.content_markdown.replace(/\[___\]/g, interactSeg.task.answer_key);
+                (outcomeInput as any).contextSentence = sentence;
+            }
+        }
+
+        // 静默记录，但打印错误日志 (FSRS Integrity)
+        recordOutcome(outcomeInput).catch((e) => {
             console.error('[FSRS] recordOutcome failed:', e);
         });
 

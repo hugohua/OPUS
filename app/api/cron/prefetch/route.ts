@@ -20,7 +20,7 @@ const log = createLogger('api:cron:prefetch');
 const CRON_SECRET = process.env.CRON_SECRET;
 
 // 配置
-const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO'];
+const MODES: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'AUDIO', 'PHRASE', 'CONTEXT'];
 // [Fix] Import shared limits from drill-cache
 import { CACHE_LIMIT_MAP } from '@/lib/drill-cache';
 

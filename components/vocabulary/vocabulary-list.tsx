@@ -40,9 +40,7 @@ export function VocabularyList() {
 
     // Metadata Stats (From first page, usually correct enough or we fetch separately)
     // Actually getVocabList returns metadata.stats in every page (global).
-    const stats = data?.pages[0]?.metadata.stats ?? { mastered: 0, learning: 0, due: 0 };
-    const totalCount = data?.pages[0]?.metadata.total ?? 0; // Total filtered? Or total Global?
-    // getVocabList returns 'stats' as GLOBAL usage, 'total' as filtered count.
+    const stats = data?.pages[0]?.metadata.stats ?? { mastered: 0, learning: 0, due: 0, totalVocab: 0 };
 
     // 3. Virtualizer
     const parentRef = useRef<HTMLDivElement>(null);
@@ -76,22 +74,7 @@ export function VocabularyList() {
     return (
         <div className="flex flex-col h-screen w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 overflow-hidden font-sans">
             {/* 1. HUD */}
-            <VocabHud stats={stats} totalCount={100} />
-            {/* Note: totalCount for progress bar denominator is tricky. 
-               Ideally we know total vocab count (e.g. 5000). 
-               Let's assume a fixed denominator or fetch it.
-               The 'stats' include Mastered/Learning, we can sum them + New. 
-               Or assume 'total' from metadata is filtered count.
-               For now, I'll pass 3000 as typical TOEIC core size if unknown, 
-               or better: sum of stats + stats.new? 
-               Let's pass 3000 (TOEIC Core) as hardcoded or derived?
-               Actually, let's just pass `stats.mastered + stats.learning + stats.due + ...`?
-               No, stats.due is subset.
-               Let's assume denominator = stats.mastered + stats.learning + 2000 (approx remaining).
-               Better: Pass 100 to treat input as direct if we calculate percentage inside.
-               Actually, HUD implementation calculates % based on totalCount.
-               I'll pass hardcoded 3000 for "TOEIC Core" visual.
-            */}
+            <VocabHud stats={stats} totalCount={stats.totalVocab} />
 
             {/* 2. Filters */}
             <VocabFilters

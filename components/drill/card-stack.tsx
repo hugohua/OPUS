@@ -1,25 +1,46 @@
+/**
+ * 卡片堆栈组件
+ * 
+ * 功能：
+ *   可滑动的卡片堆栈，支持左右滑动投票。
+ *   支持 onNeedMore 回调实现无限滚动预加载。
+ */
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { WordCard } from './word-card';
 import { WordAsset } from '@/types/word';
 import { Button } from '@/components/ui/button';
 import { X, Check, RefreshCw } from 'lucide-react';
 
-export function CardStack({ items }: { items: WordAsset[] }) {
+interface CardStackProps {
+    items: WordAsset[];
+    onNeedMore?: () => void;
+    onCardComplete?: () => void;
+}
+
+const PRELOAD_THRESHOLD = 5; // 剩余 ≤5 张时预加载
+
+export function CardStack({ items, onNeedMore, onCardComplete }: CardStackProps) {
     const [index, setIndex] = useState(0);
     const x = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-30, 30]);
-    // const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 1, 1, 1, 0.5]); 
-    // Opacity transform can be tricky with shared layout id, keeping simple.
 
     const card = items[index];
     const nextCard = items[index + 1];
+    const remaining = items.length - index;
+
+    // 无限滚动：剩余卡片不足时预加载
+    useEffect(() => {
+        if (remaining <= PRELOAD_THRESHOLD && onNeedMore) {
+            onNeedMore();
+        }
+    }, [remaining, onNeedMore]);
 
     const handleVote = (vote: boolean) => {
-        // Logic to record vote (e.g. Mastered vs Review)
         setIndex(i => i + 1);
+        onCardComplete?.();
     }
 
     const handleDragEnd = (_: any, info: any) => {
@@ -36,9 +57,8 @@ export function CardStack({ items }: { items: WordAsset[] }) {
                 <div className="p-4 bg-muted rounded-full">
                     <RefreshCw className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-xl font-medium">All caught up!</h3>
-                <p className="text-muted-foreground">Check back tomorrow for more review cards.</p>
-                <Button onClick={() => setIndex(0)} variant="ghost">Restart (Demo)</Button>
+                <h3 className="text-xl font-medium">今日复习完成！</h3>
+                <p className="text-muted-foreground">明天再来看看新的复习卡片吧。</p>
             </div>
         );
     }

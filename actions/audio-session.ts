@@ -16,6 +16,7 @@ import { ActionState } from '@/types/action';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { recordOutcome } from './record-outcome';
+import { DEFAULT_TTS_VOICE } from '@/config/audio';
 
 const log = createLogger('actions:audio-session');
 
@@ -26,7 +27,7 @@ export const AudioSessionItemSchema = z.object({
     word: z.string(),
     phonetic: z.string().optional(),
     definition: z.string().optional(),
-    voice: z.string().default('Cherry'), // 从 confusionAudio 或默认
+    voice: z.string().default(DEFAULT_TTS_VOICE),
 });
 
 export type AudioSessionItem = z.infer<typeof AudioSessionItemSchema>;
@@ -98,7 +99,7 @@ export async function getAudioSession(): Promise<ActionState<AudioSessionData>> 
             word: p.vocab.word,
             phonetic: p.vocab.phoneticUs || p.vocab.phoneticUk || undefined,
             definition: p.vocab.definition_cn || undefined,
-            voice: 'Cherry', // TODO: 可以根据单词特性选择不同音色
+            voice: DEFAULT_TTS_VOICE,
         }));
 
         return {

@@ -57,6 +57,7 @@ export const RecordOutcomeSchema = z.object({
     track: z.enum(['VISUAL', 'AUDIO', 'CONTEXT']).optional(), // [NEW] Explicit track for cross-track reviews
     duration: z.number().int().nonnegative().optional(), // 毫秒 (ms)
     isRetry: z.boolean().optional(), // 是否为会话内重试
+    contextSentence: z.string().optional(), // [NEW] Context Anchor
 });
 
 export type GetBriefingInput = z.input<typeof GetBriefingSchema>;

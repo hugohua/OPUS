@@ -17,6 +17,7 @@ import {
     switchL2Scenario,
     getSmartContentAudio
 } from "@/actions/content-generator";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 interface ContextSnapshotProps {
     vocabId: number;
@@ -117,7 +118,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
             // 调用 TTS Hook 实时生成
             tts.play({
                 text: content.text,
-                voice: "Cherry",
+                voice: DEFAULT_TTS_VOICE,
                 language: "en-US",
                 speed: 1.0
             });

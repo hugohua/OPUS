@@ -59,12 +59,32 @@ Your goal is to generate "Eyes-Free" auditory drills that train "Audio Reflex".
 </output_requirements>
 
 <response_template>
+CRITICAL: Return raw JSON array. NO outer object wrapper.
 [
     {
       "meta": {
-        // ...
+        "mode": "AUDIO",
+        "format": "chat",
+        "target_word": "\${Word}"
       },
-      // ...
+      "segments": [
+        {
+          "type": "text",
+          "content_markdown": "\${Context_Or_Instruction}",
+          "audio_text": "\${TTS_Friendly_Text}"
+        },
+        {
+          "type": "interaction",
+          "dimension": "A",
+          "task": {
+            "style": "bubble_select",
+            "question_markdown": "\${Question}",
+            "options": ["\${Option_A}", "\${Option_B}"],
+            "answer_key": "\${Correct_Answer}",
+            "explanation_markdown": "\${Explanation_CN}"
+          }
+        }
+      ]
     }
 ]
 </response_template>

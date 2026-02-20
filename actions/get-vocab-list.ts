@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
+import { LEECH_THRESHOLD } from '@/config/vocab';
 
 export type VocabFilterStatus = 'ALL' | 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' | 'LEECH' | 'CONTEXT';
 export type VocabSortOption = 'RANK' | 'DUE' | 'DIFFICULTY';
@@ -45,6 +46,7 @@ export interface GetVocabListResponse {
             mastered: number;
             learning: number;
             due: number;
+            totalVocab: number;
         }
     };
 }
@@ -122,8 +124,15 @@ export async function getVocabList({
             some: { userId: userId, track: 'VISUAL', status: 'LEARNING' }
         };
     } else if (status === 'REVIEW') {
+        // [Fix] "To Review" means items that are DUE (next_review_at <= now)
+        // We include LEARNING/REVIEW/MASTERED phases, but exclude NEW.
         where.progress = {
-            some: { userId: userId, track: 'VISUAL', status: 'REVIEW' }
+            some: {
+                userId: userId,
+                track: 'VISUAL',
+                next_review_at: { lte: new Date() },
+                status: { not: 'NEW' }
+            }
         };
     } else if (status === 'MASTERED') {
         // Status MASTERED or Stability > 21? PRD says "Status Mastered" in Demo, but logic might vary.
@@ -132,9 +141,9 @@ export async function getVocabList({
             some: { userId: userId, track: 'VISUAL', status: 'MASTERED' }
         };
     } else if (status === 'LEECH') {
-        // Leech: Lapses > 3 (Example threshold)
+        // Leech: lapses >= LEECH_THRESHOLD
         where.progress = {
-            some: { userId: userId, track: 'VISUAL', lapses: { gte: 3 } } // Hardcoded 3 for now
+            some: { userId: userId, track: 'VISUAL', lapses: { gte: LEECH_THRESHOLD } }
         };
     } else if (status === 'CONTEXT') {
         // Has AI Context
@@ -176,12 +185,10 @@ export async function getVocabList({
         // If sort == DUE, we probably want to see "Review" list.
         // Let's trust Prisma's ability if we had a direct link, but 1-to-many makes it hard (even if unique compound).
 
-        // Fix: UserProgress is 1-N to Vocab, but for a (User, Track) it is 1-1.
-        // Prisma doesn't know it's 1-1 efficiently here without specific view.
-        // We will default to RANK for now to ensure stability.
+        // KNOWN_LIMITATION: Prisma 不支持关联字段排序（UserProgress 与 Vocab 为 1-N），需 Raw SQL 实现
         orderBy = { abceed_rank: 'asc' };
     } else if (sort === 'DIFFICULTY') {
-        // Similar issue.
+        // KNOWN_LIMITATION: 同上
         orderBy = { abceed_rank: 'asc' };
     }
 
@@ -233,7 +240,7 @@ export async function getVocabList({
                 retention = Math.pow(0.9, elapsedDays / stability) * 100;
             }
 
-            isLeech = p.lapses >= 3 || (p.status === 'REVIEW' && p.stability < 1 && p.lapses > 1);
+            isLeech = p.lapses >= LEECH_THRESHOLD || (p.status === 'REVIEW' && p.stability < 1 && p.lapses > 1);
         }
 
         return {
@@ -269,8 +276,7 @@ export async function getVocabList({
 }
 
 async function getHudStats(userId: string) {
-    // Determine counts strictly
-    const [mastered, learning, due] = await Promise.all([
+    const [mastered, learning, due, totalVocab] = await Promise.all([
         db.userProgress.count({
             where: { userId, track: 'VISUAL', status: 'MASTERED' }
         }),
@@ -282,10 +288,14 @@ async function getHudStats(userId: string) {
                 userId,
                 track: 'VISUAL',
                 next_review_at: { lte: new Date() },
-                status: { in: ['LEARNING', 'REVIEW', 'MASTERED'] } // Mastered also needs review eventually? Typically yes in FSRS.
+                status: { in: ['LEARNING', 'REVIEW', 'MASTERED'] }
             }
+        }),
+        // 总词库数（进度条分母）
+        db.vocab.count({
+            where: { abceed_level: { not: null } }
         })
     ]);
 
-    return { mastered, learning, due };
+    return { mastered, learning, due, totalVocab };
 }

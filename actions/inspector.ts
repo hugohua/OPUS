@@ -16,6 +16,7 @@ import {
     AuditResult,
     AuditResultSchema
 } from '@/lib/generators/audit/quality-auditor';
+import { auth } from '@/auth';
 
 // Re-export for UI
 export type { AuditResult } from '@/lib/generators/audit/quality-auditor';
@@ -105,6 +106,98 @@ export async function auditDrillQuality(
 
     } catch (error) {
         console.error("[Audit] Failed:", error);
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * 模拟内容生成 (Content Simulation)
+ * 
+ * 功能：
+ *   直接调用 OMPS 核心选词逻辑，展示如果当前用户（或目标用户）现在开始学习，
+ *   系统会推荐哪些单词。用于调试 OMPS 算法和 FSRS 调度。
+ */
+export async function simulateContent(
+    inputUserId?: string,
+    mode: string = 'L0_MIXED',
+    limit: number = 20,
+    forceRefresh: boolean = false
+) {
+    try {
+        // 1. Security Check
+        const session = await auth();
+        if (!session?.user) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        // 默认使用当前管理员 ID，或者指定的测试用户 ID
+        const targetUserId = inputUserId || session.user.id;
+        if (!targetUserId) {
+            return { success: false, error: "No user ID found" };
+        }
+
+        console.log('[Inspector] Simulating content for:', { targetUserId, mode, limit });
+
+        const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
+
+        // 2. Clear Cache if forced
+        if (forceRefresh) {
+            const { inventory } = await import('@/lib/core/inventory');
+            await inventory.clearMode(targetUserId, mode);
+            console.log('[Inspector] Cache cleared for:', { targetUserId, mode });
+        }
+
+        // 3. Fetch Candidates
+        const safeLimit = Math.min(Math.max(limit, 1), 50);
+        const candidates = await fetchOMPSCandidates(
+            targetUserId,
+            safeLimit,
+            undefined, // config
+            [], // excludeIds
+            mode // session mode
+        );
+
+        // 4. Transform for Display
+        const mappedData = candidates.map((c, index) => ({
+            rank: index + 1,
+            vocabId: c.vocabId,
+            word: c.word,
+            definition_cn: c.definition_cn,
+            partOfSpeech: c.partOfSpeech || 'unknown',
+            frequency_score: c.frequency_score,
+            priority_level: c.priority_level, // 2=Review, 3=New
+            bucket: c.type, // REVIEW / NEW
+            stability: c.reviewData?.stability || 0,
+            due: c.reviewData?.next_review_at || null,
+            reason: c.type === 'REVIEW'
+                ? `复习 (S:${c.reviewData?.stability?.toFixed(1)})`
+                : `新词 (F:${c.frequency_score})`
+        }));
+
+        // 5. Calculate Stats
+        const { db } = await import('@/lib/db');
+        const masteredCount = await db.userProgress.count({
+            where: {
+                userId: targetUserId,
+                track: 'VISUAL', // Using VISUAL as the primary track for vocabulary size
+                status: 'MASTERED'
+            }
+        });
+
+        const vocabCoverage = Math.min(Math.round((masteredCount / 3000) * 100), 100);
+        const targetScore = Math.min(Math.round(200 + (masteredCount * 0.5)), 990);
+
+        return {
+            success: true,
+            data: mappedData,
+            stats: {
+                vocabCoverage,
+                targetScore
+            }
+        };
+
+    } catch (error) {
+        console.error("[Inspector] Simulation failed:", error);
         return { success: false, error: String(error) };
     }
 }

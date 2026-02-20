@@ -56,6 +56,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Evaluation Matrix**: `docs/dev-notes/evaluation-matrix.md` (**三维评估体系**：Logic / Quality / Stability)
 - **L0 Quality Assurance**: `docs/dev-notes/TESTING.md` (包含 Schema 校验、规则断言逻辑、LLM 评分基线)
 - **Auth**: `docs/dev-notes/auth-system-and-infrastructure.md` (NextAuth/Clerk logic)
+- **PWA 配置**: `docs/dev-notes/pwa-configuration.md` (**Serwist**: Service Worker、Manifest、iOS 安装支持)
 
 ### 5. Text-to-Speech (TTS)
 - **Architecture**: `docs/dev-notes/tts-architecture.md` (**Updated**: Database Indexed Caching, Python Atomic Write)
@@ -121,4 +122,5 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If 需要追踪算法行为 / 排查异常** -> Read `panoramic-audit-system.md` (审计服务) AND 运行 `npx tsx scripts/audit-report.ts`.
 - **If 修改选词/评分/生成逻辑** -> **必须使用** `audit-service.ts` 中的埋点方法，而非直接操作 `DrillAudit` 表.
 - **If 部署到 NAS / 修改 Docker 配置 / 排查部署问题** -> Read `nas-deployment-guide.md` (**完整踩坑记录**).
+- **If 修改 PWA 配置 / Service Worker / Manifest / 图标** -> Read `pwa-configuration.md` (**Serwist 缓存策略、构建注意事项**).
 

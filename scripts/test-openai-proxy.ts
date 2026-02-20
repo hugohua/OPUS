@@ -15,12 +15,13 @@ async function testProxy() {
 
     const apiKey = process.env.ETL_API_KEY;
     if (!apiKey) {
-        console.warn("⚠️ Warning: ETL_API_KEY not found in .env");
+        console.error("❌ ETL_API_KEY not found in .env. Cannot proceed.");
+        process.exit(1);
     }
 
     const client = new OpenAI({
         baseURL: process.env.ETL_BASE_URL || "http://127.0.0.1:8045/v1",
-        apiKey: apiKey || "sk-1bbb83ba938b4a9190d452c06ebed583", // Fallback to hardcoded key if env missing
+        apiKey,
     });
 
     try {

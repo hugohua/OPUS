@@ -33,6 +33,7 @@ import {
 import { AuditButton } from './audit-button';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { MODE_LABELS } from '@/lib/constants/modes';
+import { DrillCardPreview } from '@/components/admin/drill-card-preview';
 
 // Mock Data for Initial State (to show structure)
 interface DrillItem {
@@ -423,40 +424,22 @@ function DetailPanel({
                     <span className="text-[10px] font-mono text-muted-foreground">模型: {item.debug?.model || '未知'}</span>
                 </div>
 
-                {/* The Preview Card - Light Mode Only */}
-                <div className="w-full bg-zinc-50 text-zinc-900 rounded-2xl p-6 shadow-2xl relative">
-                    <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-400 border border-zinc-200 px-1 rounded">预览</div>
-
-                    {interaction ? (
-                        <>
-                            <h3 className="font-serif text-xl leading-relaxed text-center mt-4">
-                                {/* 简化渲染 markdown */}
-                                {interaction.task?.question_markdown || "无问题内容"}
-                            </h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
-                                {interaction.task?.options?.map((opt: any) => (
-                                    <div key={typeof opt === 'string' ? opt : opt.text} className="p-3 rounded-xl border border-zinc-200 bg-white text-center text-sm">
-                                        {typeof opt === 'string' ? opt : opt.text}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-6 pt-4 border-t border-zinc-200">
-                                <p className="text-[10px] font-mono text-zinc-500 uppercase">解释</p>
-                                <p className="text-xs text-zinc-600 mt-1">
-                                    {interaction.task?.explanation_markdown || "暂无解释"}
-                                </p>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="text-center py-10 opacity-50 font-mono text-xs">
-                            原始数据视图 (无交互内容)
-                            <br />
-                            {JSON.stringify(segments.slice(0, 1))}
-                        </div>
-                    )}
-                </div>
+                {/* The Preview Card - Using Shared Component */}
+                {interaction ? (
+                    <DrillCardPreview
+                        question={interaction.task?.question_markdown}
+                        options={interaction.task?.options}
+                        explanation={interaction.task?.explanation_markdown}
+                        model={item.debug?.model}
+                        context="预览"
+                    />
+                ) : (
+                    <div className="w-full bg-zinc-50 text-zinc-900 rounded-2xl p-6 shadow-2xl relative text-center py-10 opacity-50 font-mono text-xs">
+                        原始数据视图 (无交互内容)
+                        <br />
+                        {JSON.stringify(segments.slice(0, 1))}
+                    </div>
+                )}
 
                 {/* Audit Action */}
                 <div className="mt-4 pb-8 md:pb-0">

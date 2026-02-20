@@ -211,7 +211,11 @@ export async function getPanoramicLogs(
             contextMode: true,
             status: true,
             auditTags: true,
-            payload: true
+            payload: true,
+            auditScore: true,
+            auditReason: true,
+            flagReason: true,
+            isRedundant: true
         }
     });
 }

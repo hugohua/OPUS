@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useTTS } from "@/hooks/use-tts";
 import { useTextSelection } from "@/hooks/use-text-selection";
 import { toast } from "sonner";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 interface UseWeaverToolbarProps {
     scenario: string;
@@ -44,7 +45,7 @@ export function useWeaverToolbar({
     }, [clearSelection, wandContext, scenario]);
 
     const handlePlay = useCallback((text: string) => {
-        tts.play({ text, voice: 'Cherry', language: 'en-US', speed: 0.9 });
+        tts.play({ text, voice: DEFAULT_TTS_VOICE, language: 'en-US', speed: 0.9 });
     }, [tts]);
 
     const handleCopy = useCallback(() => {

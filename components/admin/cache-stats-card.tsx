@@ -63,7 +63,7 @@ const MODE_GROUPS = [
         icon: Brain,
         modes: [
             { key: 'NUANCE', label: MODE_LABELS['NUANCE'] },
-            { key: 'READING', label: MODE_LABELS['READING'] },
+            { key: 'CONTEXT', label: MODE_LABELS['CONTEXT'] },
         ]
     }
 ];

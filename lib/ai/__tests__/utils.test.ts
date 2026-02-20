@@ -106,5 +106,16 @@ describe('AI Utils', () => {
             const input = '{"items": [{"id": '; // Completely broken
             expect(() => safeParse(input, schema)).toThrow();
         });
+
+        it('should reject { drills: [...] } format (Array-First spec guard)', () => {
+            // { drills } is NOT recognized by safeParse — only raw arrays or { items } work
+            const input = '{"drills": [{"id": 1}]}';
+            expect(() => safeParse(input, schema)).toThrow();
+        });
+
+        it('should accept { items: [...] } format directly', () => {
+            const input = '{"items": [{"id": 1}]}';
+            expect(safeParse(input, schema)).toEqual({ items: [{ id: 1 }] });
+        });
     });
 });

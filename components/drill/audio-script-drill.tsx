@@ -161,11 +161,11 @@ export function AudioScriptDrill({
                             exit={{ opacity: 0, y: -10 }}
                             className="text-center space-y-4 max-w-sm"
                         >
-                            <p className="font-mono text-xs text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                                Listen & Identify
+                            <p className="font-mono text-xs text-zinc-400 dark:text-zinc-500 tracking-widest">
+                                听力辨析
                             </p>
                             <h2 className="font-serif text-2xl text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                                What did you hear?
+                                你听到了什么？
                             </h2>
                         </motion.div>
                     ) : (
@@ -186,7 +186,7 @@ export function AudioScriptDrill({
                                             isCorrect ? "bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400" :
                                                 "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400"
                                         )}>
-                                            {isCorrect ? "Correct" : isGivenUp ? "Missed" : "Incorrect"}
+                                            {isCorrect ? "正确" : isGivenUp ? "跳过" : "错误"}
                                         </div>
                                     )
                                 })()}
@@ -197,7 +197,7 @@ export function AudioScriptDrill({
                                 <div className="space-y-4">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Target</span>
+                                            <span className="text-[10px] font-mono font-bold text-zinc-400 tracking-wider">目标单词</span>
                                             <span className="text-xs font-serif italic text-zinc-500">{phonetic}</span>
                                         </div>
                                         <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{drill.meta.target_word}</p>
@@ -206,7 +206,7 @@ export function AudioScriptDrill({
                                     <div className="h-px bg-zinc-100 dark:bg-zinc-800" />
 
                                     <div>
-                                        <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Context</span>
+                                        <span className="text-[10px] font-mono font-bold text-zinc-400 tracking-wider mb-1 block">语境</span>
                                         <div
                                             className="text-base text-zinc-600 dark:text-zinc-300 font-serif leading-relaxed"
                                             dangerouslySetInnerHTML={{ __html: boldToHtml(finalScript, "text-cyan-600 dark:text-cyan-400 font-bold") }}
@@ -215,7 +215,7 @@ export function AudioScriptDrill({
 
                                     {finalAnalysis && (
                                         <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans mt-2">
-                                            <span className="font-bold text-cyan-600 text-xs uppercase mr-2">Logic</span>
+                                            <span className="font-bold text-cyan-600 text-xs mr-2">解析</span>
                                             {finalAnalysis}
                                         </div>
                                     )}

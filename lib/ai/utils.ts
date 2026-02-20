@@ -59,6 +59,8 @@ export function recoverTruncatedJson(content: string): { recovered: string; item
     console.log('[DEBUG] recoverTruncatedJson input:', content.slice(0, 100));
     try {
         // 查找 "items": [ 或 "drills": [ 的位置
+        // 注意：虽然 Array-First 规范已禁用 drills key，
+        // 此处保留是为了截断恢复的防御性容错（LLM 偶尔无视指令时仍可挽救）
         const itemsMatch = content.match(/"(items|drills)"\s*:\s*\[/);
         if (!itemsMatch || itemsMatch.index === undefined) {
             console.log('[DEBUG] No items/drills array found');

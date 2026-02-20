@@ -7,6 +7,7 @@ import { useTTS } from "@/hooks/use-tts";
 import { toast } from "sonner";
 import { getAudioSession, submitAudioGrade } from "@/actions/audio-session";
 import { AudioDrillCardSkeleton } from "@/components/drill/audio-drill-card-skeleton";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 export function AudioSessionRunner() {
     const router = useRouter();
@@ -71,7 +72,7 @@ export function AudioSessionRunner() {
         const playAudio = async () => {
             await tts.play({
                 text: currentItem.word, // Or use a phrase? "spell {word}"? For now just word.
-                voice: currentItem.voice || "Cherry",
+                voice: currentItem.voice || DEFAULT_TTS_VOICE,
                 speed: 1.0
             });
         };
@@ -85,7 +86,7 @@ export function AudioSessionRunner() {
         if (!currentItem) return;
         tts.play({
             text: currentItem.word,
-            voice: currentItem.voice || "Cherry"
+            voice: currentItem.voice || DEFAULT_TTS_VOICE
         });
     };
 

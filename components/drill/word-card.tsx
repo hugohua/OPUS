@@ -2,19 +2,20 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AudioLines } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { WordAsset } from "@/types/word";
 import { PhraseHighlighter } from "@/components/drill/phrase-highlighter";
+import { TTSButton } from "@/components/tts/tts-button";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 const cardIntentVariants = cva(
     "relative overflow-hidden rounded-xl border transition-all duration-300 w-full h-full flex flex-col justify-between selection:bg-primary/20",
     {
         variants: {
             intent: {
-                default: "bg-card text-card-foreground border-border shadow-sm dark:backdrop-blur-md dark:bg-white/5 dark:border-white/10",
-                glow: "border-primary/50 bg-primary/5 dark:shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+                default: "bg-card text-card-foreground border-border shadow-sm dark:bg-zinc-900 dark:border-white/10",
+                glow: "bg-card dark:bg-zinc-900 border-primary/50 text-card-foreground shadow-[0_0_20px_rgba(124,58,237,0.1)]"
             }
         },
         defaultVariants: {
@@ -37,9 +38,13 @@ export function WordCard({ data, isActive }: WordCardProps) {
             <CardContent className="flex-1 p-8 flex flex-col items-center text-center space-y-6 overflow-y-auto">
                 {/* Header */}
                 <div className="space-y-4 w-full">
-                    <div className="flex justify-between items-start w-full opacity-50">
-                        <span className="text-xs uppercase tracking-widest">Business Core</span>
-                        <AudioLines className="w-5 h-5 cursor-pointer hover:text-primary transition-colors" />
+                    <div className="flex justify-between items-start w-full">
+                        <span className="text-xs uppercase tracking-widest opacity-50">Business Core</span>
+                        <TTSButton
+                            text={data.word}
+                            voice={DEFAULT_TTS_VOICE}
+                            className="w-5 h-5 opacity-50 hover:opacity-100 transition-opacity"
+                        />
                     </div>
 
                     <div className="space-y-2 py-4">

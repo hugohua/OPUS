@@ -2,6 +2,7 @@
 
 import { useTTS } from "@/hooks/use-tts";
 import { cn } from "@/lib/utils";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 interface Collocation {
     text: string;
@@ -19,7 +20,7 @@ export function CommonChunks({ collocations, mainWord }: CommonChunksProps) {
     const handlePlay = (text: string) => {
         tts.play({
             text: text,
-            voice: "Cherry",
+            voice: DEFAULT_TTS_VOICE,
             language: "en-US",
             speed: 1.0
         });

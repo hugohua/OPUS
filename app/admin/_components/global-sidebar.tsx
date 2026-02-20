@@ -1,5 +1,7 @@
 'use client';
 
+import NextImage from 'next/image';
+
 import {
     LayoutDashboard,
     ListOrdered,
@@ -49,10 +51,15 @@ export function GlobalAdminSidebar() {
                 <AdminSidebar>
                     {/* Brand Header */}
                     <SidebarHeader>
-                        <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(124,58,237,0.5)] shrink-0">
-                            OP
+                        <div className="w-8 h-8 relative shrink-0">
+                            <NextImage
+                                src="/favicon.svg"
+                                alt="OPUS Logo"
+                                fill
+                                className="object-contain"
+                            />
                         </div>
-                        <span className="ml-3 font-mono font-bold text-sm tracking-wider text-zinc-200 transition-opacity duration-300 opacity-0 group-data-[state=expanded]:opacity-100">
+                        <span className="ml-3 font-mono font-bold text-sm tracking-wider text-zinc-800 dark:text-zinc-200 transition-opacity duration-300 opacity-0 group-data-[state=expanded]:opacity-100">
                             OPUS 后台
                         </span>
                     </SidebarHeader>
@@ -80,8 +87,13 @@ export function GlobalAdminSidebar() {
             {/* Mobile Header (Visible on Mobile) */}
             <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-lg border-b border-border z-50 flex items-center px-4 justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-violet-600 flex items-center justify-center font-bold text-[10px] text-white">
-                        OP
+                    <div className="w-6 h-6 relative shrink-0">
+                        <NextImage
+                            src="/favicon.svg"
+                            alt="OPUS Logo"
+                            fill
+                            className="object-contain"
+                        />
                     </div>
                     <span className="font-mono font-bold text-sm text-foreground">OPUS 后台</span>
                 </div>

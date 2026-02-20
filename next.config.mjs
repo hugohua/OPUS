@@ -9,6 +9,7 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig = {
+    turbopack: {},
     experimental: {
         serverActions: {
             allowedOrigins: ["*"],

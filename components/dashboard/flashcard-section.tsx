@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, Car } from "lucide-react";
+import { Layers, Car, BookOpenCheck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,16 @@ const FLASHCARD_MODES = [
         color: "text-amber-400",
         bg: "bg-amber-500/10",
         href: "/drive"
+    },
+    {
+        id: "review-deck",
+        name: "复习卡组",
+        desc: "滑动复习",
+        sub: "L0 • 记忆",
+        icon: BookOpenCheck,
+        color: "text-emerald-400",
+        bg: "bg-emerald-500/10",
+        href: "/dashboard/cards"
     }
 ];
 
@@ -34,7 +44,7 @@ export function FlashcardSection() {
                 卡片
             </h3>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
                 {FLASHCARD_MODES.map((mode) => (
                     <Link
                         key={mode.id}

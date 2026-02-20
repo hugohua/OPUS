@@ -35,7 +35,7 @@ const PIVOT_CONFIG = {
 // AI 输出 Schema (Reusable)
 const SingleDrillSchema = z.object({
     meta: z.object({
-        format: z.enum(['chat', 'email', 'memo']),
+        format: z.string().optional(), // Relaxed to allow LLM variation (was enum)
         // mode: z.enum(['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ']), // Optional in LLM response, inferred from context
         target_word: z.string().optional(),
     }),

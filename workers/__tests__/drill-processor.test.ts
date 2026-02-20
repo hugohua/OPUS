@@ -75,7 +75,7 @@ describe('Drill Processor', () => {
         // Mock AIService Response
         (AIService.generateObject as any).mockResolvedValue({
             object: {
-                drills: [{
+                items: [{
                     meta: { format: 'chat', mode: 'SYNTAX', target_word: 'abandon', vocabId: 1 },
                     segments: [{
                         type: "text",
@@ -129,7 +129,7 @@ describe('Drill Processor', () => {
         // Mock AIService Response (Valid)
         (AIService.generateObject as any).mockResolvedValue({
             object: {
-                drills: [{
+                items: [{
                     meta: { format: 'chat', target_word: 'smart-fetch' },
                     segments: []
                 }]
@@ -171,7 +171,7 @@ describe('Drill Processor', () => {
 
         (AIService.generateObject as any).mockResolvedValue({
             object: {
-                drills: [{
+                items: [{
                     meta: { format: 'chat', target_word: 'plan-c' },
                     segments: []
                 }]
@@ -216,7 +216,7 @@ describe('Drill Processor', () => {
         // Mock AIService Response
         (AIService.generateObject as any).mockResolvedValue({
             object: {
-                drills: [{
+                items: [{
                     meta: { format: 'chat', target_word: 'new-word' },
                     segments: []
                 }]

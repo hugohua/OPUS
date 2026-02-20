@@ -5,6 +5,7 @@ import { Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DEFAULT_TTS_VOICE } from "@/config/audio";
 
 interface VocabHeroProps {
     word: string;
@@ -23,7 +24,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
     const handlePlay = () => {
         tts.play({
             text: word,
-            voice: "Cherry", // Default voice
+            voice: DEFAULT_TTS_VOICE,
             language: "en-US",
             speed: 1.0
         });

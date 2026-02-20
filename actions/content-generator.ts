@@ -22,6 +22,7 @@ import {
     type L2SentencePayload,
 } from '@/lib/generators/l2/smart-content';
 import { getTTSAudioCore as getTTSAudio } from '@/lib/tts/service';
+import { DEFAULT_TTS_VOICE } from '@/config/audio';
 
 const log = createLogger('content-generator');
 
@@ -193,7 +194,7 @@ export async function switchL2Scenario(
 async function triggerTTSGeneration(contentId: string, text: string) {
     const result = await getTTSAudio({
         text,
-        voice: 'Cherry',
+        voice: DEFAULT_TTS_VOICE,
         language: 'en-US',
         speed: 1.0,
         cacheType: 'temporary',

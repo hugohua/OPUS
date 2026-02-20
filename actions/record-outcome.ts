@@ -195,6 +195,8 @@ export async function recordOutcome(
                 next_review_at: newCard.due,
                 last_review_at: now,
                 status: newCard.state === State.Review ? 'REVIEW' : 'LEARNING',
+                // [NEW] Update context anchor if provided
+                ...(input.contextSentence ? { lastContextSentence: input.contextSentence } : {}),
             },
             create: {
                 userId,
@@ -211,6 +213,8 @@ export async function recordOutcome(
                 last_review_at: now,
                 status: 'LEARNING',
                 dueDate: newCard.due, // Legacy field
+                // [NEW] Set context anchor
+                lastContextSentence: input.contextSentence || null,
             }
         });
 
