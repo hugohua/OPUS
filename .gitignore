@@ -25,6 +25,7 @@ dockers
 other-project-demo
 build-and-export.sh
 data/
+books/
 
 # Serwist Service Worker 构建产物
 public/sw.js

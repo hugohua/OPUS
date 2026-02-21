@@ -15,13 +15,14 @@ import crypto from 'crypto';
 import { SessionMode, BriefingPayload } from '@/types/briefing';
 import { AIService } from '@/lib/ai/core';
 import { ContextSelector } from '@/lib/ai/context-selector';
-import { buildSyntaxInput, buildPhraseInput, buildBlitzInputWithTraps } from '@/lib/generators/input-builders';
+import { buildSyntaxInput, buildPhraseInput, buildBlitzInputWithTraps, buildPart5Input, Part5DrillInput } from '@/lib/generators/input-builders';
 import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { validateL0Payload, createPivotPayload, L0Mode } from '@/lib/validations/l0-schemas';
 import { DRILLS_PER_BATCH } from '@/lib/drill-cache';
 import { getL1AudioScriptPrompt, AudioScriptInput } from '@/lib/generators/l1/audio-script';
 import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
-import { buildSimpleDrill } from '@/lib/templates/deterministic-drill'; // [B1 Fix] Pivot Fallback
+import { buildPhraseFallbackDrill } from '@/lib/templates/phrase-fallback';
+import { buildChunkingDrillFallback } from '@/lib/templates/deterministic-drill'; // [B1 Fix] Pivot Fallback
 import { VisualTrapService } from '@/lib/services/visual-trap'; // [Phase 5]
 import { auditLLMGeneration, auditInventoryEvent } from '@/lib/services/audit-service'; // [V5.1] Audit
 
@@ -144,6 +145,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         const contextGroup: DrillCandidate[] = []; // [L2] Context
         const chunkingGroup: DrillCandidate[] = []; // [L1] Chunking
         const nuanceGroup: DrillCandidate[] = []; // [L2] Nuance
+        const arenaPart5Group: DrillCandidate[] = []; // [New] ARENA_PART5
 
         // Routing Logic
         if (mode === 'SYNTAX') {
@@ -184,6 +186,9 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             } else if (mode === 'NUANCE') {
                 // [L2] Nuance (Business Nuance)
                 nuanceGroup.push(...candidates);
+            } else if (mode === 'ARENA_PART5') {
+                // [New] ARENA_PART5
+                arenaPart5Group.push(...candidates);
             } else {
                 // Default fallback to Syntax
                 syntaxGroup.push(...candidates);
@@ -290,7 +295,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                     if (dbDrill) {
                         generatedDrills.push({
-                            drill: dbDrill,
+                            drill: buildPhraseFallbackDrill({
+                                id: c.vocabId,
+                                word: c.word,
+                                definition_cn: c.definition_cn,
+                                commonExample: c.commonExample,
+                                collocations: c.collocations as CollocationItem[]
+                            }, mode),
                             candidate: c,
                             systemPrompt: 'DB_FIRST',
                             userPrompt: 'DB_FIRST',
@@ -447,7 +458,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
 
                     const input: ContextGeneratorInput & { candidate: DrillCandidate } = {
                         targetWord: c.word,
-                        meaning: c.definition_cn || '',
+                        meaning: c.definition_cn || '暂无释义',
                         contextWords: related.map(r => r.word),
                         synonyms: c.synonyms || [],  // B3 Fix: Use type-safe access
                         scenario: c.scenario || 'general office',
@@ -488,7 +499,7 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                         log.warn({ error: err.message, stage: stageNum, count: inputs.length }, '[L2] Stage LLM failed, using Pivot fallback');
 
                         for (const input of inputs) {
-                            const fallbackDrill = buildSimpleDrill({
+                            const fallbackDrill = buildPhraseFallbackDrill({
                                 id: input.candidate.vocabId,
                                 word: input.candidate.word,
                                 definition_cn: input.candidate.definition_cn,
@@ -508,6 +519,104 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     processStageBatch(stage3Inputs, 3)
                 ]);
             })().catch(err => log.error({ error: err.message }, 'Failed to process Context group')));
+        }
+
+        // --- Task H: Process Arena Part 5 Group ---
+        if (arenaPart5Group.length > 0 || mode === 'ARENA_PART5') {
+            tasks.push((async () => {
+                const { getPart5DrillBatchPrompt, buildArenaPart5Inputs } = await import('@/lib/generators/arena/part5-drill');
+
+                const directPivotDrills = [];
+                const realCandidates = [];
+
+                // 区分来源于 OMPS 真实词库的 candidate 和纯语法的假 candidate
+                for (const c of arenaPart5Group) {
+                    if (c.vocabId < 0 && c.reviewData?.seed) {
+                        directPivotDrills.push({ candidate: c, seed: c.reviewData.seed });
+                    } else {
+                        realCandidates.push(c);
+                    }
+                }
+
+                // 一键处理真词候选项的 DB 查询与 Seed 重组，自动随机兜底
+                let llmInputs: { candidate: any; input: any }[] = [];
+                if (realCandidates.length > 0) {
+                    llmInputs = await buildArenaPart5Inputs(realCandidates);
+                }
+
+                // 3. 执行 LLM 生成 (分批处理，每次 2 词，防 API 限流与 LLM 串线)
+                if (llmInputs.length > 0) {
+                    const CHUNK_SIZE = 2;
+                    for (let i = 0; i < llmInputs.length; i += CHUNK_SIZE) {
+                        const chunk = llmInputs.slice(i, i + CHUNK_SIZE);
+                        const p = getPart5DrillBatchPrompt(chunk.map(item => item.input));
+
+                        try {
+                            const { object: result, provider } = await AIService.generateObject({
+                                mode: 'fast',
+                                schema: BatchDrillOutputSchema,
+                                system: p.system,
+                                prompt: p.user
+                            });
+
+                            result.items.forEach((drill, idx) => {
+                                if (idx < chunk.length) {
+                                    generatedDrills.push({
+                                        drill,
+                                        candidate: chunk[idx].candidate,
+                                        systemPrompt: p.system,
+                                        userPrompt: p.user,
+                                        provider: provider
+                                    });
+                                }
+                            });
+                        } catch (err: any) {
+                            log.error({ error: err.message, chunkIndex: i / CHUNK_SIZE }, 'Failed to process Arena Part 5 chunk (LLM), using raw seeds as fallback');
+                            // Fallback: Use the raw seeds directly for this specific failed chunk
+                            for (const item of chunk) {
+                                directPivotDrills.push({ candidate: item.candidate, seed: item.input.seed });
+                            }
+                        }
+                    }
+                }
+
+                // 4. 处理直接兜底（纯语法题 或 LLM 失败项）
+                for (const pivot of directPivotDrills) {
+                    const seed = pivot.seed;
+                    // 组装 BriefingPayload 结构
+                    const fallbackDrill = {
+                        meta: {
+                            mode: 'ARENA_PART5',
+                            target_word: pivot.candidate.word || seed.targetAnswer,
+                        },
+                        segments: [
+                            {
+                                type: 'text',
+                                content_markdown: seed.sentence.replace('_______', seed.targetAnswer), // Full sentence
+                            },
+                            {
+                                type: 'interaction',
+                                dimension: 'V', // Visual track default
+                                task: {
+                                    style: 'swipe_card',
+                                    question_markdown: seed.sentence,
+                                    options: seed.options,
+                                    answer_key: seed.targetAnswer,
+                                    explanation_markdown: seed.rationale || '正确选项符合该句的语法及语境要求。' // Might be missing in some raw DB
+                                }
+                            }
+                        ]
+                    };
+
+                    generatedDrills.push({
+                        drill: fallbackDrill,
+                        candidate: pivot.candidate,
+                        systemPrompt: 'PIVOT_FALLBACK',
+                        userPrompt: 'PIVOT_FALLBACK',
+                        provider: 'db_seed_fallback'
+                    });
+                }
+            })().catch(err => log.error({ error: err.message }, 'Failed to process Arena Part 5 group')));
         }
 
         await Promise.all(tasks);
@@ -543,6 +652,8 @@ export async function processDrillJob(job: Job<DrillJobData>) {
             // --- L0 Schema 验证 (Phase 1: Defense Layer) ---
             const isL0Mode = ['SYNTAX', 'PHRASE', 'BLITZ'].includes(mode);
 
+            // [New] Part5 并非 L0Mode, 所以不需要通过 validateL0Payload 强制打回，
+            // 依赖 Zod 在前方的校验或回放。
             if (isL0Mode) {
                 const validation = validateL0Payload(mode as L0Mode, payload);
 
@@ -671,7 +782,7 @@ function mapToCandidate(v: Vocab): DrillCandidate {
         vocabId: v.id,
         word: v.word,
         definition_cn: v.definition_cn,
-        word_family: v.word_family,
+        word_family: (v.word_family as Record<string, string>) || {}, // Ensure word_family is a Record
         collocations: v.collocations,
         partOfSpeech: v.partOfSpeech, // [New]
         type: 'NEW', // Default for manual fetch
@@ -734,18 +845,57 @@ async function fetchDueCandidates(userId: string, mode: SessionMode, limit: numb
         vocabId: omps.vocabId,
         word: omps.word,
         definition_cn: omps.definition_cn,
-        word_family: omps.word_family,
+        word_family: (omps.word_family as Record<string, string>) || {}, // Ensure word_family is a Record
         collocations: omps.collocations,
         type: omps.type, // [Smart Dispatch] Pass type
         reviewData: omps.reviewData, // [Smart Dispatch] Pass FSRS data
         partOfSpeech: omps.partOfSpeech, // [New]
-        confusion_audio: (omps as any).confusion_audio, // OMPS might need update too
-        etymology: (omps as any).etymology, // [New]
-        phoneticUs: omps.phoneticUs, // [New]
-        phoneticUk: omps.phoneticUk // [New]
+        confusion_audio: (omps as any).confusion_audio,
+        etymology: (omps as any).etymology,
+        phoneticUs: omps.phoneticUs,
+        phoneticUk: omps.phoneticUk
     }));
 
-    // 4. 返回指定数量
+    // 4. [New] 若是 ARENA_PART5，且 candidates 数量不足 limit（或不管足不足都保留30%语法比率）
+    if (mode === 'ARENA_PART5') {
+        const targetVocabCount = Math.max(0, Math.floor(limit * 0.7)); // 70% 真实词汇
+        candidates.splice(targetVocabCount); // 截断真实词汇
+
+        const missing = limit - candidates.length;
+        if (missing > 0) {
+            // 获取随机无锚点的 QuestionSeed 作为纯语法题兜底
+            const pureGrammarSeeds = await db.questionSeed.findMany({
+                where: { anchorVocabId: null, part: 5 },
+                take: missing * 2, // Take more for random selection
+                orderBy: { usedCount: 'asc' } // Prioritize least used
+            });
+
+            // Randomly select 'missing' number of seeds
+            const selectedSeeds = pureGrammarSeeds
+                .sort(() => 0.5 - Math.random())
+                .slice(0, missing);
+
+            for (const seed of selectedSeeds) {
+                candidates.push({
+                    vocabId: -Number(seed.id.replace(/\D/g, '').slice(0, 8) || Math.floor(Math.random() * 99999)), // 伪造负数 ID 标记此为纯语法补充词
+                    word: seed.targetAnswer,
+                    definition_cn: '',
+                    word_family: {} as Record<string, string>, // Ensure word_family is a Record
+                    collocations: [],
+                    partOfSpeech: null,
+                    confusion_audio: null,
+                    etymology: null,
+                    phoneticUs: undefined,
+                    phoneticUk: undefined,
+                    type: 'NEW',
+                    reviewData: { seed }, // 将 seed 藏在 reviewData 中向下传递
+                });
+            }
+        }
+        return candidates;
+    }
+
+    // 5. 返回指定数量
     return candidates.slice(0, limit);
 }
 

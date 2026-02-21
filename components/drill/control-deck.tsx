@@ -30,6 +30,10 @@ interface ControlDeckProps {
         good: string;
         easy: string;
     };
+    extraButton?: {
+        label: string;
+        onClick: () => void;
+    };
 }
 
 // ============================================
@@ -42,7 +46,8 @@ export function ControlDeck({
     disabled = false,
     className,
     labels = {},
-    gradeIntervals
+    gradeIntervals,
+    extraButton
 }: ControlDeckProps) {
 
     // --- Keyboard Bindings ---
@@ -124,9 +129,20 @@ export function ControlDeck({
                         {isContinue ? <ArrowLeft className="w-5 h-5 rotate-180" /> : <SpaceIcon className="w-5 h-5" />}
                     </div>
                 </button>
-                <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-500 mt-3 font-mono">
-                    {subLabel}
-                </p>
+                <div className="flex justify-between items-center mt-3 px-2">
+                    {extraButton ? (
+                        <button
+                            onClick={extraButton.onClick}
+                            className="text-[12px] font-bold text-violet-500 hover:text-violet-400 transition-colors flex items-center gap-1"
+                        >
+                            {extraButton.label}
+                        </button>
+                    ) : <div></div>}
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+                        {subLabel}
+                    </p>
+                    {extraButton && <div></div> /* Balance flex align */}
+                </div>
             </div>
         );
     }

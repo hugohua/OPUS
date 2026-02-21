@@ -63,6 +63,7 @@ export async function getCacheStats(): Promise<{
     NUANCE: number;
     READING: number;
     BLITZ: number;
+    ARENA_PART5: number;
     total: number;
     targets: {
         SYNTAX: number;
@@ -72,6 +73,7 @@ export async function getCacheStats(): Promise<{
         NUANCE: number;
         READING: number;
         BLITZ: number;
+        ARENA_PART5: number;
     };
 }> {
     // Helper to calculate targets from config
@@ -86,18 +88,29 @@ export async function getCacheStats(): Promise<{
     try {
         const session = await import('@/auth').then(m => m.auth());
         if (!session?.user?.id) return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, total: 0,
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, total: 0,
             targets: emptyTargets
         };
 
         const { inventory } = await import('@/lib/core/inventory');
         const stats = await inventory.getInventoryStats(session.user.id);
 
-        return { ...stats, targets: emptyTargets };
+        return {
+            SYNTAX: stats.SYNTAX || 0,
+            PHRASE: stats.PHRASE || 0,
+            CHUNKING: stats.CHUNKING || 0,
+            AUDIO: stats.AUDIO || 0,
+            NUANCE: stats.NUANCE || 0,
+            READING: stats.READING || 0,
+            BLITZ: stats.BLITZ || 0,
+            ARENA_PART5: stats.ARENA_PART5 || 0,
+            total: stats.total || 0,
+            targets: emptyTargets
+        };
     } catch (error) {
         console.error('getCacheStats error:', error);
         return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, total: 0,
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, total: 0,
             targets: emptyTargets
         };
     }

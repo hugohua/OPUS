@@ -81,6 +81,12 @@ import {
     buildPhraseInput,
     buildBlitzInputWithTraps
 } from '@/lib/generators/input-builders';
+import {
+    ARENA_PART5_SYSTEM_PROMPT,
+    getPart5DrillBatchPrompt,
+    Part5DrillInput,
+    buildArenaPart5Inputs
+} from "@/lib/generators/arena/part5-drill";
 import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { z } from 'zod';
 import chalk from 'chalk';
@@ -305,6 +311,21 @@ const Adapters: Record<string, GeneratorAdapter> = {
         getBatchPrompts: (inputs: ChunkingGeneratorInput[]) => {
             return getL1ChunkingBatchPrompt(inputs);
         }
+    },
+    'arena-part5': {
+        name: 'Arena Part 5 / 单句填空',
+        dataRequirements: '需要: 搭配词库或自动 fallback 的原题 Seed',
+        buildInput: async (vocab: VocabItem) => {
+            const batchResult = await buildArenaPart5Inputs([vocab]);
+            return batchResult[0].input;
+        },
+        getPrompts: (input: Part5DrillInput) => ({
+            system: ARENA_PART5_SYSTEM_PROMPT,
+            user: getPart5DrillBatchPrompt([input]).user
+        }),
+        getBatchPrompts: (inputs: Part5DrillInput[]) => {
+            return getPart5DrillBatchPrompt(inputs);
+        }
     }
 };
 
@@ -412,7 +433,7 @@ async function processBatch(
     const { adapter, runAI, scenario, stage } = context;
 
     // 1. 构建输入 (带 Pivot 保护)
-    const inputs = items.map(item => adapter.buildInput(item, { scenario, stage }));
+    const inputs = await Promise.all(items.map(item => adapter.buildInput(item, { scenario, stage })));
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -544,6 +565,7 @@ async function main() {
         jobName: `debug-${genKey}`,
         tier: 'free',
         isDryRun: true,
+        customBatchSize: parseInt(options.number, 10),
         fetchBatch: async (size) => fetchBatchForGenerator(size, genKey),
         processBatch,
         context: {

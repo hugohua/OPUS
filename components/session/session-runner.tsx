@@ -32,21 +32,21 @@ interface SessionRunnerProps {
 }
 
 // --- Mode to Variant Mapping (Still useful for passing to renderers if needed) ---
-const variantMap: Record<string, FocusShellVariant> = {
-    SYNTAX: 'L0',
-    PHRASE: 'L0',
-    BLITZ: 'L2',
-    AUDIO: 'L1',
-    CHUNKING: 'L1',
-    READING: 'L1',
-    CONTEXT: 'L2',
-    NUANCE: 'L2',
-    VISUAL: 'L2',
-    // Mixed modes fallbacks
-    L0_MIXED: 'L0',
-    L1_MIXED: 'L1',
-    L2_MIXED: 'L2',
-    DAILY_BLITZ: 'L2'
+const variantMap: Record<SessionMode, 'L0' | 'L1' | 'L2'> = {
+    'SYNTAX': 'L0',
+    'PHRASE': 'L0',
+    'BLITZ': 'L0',
+    'AUDIO': 'L1',
+    'CHUNKING': 'L1',
+    'CONTEXT': 'L2',
+    'NUANCE': 'L2',
+    'L0_MIXED': 'L0',
+    'L1_MIXED': 'L1',
+    'L2_MIXED': 'L2',
+    'DAILY_BLITZ': 'L0', // Hybrid requires special handling
+    'READING': 'L2',      // Arbitrary fallback
+    'VISUAL': 'L0',
+    'ARENA_PART5': 'L0' // 复用 L0 Syntax 选项样式
 };
 
 export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {

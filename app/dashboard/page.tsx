@@ -1,5 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DailyBlitzCard } from "@/components/dashboard/daily-blitz-card";
+import { ArenaSection } from "@/components/dashboard/arena-section";
 import { SkillGym } from "@/components/dashboard/skill-gym";
 import { ContextEngine } from "@/components/dashboard/context-engine";
 import { FloatingDock } from "@/components/dashboard/floating-dock";
@@ -49,6 +50,9 @@ export default async function DashboardPage() {
                 <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-8 no-scrollbar">
                     {/* Hero: Daily Blitz */}
                     <DailyBlitzCard />
+
+                    {/* Arena: Part 5 & Part 6/7 */}
+                    <ArenaSection />
 
                     {/* New Module: Flashcards */}
                     <FlashcardSection />

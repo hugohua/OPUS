@@ -27,8 +27,8 @@ vi.mock('@/lib/core/inventory', () => ({
 }));
 
 // Mock Deterministic Drill Builder (兜底生成)
-vi.mock('@/lib/templates/deterministic-drill', () => ({
-    buildSimpleDrill: vi.fn(),
+vi.mock('@/lib/templates/phrase-fallback', () => ({
+    buildPhraseFallbackDrill: vi.fn(),
 }));
 
 // Mock Audit Service
@@ -251,13 +251,13 @@ describe('Suite C: 缓存命中场景', () => {
     it('C2: 100% 缓存未命中 -> 全部兜底', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
         const { auditSessionFallback } = await import('@/lib/services/audit-service');
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockResolvedValue(null);
-        vi.mocked(buildSimpleDrill)
+        vi.mocked(buildPhraseFallbackDrill)
             .mockReturnValueOnce(createFallbackDrill(1))
             .mockReturnValueOnce(createFallbackDrill(2));
 
@@ -272,14 +272,14 @@ describe('Suite C: 缓存命中场景', () => {
     it('C3: 混合场景 (部分命中)', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill)
             .mockResolvedValueOnce(createCachedDrill(1))
             .mockResolvedValueOnce(null);
-        vi.mocked(buildSimpleDrill).mockReturnValue(createFallbackDrill(2));
+        vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(2));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 2 });
 
@@ -294,12 +294,12 @@ describe('Suite C: 缓存命中场景', () => {
     it('C4: Redis 异常应降级到兜底', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [createCandidate(1)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockRejectedValue(new Error('Redis connection failed'));
-        vi.mocked(buildSimpleDrill).mockReturnValue(createFallbackDrill(1));
+        vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });
 
@@ -321,12 +321,12 @@ describe('Suite D: 批量急救触发', () => {
     it('D1: 缓存未命中应触发批量急救', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockResolvedValue(null);
-        vi.mocked(buildSimpleDrill)
+        vi.mocked(buildPhraseFallbackDrill)
             .mockReturnValueOnce(createFallbackDrill(1))
             .mockReturnValueOnce(createFallbackDrill(2));
 
@@ -355,12 +355,12 @@ describe('Suite D: 批量急救触发', () => {
     it('D3: 急救失败不应影响响应', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [createCandidate(1)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockResolvedValue(null);
-        vi.mocked(buildSimpleDrill).mockReturnValue(createFallbackDrill(1));
+        vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
         vi.mocked(inventory.triggerBatchEmergency).mockRejectedValue(new Error('Queue failed'));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX' });
@@ -394,14 +394,14 @@ describe('Suite E: 元数据与统计', () => {
     it('E2: 返回结果应包含命中率统计', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill)
             .mockResolvedValueOnce(createCachedDrill(1))
             .mockResolvedValueOnce(null);
-        vi.mocked(buildSimpleDrill).mockReturnValue(createFallbackDrill(2));
+        vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(2));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 2 });
 
@@ -410,10 +410,10 @@ describe('Suite E: 元数据与统计', () => {
         expect((result.meta as any).count).toBe(2);
     });
 
-    it('E3: buildSimpleDrill 应接收完整候选词数据', async () => {
+    it('E3: buildPhraseFallbackDrill 应接收完整候选词数据', async () => {
         const { fetchOMPSCandidates } = await import('@/lib/services/omps-core');
         const { inventory } = await import('@/lib/core/inventory');
-        const { buildSimpleDrill } = await import('@/lib/templates/deterministic-drill');
+        const { buildPhraseFallbackDrill } = await import('@/lib/templates/phrase-fallback');
 
         const candidates = [{
             vocabId: 1,
@@ -433,11 +433,11 @@ describe('Suite E: 元数据与统计', () => {
         }];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
         vi.mocked(inventory.popDrill).mockResolvedValue(null);
-        vi.mocked(buildSimpleDrill).mockReturnValue(createFallbackDrill(1));
+        vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
 
         await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });
 
-        expect(buildSimpleDrill).toHaveBeenCalledWith(
+        expect(buildPhraseFallbackDrill).toHaveBeenCalledWith(
             expect.objectContaining({
                 id: 1,
                 word: 'test',

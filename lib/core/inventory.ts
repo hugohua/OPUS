@@ -226,7 +226,7 @@ export const inventory = {
      */
     async triggerEmergency(userId: string, mode: string, vocabId: number | string) {
         // [P1] Job Deduplication: 使用确定性 Job ID 防止重复入队
-        const jobId = `replenish:${userId}:${mode}:${vocabId}`;
+        const jobId = `replenish-${userId}-${mode}-${vocabId}`;
 
         await inventoryQueue.add('replenish_one', {
             userId,
@@ -249,7 +249,7 @@ export const inventory = {
 
         // [P1] Job Deduplication: 使用时间窗口（分钟级）防止短时间内重复提交
         const timeWindow = Math.floor(Date.now() / 60000); // 1分钟窗口
-        const jobId = `replenish-batch:${userId}:${mode}:${timeWindow}`;
+        const jobId = `replenish-batch-${userId}-${mode}-${timeWindow}`;
 
         await inventoryQueue.add('replenish_batch', {
             userId,
@@ -279,6 +279,8 @@ export const inventory = {
             READING: parseInt(raw.READING || '0'),
             BLITZ: parseInt(raw.BLITZ || '0'),
             VISUAL: parseInt(raw.VISUAL || '0'),
+            CONTEXT: parseInt(raw.CONTEXT || '0'),
+            ARENA_PART5: parseInt(raw.ARENA_PART5 || '0'),
             total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
         };
     },

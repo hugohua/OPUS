@@ -8,7 +8,7 @@ import { createLogger } from '@/lib/logger';
 
 const log = createLogger('actions:prefetch');
 
-const MODES_TO_PREFETCH: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE'];
+const MODES_TO_PREFETCH: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'ARENA_PART5'];
 const CACHE_THRESHOLD = 4;
 
 /**

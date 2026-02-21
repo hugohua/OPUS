@@ -214,7 +214,25 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                         onClick={() => handleTrigger('READING')}
                         onClear={() => setConfirmClearMode('READING')}
                         loading={loading === 'trigger-READING'}
-                        clearing={loading === 'clear-READING'}
+                    />
+                </div>
+            </div>
+
+            {/* Arena: 竞技场训练 */}
+            <div className="space-y-2 pt-2 border-t border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/5 text-amber-500">Arena</span>
+                    <span className="text-xs font-medium text-muted-foreground">竞技场 (Challenge)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <TriggerButton
+                        mode="ARENA_PART5"
+                        label={MODE_LABELS['ARENA_PART5'] || 'Part 5'}
+                        color="amber"
+                        onClick={() => handleTrigger('ARENA_PART5' as any)}
+                        onClear={() => setConfirmClearMode('ARENA_PART5' as any)}
+                        loading={loading === 'trigger-ARENA_PART5'}
+                        clearing={loading === 'clear-ARENA_PART5'}
                     />
                 </div>
             </div>

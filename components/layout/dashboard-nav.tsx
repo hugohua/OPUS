@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, Layers } from 'lucide-react';
+import { Briefcase, Layers, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,11 @@ export function DashboardNav() {
     const pathname = usePathname();
 
     const tabs = [
+        {
+            name: 'Arena',
+            href: '/dashboard/arena',
+            icon: Swords,
+        },
         {
             name: 'Simulate',
             href: '/dashboard/simulate',

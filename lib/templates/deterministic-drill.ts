@@ -7,6 +7,7 @@
  */
 import { db } from '@/lib/db';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
+import { buildPhraseFallbackDrill } from './phrase-fallback';
 
 /**
  * 构建降级 Drill
@@ -29,10 +30,10 @@ export async function buildDeterministicDrill(
             take: limit,
             orderBy: { frequency_score: 'desc' },
         });
-        return fallbackWords.map((w) => buildSimpleDrill(w, mode));
+        return fallbackWords.map((w) => buildPhraseFallbackDrill(w, mode));
     }
 
-    return words.map((w) => buildSimpleDrill(w, mode));
+    return words.map((w) => buildPhraseFallbackDrill(w, mode));
 }
 
 /**
@@ -75,11 +76,10 @@ async function fetchWordsForDrill(
     return [...reviewWords.map((r) => r.vocab), ...newWords];
 }
 
-import { createPhrasePayload } from './phrase-drill';
+
 
 /**
  * Vocab 输入接口 (用于 Drill 构建)
- * 定义 buildSimpleDrill 函数所需的词汇字段
  */
 export interface VocabDrillInput {
     id: number;
@@ -92,70 +92,6 @@ export interface VocabDrillInput {
     phoneticUs?: string | null;
     partOfSpeech?: string | null; // [New]
     etymology?: any; // [New]
-}
-
-/**
- * 构建单个简单 Drill (统一兜底至 Phrase Mode)
- */
-export function buildSimpleDrill(vocab: VocabDrillInput, mode: SessionMode): BriefingPayload {
-    // 1. 尝试从 Collocations 获取短语
-    let sentence = "";
-    let translation = "";
-
-    // Check for collocations
-    if (vocab.collocations && Array.isArray(vocab.collocations) && vocab.collocations.length > 0) {
-        const candidates = vocab.collocations as any[];
-        // Strategy: Find first collocation with translation
-        const bestCollo = candidates.find(c => c.text && c.trans);
-
-        if (bestCollo) {
-            sentence = bestCollo.text;
-            translation = bestCollo.trans;
-        } else {
-            // Fallback: Use first text-only
-            const textOnly = candidates.find(c => c.text);
-            if (textOnly) {
-                sentence = textOnly.text;
-                translation = vocab.definition_cn || "";
-            }
-        }
-    }
-
-    // 2. Fallback to commonExample
-    if (!sentence && vocab.commonExample) {
-        sentence = vocab.commonExample;
-        translation = vocab.definition_cn || "";
-    }
-
-    // 3. Last Resort: Construct artificial sentence
-    if (!sentence) {
-        sentence = `The word "${vocab.word}" means ${vocab.definition_cn || 'something'}.`;
-        translation = vocab.definition_cn || "未知";
-    }
-
-    // [New] Construct Rich Definition Logic for Explanation
-    // Update: createPhrasePayload handles generic info. We just pass what we have.
-    // If we want to strictly follow previous rich definition logic, we might need to pass it?
-    // createPhrasePayload uses generic `vocab.definition_cn`.
-    // Let's stick to generic for unification. Rich Definition logic was mainly for explanation_markdown.
-    // The createPhrasePayload logic is: `**${vocab.word}**: ${vocab.definition_cn}\n\n[${vocab.phoneticUs}] ${vocab.partOfSpeech}`
-    // If we want to preserve "Rich Definition" (Business v. General), we should ideally pass a processed definition string.
-    // But for unification, let's trust the standard definition first.
-
-    return createPhrasePayload(
-        {
-            id: vocab.id,
-            word: vocab.word,
-            definition_cn: vocab.definition_cn || '',
-            phoneticUs: vocab.phoneticUs ?? vocab.phoneticUk ?? null,
-            partOfSpeech: vocab.partOfSpeech ?? null
-        },
-        sentence,
-        translation,
-        mode,
-        'deterministic_fallback',
-        vocab.etymology
-    );
 }
 
 /**
@@ -208,3 +144,4 @@ export function buildChunkingDrillFallback(vocab: VocabDrillInput): BriefingPayl
         segments: [] // Dummy to satisfy type, usually ignored by ChunkingDrill
     } as unknown as BriefingPayload;
 }
+

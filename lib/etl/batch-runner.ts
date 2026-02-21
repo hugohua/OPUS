@@ -63,6 +63,7 @@ export interface EtlJobOptions<T, C = any> {
     getTotalCount?: (isDryRun: boolean) => Promise<number>;
     isDryRun?: boolean;
     isContinuous?: boolean;
+    customBatchSize?: number;
     context?: C;
 }
 
@@ -155,8 +156,9 @@ ${qaPrompt}
 // --- Main Runner ---
 
 export async function runEtlJob<T, C = any>(options: EtlJobOptions<T, C>) {
-    const { jobName, tier, fetchBatch, processBatch, getTotalCount, isDryRun = false, isContinuous = false, context } = options;
+    const { jobName, tier, fetchBatch, processBatch, getTotalCount, isDryRun = false, isContinuous = false, customBatchSize, context } = options;
     const config = tier === 'paid' ? PAID_TIER_CONFIG : FREE_TIER_CONFIG;
+    const actualBatchSize = customBatchSize || config.BATCH_SIZE;
 
     // Structured Start Log
     log.info({
@@ -164,7 +166,7 @@ export async function runEtlJob<T, C = any>(options: EtlJobOptions<T, C>) {
         mode: isDryRun ? 'DRY-RUN' : isContinuous ? 'CONTINUOUS' : 'SINGLE BATCH',
         tier: tier === 'paid' ? 'PAID' : 'FREE',
         config: {
-            batchSize: config.BATCH_SIZE,
+            batchSize: actualBatchSize,
             parallelRequest: config.PARALLEL_REQUESTS,
             interval: `${config.BATCH_INTERVAL_MS / 1000}s`
         }
@@ -219,7 +221,7 @@ export async function runEtlJob<T, C = any>(options: EtlJobOptions<T, C>) {
         }
 
         // 1. Fetch
-        const items = await fetchBatch(config.BATCH_SIZE, isDryRun);
+        const items = await fetchBatch(actualBatchSize, isDryRun);
         if (items.length === 0) {
             log.info('No more items to process. Job done!');
             break;

@@ -1,6 +1,5 @@
-
 import { db } from '@/lib/db';
-import { buildSimpleDrill } from '@/lib/templates/deterministic-drill';
+import { buildPhraseFallbackDrill } from '../lib/templates/phrase-fallback';
 import { createPhrasePayload } from '@/lib/templates/phrase-drill';
 
 async function main() {
@@ -22,9 +21,9 @@ async function main() {
     console.log('📝 Definitions:', vocab.definition_cn);
     console.log('📝 Phonetic:', vocab.phoneticUs || vocab.phoneticUk);
 
-    // 2. Test buildSimpleDrill (Main Fallback Path)
-    console.log('\n--- Testing buildSimpleDrill (PHRASE) ---');
-    const drill = buildSimpleDrill({
+    // 2. Test buildPhraseFallbackDrill (Main Fallback Path)
+    console.log('\n--- Testing buildPhraseFallbackDrill (PHRASE) ---');
+    const drill = buildPhraseFallbackDrill({
         id: vocab.id,
         word: vocab.word,
         definition_cn: vocab.definition_cn,

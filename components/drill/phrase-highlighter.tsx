@@ -11,12 +11,13 @@ interface PhraseHighlighterProps {
 
 export function PhraseHighlighter({ text, highlights, className }: PhraseHighlighterProps) {
     const parts = useMemo(() => {
-        if (!highlights || highlights.length === 0) {
+        const validHighlights = highlights?.filter(Boolean) as string[] || [];
+        if (validHighlights.length === 0) {
             return [{ text, isHighlight: false }];
         }
 
         // Escape regex special characters
-        const escaped = highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const escaped = validHighlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         // Sort by length desc to match longest first (e.g. "signing" before "sign")
         escaped.sort((a, b) => b.length - a.length);
 
@@ -29,7 +30,7 @@ export function PhraseHighlighter({ text, highlights, className }: PhraseHighlig
 
         return split.map(part => {
             // Check if this part matches any highlight (case insensitive)
-            const isHighlight = highlights.some(h => h.toLowerCase() === part.toLowerCase());
+            const isHighlight = validHighlights.some(h => h.toLowerCase() === part.toLowerCase());
             return { text: part, isHighlight };
         });
 

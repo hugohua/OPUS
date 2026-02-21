@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { BriefingPayload } from '@/types/briefing';
 import { EditorialDrill } from '@/components/briefing/editorial-drill';
 import { PhraseCard } from '@/components/briefing/phrase-card';
+import { MagicWandDrawer } from '@/components/arena/magic-wand-drawer';
 import { FocusShell, FocusShellVariant } from '@/components/drill/focus-shell';
 import { ControlDeck, ControlDeckMode } from '@/components/drill/control-deck';
 import { previewIntervals } from '@/lib/client/fsrs-preview';
@@ -51,6 +52,7 @@ export function SyntaxRenderer({
     totalDrills = 20 // Default batch size
 }: SyntaxRendererProps) {
     const router = useRouter();
+    const [isWandOpen, setIsWandOpen] = React.useState(false);
 
     // FSRS 预览间隔 (仅 Phrase/Grade 模式使用)
     const fsrsKey = drill.meta?.fsrsCard
@@ -69,7 +71,9 @@ export function SyntaxRenderer({
     // [Fixed] Safer typing with optional chain
     const task = interactSegment?.task;
     const interactionStyle = task?.style;
-    const isPhraseMode = interactionStyle === 'bubble_select';
+    const isArenaPart5 = drill.meta?.mode === 'ARENA_PART5';
+    // ARENA_PART5 必须强制使用 Syntax 的选项风格
+    const isPhraseMode = !isArenaPart5 && interactionStyle === 'bubble_select';
 
     // Helper: Progress Calculation
     const progress = Math.min(100, Math.max(0, ((index + 1) / totalDrills) * 100));
@@ -142,14 +146,14 @@ export function SyntaxRenderer({
     if (isPhraseMode) {
         deckMode = status === 'idle' ? 'reveal' : 'grade';
     } else {
-        // Syntax Mode: Options (Idle) -> Continue (Result)
+        // Syntax Mode or Arena Part 5: Options (Idle) -> Continue (Result)
         deckMode = status === 'idle' ? 'options' : 'continue';
     }
 
     // Determine Shell Variant
     // Use prop or fallback to L0
     const shellVariant = variant || 'L0';
-    const label = `${shellVariant} • ${isPhraseMode ? 'PHRASE' : 'SYNTAX'}`;
+    const label = `${shellVariant} • ${isPhraseMode ? 'PHRASE' : drill.meta?.mode === 'ARENA_PART5' ? 'PART 5' : 'SYNTAX'}`;
 
     if (!textSegment || !interactSegment) return null;
 
@@ -161,51 +165,73 @@ export function SyntaxRenderer({
         });
     }
 
+    // ARENA_PART5 specific data for Magic Wand
+    const rationale = task?.explanation_markdown || "暂无详细解析";
+    const sentence = textSegment.content_markdown || "";
+
     return (
-        <FocusShell
-            variant={shellVariant}
-            progress={progress}
-            onExit={() => router.push('/dashboard')}
-            label={label}
-            footer={
-                <ControlDeck
-                    mode={deckMode}
-                    onAction={handleDeckAction}
-                    labels={deckMode === 'options' ? optionLabels : {}}
-                    gradeIntervals={deckMode === 'grade' ? gradeIntervals : undefined}
+        <>
+            <FocusShell
+                variant={shellVariant}
+                progress={progress}
+                onExit={() => router.push('/dashboard')}
+                label={label}
+                footer={
+                    <ControlDeck
+                        mode={deckMode}
+                        onAction={handleDeckAction}
+                        labels={deckMode === 'options' ? optionLabels : {}}
+                        gradeIntervals={deckMode === 'grade' ? gradeIntervals : undefined}
+                        // 如果是 Part 5 并且已经答完题，显示 AI 解析按钮
+                        extraButton={isArenaPart5 && status !== 'idle' ? {
+                            label: "✨ AI 解析",
+                            onClick: () => setIsWandOpen(true),
+                        } : undefined}
+                    />
+                }
+            >
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={index}
+                        {...STAGE_ANIMATION}
+                        className="w-full flex-1 flex flex-col items-center justify-center py-4"
+                    >
+                        {isPhraseMode ? (
+                            <PhraseCard
+                                phraseMarkdown={textSegment.content_markdown || ""}
+                                translation={textSegment.translation_cn || ""}
+                                wordDefinition={cleanDefinition}
+                                status={status as any}
+                                phonetic={textSegment.phonetic || ""}
+                                partOfSpeech={posMatch ? posMatch[1] : ""}
+                                targetWord={drill.meta?.target_word || ""}
+                                etymology={drill.meta?.etymology}
+                            />
+                        ) : (
+                            <EditorialDrill
+                                content={textSegment.content_markdown || ""}
+                                questionMarkdown={task?.question_markdown}
+                                translation={textSegment.translation_cn}
+                                explanation={explanationMarkdown}
+                                answer={task?.answer_key || ""}
+                                status={status}
+                                selected={selectedOption}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </FocusShell>
+
+            {isArenaPart5 && (
+                <MagicWandDrawer
+                    open={isWandOpen}
+                    onOpenChange={setIsWandOpen}
+                    rationale={rationale}
+                    sentence={sentence}
+                    targetWord={drill.meta?.target_word}
+                    sentenceTranslation={textSegment.translation_cn}
                 />
-            }
-        >
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={index}
-                    {...STAGE_ANIMATION}
-                    className="w-full flex-1 flex flex-col items-center justify-center py-4"
-                >
-                    {isPhraseMode ? (
-                        <PhraseCard
-                            phraseMarkdown={textSegment.content_markdown || ""}
-                            translation={textSegment.translation_cn || ""}
-                            wordDefinition={cleanDefinition}
-                            status={status as any}
-                            phonetic={textSegment.phonetic || ""}
-                            partOfSpeech={posMatch ? posMatch[1] : ""}
-                            targetWord={drill.meta?.target_word || ""}
-                            etymology={drill.meta?.etymology}
-                        />
-                    ) : (
-                        <EditorialDrill
-                            content={textSegment.content_markdown || ""}
-                            questionMarkdown={task?.question_markdown}
-                            translation={textSegment.translation_cn}
-                            explanation={explanationMarkdown}
-                            answer={task?.answer_key || ""}
-                            status={status}
-                            selected={selectedOption}
-                        />
-                    )}
-                </motion.div>
-            </AnimatePresence>
-        </FocusShell>
+            )}
+        </>
     );
 }

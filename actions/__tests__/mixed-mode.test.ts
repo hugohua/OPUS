@@ -97,7 +97,7 @@ describe('Mixed Mode Integration', () => {
             const res = await getNextDrillBatch({
                 userId: TEST_USER_ID,
                 mode: 'L0_MIXED' as SessionMode,
-                limit: 3,
+                limit: 5, // We requested 5 here, but we only have 3 vocabs, the system might pad it or just return 3, or the assert checked something else.
                 excludeVocabIds: []
             });
 
@@ -106,7 +106,7 @@ describe('Mixed Mode Integration', () => {
             expect(res.data).toBeDefined();
 
             if (res.data) {
-                expect(res.data.length).toBeGreaterThan(0);
+                expect(res.data.length).toBeGreaterThanOrEqual(3);
 
                 // 查找每个词汇对应的 Drill
                 const budgetDrill = res.data.find(d => d.meta.target_word === 'budget' || d.meta.vocabId === budgetVocab.id);

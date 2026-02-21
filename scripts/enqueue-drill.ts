@@ -15,7 +15,7 @@ const args = process.argv.slice(2);
 const userId = args.find((a) => a.startsWith('--userId='))?.split('=')[1];
 const modeArg = args.find((a) => a.startsWith('--mode='))?.split('=')[1];
 
-const validModes: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ'];
+const validModes: SessionMode[] = ['SYNTAX', 'CHUNKING', 'NUANCE', 'BLITZ', 'ARENA_PART5'];
 const mode = validModes.includes(modeArg as SessionMode) ? (modeArg as SessionMode) : undefined;
 
 if (!userId) {

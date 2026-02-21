@@ -1,5 +1,5 @@
 import { db } from '../lib/db';
-import { buildSimpleDrill } from '../lib/templates/deterministic-drill';
+import { buildPhraseFallbackDrill } from '../lib/templates/phrase-fallback';
 
 async function main() {
     const word = await db.vocab.findUnique({
@@ -10,7 +10,7 @@ async function main() {
     console.log(JSON.stringify(word, null, 2));
 
     console.log("\n--- Simulating buildSimpleDrill ---");
-    const result = buildSimpleDrill(word as any, "PHRASE");
+    const result = buildPhraseFallbackDrill(word as any, "SYNTAX");
     console.log(JSON.stringify(result, null, 2));
 }
 

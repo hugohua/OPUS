@@ -100,5 +100,6 @@ export const CACHE_LIMIT_MAP = createSessionModeRecord({
     AUDIO: 10,       // 50 drills
     READING: 10,     // 50 drills
     VISUAL: 10,      // 50 drills
-    CONTEXT: 6      // [L2] 30 drills
+    CONTEXT: 6,      // [L2] 30 drills
+    ARENA_PART5: 6   // [L2] 30 drills
 });

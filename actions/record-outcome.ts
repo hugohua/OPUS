@@ -26,6 +26,8 @@ function mapModeToTrack(mode: string): string {
     if (['AUDIO', 'CHUNKING'].includes(mode)) return 'AUDIO';
     // L2: Context -> CONTEXT
     if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
+    // L2: Arena Part 5 -> VISUAL (Syntax level pattern matching)
+    if (mode === 'ARENA_PART5') return 'VISUAL';
 
     // Default fallback
     return 'VISUAL';
@@ -48,6 +50,17 @@ export async function recordOutcome(
         if (session.user.id !== userId) {
             log.warn({ sessionUser: session.user.id, inputUser: userId }, 'Security Alert: User mismatch in recordOutcome');
             return { status: 'error', message: 'Forbidden: ID Mismatch' };
+        }
+
+        // [Arena Part 5] 拦截无锚纯语法题
+        // 如果 vocabId < 0 (由 drill-processor 补充的虚拟ID)，说明这是纯语法随机题，不计入 FSRS 回流
+        if (vocabId < 0) {
+            log.info({ userId, vocabId, mode }, 'Skipping FSRS update for Pure Grammar Item (Negative Vocab ID)');
+            return {
+                status: 'success',
+                message: 'Outcome recorded (Skip FSRS for Pure Grammar)',
+                data: null
+            };
         }
 
         // [Track Priority] Use explicit track if provided, otherwise fallback to mode mapping

@@ -10,65 +10,66 @@ datasource db {
 
 model Vocab {
   // 1. 核心标识
-  id               Int      @id @default(autoincrement())
-  word             String   @unique
+  id   Int    @id @default(autoincrement())
+  word String @unique
 
   // 2. 基础语料 (From Oxford 5000)
-  phoneticUk       String?  // 英式音标
-  phoneticUs       String?  // 美式音标
-  audioUk          String?  // 英式音频 URL
-  partOfSpeech     String?  // 词性
-  commonExample    String?  // 通用例句
-  
+  phoneticUk    String? // 英式音标
+  phoneticUs    String? // 美式音标
+  audioUk       String? // 英式音频 URL
+  partOfSpeech  String? // 词性
+  commonExample String? // 通用例句
+
   // 3. 语义与场景 (AI 增强)
   // [关键] 卡片式 UI 专用的简明中文释义 (从 JP 或 EN 翻译而来)
   // 示例: "抛弃；中止"
-  definition_cn    String?  
+  definition_cn String?
 
   // definitions 结构: [{type: 'general', text: '...'}, {type: 'business', text: '...'}]
   // [关键] 结构化释义 (详情页用)
   // 结构: { "business_cn": "会议记录", "general_cn": "分钟" }
-  definitions      Json?     
-  
-  // [关键] 商务属性开关 (用于 Sidebar 筛选 "Business Only")
-  is_toeic_core    Boolean  @default(false)
+  definitions Json?
 
-  scenarios        String[] // 商务场景标签 (AI Cleaned)
-  
+  // [关键] 商务属性开关 (用于 Sidebar 筛选 "Business Only")
+  is_toeic_core Boolean @default(false)
+
+  scenarios String[] // 商务场景标签 (AI Cleaned)
+
   // collocations 结构: [{text: '...', trans: '...', source: 'abceed', weight: 100}]
-  collocations     Json?     // 常用搭配 (AI Generated / Abceed)
-  
+  collocations Json? // 常用搭配 (AI Generated / Abceed)
+
   // 3.1 AI 增强 Pro Max (ETL V3.0)
-  priority         VocabPriority? // 优先级 (CORE: 核心商务词, SUPPORT: 支撑词, NOISE: 简单词)
-  word_family      Json?          // 词族变形 { n: "...", v: "..." }
-  confusing_words  String[]       // 易混淆词 (Malapropisms)
-  confusion_audio  String[]       @default([]) // [L1] 听觉干扰词 (发音相似)
-  synonyms         String[]       // 商务近义词
-  
-  tags             String[] // 自动标签 (e.g. toeic_900)
-  
+  priority        VocabPriority? // 优先级 (CORE: 核心商务词, SUPPORT: 支撑词, NOISE: 简单词)
+  word_family     Json? // 词族变形 { n: "...", v: "..." }
+  confusing_words String[] // 易混淆词 (Malapropisms)
+  confusion_audio String[]       @default([]) // [L1] 听觉干扰词 (发音相似)
+  synonyms        String[] // 商务近义词
+
+  tags String[] // 自动标签 (e.g. toeic_900)
+
   // 4. 元数据
-  source           String   @default("oxford_5000") // 数据来源
-  source_meta      Json?    // 源数据 Meta (id_book, id_word)
+  source      String @default("oxford_5000") // 数据来源
+  source_meta Json? // 源数据 Meta (id_book, id_word)
 
   // 5. 分级策略
-  cefrLevel        String?  // A1 - C2
-  abceed_level     Int?     // Abceed Level (1-12)
-  abceed_rank      Int?     // Sort Order
-  definition_jp    String?  // 日文释义 (Reference)
-  learningPriority Int      @default(0) // 100(Core), 60(Support), 0(Noise)
-  
+  cefrLevel        String? // A1 - C2
+  abceed_level     Int? // Abceed Level (1-12)
+  abceed_rank      Int? // Sort Order
+  definition_jp    String? // 日文释义 (Reference)
+  learningPriority Int     @default(0) // 100(Core), 60(Support), 0(Noise)
+
   // [V1.2] 市场价值分 (Abceed ETL)
-  frequency_score  Int      @default(0) // 0-100 用于生存优先排序
+  frequency_score Int @default(0) // 0-100 用于生存优先排序
 
   // 向量字段 (1536 维，用于语义搜索)
   embedding Unsupported("vector(1536)")?
 
   // 关联
-  progress         UserProgress[]
-  articles         ArticleVocab[]
-  smartContent     SmartContent[]
-  etymology        Etymology?
+  progress      UserProgress[]
+  articles      ArticleVocab[]
+  smartContent  SmartContent[]
+  etymology     Etymology?
+  questionSeeds QuestionSeed[]
 
   @@index([learningPriority])
   @@index([scenarios])
@@ -77,23 +78,23 @@ model Vocab {
 
 // SmartContent: AI 生成的可复用内容 (L2 例句、L0 搭配扩展等)
 model SmartContent {
-  id        String   @id @default(uuid())
-  vocabId   Int
-  vocab     Vocab    @relation(fields: [vocabId], references: [id])
-  
-  type      String   // "L2_SENTENCE" | "L0_COLLOCATION"
-  scenario  String   // "Business Email", "Board Meeting"
-  
+  id      String @id @default(uuid())
+  vocabId Int
+  vocab   Vocab  @relation(fields: [vocabId], references: [id])
+
+  type     String // "L2_SENTENCE" | "L0_COLLOCATION"
+  scenario String // "Business Email", "Board Meeting"
+
   // 核心负载 (Zod 校验后写入)
   // 结构: { text: string, translation: string }
-  payload   Json
-  
+  payload Json
+
   // 音频关联 (通过 ttsHash 关联 TTSCache 表的 id)
-  ttsHash   String?  // 关联 TTSCache.id (MD5 Hash)
-  ttsCache  TTSCache? @relation(fields: [ttsHash], references: [id])
-  
+  ttsHash  String? // 关联 TTSCache.id (MD5 Hash)
+  ttsCache TTSCache? @relation(fields: [ttsHash], references: [id])
+
   // 元数据
-  model     String?  // "qwen-plus", "gpt-4o-mini"
+  model     String? // "qwen-plus", "gpt-4o-mini"
   createdAt DateTime @default(now())
 
   @@index([vocabId, type])
@@ -101,72 +102,70 @@ model SmartContent {
 }
 
 model UserProgress {
-  id        String   @id @default(cuid())
-  userId    String
-  vocabId   Int
-  
+  id      String @id @default(cuid())
+  userId  String
+  vocabId Int
+
   // SRS 调度
-  status    LearningStatus @default(NEW) // NEW, LEARNING, REVIEW, MASTERED
-  interval  Int            @default(0)   // 天数
-  
+  status   LearningStatus @default(NEW) // NEW, LEARNING, REVIEW, MASTERED
+  interval Int            @default(0) // 天数
+
   // FSRS v5 Fields
-  stability      Float    @default(0)
-  difficulty     Float    @default(0)
-  reps           Int      @default(0)
-  lapses         Int      @default(0)
-  state          Int      @default(0) // 0=New, 1=Learning, 2=Review, 3=Relearning
+  stability      Float     @default(0)
+  difficulty     Float     @default(0)
+  reps           Int       @default(0)
+  lapses         Int       @default(0)
+  state          Int       @default(0) // 0=New, 1=Learning, 2=Review, 3=Relearning
   last_review_at DateTime?
-  dueDate   DateTime       @default(now())
-  
+  dueDate        DateTime  @default(now())
+
   // 🔥 五维矩阵 (V/A/M/C/X)
   // { "V": 80, "A": 20, "M": 90, "C": 40, "X": 60 }
-  masteryMatrix Json       @default("{}")
+  masteryMatrix Json @default("{}")
 
   // 语境锚点 (记录上次阅读遇到的句子)
   lastContextSentence String? @db.Text
 
   // [V1.2 New] 五维认知模型分数 (独立字段版)
   // 用于混合取词引擎的高性能筛选 (e.g., 找出 V < 30 或 X < 20 的词)
-  dim_v_score    Int       @default(0)  // V: Visual Audit
-  dim_c_score    Int       @default(0)  // C: Drafting
-  dim_m_score    Int       @default(0)  // M: Decision
-  dim_x_score    Int       @default(0)  // X: Logic
-  dim_a_score    Int       @default(0)  // A: Audio
-  
-  masteryScore   Int       @default(0)  // 综合分
+  dim_v_score Int @default(0) // V: Visual Audit
+  dim_c_score Int @default(0) // C: Drafting
+  dim_m_score Int @default(0) // M: Decision
+  dim_x_score Int @default(0) // X: Logic
+  dim_a_score Int @default(0) // A: Audio
+
+  masteryScore Int @default(0) // 综合分
 
   // [V1.2 New] SRS 调度系统
-  next_review_at DateTime?              // 下次复习时间
+  next_review_at DateTime? // 下次复习时间
   // Multi-Track FSRS Support
   // 枚举值: "VISUAL" (L0/Syntax), "AUDIO" (L1/Audio), "CONTEXT" (L2/Context)
   track          String    @default("VISUAL")
 
-  user      User     @relation(fields: [userId], references: [id])
-  vocab     Vocab    @relation(fields: [vocabId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  vocab Vocab @relation(fields: [vocabId], references: [id])
 
   // [Breaking Change] 复合主键变更
   // 本条记录唯一性由 (用户 + 词 + 轨道) 决定
   // Explicitly map the name to ensure Prisma Client generates the expected input type
   @@unique([userId, vocabId, track], name: "userId_vocabId_track")
-  
   @@index([userId, dueDate])
-  @@index([userId, dim_v_score])      // [V1.2] 抢救队列核心索引
-  @@index([userId, next_review_at])   // [V1.2] 复习队列核心索引
-  
+  @@index([userId, dim_v_score]) // [V1.2] 抢救队列核心索引
+  @@index([userId, next_review_at]) // [V1.2] 复习队列核心索引
   // 方便 OMPS 快速查找某轨道下的到期词
   @@index([userId, track, next_review_at])
 }
 
 model Article {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  body        Json     // 存储段落结构，方便前端 token 化渲染
-  summaryZh   String?
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id])
-  vocabs      ArticleVocab[]
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      Json // 存储段落结构，方便前端 token 化渲染
+  summaryZh String?
+  createdAt DateTime @default(now())
+
+  user   User           @relation(fields: [userId], references: [id])
+  vocabs ArticleVocab[]
 }
 
 model ArticleVocab {
@@ -174,51 +173,49 @@ model ArticleVocab {
   vocabId   Int
   role      VocabRole // TARGET(新词), CONTEXT(复习词)
 
-  article   Article @relation(fields: [articleId], references: [id])
-  vocab     Vocab   @relation(fields: [vocabId], references: [id])
+  article Article @relation(fields: [articleId], references: [id])
+  vocab   Vocab   @relation(fields: [vocabId], references: [id])
 
   @@id([articleId, vocabId])
 }
 
-
-
 model InvitationCode {
-  id          String    @id @default(cuid())
-  code        String    @unique
-  
+  id   String @id @default(cuid())
+  code String @unique
+
   // 限制使用次数 (比如给部门同事生成的码，可以设为 20 次)
-  maxUses     Int       @default(1) 
-  usedCount   Int       @default(0)
-  
-  isActive    Boolean   @default(true)
-  
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime? // 可选：有效期
+  maxUses   Int @default(1)
+  usedCount Int @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime? // 可选：有效期
 }
 
 model User {
-  id            String    @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // 1. 极简账号信息
   // 对于同事/朋友，Email 是唯一的 ID
-  email         String    @unique
-  password      String?    // [Fix] Add password field
-  name          String?   // 显示名称
-  
+  email    String  @unique
+  password String? // [Fix] Add password field
+  name     String? // 显示名称
+
   // 2. 邀请码关联 (可选，用于记录是谁邀请的，或者使用了哪个码)
-  invitedByCode String?   
+  invitedByCode String?
 
   // 3. 业务数据 (保持 PRD V1.4 不变)
-  timezone      String    @default("Asia/Shanghai") 
-  settings      Json?     @default("{}") // { "autoPlay": true }
-  
+  timezone String @default("Asia/Shanghai")
+  settings Json?  @default("{}") // { "autoPlay": true }
+
   // 核心资产
-  progress      UserProgress[]
-  articles      Article[]
-  drillCaches   DrillCache[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  progress    UserProgress[]
+  articles    Article[]
+  drillCaches DrillCache[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum LearningStatus {
@@ -240,20 +237,19 @@ enum VocabPriority {
 }
 
 model DrillCache {
-  id        String   @id @default(cuid())
-  userId    String
-  mode      String   // 'SYNTAX' | 'CHUNKING' | 'NUANCE'
-  
+  id     String @id @default(cuid())
+  userId String
+  mode   String // 'SYNTAX' | 'CHUNKING' | 'NUANCE'
+
   // 存储完整的 AI 生成结果 (BriefingPayload[])
-  payload   Json     
-  
+  payload Json
+
   isConsumed Boolean @default(false)
-  
+
   createdAt DateTime @default(now())
   expiresAt DateTime // 建议有效期 24h
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, mode, isConsumed])
 }
@@ -265,96 +261,96 @@ model DrillCache {
 model DrillAudit {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  
+
   // Target Information
   targetWord String
-  
+
   // Context & Input
   // 格式: "L0:SYNTAX" | "OMPS:SELECTION" | "FSRS:TRANSITION"
   contextMode String?
-  
+
   // The full drill object or audit payload
-  payload   Json     
-  
+  payload Json
+
   // Audit Result
   status      String // 'GOOD', 'BAD', 'AUDIT', 'PENDING'
   auditScore  Int?
   auditReason String?
   isRedundant Boolean @default(false)
-  
+
   // If 'BAD', manual flagging reason
-  flagReason  String?
+  flagReason String?
 
   // 🆕 [V5.1] Panoramic Audit Extensions
-  userId      String?   // 可选，追踪特定用户问题
-  auditTags   String[]  // 标签: ["logic_anomaly", "high_quality", "cross_track"]
+  userId    String? // 可选，追踪特定用户问题
+  auditTags String[] // 标签: ["logic_anomaly", "high_quality", "cross_track"]
 
   // ⚡ 性能优化索引
   @@index([status])
   @@index([targetWord])
   @@index([createdAt])
-  @@index([contextMode])  // 🆕 按审计类型快速筛选
-  @@index([userId])       // 🆕 按用户追踪
+  @@index([contextMode]) // 🆕 按审计类型快速筛选
+  @@index([userId]) // 🆕 按用户追踪
 }
 
 // ----------------------------------------------------------------------
 // [V6.0] TTS Audio Cache (Database-Indexed Caching)
 // ----------------------------------------------------------------------
 model TTSCache {
-  id         String   @id  // MD5 Hash (text_voice_language_speed)
-  
+  id String @id // MD5 Hash (text_voice_language_speed)
+
   // 生成参数
-  text       String   @db.Text
-  voice      String   @default("Cherry")
-  language   String   @default("en-US")
-  speed      Float    @default(1.0)
-  
+  text     String @db.Text
+  voice    String @default("Cherry")
+  language String @default("en-US")
+  speed    Float  @default(1.0)
+
   // 缓存类型 (GC 策略)
   // 'vocab' - 单词音频 (永久保留)
   // 'phrase' - 短语音频 (永久保留)
   // 'temporary' - AI 生成临时句子 (90天清理)
-  cacheType  String   @default("temporary")
-  
+  cacheType String @default("temporary")
+
   // 文件存储
-  filePath   String   // 相对路径: "2026/02/01/abc123.wav"
-  url        String   // 对外 URL: "/audio/2026/02/01/abc123.wav"
-  fileSize   Int      // 文件大小 (bytes)
-  
+  filePath String // 相对路径: "2026/02/01/abc123.wav"
+  url      String // 对外 URL: "/audio/2026/02/01/abc123.wav"
+  fileSize Int // 文件大小 (bytes)
+
   // 时间戳
   createdAt  DateTime @default(now())
   lastUsedAt DateTime @default(now())
-  
+
   // 反向关联
   smartContent SmartContent[]
-  
+
   // 性能索引
-  @@index([lastUsedAt])   // GC 清理用
-  @@index([createdAt])    // Admin 查询用
-  @@index([cacheType])    // 按类型筛选
+  @@index([lastUsedAt]) // GC 清理用
+  @@index([createdAt]) // Admin 查询用
+  @@index([cacheType]) // 按类型筛选
 }
 
 model Etymology {
   // 1. 基础关系
-  id          String   @id @default(uuid())
-  vocabId     Int      @unique
-  vocab       Vocab    @relation(fields: [vocabId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  vocabId Int    @unique
+  vocab   Vocab  @relation(fields: [vocabId], references: [id], onDelete: Cascade)
 
   // 2. 核心分类 (Prompt mode)
   // ROOTS | COMPOUND | STORY | NONE
-  mode        EtymologyMode 
+  mode EtymologyMode
 
   // 3. 记忆钩子 (Prompt logic_cn)
   // 业务价值最高的字段，单独列出
-  memory_hook String?  
+  memory_hook String?
 
   // 4. 结构化数据 (JSONB)
   // 包含: roots, components, origin_lang, related 等
-  data        Json     
+  data Json
 
   // 5. 元数据
-  source      String?  @default("opus-ai-etl")
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  source    String?  @default("opus-ai-etl")
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 enum EtymologyMode {
@@ -362,5 +358,60 @@ enum EtymologyMode {
   DERIVATIVE
   ASSOCIATION
   NONE
+}
+
+// ----------------------------------------------------------------------
+// [V3.0] The Arena - Question Seed Library (The Anchor Strategy)
+// ----------------------------------------------------------------------
+model QuestionSeed {
+  id String @id @default(cuid())
+
+  // 1. 题目内容
+  originalNumber String? // 原题号追踪（如 "101"）
+  sentence       String @db.Text // 完整题干或局部考点句（含 _______ 空白）
+  targetAnswer   String // 正确答案（填入空格的词）
+  // JSON 规范: [{ text: "with", isCorrect: true }, { text: "to", is>>(false) }]
+  options        Json // 4个选项 
+  rationale    String @db.Text // 解析（中文，50字以内）
+
+  // 长文语境（针对 Part 6/7）
+  passageContext String? @db.Text // 所在段落/文章（如果是 Part 5 则为 null）
+
+  // 2. 锚点桥接 (The Anchor Strategy)
+  anchorVocabId Int? // 外键关联 Vocab.id（纯语法题为 null）
+  anchorText    String? // 冗余文本（如 "comply"）
+
+  // 3. 考点分类
+  questionType QuestionType // MORPHOLOGY | COLLOCATION | GRAMMAR | SYNONYM
+  posTested    String? // 考点词性 (Noun, Verb, Adj, Adv)，对 MORPHOLOGY 极重要
+  part         Int          @default(5) // TOEIC Part 5 / 6 / 7
+  scenario     String? // 商务场景标签（HR, Finance, Operations）
+  difficulty   Int          @default(2) // 1=Easy, 2=Medium, 3=Hard
+
+  // 4. 使用统计
+  usedCount Int @default(0) // 被 LLM 引用次数，用于打乱种子抽取
+
+  // 5. 元数据
+  source    String   @default("manual") // "manual" | "ai_generated" | "textbook"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // 关联
+  anchorVocab Vocab? @relation(fields: [anchorVocabId], references: [id])
+
+  // 索引
+  @@index([anchorVocabId])
+  @@index([questionType, posTested]) // 精确匹配题型和词性
+  @@index([part])
+  @@index([isActive, usedCount])
+}
+
+enum QuestionType {
+  MORPHOLOGY       // 词性辨析 (考查后缀变化，如 predictive vs prediction)
+  COLLOCATION      // 固定搭配/介词 (考查词块关联，如 comply with)
+  GRAMMAR          // 纯语法 (连词、代词、时态、语态)
+  SYNONYM          // 词汇/语境辨析 (四个完全不同的单词辨析意思)
+  PHRASAL_VERB     // 动词短语辨析 (同一动词+不同介词/副词，如 turn down/out/over/into)
+  PRONOUN_REFERENCE // 代词指代 (Part 6 专属，必须结合 passageContext 才能判断单复数)
 }
 

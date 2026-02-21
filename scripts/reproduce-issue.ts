@@ -1,5 +1,5 @@
 
-import { buildSimpleDrill } from '../lib/templates/deterministic-drill';
+import { buildPhraseFallbackDrill } from '../lib/templates/phrase-fallback';
 
 const mockVocab = {
     id: 380,
@@ -22,8 +22,8 @@ const mockVocab = {
     ]
 };
 
-console.log("Testing buildSimpleDrill with mock vocab...");
-const result = buildSimpleDrill(mockVocab as any, "PHRASE");
+console.log("Testing buildPhraseFallbackDrill with mock vocab...");
+const result = buildPhraseFallbackDrill(mockVocab as any, "PHRASE");
 
 console.log(JSON.stringify(result, null, 2));
 

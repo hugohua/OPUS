@@ -11,7 +11,8 @@ export const SingleScenarioModeSchema = z.enum([
     'SYNTAX', 'PHRASE', 'BLITZ',     // L0 基础层
     'AUDIO', 'CHUNKING',              // L1 感知层
     'CONTEXT', 'NUANCE',              // L2 应用层
-    'READING', 'VISUAL'               // 其他模式
+    'READING', 'VISUAL',              // 其他模式
+    'ARENA_PART5'                     // [NEW] 竞技场 Part 5
 ]);
 
 // 混合场景模式

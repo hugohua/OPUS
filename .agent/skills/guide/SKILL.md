@@ -39,6 +39,8 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Word Selection (OMPS)**: `docs/dev-notes/omps-word-selection-engine.md` (**核心选词引擎**，所有场景必读)
 - **Context Selection**: `docs/dev-notes/context-selector-guide.md` (How we pick words/sentences)
 - **Vector Logic**: `docs/dev-notes/vector-context-selection-v2.md` (Embedding & Similarity rules)
+- **新增全新题型 (End-to-End) 开发指南**: `docs/dev-notes/new-drill-mode-end-to-end-guide.md` (**NEW**: 涵盖新增任意答题类型的 8 步全栈 Checklist)
+- **Arena 架构解密**: `docs/dev-notes/arena-mode-integration-guide.md` (特指竞技场数据流与 O(1) 兜底)
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
@@ -100,17 +102,24 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **NAS Compose**: `docker-compose.nas.yml` (预构建镜像 + 绑定挂载)
 - **Nginx 配置**: `nginx/nginx.conf` (反向代理、静态缓存、音频直出)
 
+### 11. TOEIC PDF ETL Pipeline (题库数据导入)
+- **Architecture**: `docs/dev-notes/toeic-pdf-etl-pipeline.md` (**NEW**: OCR 提取 + 结构化入库 + XML-Mode Prompt + QuestionType 枚举完整定义)
+- **OCR Script**: `scripts/ocr_pdf_to_text.py` (PyMuPDF + Vision API + 并发 + 断点续传)
+- **Seeding Script**: `scripts/seed-from-pdf.ts` (Gemini ETL + Zod 校验 + 原生 Worker Pool 并发)
+- **ETL Prompt**: `lib/generators/etl/part5-seed-prompt.ts` (XML-Mode + 6-Enum 决策树 + 自检步骤)
+- **Schema**: `QuestionSeed` in `prisma/schema.prisma` (含 `originalNumber`, `passageContext`, `QuestionType` 枚举)
 
-## 🚦 Decision Routing
+
 - **If implementing Mixed Mode / L0_MIXED / L1_MIXED / DAILY_BLITZ** -> Read `mixed-mode-architecture.md` (**Stability 阈值、Track 隔离、批量操作**).
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
 - **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
 - **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.
-- **If 发现缓存命中率低 / 大量兜底数据** -> 阅读 `cache-hit-rate-optimization.md` 排查选词逻辑是否一致.
-- **If modifying Audio/Playback** -> Read `tts-architecture.md` (Architecture) AND `use-tts.ts` (Implementation).
-- **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md` (**Phase 4 Complete Guide**).
-- **If adding a new game mode** -> Check `technical-spec-phrase-mode.md` for inspiration on spec structure.
-- **If DB schema changes** -> You MUST update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
+- **If discovering low cache hits / many fallbacks** -> Read `cache-hit-rate-optimization.md`.
+- **If modifying Audio/Playback** -> Read `tts-architecture.md` and `use-tts.ts`.
+- **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md`.
+- **If adding a new game mode / answer type** -> **CRITICAL**: Read `new-drill-mode-end-to-end-guide.md` for the 8-step full-stack checklist.
+- **If DB schema changes** -> Update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
+- **If 处理 TOEIC PDF 数据 / 修改题库导入 / QuestionSeed 相关** -> Read `toeic-pdf-etl-pipeline.md` (**ETL 全流程、QuestionType 枚举、Prompt 设计规范**).
 - **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).
 - **If adding vocabulary selection logic** -> You MUST use `fetchOMPSCandidates` from `lib/services/omps-core.ts` (**注意**: Weaver 使用独立的 4 层瀑布选词，见 `actions/weaver-selection.ts`).
 - **If 修改 Weaver Lab 选词/场景/密度** -> Read `weaver-wand-technical-architecture.md` (v2.1) AND `weaver-wand-ui-spec.md` (v2.0).

@@ -10,6 +10,7 @@ import { ContextSelector } from '@/lib/ai/context-selector';
 import { SyntaxGeneratorInput } from '@/lib/generators/l0/syntax';
 import { PhraseGeneratorInput } from '@/lib/generators/l0/phrase';
 import { BlitzGeneratorInput } from '@/lib/generators/l0/blitz';
+import { Part5DrillInput as Part5DrillInputPrompt } from '@/lib/generators/arena/part5-drill';
 import { logger } from '@/lib/logger';
 import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { VisualTrapService } from '@/lib/services/visual-trap';
@@ -154,8 +155,52 @@ export interface BlitzGeneratorInputWithTraps extends BlitzGeneratorInput {
 }
 
 // ============================================
-// 辅助函数
+// Arena Part 5 输入构建
 // ============================================
+
+/**
+ * 构建 Arena Part 5 输入
+ * 
+ * @param candidate 词汇候选项 (包含 wordFamily 等)
+ * @param seed 作为 Few-Shot 的 QuestionSeed 原始题目
+ * @returns Part5DrillInput
+ */
+export function buildPart5Input(
+    candidate: VocabEntity,
+    seed: any // 运行时传入精简后的 QuestionSeed 对象
+): Part5DrillInput {
+    // 确保 options 格式一致
+    const options = Array.isArray(seed.options) ? seed.options : [];
+
+    return {
+        targetWord: candidate.word,
+        meaning: candidate.definition_cn || '暂无释义',
+        wordFamily: (candidate.word_family as Record<string, string>) || {},
+        partOfSpeech: candidate.partOfSpeech || null,
+        seed: {
+            sentence: seed.sentence || '',
+            targetAnswer: seed.targetAnswer || '',
+            options,
+            questionType: seed.questionType || 'GRAMMAR'
+        }
+    };
+}
+
+/**
+ * Arena Part 5 输入
+ */
+export interface Part5DrillInput {
+    targetWord: string;
+    meaning: string;
+    wordFamily: Record<string, string>; // Match exactly
+    partOfSpeech: string | null;
+    seed: {
+        sentence: string;
+        options: { text: string; isCorrect: boolean }[];
+        targetAnswer: string;
+        questionType: string | null;
+    };
+}
 
 /**
  * 获取上下文单词 (语义向量检索)

@@ -10,6 +10,7 @@ import {
     Wrench,       // L0: Mechanics
     Activity,     // L1: Rhythm/Flow
     Brain,        // L2: Cognitive
+    Swords,       // Arena: Challenge
     Database,     // Icon
     MoreHorizontal
 } from 'lucide-react';
@@ -24,6 +25,7 @@ interface CacheStatsCardProps {
         NUANCE: number;
         READING: number;
         BLITZ: number;
+        ARENA_PART5: number;
         total: number;
         targets: Record<string, number>;
     };
@@ -64,6 +66,16 @@ const MODE_GROUPS = [
         modes: [
             { key: 'NUANCE', label: MODE_LABELS['NUANCE'] },
             { key: 'CONTEXT', label: MODE_LABELS['CONTEXT'] },
+        ]
+    },
+    {
+        level: 'Arena',
+        label: '竞技场 (Challenge)',
+        subLabel: '实战演练',
+        color: 'amber',
+        icon: Swords,
+        modes: [
+            { key: 'ARENA_PART5', label: MODE_LABELS['ARENA_PART5'] || 'Part 5' },
         ]
     }
 ];
@@ -131,6 +143,13 @@ function TrackCard({
             icon: 'text-violet-500',
             bar: 'bg-violet-500',
             text: 'text-violet-500',
+        },
+        amber: {
+            border: 'border-amber-500/20 group-hover:border-amber-500/30',
+            bg: 'bg-amber-500/5',
+            icon: 'text-amber-500',
+            bar: 'bg-amber-500',
+            text: 'text-amber-500',
         },
     };
 

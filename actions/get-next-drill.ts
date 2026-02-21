@@ -15,7 +15,9 @@ import { ActionState } from '@/types/action';
 import { BriefingPayload, SessionMode, SingleScenarioMode } from '@/types/briefing';
 import { GetBriefingSchema, GetBriefingInput } from '@/lib/validations/briefing';
 import { inventory } from '@/lib/core/inventory';
-import { buildSimpleDrill, buildChunkingDrillFallback } from '@/lib/templates/deterministic-drill';
+import { buildChunkingDrillFallback } from '@/lib/templates/deterministic-drill';
+import { buildArenaFallbackDrill } from '@/lib/templates/arena-fallback';
+import { buildPhraseFallbackDrill } from '@/lib/templates/phrase-fallback';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
 import { auditInventoryEvent, auditSessionFallback, auditMixedModeDistribution } from '@/lib/services/audit-service';
 
@@ -75,34 +77,50 @@ export async function getNextDrillBatch(
             };
         }
 
-        // 3. 将候选词转换为 Drill (消费层)
+        // 3.1 预取缓存并处理 N+1
+        const vocabIds = candidates.map(c => c.vocabId);
+        let drillMap: Record<number, BriefingPayload> = {};
+        try {
+            drillMap = await inventory.popDrillBatch(userId, { [mode]: vocabIds });
+        } catch (e) {
+            log.error({ error: e }, 'Redis batch pop failed in single mode');
+        }
+
+        // 3.1.5 ARENA 批量预加载 Seed 解决 N+1
+        let arenaSeedsMap: Record<string, any> = {};
+        if (mode === 'ARENA_PART5') {
+            const missingVocabs = candidates.filter(c => !drillMap[c.vocabId]).map(c => c.word);
+            if (missingVocabs.length > 0) {
+                const seeds = await prisma.questionSeed.findMany({
+                    where: { targetAnswer: { in: missingVocabs } },
+                    orderBy: { id: 'asc' }
+                });
+                for (const seed of seeds) {
+                    if (!arenaSeedsMap[seed.targetAnswer]) {
+                        arenaSeedsMap[seed.targetAnswer] = seed;
+                    }
+                }
+            }
+        }
+
+        // 3.2 将候选词转换为 Drill (消费层)
         const drills: BriefingPayload[] = [];
         const missedVocabIds: number[] = [];
 
         for (const candidate of candidates) {
-            let drill: BriefingPayload | null = null;
+            let drill = drillMap[candidate.vocabId] || null;
             let source = 'unknown';
 
-            // 3.2 标准路径：Redis 缓存 (Unified Zero-Wait)
-            try {
-                // All modes (SYNTAX, PHRASE, BLITZ, AUDIO, etc.) try cache first
-                drill = await inventory.popDrill(userId, mode, candidate.vocabId);
-                if (drill) {
-                    source = 'cache_v2';
-                    // [Audit] 记录库存消费事件
-                    auditInventoryEvent(userId, 'CONSUME', mode, {
-                        currentCount: 0, // 消费时不单独查询库存
-                        capacity: 0,
-                        delta: -1,
-                        vocabId: candidate.vocabId // W2 Fix: 记录消费的词汇 ID
-                    });
-                }
-            } catch (e) {
-                log.error({ error: e, candidate }, 'Redis pop failed');
-            }
-
-            // 3.3 缓存未命中 -> 确定性兜底
-            if (!drill) {
+            if (drill) {
+                source = 'cache_v2';
+                auditInventoryEvent(userId, 'CONSUME', mode, {
+                    currentCount: 0,
+                    capacity: 0,
+                    delta: -1,
+                    vocabId: candidate.vocabId
+                });
+            } else {
+                // 3.3 缓存未命中 -> 确定性兜底
                 if (mode === 'CHUNKING') {
                     drill = buildChunkingDrillFallback({
                         id: candidate.vocabId,
@@ -115,17 +133,29 @@ export async function getNextDrillBatch(
                         etymology: candidate.etymology,
                         collocations: candidate.collocations
                     });
-                } else {
-                    drill = buildSimpleDrill({
+                } else if (mode === 'ARENA_PART5') {
+                    drill = buildArenaFallbackDrill({
                         id: candidate.vocabId,
                         word: candidate.word,
                         definition_cn: candidate.definition_cn,
-                        definitions: candidate.definitions, // [New]
+                        definitions: candidate.definitions,
                         commonExample: candidate.commonExample,
-                        phoneticUk: candidate.phoneticUk, // [New]
-                        partOfSpeech: candidate.partOfSpeech, // [New]
-                        etymology: candidate.etymology, // [New]
-                        collocations: candidate.collocations // Check collocations
+                        phoneticUk: candidate.phoneticUk,
+                        partOfSpeech: candidate.partOfSpeech,
+                        etymology: candidate.etymology,
+                        collocations: candidate.collocations
+                    }, mode, arenaSeedsMap[candidate.word]);
+                } else {
+                    drill = buildPhraseFallbackDrill({
+                        id: candidate.vocabId,
+                        word: candidate.word,
+                        definition_cn: candidate.definition_cn,
+                        definitions: candidate.definitions,
+                        commonExample: candidate.commonExample,
+                        phoneticUk: candidate.phoneticUk,
+                        partOfSpeech: candidate.partOfSpeech,
+                        etymology: candidate.etymology,
+                        collocations: candidate.collocations
                     }, mode);
                 }
                 source = 'deterministic_fallback';
@@ -270,7 +300,25 @@ async function getMixedDrillBatch(
     } catch (e) {
         // 🔧 P1 优化: 数据库故障降级处理
         log.error({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }, 'Inventory batch fetch failed');
-        // 继续执行，所有词汇将回退到 buildSimpleDrill
+        // 继续执行，所有词汇将回退到 fallback
+    }
+
+    // 3.5 ARENA 批量预加载 Seed 解决 N+1
+    let arenaSeedsMap: Record<string, any> = {};
+    const missingArenaVocabs = candidates
+        .filter(c => vocabScenarioMap.get(c.vocabId) === 'ARENA_PART5' && !drillMap[c.vocabId])
+        .map(c => c.word);
+
+    if (missingArenaVocabs.length > 0) {
+        const seeds = await prisma.questionSeed.findMany({
+            where: { targetAnswer: { in: missingArenaVocabs } },
+            orderBy: { id: 'asc' }
+        });
+        for (const seed of seeds) {
+            if (!arenaSeedsMap[seed.targetAnswer]) {
+                arenaSeedsMap[seed.targetAnswer] = seed;
+            }
+        }
     }
 
     // 4. 组装结果（Cache Hit 或 Fallback）
@@ -295,18 +343,44 @@ async function getMixedDrillBatch(
             // 🔧 修复W5: 兜底策略文档
             // 降级策略：当 Inventory 为空时，使用模板生成基础 Drill
             // 目的：保证 Zero-Wait 体验，避免用户等待 LLM 生成
-            // 策略：使用 buildSimpleDrill 生成确定性内容（基于词汇本身的属性）
-            drill = buildSimpleDrill({
-                id: candidate.vocabId,
-                word: candidate.word,
-                definition_cn: candidate.definition_cn,
-                definitions: candidate.definitions,
-                commonExample: candidate.commonExample,
-                phoneticUk: candidate.phoneticUk,
-                partOfSpeech: candidate.partOfSpeech,
-                etymology: candidate.etymology,
-                collocations: candidate.collocations
-            }, selectedScenario);
+            // 策略：使用 buildPhraseFallbackDrill 或专用构建器生成确定性内容（基于词汇本身的属性）
+            if (selectedScenario === 'CHUNKING') {
+                drill = buildChunkingDrillFallback({
+                    id: candidate.vocabId,
+                    word: candidate.word,
+                    definition_cn: candidate.definition_cn,
+                    definitions: candidate.definitions,
+                    commonExample: candidate.commonExample,
+                    phoneticUk: candidate.phoneticUk,
+                    partOfSpeech: candidate.partOfSpeech,
+                    etymology: candidate.etymology,
+                    collocations: candidate.collocations
+                });
+            } else if (selectedScenario === 'ARENA_PART5') {
+                drill = buildArenaFallbackDrill({
+                    id: candidate.vocabId,
+                    word: candidate.word,
+                    definition_cn: candidate.definition_cn,
+                    definitions: candidate.definitions,
+                    commonExample: candidate.commonExample,
+                    phoneticUk: candidate.phoneticUk,
+                    partOfSpeech: candidate.partOfSpeech,
+                    etymology: candidate.etymology,
+                    collocations: candidate.collocations
+                }, selectedScenario, arenaSeedsMap[candidate.word]);
+            } else {
+                drill = buildPhraseFallbackDrill({
+                    id: candidate.vocabId,
+                    word: candidate.word,
+                    definition_cn: candidate.definition_cn,
+                    definitions: candidate.definitions,
+                    commonExample: candidate.commonExample,
+                    phoneticUk: candidate.phoneticUk,
+                    partOfSpeech: candidate.partOfSpeech,
+                    etymology: candidate.etymology,
+                    collocations: candidate.collocations
+                }, selectedScenario);
+            }
             source = 'deterministic_fallback';
 
             // 收集缺货词汇，稍后批量触发急救

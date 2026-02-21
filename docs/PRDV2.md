@@ -3,17 +3,18 @@
 | 属性 | 内容 |
 | --- | --- |
 | **项目名称** | Opus (Mobile) |
-| **版本** | **v2.1 (The "Next.js-Core" Release)** |
+| **版本** | **v3.0 (The Arena Release)** |
 | **状态** | **Final Architecture Locked** |
-| **核心理念** | **AI-Native** (生成式), **Zero-Wait** (零等待), **Multi-Track** (多轨记忆) |
+| **核心理念** | **AI-Native** (生成式), **Zero-Wait** (零等待), **Multi-Track** (多轨记忆), **From Input to Output** (从输入到输出的跨越) |
 | **技术重心** | **Next.js (Brain/Logic)** + **Python (Voice Renderer)** |
-| **更新时间** | 2026-01-29 |
+| **更新时间** | 2026-02-20 |
 
 ---
 
 ## 1. 产品愿景 (Vision)
 
-Opus v2.0 是一个 **“生成优先 (Generator-First)”** 的系统。
+Opus v3.0 是一个 **“生成优先 (Generator-First)”** 的系统。核心战略是：**“前端物理分离，后端灵魂暗合”**。我们将从单一的“背单词工具”，正式跨入**“TOEIC 全真闭环提分系统”**的领域。
+
 我们不存储“死题目”，只存储“活种子”。每一次用户复习，都是 AI 根据用户当前的 FSRS 状态、记忆短板、TOEIC 考点要求，**JIT (Just-in-Time) 实时生成** 的全新体验。
 
 **核心口号**: *You never step into the same drill twice.*
@@ -22,7 +23,7 @@ Opus v2.0 是一个 **“生成优先 (Generator-First)”** 的系统。
 
 ## 2. 技术架构 (Technical Architecture)
 
-架构调整为 **Next.js 全栈主导**，Python 为专用计算节点，只处理TTS音频。
+架构维持 **Next.js 全栈主导**，Python 为专用计算节点，只处理TTS音频。
 
 ### 2.1 核心分层
 
@@ -57,69 +58,77 @@ Opus v2.0 是一个 **“生成优先 (Generator-First)”** 的系统。
 | --- | --- | --- | --- |
 | **Track A: Visual** | **Task 1 (L0)** | **形义连接** | 决定是否生成 Speed Run 卡片。 |
 | **Track B: Audio** | **Task 2 (L1)** | **听觉反射** | 决定是否生成 Audio Gym 卡片（需调用 Python）。 |
-| **Track C: Context** | **Task 3 (L2)** | **语境逻辑** | 决定是否生成 Context Lab 卡片（需调用 1+N）。 |
+| **Track C: Context** | **Task 3 (L2)** | **语境逻辑** | 决定是否生成 Context Lab/Arena 卡片（需调用 1+N）。 |
 
 ---
 
 ## 4. 交互与入口体系 (UX Structure)
 
-系统采用 **“1 + 3”** 结构：一个智能主入口，三个专项子文档。
+为了降低用户的认知负担，v3.0 升级为极简的 **底部双 Tab 结构**，将“输入”（背诵）与“输出”（测试）物理隔离：
 
-### 4.1 主入口：Daily Blitz (智能混合流)
+* **Tab 1: 🥋 The Dojo (道场 / 词汇输入)** - 专注于 L0/L1 基础建立
+* **Tab 2: 🏟️ The Arena (竞技场 / 实战输出)** - 专注于 L2 实战检验
 
+### 4.1 Tab 1: The Dojo (道场)
+
+保持原有 v2.1 版本的所有核心功能：
+
+#### 🔹 [主入口] Daily Blitz (智能混合流)
 **位置**: 首页 Hero Section。
-**逻辑**: **Zero-Decision (零决策)**。
-系统扫描所有轨道，自动混合 L0/L1/L2 卡片。用户点击一次，即可进行全方位训练。
-
-### 4.2 子入口：Skill Gym (专项训练馆)
-
-下方区域允许用户查看详情或专项训练。点击标题可进入对应任务的详细设计文档。
+**逻辑**: **Zero-Decision (零决策)**。系统扫描所有轨道，自动混合 L0/L1 卡片。用户点击一次，即可进行全方位训练。
 
 #### 🔹 [Task 1] Speed Run (L0 基础)
-
 > **📄 详细设计文档**: [](docs/task1.md) (点击查看详情)
-
-* **定位**: Foundation (基座层)。
-* **核心场景**: 快速刷词，建立形义连接。
-* **生成逻辑 (Next.js)**: 基于 FSRS 参数，实时生成 **SVO 微语境** 或 **词性陷阱**。不涉及 Python 调用。
+* **定位**: Foundation (基座层)。建立形义连接。
+* **生成逻辑 (Next.js)**: 基于 FSRS 驱动的 **70/30 协议** (70% Review + 30% New)，实时生成 **SVO 微语境** 或 **词性陷阱**。
 
 #### 🔹 [Task 1.5] Chunking Gym (L1.5 过渡)
-
 > **📄 详细设计文档**: [](docs/TASK1.5.md) (点击查看详情)
-
 * **定位**: Bridge-Prep (预腰部层)。连接"认字"与"长句"的关键过渡。
-* **核心场景**: **语块排序 (Sentence Reordering)**，训练意群断句与逻辑组装。
-* **交互模式**: 
-  1. 屏幕显示打散的 3-5 个"语块气泡"。
-  2. 用户拖拽排序，按商务逻辑组装完整句子。
-* **生成逻辑 (Next.js)**:
-  1. LLM 生成复杂商务句 (15-25 词，含从句/介词短语)。
-  2. 按意群 (Sense Groups) 切分为 3-5 个 Chunks。
-  3. **三层解析法**: 骨架透视 + 接口分析 + 商务洞察。
+* **场景**: 语块排序 (Sentence Reordering)。
 
 #### 🔹 [Task 2] Audio Gym (L1 进阶)
-
 > **📄 详细设计文档**: [](docs/task2.md) (点击查看详情)
+* **定位**: Bridge (腰部层)。盲听训练，情感语音。
+* **生成逻辑**: Next.js 编剧 + Python 演播。
 
-* **定位**: Bridge (腰部层)。
-* **核心场景**: 盲听训练，情感语音。
-* **生成逻辑 (Hybrid)**:
-1. **Next.js**: 生成对话脚本 (Script) 和情感标签 (Emotion)。
-2. **Python**: 接收脚本，**实时渲染** 高质量情感语音。
+---
 
+### 4.2 Tab 2: The Arena (竞技场) - *v3.0 新增核心*
 
+The Arena 不是一个静态的“死题库”，它是一个 **“懂你的 AI 考官”**。引入 TOEIC Part 5/6/7 题型，打造“背-练-测”闭环。
 
-#### 🔹 [Task 3] Context Lab (L2 塔尖)
+#### 🔹 [架构挂载] Hybrid Selector (30/50/20 发牌协议)
+不同于 The Dojo 纯基础复习的 70/30 协议，The Arena 的发牌引擎挂载于高阶的 `Hybrid Selector`，遵循更具挑战性的 30/50/20 配比“暗合”逻辑：
+1. **Rescue (语法补救 / 30%)**：打捞处于底层挣扎的语法盲点词汇 (Visual < 30 或 Logic < 20)。
+2. **Review (遗忘拦截 / 50%)**：抽取 FSRS 队列中面临遗忘临界点 (`Due`) 的单词，用实战做题代替机械闪卡复习。*(注：若 Rescue 队列未满，名额自动溢出至 Review)*
+3. **New (融会贯通 / 20%)**：刚在 The Dojo 学习的新词，立即在实战中考察，带来最高的心流体验与应用成就感。
 
-> **📄 详细设计文档**: [](docs/task3.md) (点击查看详情)
+#### 🔹 模块一：Arena Dashboard (实战大厅)
+* **动态战报 UI**：文案包装为职场任务风格（例: `"Briefing: 1 Active Mission"`），**严禁出现具体的待复习数字（Review Hell）以防触发用户焦虑。**
+* **模式选择**：
+  * ⚡ **Part 5 Blitz (单句闪电战)**：碎片时间 (3-5 分钟)。
+  * 📜 **Part 6/7 Mission (阅读狙击战)**：大块时间 (10-15 分钟)。
 
-* **定位**: Apex (塔尖层)。
-* **核心场景**: TOEIC Part 5/6 模拟，商务长难句填空。
-* **生成逻辑 (Next.js)**:
-1. **1+N 算法**: Next.js 直接查询 `pgvector` 抓取关联词。
-2. **LLM**: Next.js 组装 Prompt 生成题目与苏格拉底解析。
+#### 🔹 模块二：Part 5 Blitz (单句闪电战)
+* **UI 呈现**：上方题干（带 `_______` 空白），下方 4 个选项按钮。**严禁倒计时组件 (Timer)。**
+* **交互闭环**：
+  1. 用户点击选项。触发红/绿颜色反馈 + 震动 `Haptics`。
+  2. **无缝衔接 Magic Wand**：底部自动弹出魔法棒解析浮层（Rationale），用极简文字解释选项。
+  3. 用户无压力前往下一题，后台**静默记录答题耗时**。
 
+#### 🔹 模块三：Part 6/7 Mission (阅读狙击战) (演进自原 Context Lab/Weaver Lab)
+* **Part 6 (段落完形)**：LLM 生成 150 字商务短文，挖词填空。
+* **Part 7 (阅读理解)**：LLM 生成文档，底部附带阅读理解题（主旨/细节）。
+* **Magic Wand 兼容**：继承划词解析能力，长按唤起句法分析。
 
+#### 🔹 The Data Loop (数据回流机制 - 终极壁垒)
+**做题等于背词**。在 The Arena 完成题目后：
+1. **提取 `AnchorWord`**：识别测试核心词（如 `implement`）。
+2. **映射 FSRS 评级**：
+   * 选对且静默耗时短 -> `Easy/Good`，延长复习时间。
+   * **选错 -> `Again/Hard`，降维打击！该单词被立即打回，明天在 Tab 1 (Dojo) 重新以卡片形式出现并接受安全降维学习。**
+3. **写入审计日志 (Audit Log)**：记录 `PART5_ATTEMPT`，追踪错误偏好。
 
 ---
 
@@ -143,8 +152,7 @@ Opus v2.0 是一个 **“生成优先 (Generator-First)”** 的系统。
 
 ## 6. 总结 (Summary)
 
-Opus v2.1 回归了更高效的 **Next.js 单体优先** 架构，仅将计算密集型的 **TTS 语音生成** 外包给 Python。
+Opus v3.0 在基于 Next.js + Python 的高效单体架构之上，通过 **The Dojo (输入)** 与 **The Arena (输出)** 的物理切割，完美实现了认知负荷的控制与实战能力的提升。
 
-* **Task 1 (Speed Run)**: 纯 Next.js 驱动，极致响应。
-* **Task 2 (Audio Gym)**: Next.js 编剧 + Python 演播，体验最佳。
-* **Task 3 (Context Lab)**: Next.js + pgvector 驱动，逻辑深沉。
+* **The Dojo (Tab 1)**: 采用极简 70/30 FSRS 协议，负责低压力的知识捕获与记忆巩固。
+* **The Arena (Tab 2)**: 采用高阶 30/50/20 混合发牌协议，负责应用闭环、盲点探测与 FSRS 状态回流。

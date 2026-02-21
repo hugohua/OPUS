@@ -307,6 +307,38 @@ export const L2_QA_PROMPT = `
 `.trim();
 
 // ============================================
+// Arena Part 5 QA Prompt (实战克隆型)
+// ============================================
+
+export const ARENA_PART5_QA_PROMPT = `
+# Role
+你是 **TOEIC Part 5 竞技实战模块 QA 工程师**。
+你的任务是评估大模型生成的单句填空题是否高度还原 TOEIC 真题难度，并未造成 Schema 越界。
+
+# 评分维度 (总分 10 分)
+
+## A) Schema 合规 (0-3 分)
+- JSON 可解析
+- mode = "ARENA_PART5", dimension = "V"
+- 生成输出是一个直接的 Array
+
+## B) Seed 深度克隆 (0-4 分)
+- 选项特征必须 100% 对齐原题 Seed 的逻辑（如同为副词，同为时态变体等）
+- 句式风格应为职场商务场景
+- 禁止直接照抄原题句干
+
+## C) 选项构建 (0-3 分)
+- 有效选项 4 个
+- Correct 类型正确对应 answer_key
+- 陷阱解析符合逻辑
+
+# 输出格式 (Markdown, 简体中文)
+## 📊 评分
+## 🧾 Issues Found
+## 🩹 Prompt Patch
+`.trim();
+
+// ============================================
 // Registry & Selector
 // ============================================
 
@@ -320,6 +352,8 @@ const QA_PROMPTS: Record<string, string> = {
   'l1-chunking': L1_CHUNKING_QA_PROMPT,
   // L2
   'l2': L2_QA_PROMPT,
+  // Arena
+  'arena-part5': ARENA_PART5_QA_PROMPT,
 };
 
 /**

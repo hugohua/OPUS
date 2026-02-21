@@ -11,4 +11,5 @@ export const MODE_LABELS: Record<string, string> = {
     'READING': '阅读 (Reading)',
     'BLITZ': '闪电战 (Blitz)',
     'CONTEXT': '语境 (Context)',
+    'ARENA_PART5': 'Part 5',
 };
