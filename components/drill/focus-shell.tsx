@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { ImmersiveHeader } from "@/components/ui/immersive-header";
 
 export type FocusShellVariant = "L0" | "L1" | "L2" | "default"; // L0=Amber, L1=Cyan, L2=Violet
 
@@ -95,32 +96,34 @@ export function FocusShell({
             )}
         >
 
-            {/* 1. Header (Fixed) */}
-            <header className="flex-none px-6 py-4 flex items-center justify-between z-20">
-                {/* Level/Mode Badge */}
-                <div className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm transition-all duration-300 backdrop-blur-md",
-                    styles.badge
-                )}>
-                    <div className={cn("w-2 h-2 rounded-full animate-pulse", styles.bar)} />
-                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase opacity-90">
-                        {label}
-                    </span>
-                </div>
-
-                {/* Exit Button */}
-                <button
-                    onClick={onExit}
-                    title="退出训练"
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all active:scale-95 active:bg-zinc-300/50"
-                >
-                    <X className="w-5 h-5" strokeWidth={2.5} />
-                </button>
-            </header>
+            {/* 1. Standard Immersive Header (Variant B) */}
+            <ImmersiveHeader
+                className="bg-transparent dark:bg-transparent border-none"
+                leftAction={
+                    <button
+                        onClick={onExit}
+                        title="退出训练"
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all active:scale-95 active:bg-zinc-300/50"
+                    >
+                        <X className="w-5 h-5" strokeWidth={2.5} />
+                    </button>
+                }
+                centerContent={
+                    <div className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm transition-all duration-300 backdrop-blur-md",
+                        styles.badge
+                    )}>
+                        <div className={cn("w-2 h-2 rounded-full animate-pulse", styles.bar)} />
+                        <span className="text-[10px] font-mono font-bold tracking-widest uppercase opacity-90">
+                            {label}
+                        </span>
+                    </div>
+                }
+            />
 
             {/* 2. Progress Line (Below Header) */}
             <div className="w-full px-6">
-                <div className="w-full h-1 bg-zinc-200 dark:bg-zinc-800/50 rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-zinc-200 dark:bg-zinc-800/50 rounded-full overflow-hidden mt-1">
                     <div
                         className={cn("h-full transition-all duration-700 ease-out rounded-full", styles.bar)}
                         style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}

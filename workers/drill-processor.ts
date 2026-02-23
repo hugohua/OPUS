@@ -525,10 +525,12 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         if (arenaPart5Group.length > 0 || mode === 'ARENA_PART5') {
             tasks.push((async () => {
                 const { getPart5DrillBatchPrompt, buildArenaPart5Inputs } = await import('@/lib/generators/arena/part5-drill');
-                const { buildWeightedTypePicker } = await import('@/lib/services/diagnostic-service');
+                const { buildWeightedTypePicker, getWeakestGrammarNodesRaw } = await import('@/lib/services/diagnostic-service');
 
-                // [V7.0] 在入口处一次性构建加权选题函数，避免循环内重复查询
+                // [V7.0] 漏斗第一层：宏观大题型调度引擎 (基于历史错误率加权)
                 const pickTypeFn = await buildWeightedTypePicker(userId);
+                // [V7.0] 漏斗第二层：微观语法结构追踪引擎 (BKT 筛选弹药库)
+                const weakNodeIds = await getWeakestGrammarNodesRaw(userId, 5); // 提取最薄弱的 5 个语法树节点
 
                 const directPivotDrills = [];
                 const realCandidates = [];
@@ -542,10 +544,10 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     }
                 }
 
-                // 一键处理真词候选项的 DB 查询与 Seed 重组，使用加权选题
+                // 一键处理真词候选项的 DB 查询与 Seed 重组，注入双漏斗引擎选型参数
                 let llmInputs: { candidate: any; input: any }[] = [];
                 if (realCandidates.length > 0) {
-                    llmInputs = await buildArenaPart5Inputs(realCandidates, pickTypeFn);
+                    llmInputs = await buildArenaPart5Inputs(realCandidates, pickTypeFn, weakNodeIds);
                 }
 
                 // 3. 执行 LLM 生成 (分批处理，每次 2 词，防 API 限流与 LLM 串线)

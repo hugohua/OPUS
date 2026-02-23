@@ -47,6 +47,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
+- **Vocab ETL Pipeline**: `docs/dev-notes/vocab-metadata-etl-pipeline.md` (**NEW**: 从 Abceed/PDF 到包含所有释义/音标/价值分的元数据清洗、补全自动化流水线与 4 个核心脚本的顺序)
 - **Mixed Mode Architecture**: `docs/dev-notes/mixed-mode-architecture.md` (**NEW**: L0/L1/L2 混合模式、Stability 场景选择、批量操作)
 - **Phase 2 Architecture**: `docs/dev-notes/phase2-architecture-summary.md` (Multi-Track & Zero-Wait)
 - **Redis Inventory**: `docs/dev-notes/redis-inventory-schema.md` (Zero-Wait caching layer, **V2.1**: Batch Operations)
@@ -67,6 +68,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Architecture**: `docs/dev-notes/tts-architecture.md` (**Updated**: Database Indexed Caching, Python Atomic Write)
 - **DB Indexing**: `docs/dev-notes/tts-db-schema-v6.md` (**New**: `TTSCache` Schema & GC Strategy)
 - **Setup**: `docs/dev-notes/tts-quickstart.md` (How to run the Python service & Docker)
+- **Audio Preload Strategy**: `docs/dev-notes/audio-preload-architecture.md` (**New**: Zero-Wait Generic Hook, Debounce, Cache Synergy)
 - **Frontend Hook**: `hooks/use-tts.ts` (React interface for playback)
 
 ### 6. SmartContent (AI 内容资产库)

@@ -10,6 +10,7 @@ import { LoadForecast } from "@/components/profile/load-forecast";
 import { ConsistencyLog } from "@/components/profile/consistency-log";
 import { PreferenceToggle } from "@/components/profile/preference-toggle";
 import { ProfileRadarTabs } from "@/components/profile/profile-radar-tabs";
+import { GlobalHeader } from "@/components/ui/global-header";
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
@@ -35,14 +36,15 @@ export default async function ProfilePage() {
             <div className="pointer-events-none absolute top-0 right-0 h-[500px] w-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent z-0" />
 
             {/* Header */}
-            <header className="relative z-20 flex items-center justify-between px-6 h-16 shrink-0 bg-transparent">
-                <Link href="/dashboard" className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 transition-all active:scale-95 -ml-2">
-                    <ArrowLeft className="w-6 h-6" strokeWidth={2} />
-                </Link>
-
-
-                {/* Setting button removed as per user request */}
-            </header>
+            <GlobalHeader
+                title={null}
+                leftSlot={
+                    <Link href="/dashboard" className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/50 dark:hover:bg-white/5 transition-all active:scale-95 -ml-2">
+                        <ArrowLeft className="w-6 h-6" strokeWidth={2} />
+                    </Link>
+                }
+                className="bg-transparent dark:from-transparent dark:via-transparent to-transparent dark:to-transparent border-none px-6"
+            />
 
             {/* ═══════════════════════ Hero Section ═══════════════════════ */}
             <section className="relative z-10 px-6 mb-8">

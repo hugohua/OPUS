@@ -18,8 +18,9 @@ import { getWeaverIngredients } from "@/actions/weaver-selection";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Loader2, Sparkles, History } from "lucide-react";
+import { Loader2, Sparkles, History, Factory } from "lucide-react";
 import Link from "next/link";
+import { GlobalHeader } from "@/components/ui/global-header";
 
 import { RawMaterials, WordItem } from "./console/RawMaterials";
 import { ContextSelector } from "./console/ContextSelector";
@@ -84,26 +85,23 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
 
 
             {/* Header - Sticky Top */}
-            <header className="px-6 py-6 flex justify-between items-center bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-100 dark:border-white/5 sticky top-0 z-20 backdrop-blur-md transition-colors duration-300">
-                <div>
-                    <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">简报生成</h1>
-                    <div className="flex items-center gap-1.5 mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
-                            Engine Ready
-                        </span>
-                    </div>
-                </div>
-                {/* History Link */}
-                <Link
-                    href="/weaver/history"
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm hover:shadow active:scale-95 group"
-                    title="查看历史记录"
-                >
-                    <History className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors" />
-                    <span className="text-sm font-medium text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">简报中心</span>
-                </Link>
-            </header>
+            <GlobalHeader
+                title="简报生成"
+                showStatusLight={true}
+                leftSlot={
+                    <Factory className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
+                }
+                rightSlot={
+                    <Link
+                        href="/weaver/history"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm hover:shadow active:scale-95 group"
+                        title="查看历史记录"
+                    >
+                        <History className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors" />
+                        <span className="text-sm font-medium text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">简报中心</span>
+                    </Link>
+                }
+            />
 
             <main className="flex-1 overflow-y-auto pb-32 relative z-10">
 

@@ -7,6 +7,7 @@ import { generateDrivePlaylist } from '@/actions/drive';
 import { DriveHeader } from './DriveHeader';
 import { DriveMain } from './DriveMain';
 import { DriveControls } from './DriveControls';
+import { useAudioPreload } from '@/hooks/use-audio-preload';
 
 
 
@@ -157,97 +158,37 @@ export function DriveLayout({
     };
 
     // ------------------------------------------------------------------
+    // Prefetch Logic (Incremental Background Preloading via Generic Hook)
     // ------------------------------------------------------------------
-    // Prefetch Logic (Incremental Background Preloading)
-    // V2: 完整预加载 - 生成 + 下载到浏览器缓存
-    // ------------------------------------------------------------------
-    const PREFETCH_LOOKAHEAD = 5; // Always keep 5 items ahead prefetched
-    const prefetchedIndicesRef = React.useRef<Set<number>>(new Set());
-    const preloadedAudiosRef = React.useRef<Map<string, HTMLAudioElement>>(new Map());
+    const extractDriveAudio = React.useCallback((item: DriveItem) => {
+        const targets = [];
+        if (item.mode === 'QUIZ') {
+            const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
+            const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || item.speed || 1.0;
+            targets.push({ text: item.word || item.text, voice: qVoice, speed: qSpeed });
 
-    // 🔥 核心：生成音频并预加载到浏览器
-    const generateAndPreload = async (text: string, voice: DashScopeVoice, speed: number): Promise<void> => {
-        try {
-            const response = await fetch('/api/tts/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, voice, language: 'en-US', speed })
-            });
-
-            if (!response.ok) return;
-
-            const { url } = await response.json();
-            if (!url || preloadedAudiosRef.current.has(url)) return;
-
-            // ✅ 预加载音频到浏览器内存
-            const audio = new Audio(url);
-            audio.preload = 'auto';
-            audio.load();
-
-            // 缓存引用，防止被 GC
-            preloadedAudiosRef.current.set(url, audio);
-
-            console.log(`[Drive Prefetch] Preloaded: ${text.slice(0, 20)}...`);
-        } catch {
-            // 静默失败
+            const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
+            const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
+            targets.push({ text: item.trans, voice: aVoice, speed: aSpeed });
+        } else if (item.mode === 'WASH') {
+            const wVoice = DRIVE_VOICE_CONFIG.WASH_PHRASE;
+            const wSpeed = DRIVE_VOICE_SPEED_PRESETS[wVoice] || item.speed || 1.0;
+            targets.push({ text: item.text, voice: wVoice, speed: wSpeed });
+        } else {
+            const sVoice = DRIVE_VOICE_CONFIG.STORY;
+            const sSpeed = DRIVE_VOICE_SPEED_PRESETS[sVoice] || item.speed || 1.0;
+            targets.push({ text: item.text, voice: sVoice, speed: sSpeed });
         }
-    };
+        return targets;
+    }, []);
 
-    const prefetchNextItems = async () => {
-        const allRequests: Array<Promise<void>> = [];
-
-        // Calculate target range: [currentIndex + 1, currentIndex + PREFETCH_LOOKAHEAD]
-        for (let offset = 1; offset <= PREFETCH_LOOKAHEAD; offset++) {
-            const targetIndex = currentIndex + offset;
-
-            // Skip if out of range or already prefetched
-            if (targetIndex >= playlist.length) break;
-            if (prefetchedIndicesRef.current.has(targetIndex)) continue;
-
-            const nextItem = playlist[targetIndex];
-
-            // Determine which audios to prefetch based on mode
-            if (nextItem.mode === 'QUIZ') {
-                // Quiz needs 2 audios: question + answer
-                const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
-                const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || nextItem.speed || 1.0;
-                allRequests.push(generateAndPreload(nextItem.word || nextItem.text, qVoice, qSpeed));
-
-                const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
-                const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
-                allRequests.push(generateAndPreload(nextItem.trans, aVoice, aSpeed));
-            } else if (nextItem.mode === 'WASH') {
-                const wVoice = DRIVE_VOICE_CONFIG.WASH_PHRASE;
-                const wSpeed = DRIVE_VOICE_SPEED_PRESETS[wVoice] || nextItem.speed || 1.0;
-                allRequests.push(generateAndPreload(nextItem.text, wVoice, wSpeed));
-            } else {
-                // STORY
-                const sVoice = DRIVE_VOICE_CONFIG.STORY;
-                const sSpeed = DRIVE_VOICE_SPEED_PRESETS[sVoice] || nextItem.speed || 1.0;
-                allRequests.push(generateAndPreload(nextItem.text, sVoice, sSpeed));
-            }
-
-            // Mark as prefetched BEFORE request completes (optimistic)
-            prefetchedIndicesRef.current.add(targetIndex);
-        }
-
-        // Fire all requests in parallel (silent fail)
-        if (allRequests.length > 0) {
-            console.log(`[Drive Prefetch] Loading ${allRequests.length} audio(s) for indices after ${currentIndex}`);
-            await Promise.allSettled(allRequests);
-        }
-    };
-
-    // Trigger prefetch when switching to a new card
-    useEffect(() => {
-        if (isPlaying) {
-            // Delay prefetch slightly to prioritize current playback
-            const timer = setTimeout(() => {
-                prefetchNextItems();
-            }, 500); // 500ms delay
-            return () => clearTimeout(timer);
-        }
-    }, [currentIndex]); // ✅ 只在切换卡片时触发，避免 playbackStage 变化导致重复加载
+    useAudioPreload<DriveItem>({
+        items: playlist,
+        currentIndex,
+        extractTextFn: extractDriveAudio,
+        lookahead: 5,
+        enabled: isPlaying
+    });
 
     // 3. Stage Transition (On TTS End)
     // We listen to tts.status changes. When it goes from 'playing' -> 'idle', and we are isPlaying, move next.

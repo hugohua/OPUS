@@ -41,9 +41,11 @@ export async function POST(request: NextRequest) {
 
     } catch (error: any) {
         log.error({ error: error.message }, 'TTS generation failed');
+        // 透传 429 状态码，允许前端做 backoff
+        const status = error.message?.includes('429') ? 429 : 500;
         return NextResponse.json(
             { success: false, error: error.message },
-            { status: 500 }
+            { status }
         );
     }
 }

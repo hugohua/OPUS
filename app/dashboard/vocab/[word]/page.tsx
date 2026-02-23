@@ -36,8 +36,7 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
 
     return (
         <div className="relative h-screen w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans antialiased flex flex-col overflow-hidden selection:bg-indigo-500/30">
-            {/* Dynamic Background */}
-            <div className="absolute top-0 left-0 w-full h-[300px] bg-emerald-500/5 dark:bg-emerald-500/5 blur-[100px] pointer-events-none z-0"></div>
+
 
             {/* Header */}
             <StickyHeader
@@ -49,7 +48,7 @@ export default async function WordDetailPage(props: WordDetailPageProps) {
             />
 
             {/* Main Scrollable Content */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden pt-20 pb-32 relative z-10 scroll-smooth">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden pt-4 pb-32 relative z-10 scroll-smooth">
 
                 {/* Hero */}
                 <VocabHero

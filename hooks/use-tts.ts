@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { generateAudioHash } from "@/lib/tts/hash";
+import { generateAudioHash, ttsMemoryCache } from "@/lib/tts/hash";
 import { TTSRequest, TTSResponse, TTSState } from "@/types/tts";
 import { toast } from "sonner";
 
-// Memory cache for audio URLs to avoid re-fetching in the same session
-const memoryCache = new Map<string, string>();
+// Global audio object ensures that there is ONLY ONE AUDIO playing across the whole app.
+// If multiple components (e.g. rapid Next clicking) trigger play(), the singleton will automatically halt the old one.
+let globalAudio: HTMLAudioElement | null = null;
+if (typeof window !== "undefined") {
+    globalAudio = new window.Audio();
+}
 
 export function useTTS() {
     const [state, setState] = useState<TTSState>({
@@ -17,8 +21,8 @@ export function useTTS() {
         currentTime: 0,
     });
 
-    const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentHashRef = useRef<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -28,17 +32,25 @@ export function useTTS() {
     }, []);
 
     const stop = useCallback(() => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            // Remove event listeners to prevent stale callbacks
-            audioRef.current.oncanplaythrough = null;
-            audioRef.current.onplay = null;
-            audioRef.current.onended = null;
-            audioRef.current.onerror = null;
-            audioRef.current.ontimeupdate = null;
-            audioRef.current = null;
+        // Cancel any pending fetch requests
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
         }
+
+        if (globalAudio) {
+            // Only stop if *this hook* was the last one to control globalAudio
+            // Actually, for multiple Rapid next clicks, we should unconditionally stop globalAudio
+            globalAudio.pause();
+            globalAudio.currentTime = 0;
+            // Clear event listeners so old hooks don't receive events meant for the new one
+            globalAudio.oncanplaythrough = null;
+            globalAudio.onplay = null;
+            globalAudio.onended = null;
+            globalAudio.onerror = null;
+            globalAudio.ontimeupdate = null;
+        }
+
         // Invalidate current hash to prevent pending audio from playing
         currentHashRef.current = null;
         setState((prev) => ({
@@ -57,22 +69,15 @@ export function useTTS() {
             speed: options.speed,
         });
 
-        // If already playing this hash, just ensure it's playing
-        if (currentHashRef.current === hash && audioRef.current && state.status !== "error") {
-            if (audioRef.current.paused) {
-                audioRef.current.play().catch(console.error);
-                setState(prev => ({ ...prev, status: "playing" }));
-            }
-            return;
-        }
-
-        // Stop previous
+        // Stop previous gracefully
         stop();
         currentHashRef.current = hash;
+        abortControllerRef.current = new AbortController();
+
         setState((prev) => ({ ...prev, status: "loading", error: null }));
 
         try {
-            let audioUrl = memoryCache.get(hash);
+            let audioUrl = ttsMemoryCache.get(hash);
 
             if (!audioUrl) {
                 // 2. Fetch from API (Generate directly, it handles cache)
@@ -80,6 +85,7 @@ export function useTTS() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(options),
+                    signal: abortControllerRef.current.signal,
                 });
 
                 if (!res.ok) {
@@ -94,36 +100,43 @@ export function useTTS() {
                 }
 
                 audioUrl = data.url;
-                memoryCache.set(hash, audioUrl);
+                ttsMemoryCache.set(hash, audioUrl);
             }
 
-            // 3. Play Audio
-            const audio = new Audio(audioUrl);
-            audioRef.current = audio;
+            // Check if we aborted while fetching (e.g. user clicked Next)
+            if (currentHashRef.current !== hash) return;
 
-            // Event Listeners (使用赋值方式，与 stop() 清理逻辑匹配)
-            audio.oncanplaythrough = () => {
+            // 3. Play Audio using Global instance
+            if (!globalAudio) return;
+
+            globalAudio.src = audioUrl;
+
+            // Event Listeners (using assignment so only the *latest* hook receives events)
+            globalAudio.oncanplaythrough = () => {
                 if (currentHashRef.current === hash) {
-                    audio.play().catch((e) => {
-                        console.error("Autoplay failed", e);
-                        setState((prev) => ({ ...prev, status: "error", error: "Autoplay blocked" }));
+                    globalAudio?.play().catch((e) => {
+                        // Ignore abort errors which are normal when user interacts quickly
+                        if (e.name !== 'AbortError') {
+                            console.error("Autoplay failed", e);
+                            setState((prev) => ({ ...prev, status: "error", error: "Autoplay blocked" }));
+                        }
                     });
                 }
             };
 
-            audio.onplay = () => {
+            globalAudio.onplay = () => {
                 if (currentHashRef.current === hash) {
                     setState((prev) => ({ ...prev, status: "playing", url: audioUrl! }));
                 }
             };
 
-            audio.onended = () => {
+            globalAudio.onended = () => {
                 if (currentHashRef.current === hash) {
                     setState((prev) => ({ ...prev, status: "idle", currentTime: 0 }));
                 }
             };
 
-            audio.onerror = (e) => {
+            globalAudio.onerror = (e) => {
                 if (currentHashRef.current === hash) {
                     console.error("Audio playback error", e);
                     setState((prev) => ({ ...prev, status: "error", error: "Playback error" }));
@@ -131,17 +144,24 @@ export function useTTS() {
             };
 
             // Update time
-            audio.ontimeupdate = () => {
-                if (currentHashRef.current === hash) {
+            globalAudio.ontimeupdate = () => {
+                if (currentHashRef.current === hash && globalAudio) {
                     setState((prev) => ({
                         ...prev,
-                        currentTime: audio.currentTime,
-                        duration: audio.duration || 0
+                        currentTime: globalAudio.currentTime,
+                        duration: globalAudio.duration || 0
                     }));
                 }
             };
 
+            // Force load to trigger oncanplaythrough immediately if cached
+            globalAudio.load();
+
         } catch (err: any) {
+            if (err.name === 'AbortError') {
+                // Ignore abort errors
+                return;
+            }
             console.error("TTS Error:", err);
             toast.error(err.message);
             setState((prev) => ({ ...prev, status: "error", error: err.message }));

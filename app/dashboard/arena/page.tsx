@@ -67,9 +67,9 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
 
                         {/* 3. Select Mode Category */}
                         <section className="space-y-4 pt-4 border-t border-border/50">
-                            <h3 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest px-1">Training Modes</h3>
+                            <h3 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest px-1">实战模式 (Training Modes)</h3>
 
-                            <Link href="/dashboard/arena/blitz" className="block w-full text-left bg-surface border border-border rounded-xl p-5 shadow-sm hover:border-violet-500 hover:shadow-md transition-all active:scale-[0.98] group relative overflow-hidden dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+                            <Link href="/dashboard/arena/blitz" className="block w-full text-left bg-white border border-border rounded-xl p-5 shadow-sm hover:border-violet-500 hover:shadow-md transition-all active:scale-[0.98] group relative overflow-hidden dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
                                 <div className="flex items-start gap-4">
                                     <div className="w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center border border-violet-100 dark:border-violet-500/20 shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors text-violet-600 dark:text-violet-400">
                                         <Zap className="w-5 h-5" />
@@ -81,7 +81,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
                                 </div>
                             </Link>
 
-                            <Link href="/dashboard/arena/mission" className="block w-full text-left bg-surface border border-border rounded-xl p-5 shadow-sm hover:border-violet-500 hover:shadow-md transition-all active:scale-[0.98] group relative overflow-hidden dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+                            <Link href="/dashboard/arena/mission" className="block w-full text-left bg-white border border-border rounded-xl p-5 shadow-sm hover:border-violet-500 hover:shadow-md transition-all active:scale-[0.98] group relative overflow-hidden dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
                                 <div className="flex items-start gap-4">
                                     <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center border border-border shrink-0 group-hover:bg-zinc-900 group-hover:text-white dark:group-hover:bg-zinc-700 transition-colors text-zinc-500 dark:text-zinc-400">
                                         <BookOpen className="w-5 h-5" />
@@ -99,7 +99,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
                     matrixData ? (
                         <SyntaxMatrix data={matrixData} activeDomain={domain} />
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-surface border border-dashed border-border rounded-xl">
+                        <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white dark:bg-zinc-900/60 border border-dashed border-border rounded-xl">
                             <Activity className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mb-4" />
                             <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-1">系统离线 (Matrix Offline)</h3>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-[240px]">
@@ -113,12 +113,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
                 )}
             </main>
 
-            {/* Footer / Floating Action */}
-            <footer className="fixed bottom-0 w-full max-w-md mx-auto p-6 bg-gradient-to-t from-background via-background/80 to-transparent z-10 pb-10 pointer-events-none">
-                <button className="w-full py-4 bg-surface border border-border text-primary font-bold rounded-xl shadow-[0_4px_0_#e2e8f0] dark:shadow-[0_4px_0_#27272a] hover:border-indigo-400 dark:hover:border-indigo-500 transition-all pointer-events-auto active:translate-y-[4px] active:shadow-none">
-                    开始综合模拟测试 →
-                </button>
-            </footer>
+
         </div>
     );
 }

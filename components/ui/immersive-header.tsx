@@ -41,8 +41,8 @@ export function ImmersiveHeader({
     return (
         <header
             className={cn(
-                "sticky top-0 z-50 pt-[calc(env(safe-area-inset-top)+1rem)] pb-2 px-5 flex flex-col gap-3",
-                "bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-transparent dark:border-white/10",
+                "sticky top-0 z-50 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2 px-4 flex flex-col gap-2",
+                "bg-gradient-to-b from-zinc-50 via-zinc-50/80 to-transparent dark:from-zinc-950 dark:via-zinc-950/80 dark:to-transparent",
                 className
             )}
         >

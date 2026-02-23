@@ -26,6 +26,7 @@ other-project-demo
 build-and-export.sh
 data/
 books/
+words/
 
 # Serwist Service Worker 构建产物
 public/sw.js

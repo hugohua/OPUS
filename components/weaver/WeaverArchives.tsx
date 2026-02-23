@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { deleteWeaverArticle } from "@/actions/weaver-actions";
 import { toast } from "sonner";
+import { GlobalHeader } from "@/components/ui/global-header";
 import {
     Popover,
     PopoverContent,
@@ -128,125 +129,123 @@ export function WeaverArchives({ articles, contexts }: WeaverArchivesProps) {
             <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none hidden dark:block z-0"></div>
 
             {/* Header */}
-            <header className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
-                        <Archive className="w-4 h-4" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                        <h1 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">简报中心</h1>
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
-                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 font-medium">
-                                已存储 {articles.length} 篇简报
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <button className={cn(
-                                "h-11 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors flex items-center gap-2 min-h-[44px]", // Mobile target size
-                                (filterStatus || filterContext)
-                                    ? "bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-900/30 dark:border-violet-800 dark:text-violet-300"
-                                    : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                            )}>
-                                <Filter className="w-3.5 h-3.5 text-current" strokeWidth={1.5} />
-                                筛选 {(filterStatus || filterContext) && '(1)'}
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-56 p-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-xl rounded-lg animate-in fade-in zoom-in-95 duration-100" align="end">
-                            {/* Status Section */}
-                            <div className="px-2 py-1.5 text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                                状态 (Status)
-                            </div>
-                            <button
-                                onClick={() => updateFilter('status', 'new')}
-                                className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left group transition-colors min-h-[44px]"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-violet-500"></div>
-                                    <span className={cn(
-                                        "text-sm font-medium transition-colors",
-                                        filterStatus === 'new' ? "text-violet-600 dark:text-violet-400" : "text-zinc-700 dark:text-zinc-300"
-                                    )}>新生成 / 未读</span>
+            <GlobalHeader
+                title="简报中心"
+                leftSlot={
+                    <Archive className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
+                }
+                rightSlot={
+                    <>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className={cn(
+                                    "h-11 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors flex items-center gap-2 min-h-[44px]", // Mobile target size
+                                    (filterStatus || filterContext)
+                                        ? "bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-900/30 dark:border-violet-800 dark:text-violet-300"
+                                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                )}>
+                                    <Filter className="w-3.5 h-3.5 text-current" strokeWidth={1.5} />
+                                    筛选 {(filterStatus || filterContext) && '(1)'}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-xl rounded-lg animate-in fade-in zoom-in-95 duration-100" align="end">
+                                {/* Status Section */}
+                                <div className="px-2 py-1.5 text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                                    状态 (Status)
                                 </div>
-                                {filterStatus === 'new' && (
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
-                                )}
-                            </button>
-                            <button
-                                onClick={() => updateFilter('status', 'archived')}
-                                className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
-                                    <span className={cn(
-                                        "text-sm font-medium transition-colors",
-                                        filterStatus === 'archived' ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"
-                                    )}>已归档</span>
-                                </div>
-                                {filterStatus === 'archived' && (
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" strokeWidth={1.5} />
-                                )}
-                            </button>
-
-                            <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1"></div>
-
-                            {/* Context Section */}
-                            <div className="px-2 py-1.5 text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                                语境 (Context)
-                            </div>
-
-                            {/* All Contexts Button */}
-                            <button
-                                onClick={() => updateFilter('context', null)}
-                                className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
-                            >
-                                <span className={cn(
-                                    "text-sm font-medium transition-colors",
-                                    !filterContext ? "text-violet-600 dark:text-violet-400" : "text-zinc-600 dark:text-zinc-400"
-                                )}>全部语境</span>
-                                {!filterContext && (
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
-                                )}
-                            </button>
-
-                            {contexts.map(ctxId => {
-                                const scenario = WEAVER_SCENARIOS.find(s => s.id === ctxId);
-                                const label = scenario?.label || ctxId;
-
-                                return (
-                                    <button
-                                        key={ctxId}
-                                        onClick={() => updateFilter('context', ctxId)}
-                                        className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
-                                    >
+                                <button
+                                    onClick={() => updateFilter('status', 'new')}
+                                    className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left group transition-colors min-h-[44px]"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-violet-500"></div>
                                         <span className={cn(
                                             "text-sm font-medium transition-colors",
-                                            filterContext === ctxId ? "text-violet-600 dark:text-violet-400" : "text-zinc-600 dark:text-zinc-400"
-                                        )}>{label}</span>
-                                        {filterContext === ctxId && (
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
-                                        )}
-                                    </button>
-                                );
-                            })}
+                                            filterStatus === 'new' ? "text-violet-600 dark:text-violet-400" : "text-zinc-700 dark:text-zinc-300"
+                                        )}>新生成 / 未读</span>
+                                    </div>
+                                    {filterStatus === 'new' && (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => updateFilter('status', 'archived')}
+                                    className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                                        <span className={cn(
+                                            "text-sm font-medium transition-colors",
+                                            filterStatus === 'archived' ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-600 dark:text-zinc-400"
+                                        )}>已归档</span>
+                                    </div>
+                                    {filterStatus === 'archived' && (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" strokeWidth={1.5} />
+                                    )}
+                                </button>
 
-                        </PopoverContent>
-                    </Popover>
+                                <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1"></div>
 
-                    <button
-                        onClick={handleNewBuild}
-                        className="h-11 px-3 py-1.5 rounded-md bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold shadow-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors flex items-center gap-2 min-h-[44px]"
-                    >
-                        <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
-                        新建简报
-                    </button>
+                                {/* Context Section */}
+                                <div className="px-2 py-1.5 text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                                    语境 (Context)
+                                </div>
+
+                                {/* All Contexts Button */}
+                                <button
+                                    onClick={() => updateFilter('context', null)}
+                                    className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
+                                >
+                                    <span className={cn(
+                                        "text-sm font-medium transition-colors",
+                                        !filterContext ? "text-violet-600 dark:text-violet-400" : "text-zinc-600 dark:text-zinc-400"
+                                    )}>全部语境</span>
+                                    {!filterContext && (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
+                                    )}
+                                </button>
+
+                                {contexts.map(ctxId => {
+                                    const scenario = WEAVER_SCENARIOS.find(s => s.id === ctxId);
+                                    const label = scenario?.label || ctxId;
+
+                                    return (
+                                        <button
+                                            key={ctxId}
+                                            onClick={() => updateFilter('context', ctxId)}
+                                            className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left transition-colors min-h-[44px]"
+                                        >
+                                            <span className={cn(
+                                                "text-sm font-medium transition-colors",
+                                                filterContext === ctxId ? "text-violet-600 dark:text-violet-400" : "text-zinc-600 dark:text-zinc-400"
+                                            )}>{label}</span>
+                                            {filterContext === ctxId && (
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+
+                            </PopoverContent>
+                        </Popover>
+
+                        <button
+                            onClick={handleNewBuild}
+                            className="h-11 px-3 py-1.5 rounded-md bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold shadow-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors flex items-center gap-2 min-h-[44px]"
+                        >
+                            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                            新建简报
+                        </button>
+                    </>
+                }
+            >
+                <div className="flex items-center gap-2 px-5 mt-[-4px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+                    <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 font-medium">
+                        已存储 {articles.length} 篇简报
+                    </span>
                 </div>
-            </header>
+            </GlobalHeader>
 
             <main className="relative flex-1 p-6 max-w-5xl mx-auto w-full space-y-4 z-10">
 

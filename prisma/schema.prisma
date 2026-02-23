@@ -8,6 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// === [STATIC_DATA] 静态题库数据 ===
 model Vocab {
   // 1. 核心标识
   id   Int    @id @default(autoincrement())
@@ -78,6 +79,7 @@ model Vocab {
 }
 
 // SmartContent: AI 生成的可复用内容 (L2 例句、L0 搭配扩展等)
+// === [STATIC_DATA] 静态题库数据 ===
 model SmartContent {
   id      String @id @default(uuid())
   vocabId Int
@@ -102,6 +104,7 @@ model SmartContent {
   @@index([createdAt])
 }
 
+// === [USER_DATA] 用户核心进度数据 ===
 model UserProgress {
   id      String @id @default(cuid())
   userId  String
@@ -157,6 +160,7 @@ model UserProgress {
   @@index([userId, track, next_review_at])
 }
 
+// === [USER_DATA] 用户业务数据 ===
 model Article {
   id        String   @id @default(cuid())
   userId    String
@@ -169,6 +173,7 @@ model Article {
   vocabs ArticleVocab[]
 }
 
+// === [USER_DATA] 用户业务数据 ===
 model ArticleVocab {
   articleId String
   vocabId   Int
@@ -180,6 +185,7 @@ model ArticleVocab {
   @@id([articleId, vocabId])
 }
 
+// === [STATIC_DATA] 静态配置数据 ===
 model InvitationCode {
   id   String @id @default(cuid())
   code String @unique
@@ -194,6 +200,7 @@ model InvitationCode {
   expiresAt DateTime? // 可选：有效期
 }
 
+// === [USER_DATA] 用户账号数据 ===
 model User {
   id String @id @default(cuid())
 
@@ -239,6 +246,7 @@ enum VocabPriority {
   NOISE
 }
 
+// === [USER_DATA] 分布式缓存状态数据 ===
 model DrillCache {
   id     String @id @default(cuid())
   userId String
@@ -261,6 +269,7 @@ model DrillCache {
 // [V5.0] Admin Inspector / AI Audit
 // [V5.1] Extended for Panoramic Audit System (OMPS + FSRS + LLM)
 // ----------------------------------------------------------------------
+// === [USER_DATA] 审计与分析数据 ===
 model DrillAudit {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
@@ -299,6 +308,7 @@ model DrillAudit {
 // ----------------------------------------------------------------------
 // [V6.0] TTS Audio Cache (Database-Indexed Caching)
 // ----------------------------------------------------------------------
+// === [STATIC_DATA] 共享音频缓存 ===
 model TTSCache {
   id String @id // MD5 Hash (text_voice_language_speed)
 
@@ -332,6 +342,7 @@ model TTSCache {
   @@index([cacheType]) // 按类型筛选
 }
 
+// === [STATIC_DATA] 静态词源资料库 ===
 model Etymology {
   // 1. 基础关系
   id      String @id @default(uuid())
@@ -366,6 +377,7 @@ enum EtymologyMode {
 // ----------------------------------------------------------------------
 // [V3.0] The Arena - Question Seed Library (The Anchor Strategy)
 // ----------------------------------------------------------------------
+// === [STATIC_DATA] 静态题库数据 ===
 model QuestionSeed {
   id String @id @default(cuid())
 
@@ -431,6 +443,7 @@ enum QuestionType {
 // ----------------------------------------------------------------------
 // [V7.0] The Arena - Adaptive Diagnostic Engine
 // ----------------------------------------------------------------------
+// === [USER_DATA] 用户答题流水账 ===
 model AttemptRecord {
   id     String @id @default(cuid())
   userId String
@@ -470,6 +483,7 @@ model AttemptRecord {
 // [V3.0] 语法结构树追踪引擎 (Grammar Skill Tree)
 // ----------------------------------------------------------------------
 
+// === [STATIC_DATA] 静态语法技能树配置 ===
 model GrammarNode {
   id          String   @id @default(cuid())
   code        String   @unique
@@ -490,6 +504,7 @@ model GrammarNode {
   @@index([parentId])
 }
 
+// === [USER_DATA] 用户语法熟练度追踪 ===
 model UserGrammarProficiency {
   id            String   @id @default(cuid())
   userId        String

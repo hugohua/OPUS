@@ -82,20 +82,21 @@ export function VocabularyList({
     };
 
     return (
-        <div className="flex flex-col h-screen w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans">
+        <div className="flex flex-col h-[100dvh] w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 font-sans pt-[env(safe-area-inset-top)]">
             {/*
              * 单一滚动容器（main）
-             * ─ VocabHud         : 随内容自然滚走（无需 JS）
+             * ─ VocabHud         : 页面顶部，随内容滚动
              * ─ sticky 吸顶块    : VocabFilters + Status Bar，position:sticky top-0
              * ─ 虚拟列表         : @tanstack/react-virtual 绝对定位渲染
              */}
-            <main ref={parentRef} className="flex-1 overflow-y-auto scrollbar-hide w-full">
 
-                {/* ① HUD — 随页面自然滚走 */}
+            <main ref={parentRef} className="flex-1 overflow-y-auto scrollbar-hide w-full relative">
+
+                {/* ① HUD — 独立作为页面全局头部 */}
                 <VocabHud stats={stats} totalCount={stats.totalVocab} />
 
                 {/* ② 筛选栏 + 状态栏 — CSS sticky 吸顶，零 JS 开销 */}
-                <div className="sticky top-0 z-20">
+                <div className="sticky top-0 z-20 bg-zinc-50 dark:bg-zinc-950 shadow-sm shadow-black/5 dark:shadow-white/5 border-b border-border">
                     <VocabFilters
                         search={search}
                         onSearchChange={setSearch}
@@ -109,7 +110,7 @@ export function VocabularyList({
                     />
 
                     {/* 状态栏：显示当前筛选结果数量 */}
-                    <div className="px-6 py-2 bg-white dark:bg-zinc-900 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-900">
+                    <div className="px-6 py-2 flex items-center justify-between">
                         <span className="text-[10px] font-mono text-zinc-500 uppercase">
                             正在显示 "{status === 'TAGGED' ? tagFilter : status}" 模式下的 {data?.pages[0]?.metadata.total ?? 0} 个词
                         </span>

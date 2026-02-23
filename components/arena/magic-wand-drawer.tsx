@@ -155,7 +155,7 @@ export function MagicWandDrawer({
                                     <h4 className="flex items-center gap-2 text-sm font-bold text-primary mb-4">
                                         <span className="text-lg">🦴</span> 句子原句
                                     </h4>
-                                    <div className="bg-surface dark:bg-zinc-900 border border-border rounded-xl p-4 text-sm shadow-sm flex flex-col gap-2">
+                                    <div className="bg-white dark:bg-zinc-900 border border-border rounded-xl p-4 text-sm shadow-sm flex flex-col gap-2">
                                         <div className="text-primary font-medium">{sentence}</div>
                                         {sentenceTranslation && (
                                             <div className="text-muted-foreground pt-2 border-t border-border/50 text-xs">

@@ -171,7 +171,8 @@ export function getPart5DrillBatchPrompt(inputs: Part5DrillInput[]) {
  */
 export async function buildArenaPart5Inputs(
   candidates: VocabEntity[],
-  pickTypeFn?: () => QuestionType
+  pickTypeFn?: () => QuestionType,
+  weakGrammarNodeIds?: string[] // [V7.0] 引入双漏斗机制的第二层：用于精准打击 BKT 计算出的薄弱点
 ): Promise<{ candidate: VocabEntity; input: Part5DrillInput }[]> {
   // 1. 预先抓取各类题型的总数（避免在每个候选词的循环中产生 N+1 数据库 Count 查询阻塞）
   const typeCounts = await Promise.all(
@@ -202,18 +203,39 @@ export async function buildArenaPart5Inputs(
         }
       }
 
-      // 如果是 70% 分支 或者 30%分支没找到对应的原题兜底，则走全域随机借场模式
+      // 如果是 70% 分支 或者 30%分支没找到对应的原题兜底，则走全域借场模式
       if (!seedRecord) {
         const targetType = pickTypeFn ? pickTypeFn() : PART5_QUESTION_TYPES[Math.floor(Math.random() * PART5_QUESTION_TYPES.length)];
-        const totalCount = typeCountMap.get(targetType) || 0;
 
-        if (totalCount > 0) {
-          seedRecord = await db.questionSeed.findFirst({
-            where: { part: 5, questionType: targetType },
-            skip: Math.floor(Math.random() * totalCount)
+        // --- 漏斗核心逻辑 (PRD 4.3) ---
+        // 如果第一层调度（DiagnosticRadar）选中了纯语法或语法相关的考点，
+        // 则尝试启动第二层（UserGrammarProficiency / GrammarRadar）精准命中知识树节点
+        if ((targetType === 'GRAMMAR' || targetType === 'MORPHOLOGY') && weakGrammarNodeIds && weakGrammarNodeIds.length > 0) {
+          // 随机在用户的最弱节点里挑一个
+          const targetedNodeId = weakGrammarNodeIds[Math.floor(Math.random() * weakGrammarNodeIds.length)];
+          const targetedSeeds = await db.questionSeed.findMany({
+            where: { part: 5, questionType: targetType, grammarNodeId: targetedNodeId },
+            take: 10,
+            orderBy: { usedCount: 'asc' }
           });
+
+          if (targetedSeeds.length > 0) {
+            seedRecord = targetedSeeds[Math.floor(Math.random() * targetedSeeds.length)];
+          }
         }
 
+        // 如果上述弱点追踪漏斗没有命中对应的种子题，降级回依靠大题型（第一层）随机借场
+        if (!seedRecord) {
+          const totalCount = typeCountMap.get(targetType) || 0;
+          if (totalCount > 0) {
+            seedRecord = await db.questionSeed.findFirst({
+              where: { part: 5, questionType: targetType },
+              skip: Math.floor(Math.random() * totalCount)
+            });
+          }
+        }
+
+        // 最终兜底
         if (!seedRecord && backupCount > 0) {
           seedRecord = await db.questionSeed.findFirst({
             where: { part: 5 },

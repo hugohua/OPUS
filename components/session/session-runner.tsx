@@ -24,6 +24,10 @@ import { SessionSkeleton } from './session-skeleton';
 import { BlitzSession } from './blitz-session';
 import { Button } from '@/components/ui/button';
 import { BriefingPayload } from '@/types/briefing';
+import React from 'react';
+import { useSharedUserSettings } from '@/components/providers/user-settings-provider';
+import { useAudioPreload } from '@/hooks/use-audio-preload';
+import { DEFAULT_TTS_VOICE, DEFAULT_TTS_SPEED } from '@/config/audio';
 
 interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
@@ -47,7 +51,8 @@ const variantMap: Record<SessionMode, 'L0' | 'L1' | 'L2'> = {
     'DAILY_BLITZ': 'L0', // Hybrid requires special handling
     'READING': 'L2',      // Arbitrary fallback
     'VISUAL': 'L0',
-    'ARENA_PART5': 'L0' // 复用 L0 Syntax 选项样式
+    'ARENA_PART5': 'L0', // 复用 L0 Syntax 选项样式
+    'ARENA_PART6': 'L0' // 复用 L0 选项样式
 };
 
 export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: SessionRunnerProps) {
@@ -68,6 +73,37 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
         queue: session.queue,
         index: session.index,
         completed: session.completed,
+    });
+
+    // --- Audio Preload Integration (Global) ---
+    const { autoPlay } = useSharedUserSettings();
+
+    // Arena 实战模式（Part5/6）不需要 TTS 预加载，仅背单词模式才触发
+    const ARENA_MODES: SessionMode[] = ['ARENA_PART5', 'ARENA_PART6'];
+    const needsAudioPreload = autoPlay && !ARENA_MODES.includes(mode);
+
+    const extractSessionAudio = React.useCallback((item: BriefingPayload) => {
+        const segments = item.segments || [];
+        const textSegments = segments.filter(s => s.type === 'text');
+
+        return textSegments.map(s => {
+            // Strip structural tags like <s>, <v>, <o>, <chunk>
+            const rawText = s.content_markdown || "";
+            const cleanText = rawText.replace(/<\/?(?:s|v|o|chunk)>/g, "");
+            return {
+                text: cleanText,
+                voice: DEFAULT_TTS_VOICE,
+                speed: DEFAULT_TTS_SPEED
+            };
+        });
+    }, []);
+
+    useAudioPreload<BriefingPayload>({
+        items: session.queue,
+        currentIndex: session.index,
+        extractTextFn: extractSessionAudio,
+        lookahead: 3,
+        enabled: needsAudioPreload
     });
 
     // --- Early Return: BLITZ Mode ---

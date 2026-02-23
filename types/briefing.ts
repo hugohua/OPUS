@@ -4,7 +4,8 @@ export type SingleScenarioMode =
     | "AUDIO" | "CHUNKING"              // L1 感知层
     | "CONTEXT" | "NUANCE"              // L2 应用层
     | "READING" | "VISUAL"              // 其他模式
-    | "ARENA_PART5";                    // [NEW] 竞技场 Part 5
+    | "ARENA_PART5"                     // 竞技场 Part 5
+    | "ARENA_PART6";                    // [NEW] 竞技场 Part 6
 
 // 混合场景模式（用于首页智能混合）
 export type MixedScenarioMode =
@@ -16,7 +17,7 @@ export type MixedScenarioMode =
 // SessionMode 统一类型（向后兼容）
 export type SessionMode = SingleScenarioMode | MixedScenarioMode;
 
-export type BriefingFormat = "chat" | "email" | "memo" | "article";
+export type BriefingFormat = "chat" | "email" | "memo" | "article" | "part6";
 
 export type InteractionStyle = "swipe_card" | "bubble_select" | "slot_machine";
 
@@ -86,6 +87,9 @@ export interface BriefingPayload {
         questionSeedId?: string; // [V7.0] For Arena Telemetry
         questionType?: string; // [V7.0] For Arena Telemetry
         part?: number; // [V7.0] For Arena Telemetry
+        target_word_blank_index?: number; // [V8.0 / Part 6] FSRS 追踪的核心词所在坑位 (1-4)
+        generation_ms?: number; // [V8.0 / Part 6] 生成耗时遥测
+        seed_origin?: 'part6_native' | 'part5_fallback'; // [V8.0 / Part 6] 种子来源遥测
         /** @internal 仅用于客户端 FSRS 预览计算 */
         fsrsCard?: {
             stability: number;
@@ -98,4 +102,5 @@ export interface BriefingPayload {
         userNote?: string; // [New] Feature A: User custom memory hook
     };
     segments: BriefingSegment[];
+    passage_markdown?: string; // [V8.0 / Part 6] The overarching passage text
 }

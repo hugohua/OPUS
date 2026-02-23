@@ -51,14 +51,14 @@ export function GrammarRadar({ initialData }: { initialData?: RadarDomain[] }) {
         );
     }
 
-    if (radarDomains.length === 0) {
+    if (radarDomains.length === 0 || radarDomains.every(d => d.score === 0)) {
         return (
             <Card className="w-full relative overflow-hidden">
                 <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2">
                         <span>专精语法树</span>
                         <span className="text-[10px] font-mono font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full uppercase">
-                            L1 DOMAINS
+                            L1 专精领域 (DOMAINS)
                         </span>
                     </CardTitle>
                     <CardDescription>
@@ -95,7 +95,7 @@ export function GrammarRadar({ initialData }: { initialData?: RadarDomain[] }) {
                         </PopoverContent>
                     </Popover>
                     <span className="text-[10px] font-mono font-normal text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50 uppercase">
-                        L1 DOMAINS
+                        L1 专精领域 (DOMAINS)
                     </span>
                 </CardTitle>
                 <CardDescription>

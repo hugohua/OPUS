@@ -156,3 +156,25 @@ export async function getRadarDataRaw(userId: string): Promise<{
         totalAttempts,
     };
 }
+
+// --------------------------------------------------------------------------
+// 4. getWeakestGrammarNodesRaw — 取出用户最薄弱的 L3 语法节点
+// --------------------------------------------------------------------------
+export async function getWeakestGrammarNodesRaw(
+    userId: string,
+    limit = 3
+): Promise<string[]> {
+    const weakNodes = await db.userGrammarProficiency.findMany({
+        where: {
+            userId,
+            masteryScore: { not: undefined }, // 有记录
+            grammarNode: { level: 3 }         // L3 叶子节点
+        },
+        orderBy: { masteryScore: 'asc' },
+        take: limit,
+        select: { grammarNodeId: true }
+    });
+
+    // 过滤掉可能存在的 null 或未挂载的数据
+    return weakNodes.map(n => n.grammarNodeId).filter((id): id is string => id !== null);
+}

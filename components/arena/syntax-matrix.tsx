@@ -57,7 +57,7 @@ export function SyntaxMatrix({ data, activeDomain }: SyntaxMatrixProps) {
             <div className="space-y-8">
                 {data.categories.length === 0 ? (
                     <div className="text-center py-10 text-sm text-zinc-500 font-mono">
-                        No modules active in this domain.
+                        该领域暂无活跃的训练模块。
                     </div>
                 ) : (
                     data.categories.map(category => (
@@ -68,7 +68,7 @@ export function SyntaxMatrix({ data, activeDomain }: SyntaxMatrixProps) {
                                 </h2>
                                 <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800"></div>
                                 <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                                    {category.knots.reduce((acc, k) => acc + k.availableQs, 0)} Qs
+                                    {category.knots.reduce((acc, k) => acc + k.availableQs, 0)} 题 (Qs)
                                 </span>
                             </div>
 
@@ -135,7 +135,7 @@ function MatrixTile({ knot, onClick }: { knot: SyntaxKnot, onClick: () => void }
                     {knot.nameEn || knot.name}
                 </h3>
                 <p className={`text-[9px] mt-0.5 font-mono ${isVulnerable ? 'text-rose-500 font-bold' : 'text-zinc-400 dark:text-zinc-500'}`}>
-                    {knot.masteryScore}% Mastery
+                    {knot.masteryScore}% 掌握度
                 </p>
             </div>
 
@@ -167,7 +167,7 @@ function SyntaxTileDrawer({
         <Drawer open={!!selected} onOpenChange={(open) => !open && onClose()}>
             <DrawerContent className="bg-background rounded-t-2xl outline-none max-h-[85vh] border-border pb-safe">
                 <VisuallyHidden.Root>
-                    <DrawerTitle>Target Drill Action</DrawerTitle>
+                    <DrawerTitle>靶向特训 (Target Drill Action)</DrawerTitle>
                 </VisuallyHidden.Root>
 
                 {/* Handle */}
@@ -195,7 +195,7 @@ function SyntaxTileDrawer({
                         {isVulnerable && (
                             <div className="flex flex-col items-end">
                                 <span className="px-2 py-1 rounded-md bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold border border-rose-200 dark:border-rose-500/20">
-                                    ACTION REQ
+                                    亟待提升 (ACTION REQ)
                                 </span>
                             </div>
                         )}
@@ -204,19 +204,19 @@ function SyntaxTileDrawer({
                     {/* Stats Panel */}
                     <div className="flex gap-3">
                         <div className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-white/5 rounded-xl p-3">
-                            <span className="block text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mb-1 uppercase">BKT Mastery</span>
+                            <span className="block text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mb-1 uppercase">BKT 掌握度</span>
                             <div className="flex items-baseline gap-1.5">
                                 <span className={`text-xl font-bold ${isVulnerable ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
                                     {knot.masteryScore}<span className="text-sm">%</span>
                                 </span>
-                                {isVulnerable && <span className="text-[10px] text-rose-500 font-mono">↓ Vulnerable</span>}
+                                {isVulnerable && <span className="text-[10px] text-rose-500 font-mono">↓ 薄弱项</span>}
                             </div>
                         </div>
                         <div className="flex-1 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-white/5 rounded-xl p-3">
-                            <span className="block text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mb-1 uppercase">Questions</span>
+                            <span className="block text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mb-1 uppercase">储备题库</span>
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-xl font-bold text-zinc-800 dark:text-zinc-200">{knot.availableQs}</span>
-                                <span className="text-[10px] text-zinc-500 font-mono">Available</span>
+                                <span className="text-[10px] text-zinc-500 font-mono">可用题解</span>
                             </div>
                         </div>
                     </div>
@@ -228,7 +228,7 @@ function SyntaxTileDrawer({
                         className="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-bold shadow-[0_4px_0_#0f172a] dark:shadow-md hover:bg-zinc-800 dark:hover:bg-zinc-200 active:translate-y-[4px] active:shadow-none delay-75 transition-all"
                     >
                         <Target className="w-4 h-4 text-indigo-400 dark:text-indigo-600" />
-                        Targeted Drill ({Math.min(knot.availableQs, 10)} Qs)
+                        开启靶向特训 ({Math.min(knot.availableQs, 10)} 题)
                     </Link>
                 </div>
             </DrawerContent>

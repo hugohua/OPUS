@@ -13,34 +13,18 @@ interface VocabHudProps {
     };
     totalCount: number; // For progress calc
 }
-
 export function VocabHud({ stats, totalCount }: VocabHudProps) {
     const masteredPct = totalCount > 0 ? (stats.mastered / totalCount) * 100 : 0;
     const learningPct = totalCount > 0 ? (stats.learning / totalCount) * 100 : 0;
-    // The rest is "New" or "Index". Demo showed Zinc for the rest.
-
-    // Demo header structure:
-    // Left: Title + Subtitle
-    // Right: Big Number (Mastered) + Label
-    // Bottom: Progress Bar
 
     return (
-        <header className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 py-2.5 z-20">
-            <div className="flex items-center justify-between mb-2">
-                <div>
-                    <h1 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">词库</h1>
-                    <p className="text-xs text-zinc-500 font-mono mt-0.5">TOEIC Core • FSRS v4.5</p>
-                </div>
-                <div className="text-right">
-                    <div className="text-2xl font-mono font-bold text-emerald-500">
-                        {stats.mastered.toLocaleString()}
-                    </div>
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">已掌握</div>
-                </div>
-            </div>
+        <header className="px-5 py-4 flex items-center justify-between shrink-0 pointer-events-auto">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-50 tracking-tight shrink-0">
+                词库
+            </h1>
 
-            {/* Progress Bar */}
-            <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
+            {/* Progress Bar centered */}
+            <div className="flex-1 mx-6 max-w-[200px] h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden flex">
                 <div
                     className="h-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${masteredPct}%` }}
@@ -49,12 +33,14 @@ export function VocabHud({ stats, totalCount }: VocabHudProps) {
                     className="h-full bg-amber-500 transition-all duration-500"
                     style={{ width: `${learningPct}%` }}
                 />
-                {/* Remaining space is implicitly zinc-800 (background) or we add a zinc-700 segment for "seen but not learning"? 
-                    Demo said: "bg-zinc-700 w-[45%]" for the last part. 
-                    Let's assume the background covers 'New' or 'Locked', 
-                    but if we want specific color for 'New', we can add another div.
-                    For now, background is fine.
-                */}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest hidden sm:inline-block">已掌握</span>
+                <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {stats.mastered.toLocaleString()}
+                </span>
             </div>
         </header>
     );

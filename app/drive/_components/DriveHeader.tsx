@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDrive } from './DriveLayout';
+import { ImmersiveHeader } from '@/components/ui/immersive-header';
+import { useRouter } from 'next/navigation';
 
 export function DriveHeader() {
     const { theme, setTheme } = useTheme();
     const { playlist, currentIndex } = useDrive();
     const [currentTime, setCurrentTime] = useState('');
     const [mounted, setMounted] = useState(false);
+    const router = useRouter();
 
     // Prevent hydration mismatch for time and theme
     useEffect(() => {
@@ -29,9 +32,7 @@ export function DriveHeader() {
     };
 
     if (!mounted) return (
-        <header className="shrink-0 p-6 flex flex-col gap-4 opacity-80 h-[88px]">
-            {/* Skeleton placeholder to prevent layout shift */}
-        </header>
+        <ImmersiveHeader className="opacity-80 h-[88px] bg-transparent dark:bg-transparent" />
     );
 
     const totalWords = playlist.length;
@@ -39,41 +40,41 @@ export function DriveHeader() {
     const progress = totalWords > 0 ? (currentWordNum / totalWords) * 100 : 0;
 
     return (
-        <header className="shrink-0 pt-6 px-6 pb-2 flex flex-col gap-4 opacity-80 min-h-[88px]">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_#f43f5e]"></span>
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Auto-Cycle</span>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    {/* Theme Toggle */}
-                    <button
-                        onClick={toggleTheme}
-                        className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                        aria-label="Toggle Theme"
-                    >
-                        {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
-                    </button>
-
-                    <span className="text-xl font-bold font-mono text-muted-foreground/80">
-                        {currentTime}
+        <ImmersiveHeader
+            className="bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl shrink-0 border-b border-transparent dark:border-white/5"
+            progress={progress}
+            leftAction={
+                <button
+                    onClick={() => router.push('/dashboard')}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-200/50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300/50 dark:hover:bg-zinc-700 transition-colors active:scale-95"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+            }
+            centerContent={
+                <div className="flex bg-rose-50 dark:bg-rose-900/20 px-3 py-1 rounded-full items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_#f43f5e]"></span>
+                    <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest leading-none">
+                        Auto-Cycle • {currentWordNum}/{totalWords}
                     </span>
                 </div>
-            </div>
-
-            {/* Word Progress Counter */}
-            <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-primary transition-all duration-300 ease-out"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-                <span className="text-xs font-mono text-muted-foreground tabular-nums min-w-[3rem] text-right">
-                    {currentWordNum}/{totalWords}
-                </span>
-            </div>
-        </header>
+            }
+            rightAction={
+                <>
+                    <button
+                        onClick={toggleTheme}
+                        className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 transition-colors"
+                        aria-label="Toggle Theme"
+                    >
+                        {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                    </button>
+                    <div className="h-10 px-3 flex items-center justify-center">
+                        <span className="text-sm font-bold font-mono text-zinc-500 dark:text-zinc-400">
+                            {currentTime}
+                        </span>
+                    </div>
+                </>
+            }
+        />
     );
 }

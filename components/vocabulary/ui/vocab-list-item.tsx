@@ -11,113 +11,147 @@ interface VocabListItemProps {
 }
 
 export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
-    // Color logic
-    let rankColor = "text-zinc-400 dark:text-zinc-600"; // Light: neutral, Dark: muted
-    // Actually, Rank should be visible. 
-    // Light: text-zinc-500. Dark: text-zinc-500.
-    rankColor = "text-zinc-500";
-    let statusColor = "text-zinc-500";
-    let statusBg = "bg-zinc-800/10";
-    let statusText = "Unknown";
-    let barColor = "bg-zinc-700";
-
     const s = item.fsrs;
 
+    // Default styles for 'NEW' (uninitiated)
+    let leftAccentColor = "bg-slate-200 dark:bg-zinc-800 group-hover:bg-indigo-300 dark:group-hover:bg-indigo-500 transition-colors";
+    let titleColor = "text-slate-700 dark:text-zinc-300";
+    let showTelemetry = false;
+
+    // Status Tag (Only shown for New, Due, Leech)
+    let tagElement = null;
+
     if (s.status === 'MASTERED') {
-        statusColor = "text-emerald-500";
-        statusBg = "bg-emerald-500/10";
-        statusText = "已掌握";
-        barColor = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+        leftAccentColor = "bg-emerald-500 opacity-50 group-hover:opacity-100 transition-opacity";
+        titleColor = "text-slate-900 dark:text-zinc-100";
+        showTelemetry = true;
     } else if (s.status === 'LEARNING' || s.status === 'REVIEW') {
+        titleColor = "text-slate-900 dark:text-zinc-100";
+        showTelemetry = true;
+
+        const isDue = s.nextReview && new Date(s.nextReview) <= new Date();
+
         if (s.isLeech) {
-            statusColor = "text-rose-500";
-            statusBg = "bg-rose-500/10";
-            statusText = "难点词";
-            barColor = "bg-rose-500";
-        } else if (s.nextReview && new Date(s.nextReview) <= new Date()) {
-            statusColor = "text-amber-500";
-            statusBg = "bg-amber-500/10";
-            statusText = "待复习";
-            barColor = "bg-amber-500";
+            leftAccentColor = "bg-rose-500";
+            tagElement = (
+                <span className="px-1 py-0.5 rounded bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-[9px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest shrink-0">
+                    Leech
+                </span>
+            );
+        } else if (isDue) {
+            leftAccentColor = "bg-amber-500";
+            tagElement = (
+                <span className="px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900/50 text-[9px] font-mono font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest shrink-0">
+                    Due
+                </span>
+            );
         } else {
-            statusColor = "text-amber-500"; // Learning/Review generally active
-            statusBg = "bg-amber-500/10";
-            statusText = s.status === 'REVIEW' ? '待复习' : '学习中';
-            barColor = "bg-amber-500";
+            // Learning/Review (Not due)
+            leftAccentColor = "bg-indigo-400 opacity-80 dark:bg-indigo-500";
         }
     } else {
-        // New
-        rankColor = "text-zinc-600";
-        statusText = "新词";
-        // New items might not show status pill in demo, or just grey?
+        // NEW
+        tagElement = (
+            <span className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/50 text-[9px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">
+                New
+            </span>
+        );
     }
 
-    // Rank styling
-    if (item.abceedRank && item.abceedRank <= 1000) rankColor = "text-emerald-600";
-    else if (item.abceedRank && item.abceedRank <= 2000) rankColor = "text-amber-600";
+    // Attempt to extract Part of Speech from definition if possible, else default to '-'
+    // Assuming format "v. do something; n. something"
+    let pos = "";
+    let cleanDef = item.definition || "暂无释义";
+    const posMatch = cleanDef.match(/^([a-z]+?\.)\s+(.*)/);
+    if (posMatch) {
+        pos = posMatch[1]; // e.g. "v."
+        cleanDef = posMatch[2];
+    } else if (cleanDef.includes(".")) {
+        // rough fallback
+        const split = cleanDef.split(/(\.|，)/);
+        if (split[0].length <= 5 && split[0].match(/^[a-z]+$/)) {
+            pos = split[0] + ".";
+            cleanDef = cleanDef.substring(pos.length).trim();
+        }
+    }
 
+    // Fallback if no POS extracted
+    if (!pos) pos = "w.";
 
+    // Calculate Next Review formatting
     const nextReviewDays = s.nextReview
         ? Math.ceil((new Date(s.nextReview).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : 0;
 
-    let dueText = "";
-    if (s.status === 'NEW') dueText = "未开始";
-    else if (nextReviewDays <= 0) dueText = "今日复习";
-    else dueText = `复习: ${nextReviewDays}天`;
+    let nextLabel = "Not initiated";
+    let nextValueClass = "text-slate-400";
+    let nextValueText = "";
 
+    if (showTelemetry) {
+        if (nextReviewDays <= 0) {
+            nextValueClass = "text-amber-600 dark:text-amber-500 font-bold";
+            nextValueText = "Today";
+        } else if (nextReviewDays === 1) {
+            nextValueClass = "text-indigo-600 dark:text-indigo-400 font-bold";
+            nextValueText = "Tomorrow";
+        } else {
+            nextValueClass = "text-slate-800 dark:text-zinc-300 font-bold";
+            nextValueText = `${nextReviewDays}d`;
+        }
+    }
+
+    // Telemetry Colors (R/S)
+    const RColor = s.retention >= 90 ? "text-emerald-600 dark:text-emerald-500" : (s.retention < 80 ? "text-amber-600 dark:text-amber-500" : "text-slate-700 dark:text-zinc-300");
+    const SColor = s.stability >= 21 ? "text-emerald-600 dark:text-emerald-500" : "text-slate-700 dark:text-zinc-300";
 
     return (
         <div
             style={style}
             onClick={onClick}
-            className="group flex items-center px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
+            className={cn(
+                "group flex items-start justify-between p-3.5 border-b border-slate-100 dark:border-white/5 bg-white dark:bg-zinc-950",
+                "hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer relative",
+                !showTelemetry && "opacity-60 hover:opacity-100" // DIM non-initiated words
+            )}
         >
-            {/* ID */}
-            <div className="w-10 shrink-0 text-[10px] font-mono font-bold mr-2 text-right">
-                <span className={cn(rankColor)}>{item.abceedRank ? `#${item.abceedRank}` : '-'}</span>
-            </div>
+            {/* Absolute Status via Accent Lines */}
+            <div className={cn("absolute left-0 top-0 bottom-0 w-[2px]", leftAccentColor)}></div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0 mx-4">
+            <div className="flex-1 min-w-0 flex flex-col gap-1 pl-2.5">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <h3 className={cn("font-bold text-base truncate tracking-tight", titleColor)}>
                         {item.word}
-                    </span>
-
-                    {/* Status Pill (Only if not New or strict condition) */}
-                    {s.status !== 'NEW' && (
-                        <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/5", statusColor, statusBg)}>
-                            {statusText}
-                        </span>
-                    )}
-
-                    {/* Has Context Icon */}
-                    {s.hasContext && (
-                        <Sparkles className="w-3 h-3 text-violet-400 fill-violet-400/20" />
-                    )}
+                    </h3>
+                    {tagElement}
+                    {s.hasContext && <Sparkles className="w-3 h-3 text-violet-400 fill-violet-400/30 shrink-0" />}
                 </div>
-                <p className="text-xs text-zinc-500 mt-0.5 truncate max-w-[200px] md:max-w-md">
-                    {item.definition}
-                </p>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:text-zinc-400 dark:bg-zinc-800/50 px-1 rounded border border-transparent dark:border-white/5 shrink-0">
+                        {pos}
+                    </span>
+                    <p className="text-[13px] text-slate-500 dark:text-zinc-500 truncate">
+                        {cleanDef}
+                    </p>
+                </div>
             </div>
 
-            {/* Right: State */}
-            <div className="text-right w-24 shrink-0 flex flex-col items-end gap-1">
-                {s.status !== 'NEW' ? (
+            <div className="flex flex-col items-end shrink-0 ml-4 justify-center gap-1.5 h-full">
+                {showTelemetry ? (
                     <>
-                        <div className="w-16 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                            <div
-                                className={cn("h-full", barColor)}
-                                style={{ width: `${s.retention}%` }}
-                            />
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-zinc-500">
+                            Next: <span className={nextValueClass}>{nextValueText}</span>
                         </div>
-                        <div className={cn("text-[10px] font-mono", nextReviewDays <= 0 ? "text-amber-500 font-bold" : "text-zinc-500")}>
-                            {dueText}
+                        <div className="flex items-center gap-2 text-[9px] font-mono">
+                            <span className="text-slate-400 dark:text-zinc-500" title="Retrievability">
+                                R: <span className={cn("font-bold", RColor)}>{s.retention.toFixed(0)}%</span>
+                            </span>
+                            <span className="text-slate-400 dark:text-zinc-500" title="Stability">
+                                S: <span className={cn("font-bold", SColor)}>{s.stability.toFixed(1)}</span>
+                            </span>
                         </div>
                     </>
                 ) : (
-                    <div className="text-[10px] text-zinc-600 font-mono">未学习</div>
+                    <span className="text-[10px] font-mono text-slate-400 dark:text-zinc-600 mt-0.5">Not initiated</span>
                 )}
             </div>
         </div>

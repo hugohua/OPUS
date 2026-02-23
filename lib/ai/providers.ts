@@ -58,7 +58,7 @@ export class ProviderRegistry {
         if (process.env.ETL_API_KEY && process.env.ETL_BASE_URL) {
             pool['openrouter'] = {
                 id: 'openrouter',
-                modelId: process.env.ETL_MODEL_NAME || 'google/gemini-flash-1.5',
+                modelId: process.env.ETL_MODEL_NAME || 'google/gemini-3-flash-preview',
                 apiKey: process.env.ETL_API_KEY,
                 baseURL: process.env.ETL_BASE_URL,
                 proxy: process.env.HTTPS_PROXY,

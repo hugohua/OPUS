@@ -70,7 +70,7 @@ export function RadarChart({ domains, colorVariant = "violet" }: RadarChartProps
     const dotFillColor = colorVariant === "cyan" ? "#06b6d4" : "#8b5cf6";
 
     return (
-        <div className="relative w-full aspect-square max-w-[260px] mx-auto my-4">
+        <div className="relative w-full aspect-square max-w-[210px] mx-auto my-4">
             <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
                 {/* 1. 背景多边形轮廓 (Full & Mid) */}
                 <polygon points={maxOutline} fill="none" stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" strokeWidth="1" />

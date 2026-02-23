@@ -29,7 +29,7 @@ async function testProxy() {
         const startTime = Date.now();
 
         const response = await client.chat.completions.create({
-            model: "gemini-3-flash",
+            model: "gemini-3.1-pro-high",
             messages: [{ role: "user", content: "Hello" }],
         });
 

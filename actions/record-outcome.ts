@@ -27,8 +27,8 @@ function mapModeToTrack(mode: string): string {
     if (['AUDIO'].includes(mode)) return 'AUDIO';
     // L2: Context -> CONTEXT
     if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
-    // L2: Arena Part 5 -> VISUAL (Syntax level pattern matching)
-    if (mode === 'ARENA_PART5') return 'VISUAL';
+    // L2: Arena Part 5/6 -> VISUAL (Syntax level pattern matching)
+    if (mode === 'ARENA_PART5' || mode === 'ARENA_PART6') return 'VISUAL';
 
     // Default fallback
     return 'VISUAL';

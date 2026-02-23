@@ -52,7 +52,7 @@ class Config:
     AUDIO_SAMPLE_RATE: int = 24000  # 24kHz
     
     # 并发控制
-    MAX_CONCURRENT_REQUESTS: int = 5
+    MAX_CONCURRENT_REQUESTS: int = 3
     
     # 超时设置
     TTS_API_TIMEOUT: int = 30  # 秒

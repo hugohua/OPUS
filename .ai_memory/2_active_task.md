@@ -15,6 +15,7 @@ Task 1.5: Topic Briefing & Phase 1.5 Features
   - [x] Infrastructure: Architecture Unification (Article/Vocab Services)
 - [x] Task 1.5.3: PRD Update (Topic Briefing) - Doc Integration
 - [ ] Task 1.5.4: Topic Briefing (AI Context Generator) - Implementation
+- [x] Task 1.5.5: Arena Mission (Part 6/7) 悬浮指挥舱 Split-Dock UI 重构
 - [ ] Task 3.2: Rest Card UI (每日休息卡)
 - [x] 替换本地数据库 (Import `opus_export.sql`)
 

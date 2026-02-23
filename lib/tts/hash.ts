@@ -6,6 +6,9 @@
  */
 import MD5 from 'crypto-js/md5';
 
+// Global memory cache for TTS URLs shared between useTTS and preload utilities
+export const ttsMemoryCache = new Map<string, string>();
+
 interface HashOptions {
     text: string;
     voice?: string;
