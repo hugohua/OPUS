@@ -33,9 +33,10 @@ import { MODE_LABELS } from "@/lib/constants/modes";
 interface OperationPanelProps {
     isPaused: boolean;
     userId: string;
+    queuedCount: number;
 }
 
-export function OperationPanel({ isPaused: initialPaused, userId }: OperationPanelProps) {
+export function OperationPanel({ isPaused: initialPaused, userId, queuedCount }: OperationPanelProps) {
     const [isPaused, setIsPaused] = useState(initialPaused);
     const [loading, setLoading] = useState<string | null>(null);
     const [confirmClearMode, setConfirmClearMode] = useState<SessionMode | null>(null);
@@ -245,7 +246,7 @@ export function OperationPanel({ isPaused: initialPaused, userId }: OperationPan
                             disabled={loading !== null}
                             className="flex-1 py-2 text-xs font-medium text-rose-400 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors disabled:opacity-50"
                         >
-                            {loading === 'clear' ? '清空中...' : '清空队列'}
+                            {loading === 'clear' ? '清空中...' : `清空队列 (${queuedCount})`}
                         </button>
                     </AlertDialogTrigger>
                     {/* ... content ... */}

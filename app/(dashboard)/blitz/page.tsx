@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { getUserSettings } from '@/actions/update-user-settings';
+import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
+
 export const metadata: Metadata = {
     title: 'Phrase Blitz | OPUS',
     description: 'High-velocity vocabulary review.',
@@ -47,21 +50,25 @@ export default async function BlitzPage() {
         );
     }
 
-    return (
-        <div className="container max-w-md mx-auto py-6 min-h-screen relative">
-            {/* Minimalist Header (Optional Back Button) */}
-            <div className="absolute top-4 left-4 z-50">
-                <Button variant="ghost" size="icon" asChild className="opacity-50 hover:opacity-100">
-                    <Link href="/dashboard">
-                        <ArrowLeft className="h-5 w-5" />
-                    </Link>
-                </Button>
-            </div>
+    const settings = await getUserSettings();
 
-            <BlitzSession
-                initialData={blitzData}
-                userId={session.user.id}
-            />
-        </div>
+    return (
+        <UserSettingsProvider settings={settings}>
+            <div className="container max-w-md mx-auto py-6 min-h-screen relative">
+                {/* Minimalist Header (Optional Back Button) */}
+                <div className="absolute top-4 left-4 z-50">
+                    <Button variant="ghost" size="icon" asChild className="opacity-50 hover:opacity-100">
+                        <Link href="/dashboard">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Link>
+                    </Button>
+                </div>
+
+                <BlitzSession
+                    initialData={blitzData}
+                    userId={session.user.id}
+                />
+            </div>
+        </UserSettingsProvider>
     );
 }

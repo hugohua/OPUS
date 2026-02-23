@@ -1,5 +1,5 @@
 "use client";
-
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { stripBold, hasBold } from "@/lib/utils/markdown";
 import { useTTS } from "@/hooks/use-tts"; // Re-added for H1 interaction
@@ -16,7 +16,10 @@ interface PhraseCardProps {
     status: "idle" | "correct" | "wrong" | "revealed";
     targetWord?: string;
     etymology?: any; // [New]
+    userNote?: string; // [New] Feature A
 }
+
+import { useSharedUserSettings } from "@/components/providers/user-settings-provider";
 
 export function PhraseCard({
     phraseMarkdown,
@@ -26,8 +29,11 @@ export function PhraseCard({
     partOfSpeech,
     status,
     targetWord,
-    etymology // [New]
+    etymology, // [New]
+    userNote // [New] Feature A
 }: PhraseCardProps) {
+
+    const { autoPlay } = useSharedUserSettings();
 
     // Smart Highlight Logic matching Demo Style (Tilted + Indigo)
     const renderSmartText = (text: string) => {
@@ -156,6 +162,14 @@ export function PhraseCard({
         });
     };
 
+    const [lastPlayedPhrase, setLastPlayedPhrase] = useState<string | null>(null);
+    useEffect(() => {
+        if (autoPlay && phraseMarkdown && lastPlayedPhrase !== phraseMarkdown) {
+            handlePlaySentence();
+            setLastPlayedPhrase(phraseMarkdown);
+        }
+    }, [autoPlay, phraseMarkdown, lastPlayedPhrase, playSentence]);
+
     return (
         <div className="w-full h-full flex flex-col justify-between relative">
 
@@ -163,11 +177,18 @@ export function PhraseCard({
             <div className="flex-1 flex flex-col justify-center w-full">
                 {/* Removed px-6 (handled by wrapper) */}
 
-                {/* Tag */}
-                <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {/* Meta Tags & User Note */}
+                <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500 flex flex-col gap-3 items-start">
                     <span className="px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest shadow-sm">
                         Business • Phrase
                     </span>
+                    {userNote && (
+                        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-900/50 px-3 py-2 rounded-lg text-amber-700 dark:text-amber-400 text-sm animate-in fade-in duration-700 shadow-sm max-w-[85%]">
+                            <span className="font-serif italic mt-0.5 leading-tight select-text">
+                                "{userNote}"
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Main Sentence - Click to Play */}

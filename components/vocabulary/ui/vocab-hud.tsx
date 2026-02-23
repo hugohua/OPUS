@@ -25,8 +25,8 @@ export function VocabHud({ stats, totalCount }: VocabHudProps) {
     // Bottom: Progress Bar
 
     return (
-        <header className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 z-20">
-            <div className="flex items-end justify-between mb-4">
+        <header className="shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 py-2.5 z-20">
+            <div className="flex items-center justify-between mb-2">
                 <div>
                     <h1 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">词库</h1>
                     <p className="text-xs text-zinc-500 font-mono mt-0.5">TOEIC Core • FSRS v4.5</p>

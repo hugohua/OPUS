@@ -196,7 +196,7 @@ export function VocabularyCard({
                 )}
             >
                 <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-600">
-                    Abceed Rank #{collocations.length > 0 ? "Top" : "N/A"}
+                    Abceed 排行 #{collocations.length > 0 ? "Top" : "N/A"}
                 </span>
                 <Button
                     variant="ghost"

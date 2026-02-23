@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { X, Dot, ArrowLeft } from "lucide-react";
+import { X } from "lucide-react";
 
 export type FocusShellVariant = "L0" | "L1" | "L2" | "default"; // L0=Amber, L1=Cyan, L2=Violet
 
@@ -26,8 +26,35 @@ export function FocusShell({
     label = "训练",
     className
 }: FocusShellProps) {
+    const shellRef = useRef<HTMLDivElement>(null);
 
-    // 1. Color System Mapping (Zinc as base, Variant as highlight)
+    useEffect(() => {
+        // 第一层：CSS class toggle（position:fixed + overflow:hidden）
+        document.documentElement.classList.add('in-session');
+
+        // 第二层：JS touchmove 拦截（iOS Safari 终极兜底）
+        // 仅拦截 shell 容器自身的 touchmove，内部可滚动区域通过 data-scrollable 豁免
+        const shell = shellRef.current;
+        const preventTouchMove = (e: TouchEvent) => {
+            // 检查触摸目标是否在可滚动的 main 区域内
+            const target = e.target as HTMLElement;
+            const scrollableParent = target.closest('[data-scrollable]');
+            if (scrollableParent) {
+                // 允许可滚动区域内部滚动
+                return;
+            }
+            e.preventDefault();
+        };
+
+        shell?.addEventListener('touchmove', preventTouchMove, { passive: false });
+
+        return () => {
+            document.documentElement.classList.remove('in-session');
+            shell?.removeEventListener('touchmove', preventTouchMove);
+        };
+    }, []);
+
+    // Color System Mapping (Zinc as base, Variant as highlight)
     const variantStyles: Record<string, any> = {
         L0: {
             bar: "bg-amber-500",
@@ -58,11 +85,15 @@ export function FocusShell({
     const styles = variantStyles[variant] || variantStyles.default;
 
     return (
-        <div className={cn(
-            "relative w-full h-[100dvh] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased flex flex-col overflow-hidden transition-colors duration-300",
-            styles.selection,
-            className
-        )}>
+        <div
+            ref={shellRef}
+            className={cn(
+                // 使用 fixed + inset-0 替代 h-[100dvh]，避免 iOS Safari 地址栏动态调整引起布局抖动
+                "fixed inset-0 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased flex flex-col overflow-hidden overscroll-none touch-none transition-colors duration-300 z-50",
+                styles.selection,
+                className
+            )}
+        >
 
             {/* 1. Header (Fixed) */}
             <header className="flex-none px-6 py-4 flex items-center justify-between z-20">
@@ -97,13 +128,16 @@ export function FocusShell({
                 </div>
             </div>
 
-            {/* 3. Stage (Main Content) */}
-            <main className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-lg mx-auto overflow-y-auto no-scrollbar py-6">
+            {/* 3. Stage (Main Content) — data-scrollable 允许内部滚动 */}
+            <main
+                data-scrollable
+                className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-lg mx-auto overflow-y-auto scrollbar-hide overscroll-none touch-auto py-6"
+            >
                 {children}
             </main>
 
             {/* 4. Footer (Control Deck Slot) */}
-            <footer className="flex-none w-full max-w-lg mx-auto px-6 pb-[100px] pt-2 z-20 min-h-[140px] flex flex-col justify-end">
+            <footer className="flex-none w-full max-w-lg mx-auto px-6 pb-[130px] pt-2 z-20 min-h-[140px] flex flex-col justify-end">
                 {footer}
             </footer>
 

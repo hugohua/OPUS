@@ -35,7 +35,7 @@ export function WordCard({ data, isActive }: WordCardProps) {
 
     return (
         <Card className={cn(cardIntentVariants({ intent: isActive ? "glow" : "default" }))}>
-            <CardContent className="flex-1 p-8 flex flex-col items-center text-center space-y-6 overflow-y-auto">
+            <CardContent className="flex-1 p-8 flex flex-col items-center text-center space-y-6 overflow-y-auto scrollbar-hide">
                 {/* Header */}
                 <div className="space-y-4 w-full">
                     <div className="flex justify-between items-start w-full">

@@ -332,12 +332,38 @@ const MODE_TARGET_COUNT = {
 };
 ```
 
-### 库存水位阈值
+### 三重库存控制体系 (Capacity Management)
+
+为了系统高效运作并防止边界灾难，Opus 的选词引擎设置了**三重水位控制**，它们的生效阶段和防线作用各不相同：
+
+#### 1. LOW_WATERMARK（低水位预警线 / 定向救急）
+- **作用对象**: 单个单词（`vocabId`）。
+- **触发规则**: 在用户消费（`popDrill`）后原子性检查，当某单词剩余库存 `< 3` 时触发。
+- **行为**: 向 BullMQ 发起该特定缺货单词的紧急补充请求（`checkAndTriggerReplenish`）。
+- **目的**: 确保用户的高频易错词或被选中的特定词**永远不会 Cache Miss**。
+
+#### 2. Soft Cap（全局软上限 / 常规容量预警）
+- **作用对象**: 全局特定应用模式（如 `SYNTAX`、`ARENA_PART5`），配置在 `lib/drill-cache.ts` 的 `CACHE_LIMIT_MAP` 中。
+- **触发规则**: 在“泛滥式自动预热”（如 Cron Job, 初始批量拉取）时生效。
+- **行为**: 如果当前模式总存量 `>= Soft Cap`（例如 50 取 25），系统将**不再下发新的自动大批量预先生成任务**。
+- **核心哲学（溢出容忍）**: 软上限可以被 LOW_WATERMARK 的“定向救急”所突破。这保证了哪怕总体库满满当当，只要有个别词缺货依然能插队补进来，并在入库时打印 `Overflow accepted`。
+
+#### 3. Hard Cap（全局硬上限 / 极端饱和熔断）
+- **作用对象**: 全局特定应用模式。代码计算为 `Soft Cap * 1.5` 倍。
+- **触发规则**: 在向队列发起新的 LOW_WATERMARK 救急请求之前（`isSaturated`）生效。
+- **行为**: 一旦总库存达到或超过硬上限（`>= HardCap`），说明系统处于**极度拥堵饱和状态**。此时无论哪个缺货单词申请补货，都会在发入 BullMQ 之前进行**源头熔断**（返回并警告 `System saturated`）。
+- **目的**: 彻底防止过去曾经出现过的“任务进入死循环，消费 Token 生成后被后端入库丢弃”的性能灾难，同时保证 Redis 不无限膨胀。
 
 ```typescript
 // lib/inventory.ts
-if (len < 2) {
-  // 触发补货
+if (isSaturated) {
+  // 熔断请求
+  return;
+}
+
+if (len < 3) {
+  // 发起紧急补货
+  addToBuffer(userId, mode, vocabId)
 }
 ```
 

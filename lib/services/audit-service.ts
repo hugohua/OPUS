@@ -63,14 +63,14 @@ export interface AuditRecordInput {
 }
 
 /**
- * 记录审计日志（非阻塞）
+ * 记录审计日志（非阻塞，但如果传入 tx 则必须被 await）
  * 
  * 自动处理：
  * - 开关检查
  * - 采样率控制
  * - 错误捕获（不影响主流程）
  */
-export function recordAudit(input: AuditRecordInput): void {
+export async function recordAudit(input: AuditRecordInput, tx?: any): Promise<void> {
     // 1. 开关检查
     if (!AUDIT_CONFIG.enabled) {
         return;
@@ -84,30 +84,33 @@ export function recordAudit(input: AuditRecordInput): void {
         }
     }
 
-    // 3. 非阻塞写入
-    void db.drillAudit?.create({
-        data: {
-            targetWord: input.targetWord,
-            contextMode: input.contextMode,
-            userId: input.userId,
-            status: input.status || 'PENDING',
-            payload: JSON.parse(JSON.stringify(input.payload)), // 确保 JSON 兼容
-            auditTags: input.auditTags || []
-        }
-    }).catch(err => {
+    const client = tx || db;
+
+    try {
+        await client.drillAudit?.create({
+            data: {
+                targetWord: input.targetWord,
+                contextMode: input.contextMode,
+                userId: input.userId,
+                status: input.status || 'PENDING',
+                payload: JSON.parse(JSON.stringify(input.payload)), // 确保 JSON 兼容
+                auditTags: input.auditTags || []
+            }
+        });
+    } catch (err) {
         log.error({ err, contextMode: input.contextMode }, 'Audit record failed');
-    });
+    }
 }
 
 /**
  * 批量记录审计日志
  * 用于 LLM 批量生成场景
  */
-export function recordAuditBatch(inputs: AuditRecordInput[]): void {
+export async function recordAuditBatch(inputs: AuditRecordInput[], tx?: any): Promise<void> {
     if (!AUDIT_CONFIG.enabled) return;
 
     for (const input of inputs) {
-        recordAudit(input);
+        await recordAudit(input, tx);
     }
 }
 
@@ -156,7 +159,7 @@ export function auditOMPSSelection(
 /**
  * FSRS 状态跃迁审计
  */
-export function auditFSRSTransition(
+export async function auditFSRSTransition(
     userId: string,
     context: {
         vocabId: number;
@@ -176,8 +179,9 @@ export function auditFSRSTransition(
     },
     options?: {
         extraTags?: string[];
-    }
-): void {
+    },
+    tx?: any
+): Promise<void> {
     // 自动异常标记
     const auditTags: string[] = options?.extraTags || [];
 
@@ -188,13 +192,13 @@ export function auditFSRSTransition(
         auditTags.push('stability_drop');
     }
 
-    recordAudit({
+    await recordAudit({
         targetWord: String(context.vocabId),
         contextMode: 'FSRS:TRANSITION',
         userId,
         payload: { context, decision },
         auditTags
-    });
+    }, tx);
 }
 
 /**

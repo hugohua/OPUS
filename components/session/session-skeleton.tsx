@@ -20,7 +20,7 @@ export function SessionSkeleton({ mode = "SYNTAX" }: SessionSkeletonProps) {
             variant="default"
             progress={0}
             label={`LOADING • ${mode}`}
-            className="animate-pulse" // Global pulse for subtle effect
+            // 不在外壳加 animate-pulse，避免多层动画叠加过度闪动
             footer={
                 // Skeleton Control Deck
                 <div className="grid grid-cols-2 gap-3 w-full animate-pulse">

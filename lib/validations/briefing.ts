@@ -40,6 +40,8 @@ export const GetBriefingSchema = z.object({
     limit: z.number().int().min(1).max(50).default(10),
     excludeVocabIds: z.array(z.number().int()).default([]),
     forceRefresh: z.boolean().optional().default(false),
+    // [Quick Drill] 靶向语法训练：当传入时，100% 使用该节点的 QuestionSeed
+    grammarNodeId: z.string().optional(),
 });
 
 // FSRS 评分: 1=Again(重来), 2=Hard(困难), 3=Good(良好), 4=Easy(简单)

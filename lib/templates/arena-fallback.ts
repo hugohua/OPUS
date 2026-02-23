@@ -1,4 +1,3 @@
-import { db as prisma } from '@/lib/db';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { VocabDrillInput } from './deterministic-drill';
 import { buildPhraseFallbackDrill, extractSentenceForFallback } from './phrase-fallback';
@@ -24,6 +23,8 @@ export function buildArenaFallbackDrill(
         if (seed) {
             const options = seed.options as { text: string; isCorrect: boolean }[];
             const answerKey = options.find(o => o.isCorrect)?.text || seed.targetAnswer;
+            // 判断是精确匹配还是随机模板（审计标记）
+            const isExactMatch = seed.targetAnswer === candidate.word;
 
             return {
                 meta: {
@@ -33,12 +34,18 @@ export function buildArenaFallbackDrill(
                     sys_prompt_version: 'deterministic-v1-part5-seed',
                     vocabId: candidate.id,
                     target_word: candidate.word,
-                    source: 'deterministic_fallback_seed'
+                    source: isExactMatch ? 'deterministic_fallback_seed' : 'deterministic_fallback_random_seed',
+                    questionSeedId: seed.id,
+                    questionType: seed.questionType,
+                    part: seed.part || 5
                 },
                 segments: [
                     {
                         type: 'text',
-                        content_markdown: seed.sentence,
+                        // 将句子中的 _______ 替换回正确的单词
+                        content_markdown: String(seed.sentence).includes('_')
+                            ? String(seed.sentence).replace(/_+/g, answerKey)
+                            : String(seed.sentence),
                         translation_cn: candidate.definition_cn || '暂无翻译'
                     },
                     {
@@ -46,10 +53,13 @@ export function buildArenaFallbackDrill(
                         dimension: 'C', // Or whatever dimension Part 5 implies
                         task: {
                             style: 'swipe_card',
-                            question_markdown: seed.sentence,
+                            // 确保 question_markdown 一定有挖空
+                            question_markdown: String(seed.sentence).includes('_')
+                                ? String(seed.sentence)
+                                : String(seed.sentence).replace(new RegExp(`\\b${answerKey}\\b`, 'i'), '_______'),
                             options: options.map(o => o.text), // Must map back to string[] or formatted objects
                             answer_key: answerKey,
-                            explanation_markdown: `**${candidate.word}**: ${candidate.definition_cn || '暂无释义'}`
+                            explanation_markdown: seed.rationale ? `${seed.rationale}\n\n**${candidate.word}**: ${candidate.definition_cn || '暂无释义'}` : `**${candidate.word}**: ${candidate.definition_cn || '暂无释义'}`
                         }
                     }
                 ]

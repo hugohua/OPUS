@@ -124,6 +124,7 @@ const config: Config = {
 	plugins: [
 		require("tailwindcss-animate"),
 		require("tailwindcss-safe-area"),
+		require("tailwind-scrollbar-hide"),
 		addVariablesForColors,
 		function ({ matchUtilities, theme }: any) {
 			matchUtilities(

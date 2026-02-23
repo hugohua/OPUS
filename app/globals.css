@@ -6,48 +6,72 @@
 
   /* Light Mode: Pro Max (Clean Slate) */
   :root {
-    --background: 0 0% 98%;      /* Zinc 50 #FAFAFA */
-    --foreground: 240 10% 3.9%;   /* Zinc 900 #09090B */
+    --background: 0 0% 98%;
+    /* Zinc 50 #FAFAFA */
+    --foreground: 240 10% 3.9%;
+    /* Zinc 900 #09090B */
 
-    --card: 0 0% 100%;            /* White #FFFFFF */
-    --card-foreground: 240 10% 3.9%; /* Zinc 900 */
+    --card: 0 0% 100%;
+    /* White #FFFFFF */
+    --card-foreground: 240 10% 3.9%;
+    /* Zinc 900 */
 
-    --popover: 0 0% 100%;         /* White */
+    --popover: 0 0% 100%;
+    /* White */
     --popover-foreground: 240 10% 3.9%;
 
-    --primary: 262.1 83.3% 57.8%; /* Violet 600 #7C3AED */
-    --primary-foreground: 0 0% 100%;   /* White */
+    --primary: 262.1 83.3% 57.8%;
+    /* Violet 600 #7C3AED */
+    --primary-foreground: 0 0% 100%;
+    /* White */
 
-    --secondary: 240 4.8% 95.9%;  /* Zinc 100 #F4F4F5 */
-    --secondary-foreground: 240 3.8% 46.1%; /* Zinc 500 #71717A (as visual secondary text) */
+    --secondary: 240 4.8% 95.9%;
+    /* Zinc 100 #F4F4F5 */
+    --secondary-foreground: 240 3.8% 46.1%;
+    /* Zinc 500 #71717A (as visual secondary text) */
 
-    --muted: 240 4.8% 95.9%;      /* Zinc 100 */
-    --muted-foreground: 240 3.8% 46.1%; /* Zinc 500 */
+    --muted: 240 4.8% 95.9%;
+    /* Zinc 100 */
+    --muted-foreground: 240 3.8% 46.1%;
+    /* Zinc 500 */
 
-    --accent: 240 4.8% 95.9%;     /* Zinc 100 */
-    --accent-foreground: 240 5.9% 10%; /* Zinc 900 */
+    --accent: 240 4.8% 95.9%;
+    /* Zinc 100 */
+    --accent-foreground: 240 5.9% 10%;
+    /* Zinc 900 */
 
-    --destructive: 0 84.2% 60.2%; /* Red 500 */
+    --destructive: 0 84.2% 60.2%;
+    /* Red 500 */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 5.9% 90%;       /* Zinc 200 #E4E4E7 */
+    --border: 240 5.9% 90%;
+    /* Zinc 200 #E4E4E7 */
     --input: 240 5.9% 90%;
-    --ring: 262.1 83.3% 57.8%;    /* Violet 600 */
+    --ring: 262.1 83.3% 57.8%;
+    /* Violet 600 */
 
     --radius: 0.75rem;
 
     /* Opus v1.5 Semantic Tokens */
-    --brand-core: 262.1 83.3% 57.8%; /* Violet 600 */
-    
-    --status-ready: 158 64% 52%;     /* Emerald 600 */
-    --status-warn: 37.7 92.1% 50.2%; /* Amber 500 */
-    --status-lock: 240 5% 65%;       /* Zinc 400 (Check vs 600) */
+    --brand-core: 262.1 83.3% 57.8%;
+    /* Violet 600 */
+
+    --status-ready: 158 64% 52%;
+    /* Emerald 600 */
+    --status-warn: 37.7 92.1% 50.2%;
+    /* Amber 500 */
+    --status-lock: 240 5% 65%;
+    /* Zinc 400 (Check vs 600) */
 
     /* Syntax Highlighting */
-    --syntax-s: 159 64% 45%;         /* Emerald 700 */
-    --syntax-v: 343 88% 54%;         /* Rose 600 */
-    --syntax-o: 204 94% 48%;         /* Sky 600 */
-    --syntax-x: 240 5% 65%;          /* Zinc 400 */
+    --syntax-s: 159 64% 45%;
+    /* Emerald 700 */
+    --syntax-v: 343 88% 54%;
+    /* Rose 600 */
+    --syntax-o: 204 94% 48%;
+    /* Sky 600 */
+    --syntax-x: 240 5% 65%;
+    /* Zinc 400 */
 
     /* Charts */
     --chart-1: 12 76% 61%;
@@ -59,31 +83,41 @@
 
   /* Dark Mode: Pro Max (Deep Space) */
   .dark {
-    --background: 240 10% 3.9%;   /* Zinc 950 #09090B */
-    --foreground: 0 0% 98%;       /* Zinc 50 #FAFAFA */
+    --background: 240 10% 3.9%;
+    /* Zinc 950 #09090B */
+    --foreground: 0 0% 98%;
+    /* Zinc 50 #FAFAFA */
 
-    --card: 240 10% 3.9%;         /* Zinc 900 base (usually transparent/glass in code) */
+    --card: 240 10% 3.9%;
+    /* Zinc 900 base (usually transparent/glass in code) */
     --card-foreground: 0 0% 98%;
 
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 263.4 70% 50.4%;   /* Violet 500 #8B5CF6 */
+    --primary: 263.4 70% 50.4%;
+    /* Violet 500 #8B5CF6 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 3.7% 15.9%;  /* Zinc 800 #27272A */
-    --secondary-foreground: 240 5% 64.9%; /* Zinc 400 #A1A1AA */
+    --secondary: 240 3.7% 15.9%;
+    /* Zinc 800 #27272A */
+    --secondary-foreground: 240 5% 64.9%;
+    /* Zinc 400 #A1A1AA */
 
-    --muted: 240 3.7% 15.9%;      /* Zinc 800 */
-    --muted-foreground: 240 5% 64.9%; /* Zinc 400 */
+    --muted: 240 3.7% 15.9%;
+    /* Zinc 800 */
+    --muted-foreground: 240 5% 64.9%;
+    /* Zinc 400 */
 
-    --accent: 240 3.7% 15.9%;     /* Zinc 800 */
+    --accent: 240 3.7% 15.9%;
+    /* Zinc 800 */
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 100%;          /* White (to use with opacity) */
+    --border: 0 0% 100%;
+    /* White (to use with opacity) */
     /* Note: opacity is usually handled in utility class like border-white/10 */
     /* However, for default borders using 'border-border', we need a concrete color or handle opacity downstream. 
        Givent rules 'border-white/10', we will set this to White and rely on components using border-white/10 
@@ -96,35 +130,48 @@
        Wait, strict 'border-white/10' implies 10% opacity white. On Zinc 950, that looks like Zinc 800.
        I will set it to White and rely on 'border-opacity-10' or just set it to Zinc 800.
        Let's stick to Zinc 800 (240 3.7% 15.9%) for the generic --border var to stay robust. */
-    --border: 240 3.7% 15.9%; /* Zinc 800 */
-    
+    --border: 240 3.7% 15.9%;
+    /* Zinc 800 */
+
     --input: 240 3.7% 15.9%;
-    --ring: 263.4 70% 50.4%; /* Violet 500 */
+    --ring: 263.4 70% 50.4%;
+    /* Violet 500 */
 
     /* Opus v1.5 Semantic Tokens */
-    --brand-core: 263.4 70% 50.4%; /* Violet 500 */
-    
-    --status-ready: 151 55% 41.5%;   /* Emerald 400 (Approx) -> Tailwind Emerald 400 is 150 96% 40% ?? No, Emerald 400 is #34D399 (158 64% 52% is 500?). Let's check. Emerald 400 is #34D399 (158.1 64.4% 51.6%).
+    --brand-core: 263.4 70% 50.4%;
+    /* Violet 500 */
+
+    --status-ready: 151 55% 41.5%;
+    /* Emerald 400 (Approx) -> Tailwind Emerald 400 is 150 96% 40% ?? No, Emerald 400 is #34D399 (158 64% 52% is 500?). Let's check. Emerald 400 is #34D399 (158.1 64.4% 51.6%).
     The light mode Emerald 600 #059669 is 161.4 93.5% 30.4%.
     Let's refine these HSLs.
     Light Mode Emerald 600: 161.4 93.5% 30.4%
     Dark Mode Emerald 400: 158.1 64.4% 51.6%
     */
-    --status-ready: 158.1 64.4% 51.6%; /* Emerald 400 */
+    --status-ready: 158.1 64.4% 51.6%;
+    /* Emerald 400 */
 
-    --status-warn: 37.7 92.1% 50.2%; /* Amber 500 (Same as Light) */
-    --status-lock: 240 5.2% 33.9%;   /* Zinc 600 */
+    --status-warn: 37.7 92.1% 50.2%;
+    /* Amber 500 (Same as Light) */
+    --status-lock: 240 5.2% 33.9%;
+    /* Zinc 600 */
 
     /* Syntax Highlighting */
-    --syntax-s: 158.1 64.4% 51.6%;   /* Emerald 300?? No, Emerald 300 is #6EE7B7. 154.9 74.3% 66.9%. */
-    --syntax-s: 154.9 74.3% 66.9%;   /* Emerald 300 */
-    --syntax-v: 343 96% 76%;         /* Rose 400 */
-    --syntax-o: 204.2 92% 75%;       /* Sky 300 (Approx for Sky 300 which is #7DD3FC) */
-    --syntax-x: 240 3.8% 46.1%;      /* Zinc 500 #71717A - wait, Light mode used Zinc 400. Dark mode syntax-x should be Zinc 500? Rules say: "Muted Grey (text-zinc-400 / text-zinc-500)". 
+    --syntax-s: 158.1 64.4% 51.6%;
+    /* Emerald 300?? No, Emerald 300 is #6EE7B7. 154.9 74.3% 66.9%. */
+    --syntax-s: 154.9 74.3% 66.9%;
+    /* Emerald 300 */
+    --syntax-v: 343 96% 76%;
+    /* Rose 400 */
+    --syntax-o: 204.2 92% 75%;
+    /* Sky 300 (Approx for Sky 300 which is #7DD3FC) */
+    --syntax-x: 240 3.8% 46.1%;
+    /* Zinc 500 #71717A - wait, Light mode used Zinc 400. Dark mode syntax-x should be Zinc 500? Rules say: "Muted Grey (text-zinc-400 / text-zinc-500)". 
        Light: text-zinc-400 (240 5% 65%)
        Dark: text-zinc-500 (240 4% 46%)
     */
-    --syntax-x: 240 5% 64.9%;       /* Zinc 400. Wait. Rules table:
+    --syntax-x: 240 5% 64.9%;
+    /* Zinc 400. Wait. Rules table:
        Prep/Other | syntax-x | Muted Grey text-zinc-400 (Light) / text-zinc-500 (Dark)? 
        Actually the table says `text-zinc-400 / text-zinc-500`. 
        Usually Light mode text is darker (500) and Dark mode text is lighter (400).
@@ -138,8 +185,9 @@
        Light Mode syntax-x: Zinc 500 (240 3.8% 46.1%)
        Dark Mode syntax-x: Zinc 400 (240 5% 64.9%)
     */
-    --syntax-x: 240 5% 64.9%; /* Zinc 400 */
-    
+    --syntax-x: 240 5% 64.9%;
+    /* Zinc 400 */
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -148,11 +196,44 @@
   }
 }
 
+@layer utilities {
+
+  /* 
+   * iOS Safari 终极强制隐藏滚动条补丁
+   * 有时候尾风插件的 rule 会被组件级层叠覆盖，这里用 !important 强制
+   */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* iOS Safari 终极防滚动策略
+     核心原理：position:fixed 会让 html/body 脱离正常文档流，
+     彻底切断 Safari 地址栏动态调整触发的滚动行为。
+     仅在答题页面(.in-session)激活，不影响其他页面正常滚动。 */
+  html.in-session,
+  html.in-session body {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    /* 防止 iOS 弹性拉伸 */
+    -webkit-overflow-scrolling: auto;
   }
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, Zap, User, Sparkles, Swords } from "lucide-react";
+import { Layers, Zap, User, Sparkles } from "lucide-react";
 
 interface FloatingDockProps {
     hasDue?: boolean;
@@ -19,12 +19,6 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
     };
 
     const navItems = [
-        {
-            href: "/dashboard/arena",
-            icon: Swords,
-            label: "演练",
-            exact: false
-        },
         {
             href: "/dashboard/simulate",
             icon: Zap,

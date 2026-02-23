@@ -26,20 +26,12 @@ export const inventory = {
     async pushDrill(userId: string, mode: string, vocabId: number | string, drill: BriefingPayload) {
         const stats: any = await this.getInventoryStats(userId);
         const currentCount = stats[mode] || 0;
-        const hardCap = await this.getHardCapacity(mode);
 
-        // Hard Cap: 绝对上限，极端竞态才触发
-        if (currentCount >= hardCap) {
-            log.warn({ userId, mode, vocabId, currentCount, hardCap },
-                '⛔ Hard cap reached - discarding');
-            return;
-        }
-
-        // Soft Cap: 溢出容忍，接受但打日志（竞态正常现象）
+        // Soft Cap: 溢出容忍，接受但打日志（竞态正常现象/突破硬上限救急现象）
         const softCap = await this.getCapacity(mode);
         if (currentCount >= softCap) {
-            log.info({ userId, mode, vocabId, currentCount, softCap, hardCap },
-                '📦 Overflow accepted (race condition)');
+            log.info({ userId, mode, vocabId, currentCount, softCap },
+                '📦 Overflow accepted (race condition or emergency replenish)');
         }
 
         // 正常入库
@@ -139,6 +131,14 @@ export const inventory = {
      * 检查库存水位并触发补充
      */
     async checkAndTriggerReplenish(userId: string, mode: string, vocabId: number | string) {
+        // [Fix] 防止无限生成循环：如果系统处于严重饱和状态 (>= HardCap)，
+        // 应当暂停对极冷门单词的无休止补货请求，避免队列无限增长。
+        const isSaturated = await this.isSaturated(userId, mode);
+        if (isSaturated) {
+            log.warn({ userId, mode, vocabId }, '⛔ System saturated (Hard Cap reached), blocking local fetch to prevent loop');
+            return;
+        }
+
         const key = keys.drillList(userId, mode, vocabId);
         const len = await connection.llen(key);
 
@@ -319,6 +319,17 @@ export const inventory = {
         const currentCount = stats[mode] || 0;
         const capacity = await this.getCapacity(mode);
         return currentCount >= capacity;
+    },
+
+    /**
+     * 检查库存是否处于极度饱和状态 (基于 Hard Cap)
+     * 用于防止极端情况下，某个特定次要单词的补充请求导致无休止的任务入队
+     */
+    async isSaturated(userId: string, mode: string): Promise<boolean> {
+        const stats: any = await this.getInventoryStats(userId);
+        const currentCount = stats[mode] || 0;
+        const hardCap = await this.getHardCapacity(mode);
+        return currentCount >= hardCap;
     },
 
     /**

@@ -139,7 +139,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
         <section className="mb-8 px-6">
             <div className="flex justify-between items-end mb-3 pl-1">
                 <h3 className="text-[10px] font-mono font-bold text-violet-400 uppercase tracking-widest">
-                    L2 • Context Snapshot
+                    L2 • 情境快照
                 </h3>
                 <Button
                     variant="ghost"
@@ -149,7 +149,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                     className="h-6 text-[10px] text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 flex items-center gap-1 transition-colors disabled:opacity-50 px-2"
                 >
                     <RefreshCw className={`w-3 h-3 ${isPending ? 'animate-spin' : ''}`} />
-                    Switch Scenario
+                    换一个场景
                 </Button>
             </div>
 
@@ -206,7 +206,7 @@ export function ContextSnapshot({ vocabId, mainWord, definition }: ContextSnapsh
                         </div>
                     ) : (
                         <div className="p-4 bg-white/50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl">
-                            <span className="text-zinc-400 dark:text-zinc-500 text-sm">No context available.</span>
+                            <span className="text-zinc-400 dark:text-zinc-500 text-sm">暂无语境样本。</span>
                         </div>
                     )}
                 </div>

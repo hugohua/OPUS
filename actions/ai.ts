@@ -4,6 +4,7 @@ import { VocabularyAIService } from '@/lib/ai';
 import { VocabularyInputSchema } from '@/lib/validations/ai';
 import type { ActionState, VocabularyResult } from '@/types';
 import { z } from 'zod';
+import { createLogger } from '@/lib/logger';
 
 const EnrichInputSchema = z.array(VocabularyInputSchema);
 
@@ -33,7 +34,8 @@ export async function enrichVocabularyAction(
             data: result,
         };
     } catch (error) {
-        console.error('[AI Action Error]', error);
+        const log = createLogger('actions:ai');
+        log.error({ error }, 'AI enrichment failed');
 
         if (error instanceof z.ZodError) {
             return {

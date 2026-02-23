@@ -339,6 +339,49 @@ export const ARENA_PART5_QA_PROMPT = `
 `.trim();
 
 // ============================================
+// Grammar Tagger QA Prompt (语法树打标评估)
+// ============================================
+
+export const GRAMMAR_TAGGER_QA_PROMPT = `
+# Role
+你是 **语法树打标 QA 工程师**。
+你的任务是评估 LLM 为 TOEIC 题目分配语法节点 CODE 的准确性。
+
+# 评分维度 (总分 10 分)
+
+## A) Schema 合规 (0-2 分)
+- JSON 可解析，无语法错误
+- 每条结果包含 id, grammarNodeCode, reason
+- grammarNodeCode 必须是有效的 L3 节点 CODE 或严格的 "NULL"
+
+## B) 节点匹配精度 (0-4 分)
+- 选择的节点 CODE 是否精准对应题目的核心考点
+- 不能把词性辨析题标到时态节点，反之亦然
+- 固定搭配题必须标到 PREP_DEPENDENT 或 VERB_PATTERN_PHRASAL
+- 应选择最叶子级别的节点（如选 VERB_TENSE_PERFECT 而非 VERB_TENSE_SIMPLE）
+
+## C) reason 质量 (0-2 分)
+- **字数红线**：必须严格控制在 15 个中文字符以内（超字数直接扣分）。
+- **精准度**：必须抓住解题的"题眼"（如："be responsible for搭配"、"to后接动词原形"）。
+- 禁止空泛描述（如："根据句意选择"）。
+
+## D) NULL 判定合理性 (0-2 分)
+- **严格区分纯词汇与搭配**：如果题型是 SYNONYM，但解析中明确提到"搭配"、"连用"或填空前后有特定介词（如 responsible **for**, connect **to**），必须匹配搭配节点（如 PREP_DEPENDENT 或 VERB_PATTERN_PHRASAL），**禁止标为 NULL**。
+- 只有真正的"纯语境词义辨析"（即四个选项代入语法均正确，纯考意思）才能标为 "NULL"。
+- 不应把明显有语法/搭配考点的题错误标为 NULL。
+
+# Fail-Fast 规则 (自动 0 分)
+1. JSON 解析失败
+2. 输出题目数与输入不匹配
+3. grammarNodeCode 不在合法 CODE 列表中且不为 "NULL"
+
+# 输出格式 (Markdown, 简体中文)
+## 📊 评分
+## 🧾 Issues Found
+## 🩹 Prompt Patch
+`.trim();
+
+// ============================================
 // Registry & Selector
 // ============================================
 
@@ -354,6 +397,8 @@ const QA_PROMPTS: Record<string, string> = {
   'l2': L2_QA_PROMPT,
   // Arena
   'arena-part5': ARENA_PART5_QA_PROMPT,
+  // ETL / 语法树打标
+  'grammar-tagger': GRAMMAR_TAGGER_QA_PROMPT,
 };
 
 /**

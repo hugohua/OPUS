@@ -43,6 +43,7 @@ export interface OMPSCandidate {
     reviewData?: any;
     confusion_audio?: string[]; // [New] L1 Audio
     etymology?: any; // [New] Source Code
+    userNote?: string; // [New] Feature A: User custom memory hook
 }
 
 export interface OMPSConfig {
@@ -427,6 +428,15 @@ function mapToCandidate(
     type: 'REVIEW' | 'NEW',
     reviewData?: any
 ): OMPSCandidate {
+    // 解析 masteryMatrix (Feature A)
+    let userNote: string | undefined = undefined;
+    if (reviewData?.masteryMatrix && typeof reviewData.masteryMatrix === 'object') {
+        const matrix = reviewData.masteryMatrix as Record<string, any>;
+        if (typeof matrix.userNote === 'string') {
+            userNote = matrix.userNote;
+        }
+    }
+
     return {
         vocabId: v.id,
         word: v.word,
@@ -442,7 +452,8 @@ function mapToCandidate(
         type,
         reviewData,
         confusion_audio: v.confusion_audio || [],
-        etymology: v.etymology // [New]
+        etymology: v.etymology, // [New]
+        userNote // [New] User custom memory hint
     };
 }
 

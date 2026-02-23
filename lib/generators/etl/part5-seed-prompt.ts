@@ -19,10 +19,10 @@ RULES:
 7. Do NOT output rationale or any Chinese text.
 
 questionType (pick ONE):
-- MORPHOLOGY: 4 options are forms of same root (predict/prediction/predictive/predictably)
+- MORPHOLOGY: Tests Part of Speech (POS). Options are different POS forms of same root (e.g., predict/prediction/predictive)
+- GRAMMAR: Tests structural rules. Includes verb tense/voice/agreement (e.g., follow/follows/followed), function words, conjunctions
 - PHRASAL_VERB: same verb + different particles (turn down/out/over/into)
 - PRONOUN_REFERENCE: pronouns needing passage context
-- GRAMMAR: function words, tense, conjunctions
 - COLLOCATION: fixed partner word/preposition (comply WITH)
 - SYNONYM: 4 different content words testing meaning
 
@@ -30,7 +30,7 @@ posTested: Noun|Verb|Adjective|Adverb|Preposition|Conjunction|Pronoun|null
 scenario: Finance|HR|Operations|Marketing|Office|Travel|General
 
 OUTPUT FORMAT (no other fields):
-{"questions":[{"originalNumber":"101","sentence":"The manager asked staff to _______ the procedures.","targetAnswer":"follow","options":[{"text":"follow","isCorrect":true},{"text":"follows","isCorrect":false},{"text":"followed","isCorrect":false},{"text":"following","isCorrect":false}],"questionType":"MORPHOLOGY","posTested":"Verb","anchorText":"follow","scenario":"HR"}]}`.trim();
+{"questions":[{"originalNumber":"101","sentence":"The manager asked staff to _______ the procedures.","targetAnswer":"follow","options":[{"text":"follow","isCorrect":true},{"text":"follows","isCorrect":false},{"text":"followed","isCorrect":false},{"text":"following","isCorrect":false}],"questionType":"GRAMMAR","posTested":"Verb","anchorText":null,"scenario":"HR"}]}`.trim();
 
 // ---- Zod Schema (server-side hard validation) ----
 

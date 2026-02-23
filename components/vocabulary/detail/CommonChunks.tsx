@@ -45,7 +45,7 @@ export function CommonChunks({ collocations, mainWord }: CommonChunksProps) {
     return (
         <section className="px-6 py-4">
             <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Common Chunks</h3>
+                <h3 className="text-[10px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">高频搭配</h3>
                 <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800"></div>
             </div>
 
@@ -70,7 +70,7 @@ export function CommonChunks({ collocations, mainWord }: CommonChunksProps) {
                         {/* Mock Frequency Badge for first item */}
                         {idx === 0 && (
                             <span className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded text-[9px] font-mono text-zinc-400 dark:text-zinc-500 shrink-0">
-                                HI
+                                高频
                             </span>
                         )}
                     </div>

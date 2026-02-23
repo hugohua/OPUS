@@ -14,9 +14,13 @@ interface EditorialDrillProps {
     selected: string | null;
     translation?: string;
     explanation?: string;
+    userNote?: string; // [New] Feature A
 }
 
-export function EditorialDrill({ content, questionMarkdown, answer, status, selected, translation, explanation }: EditorialDrillProps) {
+import { useSharedUserSettings } from "@/components/providers/user-settings-provider";
+
+export function EditorialDrill({ content, questionMarkdown, answer, status, selected, translation, explanation, userNote }: EditorialDrillProps) {
+    const { autoPlay } = useSharedUserSettings();
 
     // --- Advanced Parser Engine ---
     // 1. Calculate Gap Range in Plain Text
@@ -182,7 +186,7 @@ export function EditorialDrill({ content, questionMarkdown, answer, status, sele
 
                 {/* TTS Control - Top Right */}
                 <div className="w-full flex justify-end mb-2">
-                    <TTSButton text={cleanText} />
+                    <TTSButton text={cleanText} autoPlay={autoPlay} />
                 </div>
 
                 <div className="font-serif text-xl md:text-2xl leading-[2.5rem] text-zinc-800 dark:text-zinc-300 w-full break-words">
@@ -274,8 +278,16 @@ export function EditorialDrill({ content, questionMarkdown, answer, status, sele
                         status !== "idle" ? "grid-rows-[1fr] mt-8 opacity-100" : "grid-rows-[0fr] mt-0 opacity-0"
                     )}
                 >
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden scrollbar-hide">
                         <div className="pt-6 border-t border-zinc-200 dark:border-white/5 space-y-4">
+                            {userNote && (
+                                <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                                    <p className="text-amber-700 dark:text-amber-400 text-sm leading-relaxed font-serif italic">
+                                        <span className="font-bold mr-2 uppercase text-[10px] tracking-wider not-italic">Sidenote</span>
+                                        "{userNote}"
+                                    </p>
+                                </div>
+                            )}
                             {translation && (
                                 <p className="text-zinc-500 dark:text-zinc-400 text-sm font-sans text-center leading-relaxed italic">
                                     "{translation}"

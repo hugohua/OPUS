@@ -65,11 +65,12 @@ model Vocab {
   embedding Unsupported("vector(1536)")?
 
   // 关联
-  progress      UserProgress[]
-  articles      ArticleVocab[]
-  smartContent  SmartContent[]
-  etymology     Etymology?
-  questionSeeds QuestionSeed[]
+  progress       UserProgress[]
+  articles       ArticleVocab[]
+  smartContent   SmartContent[]
+  etymology      Etymology?
+  questionSeeds  QuestionSeed[]
+  attemptRecords AttemptRecord[]
 
   @@index([learningPriority])
   @@index([scenarios])
@@ -210,9 +211,11 @@ model User {
   settings Json?  @default("{}") // { "autoPlay": true }
 
   // 核心资产
-  progress    UserProgress[]
-  articles    Article[]
-  drillCaches DrillCache[]
+  progress             UserProgress[]
+  articles             Article[]
+  drillCaches          DrillCache[]
+  attemptRecords       AttemptRecord[]
+  grammarProficiencies UserGrammarProficiency[] // [V3.0] 语法树熟练度追踪
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -368,11 +371,11 @@ model QuestionSeed {
 
   // 1. 题目内容
   originalNumber String? // 原题号追踪（如 "101"）
-  sentence       String @db.Text // 完整题干或局部考点句（含 _______ 空白）
+  sentence       String  @db.Text // 完整题干或局部考点句（含 _______ 空白）
   targetAnswer   String // 正确答案（填入空格的词）
   // JSON 规范: [{ text: "with", isCorrect: true }, { text: "to", is>>(false) }]
   options        Json // 4个选项 
-  rationale    String @db.Text // 解析（中文，50字以内）
+  rationale      String  @db.Text // 解析（中文，50字以内）
 
   // 长文语境（针对 Part 6/7）
   passageContext String? @db.Text // 所在段落/文章（如果是 Part 5 则为 null）
@@ -380,6 +383,11 @@ model QuestionSeed {
   // 2. 锚点桥接 (The Anchor Strategy)
   anchorVocabId Int? // 外键关联 Vocab.id（纯语法题为 null）
   anchorText    String? // 冗余文本（如 "comply"）
+
+  // [V3.0] 语法树挂载
+  grammarNodeId   String?
+  isGrammarTagged Boolean      @default(false) // 标记是否已被处理过（即使被判定为NULL）
+  grammarNode     GrammarNode? @relation(fields: [grammarNodeId], references: [id], onDelete: Restrict)
 
   // 3. 考点分类
   questionType QuestionType // MORPHOLOGY | COLLOCATION | GRAMMAR | SYNONYM
@@ -397,9 +405,12 @@ model QuestionSeed {
   createdAt DateTime @default(now())
 
   // 关联
-  anchorVocab Vocab? @relation(fields: [anchorVocabId], references: [id])
+  anchorVocab    Vocab?          @relation(fields: [anchorVocabId], references: [id])
+  attemptRecords AttemptRecord[]
 
   // 索引
+  @@index([grammarNodeId])
+  @@index([isGrammarTagged])
   @@index([anchorVocabId])
   @@index([questionType, posTested]) // 精确匹配题型和词性
   @@index([part])
@@ -407,11 +418,92 @@ model QuestionSeed {
 }
 
 enum QuestionType {
-  MORPHOLOGY       // 词性辨析 (考查后缀变化，如 predictive vs prediction)
-  COLLOCATION      // 固定搭配/介词 (考查词块关联，如 comply with)
-  GRAMMAR          // 纯语法 (连词、代词、时态、语态)
-  SYNONYM          // 词汇/语境辨析 (四个完全不同的单词辨析意思)
-  PHRASAL_VERB     // 动词短语辨析 (同一动词+不同介词/副词，如 turn down/out/over/into)
+  MORPHOLOGY // 词性辨析 (考查后缀变化，如 predictive vs prediction)
+  COLLOCATION // 固定搭配/介词 (考查词块关联，如 comply with)
+  GRAMMAR // 纯语法 (连词、代词、时态、语态)
+  SYNONYM // 词汇/语境辨析 (四个完全不同的单词辨析意思)
+  PHRASAL_VERB // 动词短语辨析 (同一动词+不同介词/副词，如 turn down/out/over/into)
   PRONOUN_REFERENCE // 代词指代 (Part 6 专属，必须结合 passageContext 才能判断单复数)
+  SENTENCE_INSERTION // 整句插入 (Part 6 专属：四个选项都是完整的句子)
+  DISCOURSE_LOGIC // 语篇逻辑 (Part 6 专属：However, Therefore 等篇章级连接词)
 }
 
+// ----------------------------------------------------------------------
+// [V7.0] The Arena - Adaptive Diagnostic Engine
+// ----------------------------------------------------------------------
+model AttemptRecord {
+  id     String @id @default(cuid())
+  userId String
+
+  // 关联题源
+  questionSeedId String
+  anchorVocabId  Int? // 关联的底层核心词汇
+
+  // [V3.0] 语法树冗余 (避免 JOIN QuestionSeed 再 JOIN GrammarNode)
+  grammarNodeId  String?
+  grammarNode    GrammarNode? @relation(fields: [grammarNodeId], references: [id])
+
+  // 答题表现
+  isCorrect      Boolean
+  responseTimeMs Int // 答题耗时（毫秒）
+  selectedOption String // 用户选了哪个选项 (极其重要，用于分析错因)
+
+  // 冗余维度（方便快速聚合查询，无需 JOIN）
+  questionType QuestionType
+  part         Int
+
+  createdAt DateTime @default(now())
+
+  // 关联
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionSeed QuestionSeed @relation(fields: [questionSeedId], references: [id], onDelete: Cascade)
+  anchorVocab  Vocab?       @relation(fields: [anchorVocabId], references: [id], onDelete: SetNull)
+
+  @@index([userId, questionType, isCorrect])
+  @@index([userId, createdAt])
+  @@index([questionSeedId])
+  @@index([userId, anchorVocabId])
+  @@index([userId, grammarNodeId])
+}
+
+// ----------------------------------------------------------------------
+// [V3.0] 语法结构树追踪引擎 (Grammar Skill Tree)
+// ----------------------------------------------------------------------
+
+model GrammarNode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  nameEn      String?
+  parentId    String?
+  level       Int
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+
+  parent         GrammarNode?             @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children       GrammarNode[]            @relation("NodeHierarchy")
+  questions      QuestionSeed[]
+  proficiencies  UserGrammarProficiency[]
+  attemptRecords AttemptRecord[]
+
+  @@index([level])
+  @@index([parentId])
+}
+
+model UserGrammarProficiency {
+  id            String   @id @default(cuid())
+  userId        String
+  grammarNodeId String
+
+  masteryScore  Float    @default(0.5) // BKT 初始 0.5 防冷启动满盘红预警
+  exposureCount Int      @default(0)
+  correctCount  Int      @default(0)
+
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grammarNode GrammarNode @relation(fields: [grammarNodeId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, grammarNodeId])
+  @@index([userId, masteryScore]) // 核心热路径：靶向出题
+}

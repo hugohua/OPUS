@@ -34,10 +34,12 @@ export interface Part5DrillInput {
   wordFamily: Record<string, string>;
   partOfSpeech: string | null;
   seed: {
+    id?: string;          // [V7.0] QuestionSeed.id，遥测用
     sentence: string;
     targetAnswer: string;
     options: { text: string; isCorrect: boolean }[];
     questionType: string | null;
+    part?: number;        // [V7.0] TOEIC Part number，遥测用
   };
 }
 
@@ -69,6 +71,7 @@ Generate an entirely NEW Part 5 question utilizing the provided \`targetWord\`. 
     <conflict_resolution_and_options>
         - Generate exactly 4 options (A, B, C, D). One MUST be the exact \`targetWord\` (or valid inflection).
         - IF the \`seed\` tests Verbs but the \`targetWord\` is a Noun, switch the testing logic to match the \`targetWord\`'s POS.
+        - [STRICT LOGIC MIRRORING]: If the POS of the \`targetWord\` allows, the NEW sentence MUST replicate the specific functional grammar point tested in the Seed (e.g., Subjunctive, Passive Voice, Existential 'There', Inversion). Do not just write a generic sentence.
         - CRITICAL: Option generation MUST strictly follow ONE of these two paths based on the \`seed.questionType\` (or fallback logic):
             - PATH 1: VOCABULARY TEST (If Seed is SYNONYM or COLLOCATION)
               * ALL 4 options MUST be the EXACT SAME Part of Speech and inflection as the target word.
@@ -81,10 +84,11 @@ Generate an entirely NEW Part 5 question utilizing the provided \`targetWord\`. 
     </conflict_resolution_and_options>
 
     <explanation_rules language="zh-CN">
-        - Provide a concise explanation (50-80 Chinese characters).
-        - Sentence 1: Identify the grammatical requirement of the blank (e.g., "空格位于冠词与名词之间，需填入形容词。").
-        - Sentence 2: Explain why the target word is correct (e.g., "'primary' 意为主要的，符合句意。").
-        - Sentence 3: Briefly dismiss distractors (e.g., "其他选项词性不符或存在拼写谬误。").
+        - Provide a highly efficient structural explanation (40-80 Chinese characters).
+        - Sentence 1 (Structural Anchor): Pinpoint the immediate left/right context to establish the rule (e.g., "空格前为介词 in，需接名词或动名词。").
+        - Sentence 2 (Business Logic/Collocation): State the fixed collocation or business logic (e.g., "be responsible for 为固定搭配" or "handle 搭配 complaint 符合客服逻辑。").
+        - Sentence 3 (Labeling Distractors): Explicitly categorize why distractors are wrong by explicitly labeling the POS of at least two options (e.g., "其他选项词性不符，B 为动词，C 为形容词。").
+        - BANNED: Do NOT use anxious test-prep words like "秒杀", "速攻", "技巧", or "X秒". Keep the tone calm, professional, and analytical.
     </explanation_rules>
 </processing_rules>
 
@@ -165,7 +169,10 @@ export function getPart5DrillBatchPrompt(inputs: Part5DrillInput[]) {
  * 集中构造 Arena Part 5 训练输入数据。
  * 在 6 种 ETS 标准题型中随机选取模板，保障 LLM 生成多变性和实战属性。
  */
-export async function buildArenaPart5Inputs(candidates: VocabEntity[]): Promise<{ candidate: VocabEntity; input: Part5DrillInput }[]> {
+export async function buildArenaPart5Inputs(
+  candidates: VocabEntity[],
+  pickTypeFn?: () => QuestionType
+): Promise<{ candidate: VocabEntity; input: Part5DrillInput }[]> {
   // 1. 预先抓取各类题型的总数（避免在每个候选词的循环中产生 N+1 数据库 Count 查询阻塞）
   const typeCounts = await Promise.all(
     PART5_QUESTION_TYPES.map(async (type) => {
@@ -197,7 +204,7 @@ export async function buildArenaPart5Inputs(candidates: VocabEntity[]): Promise<
 
       // 如果是 70% 分支 或者 30%分支没找到对应的原题兜底，则走全域随机借场模式
       if (!seedRecord) {
-        const targetType = PART5_QUESTION_TYPES[Math.floor(Math.random() * PART5_QUESTION_TYPES.length)];
+        const targetType = pickTypeFn ? pickTypeFn() : PART5_QUESTION_TYPES[Math.floor(Math.random() * PART5_QUESTION_TYPES.length)];
         const totalCount = typeCountMap.get(targetType) || 0;
 
         if (totalCount > 0) {
@@ -224,10 +231,12 @@ export async function buildArenaPart5Inputs(candidates: VocabEntity[]): Promise<
             wordFamily: (candidate.word_family as Record<string, string>) || {},
             partOfSpeech: candidate.partOfSpeech || null,
             seed: {
+              id: seedRecord.id,                               // [V7.0] 遥测必需
               sentence: seedRecord.sentence || '',
               targetAnswer: seedRecord.targetAnswer,
               options: (seedRecord.options as any) || [],
-              questionType: seedRecord.questionType || 'GRAMMAR'
+              questionType: seedRecord.questionType || 'GRAMMAR',
+              part: seedRecord.part ?? 5,                      // [V7.0] 遥测必需
             }
           }
         };
@@ -256,6 +265,22 @@ export async function buildArenaPart5Inputs(candidates: VocabEntity[]): Promise<
       }
     })
   );
+
+  // 3. 异步回写 usedCount（Fire-and-forget 散列负载均衡）
+  const usedSeedIds = llmInputs.flatMap(item => {
+    const id = item.input.seed.id;
+    return (id && !id.startsWith('fallback')) ? [id] : [];
+  });
+
+  if (usedSeedIds.length > 0) {
+    db.questionSeed.updateMany({
+      where: { id: { in: usedSeedIds } },
+      data: { usedCount: { increment: 1 } }
+    }).catch(err => {
+      // 仅记录日志，严禁抛出异常阻断生成流程
+      console.error('[Arena] Failed to increment usedCount:', err);
+    });
+  }
 
   return llmInputs;
 }

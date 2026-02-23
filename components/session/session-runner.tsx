@@ -29,6 +29,7 @@ interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
     userId: string;
     mode: SessionMode;
+    grammarNodeId?: string; // [Quick Drill] 靶向语法训练
 }
 
 // --- Mode to Variant Mapping (Still useful for passing to renderers if needed) ---
@@ -49,7 +50,7 @@ const variantMap: Record<SessionMode, 'L0' | 'L1' | 'L2'> = {
     'ARENA_PART5': 'L0' // 复用 L0 Syntax 选项样式
 };
 
-export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerProps) {
+export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: SessionRunnerProps) {
     const router = useRouter();
 
     // --- Core State Machine ---
@@ -57,6 +58,7 @@ export function SessionRunner({ initialPayload, userId, mode }: SessionRunnerPro
         userId,
         mode,
         initialPayload,
+        grammarNodeId,
     });
 
     // --- Audio Control ---

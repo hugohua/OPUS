@@ -71,7 +71,7 @@ export function UniversalCard({
             </header>
 
             {/* 2. MAIN Content (Stimulus Card) */}
-            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 w-full overflow-y-auto no-scrollbar pb-6">
+            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 w-full overflow-y-auto scrollbar-hide pb-6">
 
                 <div className={cn(
                     "w-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500",

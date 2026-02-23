@@ -1,16 +1,23 @@
 /**
- * Magic Wand Prompts (v2.1)
+ * Magic Wand Prompts (v3.0)
  * 
  * 功能：
  *   提供 Magic Wand 功能所需的 System Prompt 和 User Prompt。
- *   包含两个模式：
- *   1. 单词模式 (Word Contextualization)
- *   2. 句子模式 (Sentence Deconstruction)
+ *   包含三个模式：
+ *   1. 单词模式 (Word Contextualization) — Dojo 单词详情
+ *   2. 句子模式 (Sentence Deconstruction) — Dojo 句子解析
+ *   3. 微课模式 (Grammar Mini-Lesson) — Arena 语法薄弱点微课
+ * 
+ * 触发规则：
+ *   - 模式 1/2：用户主动点击 Magic Wand 按钮
+ *   - 模式 3：答错 + BKT masteryScore < 0.3 时自动触发
+ *   - 模式 3 输出格式为结构化 JSON（非 Markdown）
  * 
  * 设计原则：
- *   - 结构化 (Structured): Markdown 分块输出
+ *   - 结构化 (Structured): Markdown 分块输出 (模式 1/2) / JSON (模式 3)
  *   - 极简 (Concise): 手机端友好，无废话
- *   - 上下文感知 (Context-Aware): 基于具体句子解释
+ *   - 上下文感知 (Context-Aware): 基于具体句子/题目解释
+ *   - Fail-Safe: 模式 3 生成失败时降级为静态 rationale
  */
 
 export const WandPrompts = {
@@ -103,6 +110,38 @@ Your task is to deconstruct a complex sentence into its logical components.
 [One sentence takeaway on the grammar pattern or translation tip.]
 `;
         const user = `Target Sentence: "${targetSentence}"`;
+        return { system, user };
+    },
+
+    /**
+     * 场景 C：语法微课 (Grammar Mini-Lesson)
+     * 
+     * 触发条件：用户答错 + BKT masteryScore < 0.3
+     * 输出格式：结构化 JSON（errorAnalysis + grammarOverview + exampleSentences）
+     */
+    miniLesson: (ctx: {
+        grammarNodeName: string;
+        grammarNodeDescription: string;
+        sentence: string;
+        targetAnswer: string;
+        selectedOption: string;
+    }) => {
+        const system = '你是一位温和的 TOEIC 语法教练。用户刚在语法练习中答错了一道题，请帮助他理解错误原因和正确用法。输出必须是纯 JSON，不要包含 Markdown。';
+
+        const user = `用户答错了一道关于「${ctx.grammarNodeName}」的 TOEIC 语法题。
+
+【原题】${ctx.sentence}
+【正确答案】${ctx.targetAnswer}
+【用户选择】${ctx.selectedOption}
+【语法点描述】${ctx.grammarNodeDescription}
+
+请生成一个简短微课 JSON（不要包含 Markdown 代码块）：
+{
+  "errorAnalysis": "40字以内中文，解释为什么用户的选项是错的",
+  "grammarOverview": "80字以内中文，梳理「${ctx.grammarNodeName}」的核心规则",
+  "exampleSentences": ["15字以内英文例句1", "15字以内英文例句2"]
+}`;
+
         return { system, user };
     }
 };

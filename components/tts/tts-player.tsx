@@ -28,14 +28,14 @@ export function TTSPlayer({
     autoPlay = false,
 }: TTSPlayerProps) {
     const { play, stop, isPlaying, isLoading, status, duration, currentTime, error } = useTTS();
-    const [initialized, setInitialized] = useState(false);
+    const [lastAutoPlayedText, setLastAutoPlayedText] = useState<string | null>(null);
 
     useEffect(() => {
-        if (autoPlay && !initialized && text) {
+        if (autoPlay && text && lastAutoPlayedText !== text) {
             play({ text, voice });
-            setInitialized(true);
+            setLastAutoPlayedText(text);
         }
-    }, [autoPlay, initialized, text, voice, play]);
+    }, [autoPlay, lastAutoPlayedText, text, voice, play]);
 
     const togglePlay = () => {
         if (isPlaying) {

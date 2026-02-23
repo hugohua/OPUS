@@ -83,6 +83,9 @@ export interface BriefingPayload {
         level?: number;
         isRetry?: boolean;
         definition_cn?: string; // For Definition Extractor
+        questionSeedId?: string; // [V7.0] For Arena Telemetry
+        questionType?: string; // [V7.0] For Arena Telemetry
+        part?: number; // [V7.0] For Arena Telemetry
         /** @internal 仅用于客户端 FSRS 预览计算 */
         fsrsCard?: {
             stability: number;
@@ -92,6 +95,7 @@ export interface BriefingPayload {
             state: number;  // 0=New, 1=Learning, 2=Review, 3=Relearning
             lastReview?: string; // ISO 字符串
         };
+        userNote?: string; // [New] Feature A: User custom memory hook
     };
     segments: BriefingSegment[];
 }

@@ -5,26 +5,32 @@
  *   静默触发 Drill 缓存预取
  */
 import { PrefetchTrigger } from '@/components/session/prefetch-trigger';
+import { getUserSettings } from '@/actions/update-user-settings';
+import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default async function DashboardLayout({ children }: DashboardLayoutProps) {
+    const settings = await getUserSettings();
+
     return (
-        <div className="min-h-screen bg-background font-sans flex justify-center selection:bg-primary/20">
-            {/* ⚡️ 静默预取触发器 - 用户浏览任何 Dashboard 页面时预热缓存 */}
-            <PrefetchTrigger />
+        <UserSettingsProvider settings={settings}>
+            <div className="min-h-screen bg-background font-sans flex justify-center selection:bg-primary/20">
+                {/* ⚡️ 静默预取触发器 - 用户浏览任何 Dashboard 页面时预热缓存 */}
+                <PrefetchTrigger />
 
-            {/* Mobile First Container - "The Device" */}
-            <div className="w-full max-w-md bg-background min-h-screen shadow-2xl ring-1 ring-border/5 relative flex flex-col">
+                {/* Mobile First Container - "The Device" */}
+                <div className="w-full max-w-md bg-background min-h-screen shadow-2xl ring-1 ring-border/5 relative flex flex-col">
 
-                {/* Main Workspace */}
-                <main className="flex-1 w-full relative z-0">
-                    {children}
-                </main>
+                    {/* Main Workspace */}
+                    <main className="flex-1 w-full relative z-0">
+                        {children}
+                    </main>
 
+                </div>
             </div>
-        </div>
+        </UserSettingsProvider>
     );
 }

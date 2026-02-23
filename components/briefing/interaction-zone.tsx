@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { boldToHtml } from '@/lib/utils/markdown';
 
 interface InteractionTask {
     style: 'swipe_card' | 'bubble_select';
@@ -122,9 +123,8 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground border border-border/50 text-center"
-                    >
-                        {task.explanation_markdown}
-                    </motion.div>
+                        dangerouslySetInnerHTML={{ __html: boldToHtml(task.explanation_markdown) }}
+                    />
                 )}
             </AnimatePresence>
         </div>

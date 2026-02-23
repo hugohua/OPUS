@@ -21,9 +21,10 @@ const scheduler = fsrs({
 // --- Helper: Mode to Track Mapping ---
 function mapModeToTrack(mode: string): string {
     // L0: Syntax/Visual -> VISUAL
-    if (['SYNTAX', 'VISUAL', 'BLITZ', 'PHRASE'].includes(mode)) return 'VISUAL';
+    // L0: Syntax/Visual -> VISUAL (Including CHUNKING, because it targets shape-meaning connection)
+    if (['SYNTAX', 'VISUAL', 'BLITZ', 'PHRASE', 'CHUNKING'].includes(mode)) return 'VISUAL';
     // L1: Audio -> AUDIO
-    if (['AUDIO', 'CHUNKING'].includes(mode)) return 'AUDIO';
+    if (['AUDIO'].includes(mode)) return 'AUDIO';
     // L2: Context -> CONTEXT
     if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
     // L2: Arena Part 5 -> VISUAL (Syntax level pattern matching)
@@ -123,7 +124,7 @@ export async function recordOutcome(
         // 4. Calculate Next Schedule
         const scheduling_cards = scheduler.repeat(card, now);
 
-        let finalGrade = grade;
+        let finalGrade = grade as Rating;
 
         // [Cross-Track Policy] Conservative grading when review modality doesn't match training modality
         const inferredTrack = mapModeToTrack(mode);
@@ -132,12 +133,12 @@ export async function recordOutcome(
                 { vocabId, sourceTrack: explicitTrack, reviewMode: mode },
                 'Cross-track review: capping Easy(4) -> Good(3)'
             );
-            finalGrade = 3; // Cap Easy to Good for cross-modal reviews
+            finalGrade = 3 as Rating; // Cap Easy to Good for cross-modal reviews
         }
 
         // [Implicit Grading Logic] (Shared Algorithm)
         if (finalGrade >= 3 && input.duration) {
-            finalGrade = calculateImplicitGrade(finalGrade, input.duration, !!input.isRetry, mode) as any;
+            finalGrade = calculateImplicitGrade(finalGrade, input.duration, !!input.isRetry, mode) as Rating;
         }
 
         const rating = finalGrade as Rating; // 1 | 2 | 3 | 4
@@ -155,8 +156,19 @@ export async function recordOutcome(
         // C: Phrase/Context (New)
         // A: Audio (L1)
         // X: Context (L2)
-        let dimUpdate: any = {};
-        const scoreChange = grade >= 3 ? 5 : -5;
+        let dimUpdate: Partial<Record<'dim_v_score' | 'dim_c_score' | 'dim_a_score' | 'dim_x_score', number>> = {};
+        // [W-4 Fix] 阶梯式分数变化，与 FSRS finalGrade 语义对齐
+        // Again(1)=-10 (严重遗忘), Hard(2)=-3 (轻微失误), Good(3)=+3 (正常掌握), Easy(4)=+8 (强记忆)
+        const SCORE_CHANGE_MAP: Record<number, number> = { 1: -10, 2: -3, 3: 3, 4: 8 };
+        let scoreChange = SCORE_CHANGE_MAP[finalGrade] ?? (finalGrade >= 3 ? 3 : -5);
+
+        // [Code Review Fix] Grace Period for Cross-Modality
+        // If the user has never reviewed on this explicit track before (progress is null)
+        // AND they fail/struggle (finalGrade <= 2), we give them a buffer and don't deduct heavily.
+        if (!progress && finalGrade <= 2) {
+            log.info({ userId, vocabId, track }, 'Grace Period Applied: No deduction for first-time failure on new track');
+            scoreChange = 0;
+        }
 
         // Fetch current scores to calculate new ones locally (for mastery calculation)
         const currentScores = {
@@ -191,64 +203,68 @@ export async function recordOutcome(
         // 6. Calculate Mastery Score
         const masteryScore = calculateMasteryScore(currentScores);
 
-        // 7. DB Upsert (Track Specific)
-        const updated = await prisma.userProgress.upsert({
-            where: {
-                userId_vocabId_track: { userId, vocabId, track }
-            },
-            update: {
-                ...dimUpdate,
-                masteryScore,
-                track, // Ensure track is set
-                stability: newCard.stability,
-                difficulty: newCard.difficulty,
-                reps: newCard.reps,
-                lapses: newCard.lapses,
-                state: newCard.state,
-                next_review_at: newCard.due,
-                last_review_at: now,
-                status: newCard.state === State.Review ? 'REVIEW' : 'LEARNING',
-                // [NEW] Update context anchor if provided
-                ...(input.contextSentence ? { lastContextSentence: input.contextSentence } : {}),
-            },
-            create: {
-                userId,
-                vocabId,
-                track, // New Field
-                ...dimUpdate,
-                masteryScore,
-                stability: newCard.stability,
-                difficulty: newCard.difficulty,
-                reps: newCard.reps,
-                lapses: newCard.lapses,
-                state: newCard.state,
-                next_review_at: newCard.due,
-                last_review_at: now,
-                status: 'LEARNING',
-                dueDate: newCard.due, // Legacy field
-                // [NEW] Set context anchor
-                lastContextSentence: input.contextSentence || null,
-            }
-        });
+        // 7. DB Upsert (Track Specific) with Transaction
+        const updated = await prisma.$transaction(async (tx) => {
+            const _updated = await tx.userProgress.upsert({
+                where: {
+                    userId_vocabId_track: { userId, vocabId, track }
+                },
+                update: {
+                    ...dimUpdate,
+                    masteryScore,
+                    track, // Ensure track is set
+                    stability: newCard.stability,
+                    difficulty: newCard.difficulty,
+                    reps: newCard.reps,
+                    lapses: newCard.lapses,
+                    state: newCard.state,
+                    next_review_at: newCard.due,
+                    last_review_at: now,
+                    status: newCard.state === State.Review ? 'REVIEW' : 'LEARNING',
+                    // [NEW] Update context anchor if provided
+                    ...(input.contextSentence ? { lastContextSentence: input.contextSentence } : {}),
+                },
+                create: {
+                    userId,
+                    vocabId,
+                    track, // New Field
+                    ...dimUpdate,
+                    masteryScore,
+                    stability: newCard.stability,
+                    difficulty: newCard.difficulty,
+                    reps: newCard.reps,
+                    lapses: newCard.lapses,
+                    state: newCard.state,
+                    next_review_at: newCard.due,
+                    last_review_at: now,
+                    status: 'LEARNING',
+                    dueDate: newCard.due, // Legacy field
+                    // [NEW] Set context anchor
+                    lastContextSentence: input.contextSentence || null,
+                }
+            });
 
-        // --- [V5.1] Panoramic Audit: FSRS Transition Logging ---
-        const GRADE_LABELS: Record<number, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' };
-        auditFSRSTransition(userId, {
-            vocabId,
-            mode,
-            track,
-            prevState: progress?.state ?? 0,
-            prevStability: progress?.stability ?? 0,
-            grade: finalGrade,
-            gradeLabel: GRADE_LABELS[finalGrade] || 'Unknown',
-            reps: progress?.reps ?? 0
-        }, {
-            newState: newCard.state,
-            newStability: newCard.stability,
-            scheduledDays: newCard.scheduled_days ?? 0,
-            masteryChange: dimUpdate
-        }, {
-            extraTags: explicitTrack && explicitTrack !== inferredTrack ? ['cross_track_review'] : []
+            // --- [V5.1] Panoramic Audit: FSRS Transition Logging ---
+            const GRADE_LABELS: Record<number, string> = { 1: 'Again', 2: 'Hard', 3: 'Good', 4: 'Easy' };
+            await auditFSRSTransition(userId, {
+                vocabId,
+                mode,
+                track,
+                prevState: progress?.state ?? 0,
+                prevStability: progress?.stability ?? 0,
+                grade: finalGrade,
+                gradeLabel: GRADE_LABELS[finalGrade] || 'Unknown',
+                reps: progress?.reps ?? 0
+            }, {
+                newState: newCard.state,
+                newStability: newCard.stability,
+                scheduledDays: newCard.scheduled_days ?? 0,
+                masteryChange: dimUpdate
+            }, {
+                extraTags: explicitTrack && explicitTrack !== inferredTrack ? ['cross_track_review'] : []
+            }, tx);
+
+            return _updated;
         });
 
         return {

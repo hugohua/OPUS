@@ -9,6 +9,7 @@ import { MemoryHealth } from "@/components/profile/memory-health";
 import { LoadForecast } from "@/components/profile/load-forecast";
 import { ConsistencyLog } from "@/components/profile/consistency-log";
 import { PreferenceToggle } from "@/components/profile/preference-toggle";
+import { DiagnosticRadar } from "@/components/arena/diagnostic-radar";
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +95,11 @@ export default async function ProfilePage() {
                     <MemoryHealth data={stats.memoryHealth} />
                     <LoadForecast data={stats.loadForecast} />
                     <ConsistencyLog activeDays={stats.activeDays} />
+                </div>
+
+                {/* Arena 实战诊断雷达 (V7.0) */}
+                <div className="mt-4">
+                    <DiagnosticRadar userId={session.user.id} />
                 </div>
             </section>
 

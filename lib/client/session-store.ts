@@ -30,10 +30,10 @@ const EXPIRE_MS = 24 * 60 * 60 * 1000; // 24 Hours
 /**
  * 保存 Session 状态
  */
-export function saveSession(userId: string, mode: SessionMode, queue: BriefingPayload[], currentIndex: number) {
+export function saveSession(userId: string, mode: SessionMode, queue: BriefingPayload[], currentIndex: number, grammarNodeId?: string) {
     if (typeof window === 'undefined') return;
 
-    const key = getKey(userId, mode);
+    const key = getKey(userId, mode, grammarNodeId);
     const state: SessionState = {
         mode,
         queue,
@@ -53,10 +53,10 @@ export function saveSession(userId: string, mode: SessionMode, queue: BriefingPa
  * 恢复 Session 状态
  * 返回 null 如果不存在或已过期
  */
-export function loadSession(userId: string, mode: SessionMode): SessionState | null {
+export function loadSession(userId: string, mode: SessionMode, grammarNodeId?: string): SessionState | null {
     if (typeof window === 'undefined') return null;
 
-    const key = getKey(userId, mode);
+    const key = getKey(userId, mode, grammarNodeId);
     const raw = localStorage.getItem(key);
 
     if (!raw) return null;
@@ -95,12 +95,13 @@ export function loadSession(userId: string, mode: SessionMode): SessionState | n
  * 清除 Session 状态
  * (通常在 Session 完成或用户主动退出时调用)
  */
-export function clearSession(userId: string, mode: SessionMode) {
+export function clearSession(userId: string, mode: SessionMode, grammarNodeId?: string) {
     if (typeof window === 'undefined') return;
-    const key = getKey(userId, mode);
+    const key = getKey(userId, mode, grammarNodeId);
     localStorage.removeItem(key);
 }
 
-function getKey(userId: string, mode: SessionMode) {
-    return `${STORAGE_PREFIX}${userId}_${mode}`;
+function getKey(userId: string, mode: SessionMode, grammarNodeId?: string) {
+    const base = `${STORAGE_PREFIX}${userId}_${mode}`;
+    return grammarNodeId ? `${base}_node_${grammarNodeId}` : base;
 }

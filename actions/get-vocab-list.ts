@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
 import { LEECH_THRESHOLD } from '@/config/vocab';
 
-export type VocabFilterStatus = 'ALL' | 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' | 'LEECH' | 'CONTEXT';
+export type VocabFilterStatus = 'ALL' | 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' | 'LEECH' | 'CONTEXT' | 'TAGGED';
 export type VocabSortOption = 'RANK' | 'DUE' | 'DIFFICULTY';
 
 interface GetVocabListParams {
@@ -14,6 +14,7 @@ interface GetVocabListParams {
     search?: string;
     status?: VocabFilterStatus;
     sort?: VocabSortOption;
+    tagFilter?: string; // New tag parameter
 }
 
 export interface VocabListItem {
@@ -59,7 +60,8 @@ export async function getVocabList({
     limit = 50,
     search = '',
     status = 'ALL',
-    sort = 'RANK'
+    sort = 'RANK',
+    tagFilter
 }: GetVocabListParams): Promise<GetVocabListResponse> {
     const session = await auth();
     if (!session?.user?.id) {
@@ -152,6 +154,19 @@ export async function getVocabList({
                 userId: userId,
                 track: 'VISUAL',
                 lastContextSentence: { not: null } // Checks if field is set
+            }
+        };
+    } else if (status === 'TAGGED' && tagFilter) {
+        // Feature B: Filter by User Tags
+        // Prisma standard JSON filtering for arrays (PostgreSQL)
+        where.progress = {
+            some: {
+                userId: userId,
+                track: 'VISUAL',
+                masteryMatrix: {
+                    path: ['userTags'],
+                    array_contains: tagFilter
+                }
             }
         };
     }

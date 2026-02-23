@@ -91,6 +91,30 @@ async function main() {
         fs.writeFileSync(drillAuditPath, JSON.stringify(drillAudit, null, 2));
         console.log(`✅ [DrillAudit] 已备份 ${drillAudit.length} 条记录到 ${drillAuditPath}`);
 
+        // 11. Backup QuestionSeed (V3.0 Anchor Strategy)
+        const questionSeed = await prisma.questionSeed.findMany();
+        const questionSeedPath = path.join(backupDir, `questionSeed-${timestamp}.json`);
+        fs.writeFileSync(questionSeedPath, JSON.stringify(questionSeed, null, 2));
+        console.log(`✅ [QuestionSeed] 已备份 ${questionSeed.length} 条记录到 ${questionSeedPath}`);
+
+        // 12. Backup AttemptRecord (V3.0 User Interaction)
+        const attemptRecord = await prisma.attemptRecord.findMany();
+        const attemptRecordPath = path.join(backupDir, `attemptRecord-${timestamp}.json`);
+        fs.writeFileSync(attemptRecordPath, JSON.stringify(attemptRecord, null, 2));
+        console.log(`✅ [AttemptRecord] 已备份 ${attemptRecord.length} 条记录到 ${attemptRecordPath}`);
+
+        // 13. Backup GrammarNode (V3.0 Skill Tree)
+        const grammarNode = await prisma.grammarNode.findMany();
+        const grammarNodePath = path.join(backupDir, `grammarNode-${timestamp}.json`);
+        fs.writeFileSync(grammarNodePath, JSON.stringify(grammarNode, null, 2));
+        console.log(`✅ [GrammarNode] 已备份 ${grammarNode.length} 条记录到 ${grammarNodePath}`);
+
+        // 14. Backup UserGrammarProficiency (V3.0 BKT Mastery)
+        const grammarProficiency = await prisma.userGrammarProficiency.findMany();
+        const grammarProficiencyPath = path.join(backupDir, `userGrammarProficiency-${timestamp}.json`);
+        fs.writeFileSync(grammarProficiencyPath, JSON.stringify(grammarProficiency, null, 2));
+        console.log(`✅ [UserGrammarProficiency] 已备份 ${grammarProficiency.length} 条记录到 ${grammarProficiencyPath}`);
+
         console.log('\n🎉 所有表备份完成！');
 
     } catch (error) {

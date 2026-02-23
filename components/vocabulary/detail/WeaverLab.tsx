@@ -33,9 +33,9 @@ const extractContent = (text: string) => {
 };
 
 const FLAVORS: { id: WeaverFlavor; label: string; icon: any }[] = [
-    { id: "gossip", label: "Gossip", icon: MessageSquare },
-    { id: "email", label: "Email", icon: Mail },
-    { id: "public", label: "Public", icon: Megaphone },
+    { id: "gossip", label: "闲聊", icon: MessageSquare },
+    { id: "email", label: "邮件", icon: Mail },
+    { id: "public", label: "演讲", icon: Megaphone },
 ];
 
 export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
@@ -165,7 +165,7 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
                                 <Sparkles className="w-4 h-4 fill-current" />
                             </div>
                             <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wide">
-                                Weaver Lab
+                                场景编织
                             </h3>
                         </div>
 
@@ -212,15 +212,16 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
                         {!currentContent && !isCurrentLoading && !isSearchingAnchor && (
                             <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-300">
                                 <p className="text-xs text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                                    Generate a <strong className="text-zinc-900 dark:text-zinc-100 font-medium">{activeFlavor}</strong> scenario weaving
-                                    <strong className="text-violet-600 font-bold ml-1">{targetWord}</strong>.
+                                    请选择一个场景，为
+                                    <strong className="text-violet-600 font-bold ml-1">{targetWord}</strong>
+                                    编织一段真实语境。
                                 </p>
                                 <button
                                     onClick={handleWeave}
                                     className="h-10 px-6 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-full shadow-lg shadow-violet-500/20 active:scale-95 transition-all flex items-center gap-2 mx-auto"
                                 >
                                     <Sparkles className="w-4 h-4" />
-                                    <span>Weave {activeFlavor}</span>
+                                    <span>开始编织</span>
                                 </button>
                             </div>
                         )}
@@ -230,7 +231,7 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
                             <div className="flex flex-col items-center gap-3">
                                 <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
                                 <span className="text-xs text-zinc-400 font-mono tracking-widest uppercase">
-                                    {isSearchingAnchor ? "Calculating Vectors..." : "Weaving Story..."}
+                                    {isSearchingAnchor ? "在记忆库中搜寻最佳锚点..." : "正在编织内容..."}
                                 </span>
                             </div>
                         )}
@@ -242,7 +243,7 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
                                 <div className="flex items-center gap-2 mb-4 justify-center">
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-full">
                                         <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold font-mono tracking-tight uppercase">
-                                            ANCHOR:
+                                            词根:
                                         </span>
                                         <span className="text-xs text-amber-700 dark:text-amber-300 font-bold font-serif">
                                             {anchorMeta?.word || "..."}
@@ -291,7 +292,7 @@ export function WeaverLab({ targetWord, vocabId }: WeaverLabProps) {
 
                         {error && (
                             <div className="text-red-500 text-xs mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                                <strong>Error:</strong> {error}
+                                <strong>生成失败：</strong> {error}
                             </div>
                         )}
                     </div>

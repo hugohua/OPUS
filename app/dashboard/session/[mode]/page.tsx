@@ -8,6 +8,8 @@
 import { notFound } from 'next/navigation';
 import { SessionRunner } from '@/components/session/session-runner';
 import { SessionMode } from '@/types/briefing';
+import { getUserSettings } from '@/actions/update-user-settings';
+import { UserSettingsProvider } from '@/components/providers/user-settings-provider';
 
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
@@ -39,15 +41,19 @@ export default async function SessionPage(props: PageProps) {
     }
     const mode = modeRaw as SessionMode;
 
+    const settings = await getUserSettings();
+
     // ⚡️ 关键优化：不在 SSR 阶段获取数据
     // 数据由 SessionRunner 客户端异步加载
     // 用户立即看到骨架屏而不是白屏
 
     return (
-        <SessionRunner
-            userId={userId}
-            mode={mode}
-        // initialPayload 不传，触发客户端加载模式
-        />
+        <UserSettingsProvider settings={settings}>
+            <SessionRunner
+                userId={userId}
+                mode={mode}
+            // initialPayload 不传，触发客户端加载模式
+            />
+        </UserSettingsProvider>
     );
 }

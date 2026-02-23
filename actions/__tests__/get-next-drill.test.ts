@@ -21,7 +21,7 @@ vi.mock('@/lib/services/omps-core', () => ({
 // Mock Inventory (缓存层)
 vi.mock('@/lib/core/inventory', () => ({
     inventory: {
-        popDrill: vi.fn(),
+        popDrillBatch: vi.fn(),
         triggerBatchEmergency: vi.fn().mockResolvedValue(undefined),
     },
 }));
@@ -133,7 +133,7 @@ describe('Suite A: 基础功能', () => {
         const { inventory } = await import('@/lib/core/inventory');
 
         vi.mocked(fetchOMPSCandidates).mockResolvedValue([createCandidate(1)]);
-        vi.mocked(inventory.popDrill).mockResolvedValue(createCachedDrill(1));
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({ 1: createCachedDrill(1) });
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });
 
@@ -234,9 +234,8 @@ describe('Suite C: 缓存命中场景', () => {
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill)
-            .mockResolvedValueOnce(createCachedDrill(1))
-            .mockResolvedValueOnce(createCachedDrill(2));
+        vi.mocked(inventory.popDrillBatch)
+            .mockResolvedValueOnce({ 1: createCachedDrill(1), 2: createCachedDrill(2) });
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 2 });
 
@@ -256,7 +255,7 @@ describe('Suite C: 缓存命中场景', () => {
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockResolvedValue(null);
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({});
         vi.mocked(buildPhraseFallbackDrill)
             .mockReturnValueOnce(createFallbackDrill(1))
             .mockReturnValueOnce(createFallbackDrill(2));
@@ -276,9 +275,8 @@ describe('Suite C: 缓存命中场景', () => {
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill)
-            .mockResolvedValueOnce(createCachedDrill(1))
-            .mockResolvedValueOnce(null);
+        vi.mocked(inventory.popDrillBatch)
+            .mockResolvedValueOnce({ 1: createCachedDrill(1) });
         vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(2));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 2 });
@@ -298,7 +296,7 @@ describe('Suite C: 缓存命中场景', () => {
 
         const candidates = [createCandidate(1)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockRejectedValue(new Error('Redis connection failed'));
+        vi.mocked(inventory.popDrillBatch).mockRejectedValue(new Error('Redis connection failed'));
         vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });
@@ -325,7 +323,7 @@ describe('Suite D: 批量急救触发', () => {
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockResolvedValue(null);
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({});
         vi.mocked(buildPhraseFallbackDrill)
             .mockReturnValueOnce(createFallbackDrill(1))
             .mockReturnValueOnce(createFallbackDrill(2));
@@ -345,7 +343,7 @@ describe('Suite D: 批量急救触发', () => {
 
         const candidates = [createCandidate(1)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockResolvedValue(createCachedDrill(1));
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({ 1: createCachedDrill(1) });
 
         await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX' });
 
@@ -359,7 +357,7 @@ describe('Suite D: 批量急救触发', () => {
 
         const candidates = [createCandidate(1)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockResolvedValue(null);
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({});
         vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
         vi.mocked(inventory.triggerBatchEmergency).mockRejectedValue(new Error('Queue failed'));
 
@@ -384,7 +382,7 @@ describe('Suite E: 元数据与统计', () => {
         const { inventory } = await import('@/lib/core/inventory');
 
         vi.mocked(fetchOMPSCandidates).mockResolvedValue([createCandidate(123)]);
-        vi.mocked(inventory.popDrill).mockResolvedValue(createCachedDrill(123));
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({ 123: createCachedDrill(123) });
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });
 
@@ -398,9 +396,8 @@ describe('Suite E: 元数据与统计', () => {
 
         const candidates = [createCandidate(1), createCandidate(2)];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill)
-            .mockResolvedValueOnce(createCachedDrill(1))
-            .mockResolvedValueOnce(null);
+        vi.mocked(inventory.popDrillBatch)
+            .mockResolvedValueOnce({ 1: createCachedDrill(1) });
         vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(2));
 
         const result = await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 2 });
@@ -432,7 +429,7 @@ describe('Suite E: 元数据与统计', () => {
             confusion_audio: [],
         }];
         vi.mocked(fetchOMPSCandidates).mockResolvedValue(candidates);
-        vi.mocked(inventory.popDrill).mockResolvedValue(null);
+        vi.mocked(inventory.popDrillBatch).mockResolvedValue({});
         vi.mocked(buildPhraseFallbackDrill).mockReturnValue(createFallbackDrill(1));
 
         await getNextDrillBatch({ userId: TEST_USER_ID, mode: 'SYNTAX', limit: 1 });

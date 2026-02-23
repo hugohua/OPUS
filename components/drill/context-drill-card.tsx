@@ -12,6 +12,7 @@ import { Check, Lightbulb, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BriefingPayload } from "@/types/briefing";
 import { calculateImplicitGrade } from "@/lib/algorithm/grading";
+import { boldToHtml } from "@/lib/utils/markdown";
 
 interface ContextDrillCardProps {
     drill: BriefingPayload;
@@ -186,9 +187,10 @@ export function ContextDrillCard({
                                 <Check className="w-4 h-4" />
                                 <span className="font-bold text-xs uppercase tracking-wider">Correct</span>
                             </div>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans">
-                                {explanation}
-                            </p>
+                            <p
+                                className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-sans"
+                                dangerouslySetInnerHTML={{ __html: boldToHtml(explanation) }}
+                            />
                         </motion.div>
                     )}
 

@@ -180,9 +180,10 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
                 }
             }
 
-            // Generate Mask (Case Insensitive)
+            // Generate Mask (Case Insensitive, Word Boundary)
             const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const maskRegex = new RegExp(escapedWord, 'gi');
+            // We use \b boundary to prevent partial matches like "lead" inside "leadership"
+            const maskRegex = new RegExp(`\\b${escapedWord}(?:s|es|d|ed|ing)?\\b`, 'gi');
             const maskedText = chosenPhrase.text.replace(maskRegex, '_______');
 
             return {

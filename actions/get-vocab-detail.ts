@@ -44,9 +44,26 @@ export async function getVocabDetail(identifier: number | string) {
     // Backward compatibility for existing UI
     const progress = tracks.VISUAL;
 
+    // Extract user custom data (Tags/Notes) from primary track
+    let userTags: string[] = [];
+    let userNote: string = "";
+
+    if (progress && progress.masteryMatrix) {
+        // Safe read according to the schema
+        const matrix = progress.masteryMatrix as Record<string, any>;
+        if (Array.isArray(matrix.userTags)) {
+            userTags = matrix.userTags;
+        }
+        if (typeof matrix.userNote === 'string') {
+            userNote = matrix.userNote;
+        }
+    }
+
     return {
         vocab,
         progress, // Legacy support
         tracks,   // New Multi-Track Data
+        userTags, // Content Ops: User tags array
+        userNote, // Content Ops: User memory hook note
     };
 }

@@ -41,6 +41,8 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Vector Logic**: `docs/dev-notes/vector-context-selection-v2.md` (Embedding & Similarity rules)
 - **新增全新题型 (End-to-End) 开发指南**: `docs/dev-notes/new-drill-mode-end-to-end-guide.md` (**NEW**: 涵盖新增任意答题类型的 8 步全栈 Checklist)
 - **Arena 架构解密**: `docs/dev-notes/arena-mode-integration-guide.md` (特指竞技场数据流与 O(1) 兜底)
+- **Adaptive Diagnostic Engine**: `docs/dev-notes/adaptive-diagnostic-engine.md` (**NEW**: V7.0 自适应诊断引擎：遥测、加权选词与降维打击)
+- **Grammar Skill Tree**: `docs/PRD-GRAMMAR-SKILL-TREE.md` (**NEW**: L1-L3 语法诊断树，BKT 算法与靶向出题)
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
@@ -96,6 +98,12 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Report Script**: `scripts/audit-report.ts` (健康检查报告)
 - **Config**: `.env` (`AUDIT_ENABLED`, `AUDIT_SAMPLE_RATE`)
 
+### 10. Grammar Skill Tree (L1-L3) (**NEW**)
+- **Architecture & Schema**: `docs/dev-notes/grammar-skill-tree-architecture.md` (L1-L3 概念树、双重锚点、Restrict 保护)
+- **BKT Algorithm & Telemetry**: `docs/dev-notes/bkt-telemetry-algorithm.md` (隐马尔可夫平滑更新、降维打击与向上穿透机制)
+- **Frontend & Zero-Wait SSR**: `docs/dev-notes/arena-dashboard-frontend.md` (`app/dashboard/arena/page.tsx` 重构、SVG 雷达图弹流渲染)
+- **Quick Drill Engine**: `docs/dev-notes/quick-drill-engine.md` (`get-next-drill.ts` 旁路兜底策略、全栈参数穿透链路)
+
 ### 10. NAS 部署 (Synology)
 - **部署指南**: `docs/dev-notes/nas-deployment-guide.md` (**完整**: 架构、一键部署、数据库迁移、网络踩坑)
 - **构建脚本**: `build-and-export.sh` (Mac ARM → NAS AMD64 跨平台构建 + 自动部署)
@@ -118,6 +126,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If modifying Audio/Playback** -> Read `tts-architecture.md` and `use-tts.ts`.
 - **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md`.
 - **If adding a new game mode / answer type** -> **CRITICAL**: Read `new-drill-mode-end-to-end-guide.md` for the 8-step full-stack checklist.
+- **If 修改语法结构树 / BKT 追踪 / Arena 靶向出题** -> Read `docs/PRD-GRAMMAR-SKILL-TREE.md`.
 - **If DB schema changes** -> Update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).
 - **If 处理 TOEIC PDF 数据 / 修改题库导入 / QuestionSeed 相关** -> Read `toeic-pdf-etl-pipeline.md` (**ETL 全流程、QuestionType 枚举、Prompt 设计规范**).
 - **If modifying Prompts** -> You MUST run `npm run verify:l0` to ensure no regression in quality (Score >= 7.0).

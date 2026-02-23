@@ -117,8 +117,10 @@
 - `components/vocabulary/ui/vocab-hud.tsx`
 - `components/vocabulary/ui/vocab-filters.tsx`
 - `components/vocabulary/ui/vocab-list-item.tsx`
+- `components/vocabulary/ui/vocab-sheet.tsx`
 - `components/vocabulary/VocabularyCard.tsx`
 - `components/vocabulary/detail/StickyHeader.tsx`
+- `components/vocabulary/detail/VocabHero.tsx`
 
 ### Session 模块
 - `components/session/blitz-session.tsx`

@@ -49,7 +49,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400"
                         : "border-zinc-200 bg-zinc-50 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400"
                 )}>
-                    {isCore ? "#Core" : "#Word"} {rank ? `Top ${rank}` : ""}
+                    {isCore ? "#核心词汇" : "#常规词汇"} {rank ? `前 ${rank}` : ""}
                 </span>
                 <span className="text-[10px] font-mono text-zinc-300 dark:text-zinc-600">ID: {id || "---"}</span>
             </div>
@@ -79,7 +79,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
                         {businessDef && (
                             <div className="flex items-start gap-3 group">
                                 <span className="mt-0.5 px-1.5 py-0.5 rounded-[4px] bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 text-[9px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider shrink-0 select-none">
-                                    BIZ
+                                    商务
                                 </span>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold text-zinc-800 dark:text-zinc-200 leading-none">{businessDef}</span>
@@ -91,7 +91,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
                         {generalDef && generalDef !== businessDef && (
                             <div className="flex items-start gap-3 group">
                                 <span className="mt-0.5 px-1.5 py-0.5 rounded-[4px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[9px] font-mono font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider shrink-0 select-none">
-                                    GEN
+                                    通用
                                 </span>
                                 <div className="flex flex-col">
                                     <span className="text-lg font-bold text-zinc-800 dark:text-zinc-200 leading-none">{generalDef}</span>
@@ -103,7 +103,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
                     /* Fallback */
                     <div className="flex items-start gap-3 group">
                         <span className="mt-0.5 px-1.5 py-0.5 rounded-[4px] bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[9px] font-mono font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider shrink-0 select-none">
-                            DEF
+                            释义
                         </span>
                         <div className="flex flex-col">
                             <span className="text-lg font-bold text-zinc-800 dark:text-zinc-200 leading-none">{definition || "..."}</span>
@@ -115,7 +115,7 @@ export function VocabHero({ word, phonetic, definition, definitions, rank, deriv
             {/* Synonyms Pills */}
             {synonyms && synonyms.length > 0 && (
                 <div className="flex items-baseline gap-2">
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase">SYN:</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">近义词:</span>
                     <div className="flex flex-wrap gap-1.5">
                         {synonyms.slice(0, 5).map(syn => (
                             <a

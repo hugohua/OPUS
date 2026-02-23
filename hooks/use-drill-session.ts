@@ -14,6 +14,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { recordOutcome } from '@/actions/record-outcome';
+import { recordArenaOutcome } from '@/actions/arena-telemetry';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ export interface UseDrillSessionOptions {
     userId: string;
     mode: SessionMode;
     initialPayload?: BriefingPayload[];
+    grammarNodeId?: string; // [Quick Drill] 靶向语法训练
 }
 
 export interface DrillSessionState {
@@ -50,7 +52,7 @@ export interface DrillSessionState {
 }
 
 export function useDrillSession(options: UseDrillSessionOptions): DrillSessionState {
-    const { userId, mode, initialPayload } = options;
+    const { userId, mode, initialPayload, grammarNodeId } = options;
 
     // --- State Management ---
     const [queue, setQueue] = useState<BriefingPayload[]>(initialPayload || []);
@@ -96,7 +98,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
                 userId,
                 mode,
                 limit: BATCH_LIMIT,
-                excludeVocabIds: excludeIds
+                excludeVocabIds: excludeIds,
+                grammarNodeId
             });
 
             if (res.status === 'success' && res.data && res.data.length > 0) {
@@ -114,7 +117,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         } finally {
             setIsLoadingMore(false);
         }
-    }, [userId, mode, initVocabSet, isLoadingMore, hasMore]);
+    }, [userId, mode, initVocabSet, isLoadingMore, hasMore, grammarNodeId]);
 
     // --- Action: Load Initial Data ---
     const loadInitialData = useCallback(async () => {
@@ -123,7 +126,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
                 userId,
                 mode,
                 limit: BATCH_LIMIT,
-                excludeVocabIds: []
+                excludeVocabIds: [],
+                grammarNodeId
             });
 
             if (res.status === 'success' && res.data && res.data.length > 0) {
@@ -137,7 +141,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         } finally {
             setIsInitialLoading(false);
         }
-    }, [userId, mode, initVocabSet]);
+    }, [userId, mode, initVocabSet, grammarNodeId]);
 
     // --- Effect: Mount - Restore or Load ---
     useEffect(() => {
@@ -151,7 +155,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             return;
         }
 
-        const saved = loadSession(userId, mode);
+        const saved = loadSession(userId, mode, grammarNodeId);
         if (saved && saved.queue.length > 0 && saved.currentIndex < saved.queue.length) {
             setQueue(saved.queue);
             setIndex(saved.currentIndex);
@@ -161,14 +165,14 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         } else {
             loadInitialData();
         }
-    }, [userId, mode, initialPayload, initVocabSet, loadInitialData]);
+    }, [userId, mode, grammarNodeId, initialPayload, initVocabSet, loadInitialData]);
 
     // --- Effect: Persist to Storage ---
     useEffect(() => {
         if (queue.length > 0 && !completed) {
-            saveSession(userId, mode, queue, index);
+            saveSession(userId, mode, queue, index, grammarNodeId);
         }
-    }, [queue, index, completed, userId, mode]);
+    }, [queue, index, completed, userId, mode, grammarNodeId]);
 
     // --- Effect: Reset status on index change ---
     useEffect(() => {
@@ -248,6 +252,27 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             console.error('[FSRS] recordOutcome failed:', e);
         });
 
+        // [V7.0] Arena Telemetry: 为 ARENA_PART5 模式额外记录 AttemptRecord
+        if (mode === 'ARENA_PART5') {
+            const meta = currentDrill.meta as any;
+            const interactSeg = currentDrill.segments.find(s => s.type === 'interaction');
+            const questionSeedId = meta?.questionSeedId;
+
+            if (questionSeedId) {
+                recordArenaOutcome({
+                    questionSeedId,
+                    anchorVocabId: vocabId || null,
+                    isCorrect,
+                    responseTimeMs: duration,
+                    selectedOption: selectedOption || '',
+                    questionType: meta?.questionType || 'GRAMMAR',
+                    part: meta?.part || 5,
+                }).catch((e) => {
+                    console.error('[Arena Telemetry] recordArenaOutcome failed:', e);
+                });
+            }
+        }
+
         // Retry Queue: Insert wrong answers back
         if (!isCorrect) {
             const retryDrill = JSON.parse(JSON.stringify(currentDrill)) as BriefingPayload;
@@ -268,10 +293,10 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             setSelectedOption(null);
             setIndex(i => i + 1);
         } else {
-            clearSession(userId, mode);
+            clearSession(userId, mode, grammarNodeId);
             setCompleted(true);
         }
-    }, [currentDrill, userId, mode, queue.length, index]);
+    }, [currentDrill, userId, mode, grammarNodeId, queue.length, index]);
 
     // --- Action: Handle Next (for modes like CHUNKING) ---
     const handleNext = useCallback(() => {

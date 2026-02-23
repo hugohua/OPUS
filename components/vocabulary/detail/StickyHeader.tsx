@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, MoreHorizontal, Play, RotateCcw, EyeOff, FileJson, Copy, Tag, Edit, Share2 } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Play, RotateCcw, EyeOff, FileJson, Copy, Tag, Edit, Share2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
@@ -32,8 +32,16 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { suspendVocab, resetVocabProgress, getVocabRawData } from "@/actions/vocab-actions";
+import { suspendVocab, resetVocabProgress, getVocabRawData, updateUserVocabTags, saveUserVocabNote } from "@/actions/vocab-actions";
 import { useTTS } from "@/hooks/use-tts";
 
 interface StickyHeaderProps {
@@ -43,9 +51,14 @@ interface StickyHeaderProps {
     className?: string;
     word: string;
     vocabId: number;
+    initialTags?: string[];
+    initialNote?: string;
 }
 
-export function StickyHeader({ stability, isReviewPhase = true, rank, className, word, vocabId }: StickyHeaderProps) {
+// 标签预设
+const PRESET_TAGS = ["精读", "口语弱点", "商务核心", "错题本"];
+
+export function StickyHeader({ stability, isReviewPhase = true, rank, className, word, vocabId, initialTags = [], initialNote = "" }: StickyHeaderProps) {
     const router = useRouter();
     const tts = useTTS();
     const [isPending, startTransition] = useTransition();
@@ -55,21 +68,33 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
     const [showInspectDialog, setShowInspectDialog] = useState(false);
     const [inspectData, setInspectData] = useState<any>(null);
 
+    // Tags States
+    const [showTagsSheet, setShowTagsSheet] = useState(false);
+    const [tags, setTags] = useState<string[]>(initialTags);
+    const [newTagInput, setNewTagInput] = useState("");
+    const [isSavingTags, setIsSavingTags] = useState(false);
+
+    // Note States
+    const [showNoteDialog, setShowNoteDialog] = useState(false);
+    const [note, setNote] = useState(initialNote);
+    const [noteInput, setNoteInput] = useState(initialNote);
+    const [isSavingNote, setIsSavingNote] = useState(false);
+
     // Actions
     const handleCopyId = () => {
         navigator.clipboard.writeText(`#${vocabId}`);
-        toast.success("ID copied to clipboard", { description: `Vocab ID: ${vocabId}` });
+        toast.success("ID 已复制", { description: `词汇 ID: ${vocabId}` });
     };
 
     const handleInspect = async () => {
-        toast.loading("Fetching raw data...");
+        toast.loading("正在拉取原始数据...");
         try {
             const data = await getVocabRawData(vocabId);
             setInspectData(data);
             setShowInspectDialog(true);
             toast.dismiss();
         } catch (error) {
-            toast.error("Failed to fetch data");
+            toast.error("拉取失败");
         }
     };
 
@@ -77,9 +102,9 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
         startTransition(async () => {
             try {
                 await suspendVocab(vocabId);
-                toast.success("Card suspended", { description: "It will no longer appear in reviews." });
+                toast.success("已暂停复习", { description: "该词将不再出现在复习队列中。" });
             } catch (error) {
-                toast.error("Failed to suspend card");
+                toast.error("暂停失败");
             }
         });
     };
@@ -88,12 +113,69 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
         startTransition(async () => {
             try {
                 await resetVocabProgress(vocabId);
-                toast.success("Progress reset", { description: "Card is now treated as New." });
+                toast.success("进度已重置", { description: "该词现已变为新词状态。" });
                 setShowResetAlert(false);
             } catch (error) {
-                toast.error("Failed to reset progress");
+                toast.error("重置失败");
             }
         });
+    };
+
+    // Feature B Actions
+    const handleAddTag = (tag: string) => {
+        const trimmed = tag.trim();
+        if (!trimmed) return;
+        if (tags.length >= 10) {
+            toast.error("最多支持 10 个标签");
+            return;
+        }
+        if (trimmed.length > 12) {
+            toast.error("标签太长，请勿超过 12 个字符");
+            return;
+        }
+        if (!tags.includes(trimmed)) {
+            setTags(prev => [...prev, trimmed]);
+        }
+        setNewTagInput("");
+    };
+
+    const handleRemoveTag = (tag: string) => {
+        setTags(prev => prev.filter(t => t !== tag));
+    };
+
+    const handleSaveTags = async () => {
+        setIsSavingTags(true);
+        // Optimistic UX
+        setShowTagsSheet(false);
+        try {
+            await updateUserVocabTags(vocabId, tags);
+            toast.success("标签已保存", { description: "筛选变更已同步" });
+        } catch (error) {
+            toast.error("保存失败，可能有验证违规");
+            setTags(initialTags); // Revert
+            setShowTagsSheet(true);
+        } finally {
+            setIsSavingTags(false);
+        }
+    };
+
+    // Feature A Actions
+    const handleSaveNote = async () => {
+        setIsSavingNote(true);
+        // Optimistic UX
+        setNote(noteInput);
+        setShowNoteDialog(false);
+        try {
+            await saveUserVocabNote(vocabId, noteInput);
+            toast.success("笔记已保存");
+        } catch (error) {
+            toast.error("保存失败，笔记最长 200 字");
+            setNote(initialNote); // Revert
+            setNoteInput(initialNote);
+            setShowNoteDialog(true);
+        } finally {
+            setIsSavingNote(false);
+        }
     };
 
     return (
@@ -113,7 +195,7 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
                     aria-label="Go back"
                 >
                     <ArrowLeft className="w-5 h-5" />
-                    <span className="text-xs font-medium">List</span>
+                    <span className="text-xs font-medium">词库</span>
                 </Button>
 
                 {/* Center: Rank Badge + FSRS Status */}
@@ -154,52 +236,52 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="end">
                         {/* Content Ops */}
-                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">Content Ops</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">内容管理</DropdownMenuLabel>
                         <DropdownMenuGroup>
                             <DropdownMenuItem disabled>
                                 <Edit className="w-4 h-4 mr-2" />
-                                <span>Edit Metadata</span>
+                                <span>编辑元数据</span>
                                 <span className="ml-auto text-xs text-zinc-500">⌘E</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem disabled>
                                 <Tag className="w-4 h-4 mr-2" />
-                                <span>Manage Tags</span>
+                                <span>管理标签</span>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
 
                         {/* FSRS Ops */}
-                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">FSRS Ops</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">FSRS 操作</DropdownMenuLabel>
                         <DropdownMenuGroup>
                             <DropdownMenuItem onClick={handleSuspend} className="text-amber-500 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-900/10">
                                 <EyeOff className="w-4 h-4 mr-2" />
-                                <span>Suspend Card</span>
-                                <span className="ml-auto text-[9px] opacity-50 font-mono">Bury</span>
+                                <span>暂停复习</span>
+                                <span className="ml-auto text-[9px] opacity-50 font-mono">搁置</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setShowResetAlert(true)} className="text-rose-500 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-900/10">
                                 <RotateCcw className="w-4 h-4 mr-2" />
-                                <span>Reset Progress</span>
-                                <span className="ml-auto text-[9px] opacity-50 font-mono">Forget</span>
+                                <span>重置进度</span>
+                                <span className="ml-auto text-[9px] opacity-50 font-mono">遗忘</span>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
 
                         {/* Dev Ops */}
-                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">Dev Ops</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">开发调试</DropdownMenuLabel>
                         <DropdownMenuGroup>
                             <DropdownMenuItem onClick={handleInspect} className="text-indigo-400 focus:text-indigo-500 focus:bg-indigo-50 dark:focus:bg-indigo-900/10">
                                 <FileJson className="w-4 h-4 mr-2" />
-                                <span>Inspect JSON</span>
+                                <span>查看原始数据</span>
                                 <span className="ml-auto text-[9px] opacity-50 font-mono">{`{ }`}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleCopyId}>
                                 <Copy className="w-4 h-4 mr-2" />
-                                <span>Copy ID</span>
+                                <span>复制 ID</span>
                                 <span className="ml-auto text-[9px] opacity-50 font-mono">#{vocabId}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => tts.play({ text: word })}>
                                 <Play className="w-4 h-4 mr-2" />
-                                <span>Play Audio</span>
+                                <span>播放发音</span>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                     </DropdownMenuContent>
@@ -210,18 +292,18 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
             <AlertDialog open={showResetAlert} onOpenChange={setShowResetAlert}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Reset Progress?</AlertDialogTitle>
+                        <AlertDialogTitle>确认重置进度？</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will wipe all FSRS memory for "<b>{word}</b>".
-                            Stability will reset to 0 and it will appear as a NEW card.
+                            这将清除 "<b>{word}</b>" 的所有 FSRS 记忆数据。
+                            稳定性将归零，该词将重新变为新词。
                             <br /><br />
-                            <span className="text-rose-500 font-bold">This action cannot be undone.</span>
+                            <span className="text-rose-500 font-bold">此操作不可撤销。</span>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
                         <AlertDialogAction onClick={handleReset} className="bg-rose-500 hover:bg-rose-600 text-white">
-                            Reset Progress
+                            确认重置
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -233,11 +315,11 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <FileJson className="w-5 h-5 text-indigo-400" />
-                            Raw Data Inspector
+                            原始数据查看器
                             <Badge variant="secondary" className="font-mono">#{vocabId}</Badge>
                         </DialogTitle>
                         <DialogDescription>
-                            Live data from Postgres for debugging.
+                            来自数据库的实时数据，供调试使用。
                         </DialogDescription>
                     </DialogHeader>
 

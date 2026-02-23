@@ -525,6 +525,10 @@ export async function processDrillJob(job: Job<DrillJobData>) {
         if (arenaPart5Group.length > 0 || mode === 'ARENA_PART5') {
             tasks.push((async () => {
                 const { getPart5DrillBatchPrompt, buildArenaPart5Inputs } = await import('@/lib/generators/arena/part5-drill');
+                const { buildWeightedTypePicker } = await import('@/lib/services/diagnostic-service');
+
+                // [V7.0] 在入口处一次性构建加权选题函数，避免循环内重复查询
+                const pickTypeFn = await buildWeightedTypePicker(userId);
 
                 const directPivotDrills = [];
                 const realCandidates = [];
@@ -538,10 +542,10 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     }
                 }
 
-                // 一键处理真词候选项的 DB 查询与 Seed 重组，自动随机兜底
+                // 一键处理真词候选项的 DB 查询与 Seed 重组，使用加权选题
                 let llmInputs: { candidate: any; input: any }[] = [];
                 if (realCandidates.length > 0) {
-                    llmInputs = await buildArenaPart5Inputs(realCandidates);
+                    llmInputs = await buildArenaPart5Inputs(realCandidates, pickTypeFn);
                 }
 
                 // 3. 执行 LLM 生成 (分批处理，每次 2 词，防 API 限流与 LLM 串线)
@@ -566,7 +570,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                                         candidate: chunk[idx].candidate,
                                         systemPrompt: p.system,
                                         userPrompt: p.user,
-                                        provider: provider
+                                        provider: provider,
+                                        // [V7.0] 保留 seed 元数据用于遥测
+                                        seedInfo: {
+                                            id: chunk[idx].input.seed?.id,
+                                            questionType: chunk[idx].input.seed?.questionType,
+                                            part: chunk[idx].input.seed?.part ?? 5,
+                                        }
                                     });
                                 }
                             });
@@ -642,7 +652,13 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     vocabId: candidate.vocabId,
                     target_word: candidate.word,
                     source: 'llm_v2',
-                    etymology: candidate.etymology // [New]
+                    etymology: candidate.etymology, // [New]
+                    // [V7.0] Arena 遥测元数据注入
+                    ...(mode === 'ARENA_PART5' && {
+                        questionSeedId: item.seedInfo?.id || candidate.reviewData?.seed?.id,
+                        questionType: item.seedInfo?.questionType || candidate.reviewData?.seed?.questionType,
+                        part: item.seedInfo?.part ?? candidate.reviewData?.seed?.part ?? 5,
+                    }),
                 },
                 segments: rawDrill.segments,
             };

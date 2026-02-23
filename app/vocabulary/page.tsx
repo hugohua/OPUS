@@ -7,10 +7,13 @@ export const metadata: Metadata = {
     description: "FSRS 记忆管理中心",
 };
 
-export default function VocabularyPage() {
+import { getUserAllTags } from "@/actions/vocab-actions";
+
+export default async function VocabularyPage() {
+    const initialTags = await getUserAllTags();
     return (
         <VocabularyProvider>
-            <VocabularyList />
+            <VocabularyList initialTags={initialTags} />
         </VocabularyProvider>
     );
 }

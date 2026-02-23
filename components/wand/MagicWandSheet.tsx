@@ -65,7 +65,7 @@ export function MagicWandSheet({ target, type, context, isOpen, onOpenChange }: 
                 </SheetHeader>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar">
+                <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-hide">
                     {target && (
                         <MagicWandContent
                             completion={completion}

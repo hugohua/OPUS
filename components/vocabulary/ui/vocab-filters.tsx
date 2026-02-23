@@ -17,6 +17,9 @@ interface VocabFiltersProps {
     onStatusChange: (val: VocabFilterStatus) => void;
     sort: VocabSortOption;
     onSortChange: (val: VocabSortOption) => void;
+    userTags?: string[];                 // 所有可选的用户标签
+    tagFilter?: string;                  // 当前选中的标签
+    onTagFilterChange?: (tag: string) => void; // 切换标签的回调
 }
 
 export function VocabFilters({
@@ -25,7 +28,10 @@ export function VocabFilters({
     status,
     onStatusChange,
     sort,
-    onSortChange
+    onSortChange,
+    userTags = [],
+    tagFilter = "",
+    onTagFilterChange
 }: VocabFiltersProps) {
 
     // We handle local state for input to avoid UI lag, but parent controls "search" prop.
@@ -36,79 +42,102 @@ export function VocabFilters({
 
     return (
         <div className="shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 z-10">
-            {/* Top Row: Search + Sort */}
-            <div className="px-6 py-3 flex items-center gap-4">
-                <div className="relative flex-1 group">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
+            {/* Single Row: Search + Sort + Chips */}
+            <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                {/* Search */}
+                <div className="relative min-w-[110px] w-32 group">
+                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                        <Search className="h-3.5 w-3.5 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
                     </div>
                     <input
                         type="text"
                         value={search}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-md bg-zinc-50 dark:bg-zinc-900 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 text-zinc-900 dark:text-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all focus:outline-none"
-                        placeholder="搜索单词..."
+                        className="block w-full pl-8 pr-2 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-md bg-zinc-50 dark:bg-zinc-900 text-xs placeholder-zinc-400 dark:placeholder-zinc-500 text-zinc-900 dark:text-zinc-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all focus:outline-none"
+                        placeholder="搜索..."
                     />
                 </div>
 
-                <button
-                    onClick={() => onSortChange(sort === 'RANK' ? 'DUE' : 'RANK')}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                >
-                    <ListFilter className="w-3.5 h-3.5" />
-                    <span>排序: {sort === 'RANK' ? '排名' : '待复习'}</span>
-                </button>
-            </div>
+                <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 shrink-0" />
 
-            {/* Bottom Row: Chips */}
-            <div className="px-6 pb-4 flex items-center gap-2 overflow-x-auto no-scrollbar mask-linear-fade">
-                {/* Mask for scroll fade if supported, otherwise just scroll */}
-
+                {/* Filter Chips */}
                 <FilterChip
                     label="全部"
                     active={status === 'ALL'}
-                    onClick={() => onStatusChange('ALL')}
+                    onClick={() => {
+                        onStatusChange('ALL');
+                        if (onTagFilterChange) onTagFilterChange("");
+                    }}
                     variant="default"
                 />
-
                 <FilterChip
                     label="新词"
                     active={status === 'NEW'}
                     onClick={() => onStatusChange('NEW')}
                     dotColor="bg-zinc-600"
                 />
-
                 <FilterChip
                     label="学习中"
                     active={status === 'LEARNING'}
                     onClick={() => onStatusChange('LEARNING')}
                     dotColor="bg-amber-500"
                 />
-
                 <FilterChip
                     label="待复习"
                     active={status === 'REVIEW'}
                     onClick={() => onStatusChange('REVIEW')}
                     dotColor="bg-emerald-500"
                 />
-
                 <FilterChip
                     label="难点词"
                     active={status === 'LEECH'}
-                    onClick={() => onStatusChange('LEECH')}
+                    onClick={() => {
+                        onStatusChange('LEECH');
+                        if (onTagFilterChange) onTagFilterChange("");
+                    }}
                     variant="rose"
                     icon={<AlertCircle className="w-2.5 h-2.5" strokeWidth={3} />}
                 />
-
-                <div className="w-px h-4 bg-zinc-800 mx-1 shrink-0"></div>
-
                 <FilterChip
                     label="AI 情境"
                     active={status === 'CONTEXT'}
-                    onClick={() => onStatusChange('CONTEXT')}
+                    onClick={() => {
+                        onStatusChange('CONTEXT');
+                        if (onTagFilterChange) onTagFilterChange("");
+                    }}
                     variant="violet"
                     icon={<Sparkles className="w-2.5 h-2.5" />}
                 />
+
+                {/* Feature B: User Custom Tags */}
+                {userTags.length > 0 && (
+                    <>
+                        <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 shrink-0 mx-0.5" />
+                        {userTags.map(tag => (
+                            <FilterChip
+                                key={tag}
+                                label={tag}
+                                active={status === 'TAGGED' && tagFilter === tag}
+                                onClick={() => {
+                                    onStatusChange('TAGGED');
+                                    if (onTagFilterChange) onTagFilterChange(tag);
+                                }}
+                                variant="amber"
+                            />
+                        ))}
+                    </>
+                )}
+
+                <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 shrink-0 mx-0.5" />
+
+                {/* Sort Button */}
+                <button
+                    onClick={() => onSortChange(sort === 'RANK' ? 'DUE' : 'RANK')}
+                    className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                    <ListFilter className="w-3 h-3" />
+                    <span>{sort === 'RANK' ? '排名' : '待复习'}</span>
+                </button>
             </div>
         </div>
     );
@@ -120,7 +149,7 @@ interface FilterChipProps {
     label: string;
     active: boolean;
     onClick: () => void;
-    variant?: 'default' | 'rose' | 'violet';
+    variant?: 'default' | 'rose' | 'violet' | 'amber';
     dotColor?: string;
     icon?: React.ReactNode;
 }
@@ -160,6 +189,10 @@ function FilterChip({ label, active, onClick, variant = 'default', dotColor, ico
         variantClass = active
             ? "bg-violet-500/20 text-violet-400 border-violet-500/50"
             : "text-violet-400 hover:text-violet-300 bg-violet-500/5 border border-violet-500/10 hover:border-violet-500/40";
+    } else if (variant === 'amber') {
+        variantClass = active
+            ? "bg-amber-500/20 text-amber-500 border-amber-500/50"
+            : "text-amber-500/80 hover:text-amber-400 bg-amber-500/5 border border-amber-500/20 hover:border-amber-500/50";
     }
 
     return (

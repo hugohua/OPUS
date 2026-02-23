@@ -2,7 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Zap, Activity, Brain, Network, Play, FileText, Layers, Split, BookOpen, History } from 'lucide-react';
+import { Zap, Activity, Brain, Network, Play, FileText, Layers, Split, BookOpen, History, Target, Wand2 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { DiagnosticRadar } from "@/components/arena/diagnostic-radar";
+import { SimulateScenarioCard } from "@/components/dashboard/simulate-scenario-card";
+import { GlobalHeader } from "@/components/ui/global-header";
+import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
 
 // --- Matrix UI Configuration ---
 interface ScenarioCard {
@@ -11,7 +16,7 @@ interface ScenarioCard {
     file: string;
     desc: string;
     queue: number;
-    icon: React.ElementType;
+    icon: any;
     mode: string;
     color: string;
 }
@@ -20,7 +25,7 @@ interface L3ScenarioCard {
     id: string;
     title: string;
     desc: string;
-    icon: React.ElementType;
+    icon: any;
     href: string;
     color: string;
 }
@@ -123,16 +128,33 @@ const L3_SCENARIOS: L3ScenarioCard[] = [
     }
 ];
 
+const ARENA_SCENARIOS = [
+    {
+        id: "ARENA-BLITZ",
+        title: "单句闪电战",
+        desc: "碎片极速快测",
+        tag: "Part 5",
+        icon: Zap,
+        href: "/dashboard/arena/blitz",
+        theme: "violet" as const
+    },
+    {
+        id: "ARENA-MISSION",
+        title: "阅读狙击战",
+        desc: "沉浸商务实战",
+        tag: "Part 6/7",
+        icon: BookOpen,
+        href: "/dashboard/arena/mission",
+        theme: "indigo" as const
+    }
+];
+
 export default function SimulatePage() {
     const router = useRouter();
 
+    // L0/L1/L2 模式页面跳转（无静态 href，使用 router.push）
     const handleNavigate = (mode: string) => {
-        // 直接跳转到单一场景模式（不带 scenario 参数）
         router.push(`/dashboard/session/${mode}`);
-    };
-
-    const handleNavigateTo = (href: string) => {
-        router.push(href);
     };
 
     return (
@@ -141,24 +163,41 @@ export default function SimulatePage() {
             {/* Background Grid */}
 
 
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-white/15 px-6 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm">
-                        <Network className="w-4 h-4 text-zinc-600 dark:text-zinc-100" />
-                    </div>
-                    <div className="flex flex-col">
-                        <h1 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-none">训练矩阵</h1>
-                        <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">v3.1.0 • 9 个模块</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-100/50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/50">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-500">就绪</span>
-                </div>
-            </header>
+            {/* Header - Variant A Strict Compliance */}
+            <GlobalHeader
+                title="训练矩阵"
+                showStatusLight={true}
+                rightSlot={<HeaderActionDropdown variant="simulate" />}
+            />
 
             <main className="max-w-4xl mx-auto p-6 space-y-8 relative z-10">
+                {/* AI 诊断雷达（核心加餐提示区） */}
+                <section className="mb-8">
+                    <DiagnosticRadar />
+                </section>
+
+                {/* --- The Arena --- */}
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-500 bg-rose-100/50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded border border-rose-200/50 dark:border-rose-900/50">ARC</span>
+                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">实战演练舱</h2>
+                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+                        {ARENA_SCENARIOS.map((item) => (
+                            <SimulateScenarioCard
+                                key={item.id}
+                                title={item.title}
+                                desc={item.desc}
+                                tag={item.tag}
+                                icon={item.icon}
+                                href={item.href}
+                                theme={item.theme}
+                            />
+                        ))}
+                    </div>
+                </section>
 
                 {/* --- L0 Foundation --- */}
                 <section>
@@ -207,24 +246,16 @@ export default function SimulatePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {L1_SCENARIOS.map((item) => {
-                            const Icon = item.icon;
                             return (
-                                <button
+                                <SimulateScenarioCard
                                     key={item.id}
+                                    title={item.title}
+                                    desc={item.desc}
+                                    tag={item.mode}
+                                    icon={item.icon}
                                     onClick={() => handleNavigate(item.mode)}
-                                    className="group relative flex p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-cyan-500/40 dark:hover:border-cyan-500/40 transition-all text-left items-center"
-                                >
-                                    <div className="w-12 h-12 rounded bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
-                                        <Icon className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:text-cyan-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <h3 className="text-zinc-900 dark:text-zinc-100 font-bold">{item.title}</h3>
-                                            <span className="text-[9px] font-mono text-cyan-600 dark:text-cyan-500 bg-cyan-100/50 dark:bg-cyan-950/30 px-1 rounded">{item.mode}</span>
-                                        </div>
-                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-500 font-mono">{item.desc}</p>
-                                    </div>
-                                </button>
+                                    theme="cyan"
+                                />
                             );
                         })}
                     </div>
@@ -270,27 +301,17 @@ export default function SimulatePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {L3_SCENARIOS.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleNavigateTo(item.href)}
-                                    className="group relative flex p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all text-left items-center"
-                                >
-                                    <div className="w-12 h-12 rounded bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
-                                        <Icon className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:text-emerald-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <h3 className="text-zinc-900 dark:text-zinc-100 font-bold">{item.title}</h3>
-                                            <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-500 bg-emerald-100/50 dark:bg-emerald-950/30 px-1 rounded">{item.id}</span>
-                                        </div>
-                                        <p className="text-[10px] text-zinc-500 dark:text-zinc-500 font-mono">{item.desc}</p>
-                                    </div>
-                                </button>
-                            );
-                        })}
+                        {L3_SCENARIOS.map((item) => (
+                            <SimulateScenarioCard
+                                key={item.id}
+                                title={item.title}
+                                desc={item.desc}
+                                tag={item.id}
+                                icon={item.icon}
+                                href={item.href}
+                                theme="emerald"
+                            />
+                        ))}
                     </div>
                 </section>
 

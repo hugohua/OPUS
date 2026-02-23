@@ -58,7 +58,11 @@ export default async function QueueDashboardPage() {
 
                 {/* 3. Manual Triggers (1 Col) */}
                 <Suspense fallback={<CardSkeleton />}>
-                    <OperationPanel isPaused={status.isPaused} userId={session.user.id} />
+                    <OperationPanel
+                        isPaused={status.isPaused}
+                        userId={session.user.id}
+                        queuedCount={status.waiting + status.failed + status.delayed}
+                    />
                 </Suspense>
             </div>
         </>

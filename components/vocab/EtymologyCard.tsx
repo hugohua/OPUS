@@ -20,7 +20,7 @@ export function EtymologyCard({ etymology, className, variant = 'default' }: Ety
     // Minimal Mode: Show ONLY the logic line
     if (variant === 'minimal') {
         return (
-            <div className={cn("w-full pl-3 border-l-2 border-indigo-300 bg-indigo-50/50 py-2 pr-2 rounded-r select-text", className)}>
+            <div className={cn("w-full pl-3 border-l-2 border-indigo-300 dark:border-indigo-500/40 bg-indigo-50/50 dark:bg-indigo-500/10 py-2 pr-2 rounded-r select-text", className)}>
                 <p className="font-mono text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
                     <span className="text-indigo-600 dark:text-indigo-400 font-bold mr-2">// Logic:</span>
                     {etymology.memory_hook || data.logic_cn}
@@ -43,7 +43,7 @@ export function EtymologyCard({ etymology, className, variant = 'default' }: Ety
                 </span>
             </div>
 
-            <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 relative overflow-hidden">
+            <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/10 rounded-xl p-5 relative overflow-hidden dark:backdrop-blur-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
 
                 {/* 1. Visual Breakdown (AST Style) */}
                 {hasVisuals && (
@@ -53,7 +53,7 @@ export function EtymologyCard({ etymology, className, variant = 'default' }: Ety
                 )}
 
                 {/* 2. Logic / Memory Hook (Comment Style) */}
-                <div className="pl-2 border-l-2 border-indigo-200 bg-indigo-50/50 py-2 pr-2 rounded-r">
+                <div className="pl-2 border-l-2 border-indigo-200 dark:border-indigo-500/40 bg-indigo-50/50 dark:bg-indigo-500/10 py-2 pr-2 rounded-r">
                     <p className="font-mono text-xs text-zinc-600 leading-relaxed">
                         <span className="text-indigo-500 font-bold mr-1">// Logic:</span>
                         {etymology.memory_hook || data.logic_cn}

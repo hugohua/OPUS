@@ -206,6 +206,7 @@ export function SyntaxRenderer({
                                 partOfSpeech={posMatch ? posMatch[1] : ""}
                                 targetWord={drill.meta?.target_word || ""}
                                 etymology={drill.meta?.etymology}
+                                userNote={drill.meta?.userNote} // [New] Feature A
                             />
                         ) : (
                             <EditorialDrill
@@ -216,6 +217,7 @@ export function SyntaxRenderer({
                                 answer={task?.answer_key || ""}
                                 status={status}
                                 selected={selectedOption}
+                                userNote={drill.meta?.userNote} // [New] Feature A
                             />
                         )}
                     </motion.div>

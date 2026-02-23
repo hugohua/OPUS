@@ -35,6 +35,16 @@ MERGED_FILE  = os.path.join('books', 'toeic_full_ocr.txt')
 FAILED_LOG   = os.path.join('books', 'ocr_failed_pages.log')
 PDF_PATH     = os.path.join('books', '新托业语法和词汇详解及实战试题part5-6（21套）.pdf')
 
+def update_config(pdf_path, out_dir):
+    global PAGES_DIR, MERGED_FILE, FAILED_LOG, PDF_PATH
+    if pdf_path:
+        PDF_PATH = pdf_path
+    if out_dir:
+        PAGES_DIR = out_dir
+        MERGED_FILE = os.path.join(out_dir, 'merged_ocr.txt')
+        FAILED_LOG = os.path.join(out_dir, 'ocr_failed_pages.log')
+        os.makedirs(PAGES_DIR, exist_ok=True)
+
 MAX_RETRIES        = 3
 BASE_RETRY_DELAY_S = 3
 RATE_LIMIT_PAUSE_S = 30   # 429 时暂停秒数
@@ -285,6 +295,8 @@ async def async_main(args):
 
 def main():
     parser = argparse.ArgumentParser(description='Opus TOEIC PDF OCR (Parallel)')
+    parser.add_argument('--pdf', type=str, help='PDF 文件路径')
+    parser.add_argument('--out-dir', type=str, help='输出目录（TXT 文件存放位置）')
     parser.add_argument('--start-page', type=int, default=1)
     parser.add_argument('--end-page', type=int, default=0, help='0=last page')
     parser.add_argument('--workers', type=int, default=4, help='并发线程数')
@@ -292,6 +304,8 @@ def main():
     parser.add_argument('--retry', action='store_true', help='重试失败页')
     parser.add_argument('--merge', action='store_true', help='合并所有页面文件为一个完整文件')
     args = parser.parse_args()
+
+    update_config(args.pdf, args.out_dir)
 
     if args.merge:
         merge_pages()

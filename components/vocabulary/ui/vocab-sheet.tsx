@@ -78,7 +78,7 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                    We hide it visually but keep it for screen readers.
                 */}
                 <DrawerTitle className="sr-only">
-                    {item.word} Details
+                    {item.word} 详情
                 </DrawerTitle>
 
                 <div className="mx-auto w-full max-w-md relative">
@@ -123,10 +123,10 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
 
                                 <div className="mx-6 mb-8 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 text-center">
                                     <p className="text-sm text-indigo-900 dark:text-indigo-200 mb-2 font-medium">
-                                        Want to disable deep memory?
+                                        想查看完整记忆档案？
                                     </p>
                                     <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                                        Check full context and AI analysis in detail view.
+                                        进入详情页查看 AI 分析与语境快照。
                                     </p>
                                 </div>
                             </>
@@ -144,7 +144,7 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                         <div className="w-full mb-3">
                             <Link href={`/dashboard/vocab/${item.word}`} className="block w-full">
                                 <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 group">
-                                    Deep Dive Analysis
+                                    深度分析
                                     <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                 </Button>
                             </Link>

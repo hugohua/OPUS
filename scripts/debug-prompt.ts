@@ -20,9 +20,17 @@
  *
  *   3. 指定 L2 Context Stage:
  *      npx tsx scripts/debug-prompt.ts -g l2-context-script --stage 3
+ *
+ *   4. 语法树打标调试 (从 QuestionSeed 取真实题目):
+ *      npx tsx scripts/debug-prompt.ts -g grammar-tagger          # 仅输出 Prompt
+ *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run     # 调用 AI 查看打标结果
+ *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run -n 5  # 只测试 5 题
+ *
+ *   5. 高速并发模式 (跳过 Free 额度下的 5 分钟限制保护倒计时):
+ *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run -n 10 -t paid
  * 
  * 参数说明:
- *   -g, --gen     : 生成器类型 (l0-syntax | l0-phrase | l0-blitz | l2-smart | l2-context | l2-context-script | l2-nuance)
+ *   -g, --gen     : 生成器类型 (l0-syntax | ... | grammar-tagger)
  *   -n, --number  : 批量大小 (默认 10)
  *   -r, --run     : 执行 AI 生成
  *   -s, --scenario: 指定场景 (仅 L2)
@@ -31,6 +39,7 @@
 
 import { Command } from 'commander';
 import { select } from '@inquirer/prompts';
+import { generateObject } from 'ai';
 import { db } from '@/lib/db';
 import { AIService } from '@/lib/ai/core';
 import { runEtlJob, EtlBatchResult } from '@/lib/etl/batch-runner';
@@ -87,6 +96,13 @@ import {
     Part5DrillInput,
     buildArenaPart5Inputs
 } from "@/lib/generators/arena/part5-drill";
+import {
+    GRAMMAR_TAGGER_SYSTEM_PROMPT,
+    buildTaggerUserPrompt,
+    GrammarTagBatchResultSchema,
+    type TaxonomyNode,
+    type QuestionForTagging,
+} from '@/lib/generators/etl/grammar-tagger-prompt';
 import { VocabEntity, CollocationItem } from '@/types/vocab';
 import { z } from 'zod';
 import chalk from 'chalk';
@@ -326,8 +342,72 @@ const Adapters: Record<string, GeneratorAdapter> = {
         getBatchPrompts: (inputs: Part5DrillInput[]) => {
             return getPart5DrillBatchPrompt(inputs);
         }
+    },
+
+    // ==========================================
+    // 语法树打标 (数据源: QuestionSeed，非 Vocab)
+    // ==========================================
+    'grammar-tagger': {
+        name: '语法树打标 / Grammar Node Tagger',
+        dataRequirements: '数据源: QuestionSeed (非 Vocab)，需要 GrammarNode L3 节点已入库',
+        buildInput: (item: any) => item, // 直接透传 QuestionForTagging
+        getPrompts: (input: QuestionForTagging) => {
+            // 单条模式：需要运行时获取 taxonomy（在 processBatch 中处理）
+            return {
+                system: GRAMMAR_TAGGER_SYSTEM_PROMPT,
+                user: '(单条模式不可用，请使用批量模式)',
+            };
+        },
+        getBatchPrompts: (inputs: QuestionForTagging[]) => {
+            // taxonomy 会在 processBatch 中注入
+            // 这里用占位，实际由 grammar-tagger 专用处理路径覆盖
+            return {
+                system: GRAMMAR_TAGGER_SYSTEM_PROMPT,
+                user: '(taxonomy 将在运行时注入)',
+            };
+        },
     }
 };
+
+// ==========================================
+// 语法树打标专用：数据拉取 + taxonomy 缓存
+// ==========================================
+
+let _taxonomyCache: TaxonomyNode[] | null = null;
+
+/** 获取所有 L3 GrammarNode 作为分类目录 */
+async function getTaxonomyNodes(): Promise<TaxonomyNode[]> {
+    if (_taxonomyCache) return _taxonomyCache;
+    const nodes = await db.grammarNode.findMany({
+        where: { level: 3 },
+        select: { id: true, code: true, name: true, description: true },
+    });
+    _taxonomyCache = nodes.map(n => ({ code: n.code, name: n.name, description: n.description }));
+    return _taxonomyCache;
+}
+
+/** 从 QuestionSeed 表拉取未打标的题目 */
+async function fetchQuestionSeedsForTagger(batchSize: number): Promise<QuestionForTagging[]> {
+    const count = await db.questionSeed.count({ where: { grammarNodeId: null } });
+    if (count === 0) {
+        console.log(chalk.yellow('⚠️ 没有未打标的 QuestionSeed'));
+        return [];
+    }
+
+    const skip = Math.max(0, Math.floor(Math.random() * Math.max(0, count - batchSize)));
+    const seeds = await db.questionSeed.findMany({
+        where: { grammarNodeId: null },
+        take: batchSize,
+        skip,
+        select: {
+            id: true, sentence: true, targetAnswer: true,
+            questionType: true, options: true, rationale: true,
+        },
+    });
+
+    console.log(chalk.gray(`📊 QuestionSeed 选题: 总未标 ${count} → 本批取 ${seeds.length}`));
+    return seeds;
+}
 
 // ==========================================
 // 智能选词策略 (模拟 OMPS)
@@ -430,7 +510,44 @@ async function processBatch(
     context?: DebugContext
 ): Promise<EtlBatchResult> {
     if (!context) throw new Error("Context missing");
-    const { adapter, runAI, scenario, stage } = context;
+    const { adapter, runAI, scenario, stage, generatorKey } = context;
+
+    // ==========================================
+    // grammar-tagger 专用处理路径
+    // ==========================================
+    if (generatorKey === 'grammar-tagger') {
+        const taxonomy = await getTaxonomyNodes();
+        const questions = items as unknown as QuestionForTagging[];
+        const systemPrompt = GRAMMAR_TAGGER_SYSTEM_PROMPT;
+        const userPrompt = buildTaggerUserPrompt(taxonomy, questions);
+        let rawResult = '(AI 未执行)';
+
+        if (runAI) {
+            try {
+                const { model: aiModel } = getAIModel('etl');
+                const { object } = await generateObject({
+                    model: aiModel,
+                    system: systemPrompt,
+                    prompt: userPrompt,
+                    schema: GrammarTagBatchResultSchema,
+                    temperature: 0.1,
+                });
+                rawResult = JSON.stringify(object, null, 2);
+            } catch (e: any) {
+                rawResult = `❌ LLM 错误: ${e.message}`;
+            }
+        }
+
+        return {
+            successCount: items.length,
+            failedCount: 0,
+            debugInfo: { systemPrompt, userPrompt, rawResult, batchId: `batch_${batchIndex}` },
+        };
+    }
+
+    // ==========================================
+    // 通用处理路径 (原有逻辑)
+    // ==========================================
 
     // 1. 构建输入 (带 Pivot 保护)
     const inputs = await Promise.all(items.map(item => adapter.buildInput(item, { scenario, stage })));
@@ -528,7 +645,8 @@ async function main() {
         .option('-n, --number <count>', '处理数量', '10')
         .option('-r, --run', '执行 AI 生成', false)
         .option('-s, --scenario <scenario>', 'L2 场景')
-        .option('--stage <stage>', 'L2 Context Script 阶段 (1|2|3)', '1');
+        .option('--stage <stage>', 'L2 Context Script 阶段 (1|2|3)', '1')
+        .option('-t, --tier <tier>', '请求额度级别 (free | paid), 默认 free 会有严格反爬等待', 'free');
 
     program.parse(process.argv);
     const options = program.opts();
@@ -560,13 +678,18 @@ async function main() {
     const { model, modelName } = getAIModel('etl');
     const stage = parseInt(options.stage) as ContextStage;
 
+    // 根据生成器类型选择数据源
+    const isGrammarTagger = genKey === 'grammar-tagger';
+
     // 运行 ETL
-    await runEtlJob<VocabItem, DebugContext>({
+    await runEtlJob<any, DebugContext>({
         jobName: `debug-${genKey}`,
-        tier: 'free',
+        tier: options.tier as 'free' | 'paid',
         isDryRun: true,
         customBatchSize: parseInt(options.number, 10),
-        fetchBatch: async (size) => fetchBatchForGenerator(size, genKey),
+        fetchBatch: async (size) => isGrammarTagger
+            ? fetchQuestionSeedsForTagger(size) as any
+            : fetchBatchForGenerator(size, genKey),
         processBatch,
         context: {
             adapter,

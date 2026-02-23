@@ -28,14 +28,14 @@ export function TTSButton({
     autoPlay = false,
 }: TTSButtonProps) {
     const { play, stop, isPlaying, isLoading, status } = useTTS();
-    const [hasAutoPlayed, setHasAutoPlayed] = useState(false);
+    const [lastAutoPlayedText, setLastAutoPlayedText] = useState<string | null>(null);
 
     useEffect(() => {
-        if (autoPlay && !hasAutoPlayed && text) {
+        if (autoPlay && text && lastAutoPlayedText !== text) {
             play({ text, voice, language, speed });
-            setHasAutoPlayed(true);
+            setLastAutoPlayedText(text);
         }
-    }, [autoPlay, hasAutoPlayed, text, voice, language, speed, play]);
+    }, [autoPlay, lastAutoPlayedText, text, voice, language, speed, play]);
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation(); // 防止冒泡触发父级点击

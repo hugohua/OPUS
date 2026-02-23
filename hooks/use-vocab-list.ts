@@ -6,17 +6,19 @@ import { getVocabList, VocabFilterStatus, VocabSortOption } from "@/actions/get-
 export function useVocabList(
     search: string,
     status: VocabFilterStatus,
-    sort: VocabSortOption
+    sort: VocabSortOption,
+    tagFilter?: string
 ) {
     return useInfiniteQuery({
-        queryKey: ['vocab-list', search, status, sort],
+        queryKey: ['vocab-list', search, status, sort, tagFilter],
         queryFn: async ({ pageParam = 1 }) => {
             return getVocabList({
                 page: pageParam,
                 limit: 50,
                 search,
                 status,
-                sort
+                sort,
+                tagFilter
             });
         },
         getNextPageParam: (lastPage) => {
