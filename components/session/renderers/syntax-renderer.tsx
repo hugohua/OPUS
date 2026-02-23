@@ -218,6 +218,7 @@ export function SyntaxRenderer({
                                 status={status}
                                 selected={selectedOption}
                                 userNote={drill.meta?.userNote} // [New] Feature A
+                                suppressAutoPlay={isArenaPart5} // Arena 模式禁用自动播放
                             />
                         )}
                     </motion.div>

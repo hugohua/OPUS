@@ -15,12 +15,15 @@ interface EditorialDrillProps {
     translation?: string;
     explanation?: string;
     userNote?: string; // [New] Feature A
+    suppressAutoPlay?: boolean; // Arena 实战模式下禁用自动播放
 }
 
 import { useSharedUserSettings } from "@/components/providers/user-settings-provider";
 
-export function EditorialDrill({ content, questionMarkdown, answer, status, selected, translation, explanation, userNote }: EditorialDrillProps) {
+export function EditorialDrill({ content, questionMarkdown, answer, status, selected, translation, explanation, userNote, suppressAutoPlay = false }: EditorialDrillProps) {
     const { autoPlay } = useSharedUserSettings();
+    // Arena 实战模式下禁用自动播放
+    const effectiveAutoPlay = autoPlay && !suppressAutoPlay;
 
     // --- Advanced Parser Engine ---
     // 1. Calculate Gap Range in Plain Text
@@ -186,7 +189,7 @@ export function EditorialDrill({ content, questionMarkdown, answer, status, sele
 
                 {/* TTS Control - Top Right */}
                 <div className="w-full flex justify-end mb-2">
-                    <TTSButton text={cleanText} autoPlay={autoPlay} />
+                    <TTSButton text={cleanText} autoPlay={effectiveAutoPlay} />
                 </div>
 
                 <div className="font-serif text-xl md:text-2xl leading-[2.5rem] text-zinc-800 dark:text-zinc-300 w-full break-words">
