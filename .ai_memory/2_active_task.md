@@ -16,6 +16,7 @@ Task 1.5: Topic Briefing & Phase 1.5 Features
 - [x] Task 1.5.3: PRD Update (Topic Briefing) - Doc Integration
 - [ ] Task 1.5.4: Topic Briefing (AI Context Generator) - Implementation
 - [ ] Task 3.2: Rest Card UI (每日休息卡)
+- [x] 替换本地数据库 (Import `opus_export.sql`)
 
 ## 上下文
 - 发现 `dashboard/simulate` 页面存在 10s+ 的 LLM 生成延迟。
@@ -23,3 +24,4 @@ Task 1.5: Topic Briefing & Phase 1.5 Features
 - 实现了 "生产者-消费者" 模型：首页进入 `simulate` 时预热缓存，`session` 页面优先消费缓存。
 - 验证脚本 `scripts/verify-drill-cache.ts` 通过。
 - [Fix] 修复了 Audio 模式下由于 Inventory 缺失导致 100% Fallback 时，Session 进度无法保存导致刷新重置的问题。
+- [DB] 已用项目根目录的 `opus_export.sql` 覆盖本地 Docker 数据库 (清理并重建了 public schema)。

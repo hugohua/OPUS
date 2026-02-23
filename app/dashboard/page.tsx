@@ -1,6 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DailyBlitzCard } from "@/components/dashboard/daily-blitz-card";
-import { ArenaSection } from "@/components/dashboard/arena-section";
+import { TrainingSection } from "@/components/dashboard/training-section";
 import { SkillGym } from "@/components/dashboard/skill-gym";
 import { ContextEngine } from "@/components/dashboard/context-engine";
 import { FloatingDock } from "@/components/dashboard/floating-dock";
@@ -8,7 +8,6 @@ import { getDashboardStats } from "@/actions/get-dashboard-stats";
 import { getLatestBriefing } from "@/actions/weaver-actions";
 import { auth } from "@/auth";
 import { FsrsHud } from "@/components/dashboard/fsrs-hud";
-import { FlashcardSection } from "@/components/dashboard/flashcard-section";
 import { WEAVER_SCENARIOS } from "@/lib/constants/weaver-scenarios";
 
 export const dynamic = 'force-dynamic';
@@ -51,11 +50,8 @@ export default async function DashboardPage() {
                     {/* Hero: Daily Blitz */}
                     <DailyBlitzCard />
 
-                    {/* Arena: Part 5 & Part 6/7 */}
-                    <ArenaSection />
-
-                    {/* New Module: Flashcards */}
-                    <FlashcardSection />
+                    {/* Core Training (Combined Arena & Flashcards) */}
+                    <TrainingSection />
 
                     {/* Grid: Skill Gym */}
                     <SkillGym />

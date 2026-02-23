@@ -18,11 +18,11 @@ export type RadarDomain = {
 
 // 预期的 L1 Codes，决定雷达图 5 个轴的顺序
 const L1_DOMAINS = [
-    { code: 'L1_VERBS', label: 'Verbs' },            // Top
-    { code: 'L1_PARTS_OF_SPEECH', label: 'Nouns' },  // Top Right (词汇/名词)
-    { code: 'L1_CONNECTIVES', label: 'Conj.' },      // Bottom Right (虚词/连词)
-    { code: 'L1_SPECIAL_SYNTAX', label: 'Syntax' },  // Bottom Left (特殊句法)
-    { code: 'L1_CLAUSES', label: 'Clauses' },        // Top Left (从句)
+    { code: 'L1_VERBS', label: '动词逻辑' },            // Top
+    { code: 'L1_PARTS_OF_SPEECH', label: '词性运用' },  // Top Right (词汇/名词)
+    { code: 'L1_CONNECTIVES', label: '连词介词' },      // Bottom Right (虚词/连词)
+    { code: 'L1_SPECIAL_SYNTAX', label: '特殊句法' },  // Bottom Left (特殊句法)
+    { code: 'L1_CLAUSES', label: '从句解析' },        // Top Left (从句)
 ];
 
 /**

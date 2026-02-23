@@ -137,7 +137,7 @@ export function FocusShell({
             </main>
 
             {/* 4. Footer (Control Deck Slot) */}
-            <footer className="flex-none w-full max-w-lg mx-auto px-6 pb-[130px] pt-2 z-20 min-h-[140px] flex flex-col justify-end">
+            <footer className="flex-none w-full max-w-lg mx-auto px-6 pb-12 pt-2 z-20 min-h-[140px] flex flex-col justify-end">
                 {footer}
             </footer>
 

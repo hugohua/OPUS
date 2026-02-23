@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { Zap, BookOpen, Activity, Grid } from "lucide-react";
+import { Zap, BookOpen, Activity, Grid, HelpCircle } from "lucide-react";
 import { getRadarData, getActionRequiredNodes, getSyntaxMatrixData } from "@/actions/grammar-dashboard";
-import { RadarChart } from "@/components/arena/radar-chart";
+import { GrammarRadar } from "@/components/arena/grammar-radar";
 import { ActionRequired } from "@/components/arena/action-required";
 import { SyntaxMatrix } from "@/components/arena/syntax-matrix";
 import { redirect } from "next/navigation";
 import { GlobalHeader } from "@/components/ui/global-header";
 import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default async function ArenaDashboard({ searchParams }: { searchParams: Promise<{ tab?: string, domain?: string }> }) {
     const params = await searchParams;
@@ -55,17 +60,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
                 {tab === 'overview' ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
                         {/* 1. Grammar Proficiency Radar (L1 Domains) */}
-                        <section className="bg-surface border border-border rounded-xl p-5 shadow-sm dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-[10px] font-mono font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5 text-indigo-500" />
-                                    Grammar Proficiency
-                                </h2>
-                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-background px-1.5 py-0.5 rounded border border-border">L1 DOMAINS</span>
-                            </div>
-
-                            <RadarChart domains={radarDomains} />
-                        </section>
+                        <GrammarRadar initialData={radarDomains} />
 
                         {/* 2. Action Required (L3 Weak Nodes) */}
                         <ActionRequired nodes={actionRequiredNodes} />

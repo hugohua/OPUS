@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, Zap, User, Sparkles } from "lucide-react";
+import { Layers, Zap, User, Sparkles, Swords } from "lucide-react";
 
 interface FloatingDockProps {
     hasDue?: boolean;
@@ -24,6 +24,11 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
             icon: Zap,
             label: "模拟",
             exact: false
+        },
+        {
+            href: "/dashboard/arena",
+            icon: Swords,
+            label: "竞技"
         },
         {
             href: "/vocabulary",

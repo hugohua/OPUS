@@ -2,13 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-    Radar,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    ResponsiveContainer,
-} from "recharts";
-import {
     Card,
     CardContent,
     CardDescription,
@@ -16,11 +9,19 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { HelpCircle } from "lucide-react";
 import { getRadarData } from "@/actions/diagnostic-engine";
 import type { RadarDataPoint } from "@/lib/services/diagnostic-service";
+import { RadarChart } from "@/components/arena/radar-chart";
+import type { RadarDomain } from "@/actions/grammar-dashboard";
 
 export function DiagnosticRadar({ userId }: { userId?: string }) {
-    const [radarData, setRadarData] = useState<RadarDataPoint[]>([]);
+    const [radarData, setRadarData] = useState<RadarDomain[]>([]);
     const [weakestLabel, setWeakestLabel] = useState<string | null>(null);
     const [totalAttempts, setTotalAttempts] = useState(0);
     // [W-3 Fix] 使用独立 isLoading state 替代 useTransition(async) 反模式
@@ -31,7 +32,13 @@ export function DiagnosticRadar({ userId }: { userId?: string }) {
         setIsLoading(true);
         getRadarData(userId).then(result => {
             if (cancelled) return;
-            setRadarData(result.radarData);
+            // 转换为 RadarDomain 格式以复用自定义 RadarChart
+            const mappedData: RadarDomain[] = result.radarData.map(d => ({
+                code: d.subject,
+                label: d.subject,
+                score: d.A
+            }));
+            setRadarData(mappedData);
             setWeakestLabel(result.weakest?.label ?? null);
             setTotalAttempts(result.totalAttempts);
         }).catch(error => {
@@ -64,7 +71,7 @@ export function DiagnosticRadar({ userId }: { userId?: string }) {
                 <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2">
                         <span>AI 能力诊断</span>
-                        <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
                             Beta
                         </span>
                     </CardTitle>
@@ -82,11 +89,26 @@ export function DiagnosticRadar({ userId }: { userId?: string }) {
     return (
         <Card className="w-full relative overflow-hidden">
             {/* 背景装点 */}
-            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-primary/5 blur-3xl z-0 pointer-events-none" />
+            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-cyan-500/5 blur-3xl z-0 pointer-events-none" />
             <CardHeader className="relative z-10 pb-2">
                 <CardTitle className="flex items-center gap-2">
-                    <span>AI 能力诊断</span>
-                    <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    <span>综合题型诊断</span>
+                    <Popover>
+                        <PopoverTrigger className="text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500">
+                            <HelpCircle className="w-4 h-4" />
+                        </PopoverTrigger>
+                        <PopoverContent side="top" className="w-72 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/10 shadow-lg text-sm">
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>宏观题型调度引擎
+                                </h4>
+                                <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed text-xs">
+                                    基于您在 Arena 实战中的原始做题记录统计。这里的表现决定了系统每天为您生成何种题型的题目（如重点补足阅读或纯语法）。
+                                </p>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                    <span className="text-xs font-normal text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/30 px-2 py-0.5 rounded-full border border-cyan-100 dark:border-cyan-900/50">
                         Beta
                     </span>
                 </CardTitle>
@@ -95,33 +117,14 @@ export function DiagnosticRadar({ userId }: { userId?: string }) {
                     {weakestLabel && (
                         <div className="mt-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-md border border-amber-100 dark:border-amber-900/50">
                             <span className="font-semibold">今日建议：</span>
-                            你的 <b>{weakestLabel}</b> 环节失分较多。今日训练已为你定向组装了针对性挑战。
+                            你的 <b className="font-bold">{weakestLabel}</b> 环节失分较多。今日训练已为你定向组装了针对性挑战。
                         </div>
                     )}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="relative z-10">
-                <div className="h-[250px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                            <PolarGrid strokeOpacity={0.2} />
-                            <PolarAngleAxis
-                                dataKey="subject"
-                                tick={{
-                                    fill: "currentColor",
-                                    fontSize: 12,
-                                    opacity: 0.8,
-                                }}
-                            />
-                            <Radar
-                                name="正确率"
-                                dataKey="A"
-                                stroke="hsl(var(--primary))"
-                                fill="hsl(var(--primary))"
-                                fillOpacity={0.2}
-                            />
-                        </RadarChart>
-                    </ResponsiveContainer>
+            <CardContent className="relative z-10 pt-4 pb-6">
+                <div className="flex items-center justify-center w-full min-h-[220px]">
+                    <RadarChart domains={radarData} colorVariant="cyan" />
                 </div>
             </CardContent>
         </Card>

@@ -112,7 +112,7 @@ const L2_SCENARIOS: ScenarioCard[] = [
 const L3_SCENARIOS: L3ScenarioCard[] = [
     {
         id: "L3-WEAVER",
-        title: "文章编织",
+        title: "简报中心",
         desc: "场景驱动 · 沉浸阅读",
         icon: BookOpen,
         href: "/weaver",

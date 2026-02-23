@@ -202,7 +202,11 @@ ${mappedBatch}`;
             const rateLimitInfo = detectRateLimitError(error);
 
             try {
-                fs.writeFileSync('error_dump.json', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+                const logsDir = path.join(process.cwd(), 'logs');
+                if (!fs.existsSync(logsDir)) {
+                    fs.mkdirSync(logsDir, { recursive: true });
+                }
+                fs.writeFileSync(path.join(logsDir, 'error_dump.json'), JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
             } catch (e) { }
 
             if (error.name === 'TypeValidationError' || error.name === 'JSONParseError') {

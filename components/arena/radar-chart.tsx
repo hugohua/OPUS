@@ -5,7 +5,7 @@ import type { RadarDomain } from "@/actions/grammar-dashboard";
 
 export interface RadarChartProps {
     domains: RadarDomain[];
-    /** 预期顺序：0=Verbs(上), 1=Nouns(右上), 2=Conj.(右下), 3=Syntax(左下), 4=Clauses(左上) */
+    colorVariant?: "violet" | "cyan";
 }
 
 // 雷达图基础尺寸
@@ -18,7 +18,7 @@ const MAX_RADIUS = 36;
  * 技能树雷达图组件 (Radar Chart)
  * 接受服务端传入的长远分数 (0-100)，并在挂载后执行展开动画。
  */
-export function RadarChart({ domains }: RadarChartProps) {
+export function RadarChart({ domains, colorVariant = "violet" }: RadarChartProps) {
     // 初始状态：全分为 0 (收缩在中心点)
     const [animatedScores, setAnimatedScores] = useState<number[]>(domains.map(() => 0));
 
@@ -63,10 +63,16 @@ export function RadarChart({ domains }: RadarChartProps) {
         };
     });
 
+    const polygonColorClass = colorVariant === "cyan"
+        ? "text-cyan-500 fill-cyan-500/15 dark:fill-cyan-500/20"
+        : "text-violet-500 fill-violet-500/15 dark:fill-violet-500/20";
+
+    const dotFillColor = colorVariant === "cyan" ? "#06b6d4" : "#8b5cf6";
+
     return (
-        <div className="relative w-full aspect-square max-w-[220px] mx-auto mb-2">
+        <div className="relative w-full aspect-square max-w-[260px] mx-auto my-4">
             <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                {/* 1. 背景五边形轮廓 (Full & Mid) */}
+                {/* 1. 背景多边形轮廓 (Full & Mid) */}
                 <polygon points={maxOutline} fill="none" stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" strokeWidth="1" />
                 <polygon points={midOutline} fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800/50" strokeWidth="1" />
 
@@ -84,7 +90,7 @@ export function RadarChart({ domains }: RadarChartProps) {
                     points={dataPoints}
                     fill="currentColor"
                     stroke="currentColor"
-                    className="text-violet-500 fill-violet-500/15 dark:fill-violet-500/20 drop-shadow-sm transition-all duration-700 ease-out"
+                    className={`${polygonColorClass} drop-shadow-sm transition-all duration-700 ease-out`}
                     strokeWidth="1.5"
                 />
 
@@ -98,7 +104,7 @@ export function RadarChart({ domains }: RadarChartProps) {
                             cx={coord.x}
                             cy={coord.y}
                             r={isWeak ? 2 : 1.5}
-                            fill={isWeak ? "#f43f5e" : "#8b5cf6"} // Rose-500 or Violet-500
+                            fill={isWeak ? "#f43f5e" : dotFillColor} // Rose-500 or selected primary
                             stroke="white"
                             strokeWidth="0.5"
                             className={`transition-all duration-700 ease-out ${isWeak ? 'animate-pulse drop-shadow-sm' : ''}`}
@@ -107,31 +113,29 @@ export function RadarChart({ domains }: RadarChartProps) {
                 })}
             </svg>
 
-            {/* 外层绝对定位标签 (5 个轴向) */}
-            {domains.length === 5 && (
-                <>
-                    {/* Top: Verbs */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-1">
-                        <HoverBadge score={domains[0].score} label={domains[0].label} />
+            {/* 外层绝对定位标签 (动态环绕) */}
+            {domains.map((domain, i) => {
+                const angle = angles[i] !== undefined ? angles[i] : 0;
+                // 将标签沿半径向外延伸一定比例 (比如 radius + 15 变成 51%，这里我们直接使用 55%)
+                // 由于 viewBox 是 100x100，中心点在 (50, 50)，标签通过 top/left 和 translate 完全按圆周排布
+                const labelRadius = 55; // 这意味着它将在距离圆心 55% 的圆周上
+                const top = 50 + labelRadius * Math.sin(angle);
+                const left = 50 + labelRadius * Math.cos(angle);
+
+                return (
+                    <div
+                        key={`label-${i}`}
+                        className="absolute z-10 w-max"
+                        style={{
+                            top: `${top}%`,
+                            left: `${left}%`,
+                            transform: 'translate(-50%, -50%)'
+                        }}
+                    >
+                        <HoverBadge score={domain.score} label={domain.label} colorVariant={colorVariant} />
                     </div>
-                    {/* Top Right: Nouns/Lexical */}
-                    <div className="absolute top-1/4 right-0 -mr-2">
-                        <HoverBadge score={domains[1].score} label={domains[1].label} />
-                    </div>
-                    {/* Bottom Right: Conj/Connectives */}
-                    <div className="absolute bottom-6 right-0">
-                        <HoverBadge score={domains[2].score} label={domains[2].label} />
-                    </div>
-                    {/* Bottom Left: Syntax */}
-                    <div className="absolute bottom-6 left-0">
-                        <HoverBadge score={domains[3].score} label={domains[3].label} />
-                    </div>
-                    {/* Top Left: Clauses */}
-                    <div className="absolute top-1/4 left-0 -ml-2">
-                        <HoverBadge score={domains[4].score} label={domains[4].label} />
-                    </div>
-                </>
-            )}
+                );
+            })}
         </div>
     );
 }
@@ -140,14 +144,17 @@ export function RadarChart({ domains }: RadarChartProps) {
 // Hover/Score Label 子组件
 // ---------------------------------------------------------------------------
 
-function HoverBadge({ score, label }: { score: number; label: string }) {
-    // 依照明度分色：优秀(>80, 绿)、及格(40-80, 靛紫)、不及格(<40, 红)
-    let colorClass = "text-violet-700 bg-white border-zinc-100 dark:text-violet-300 dark:bg-zinc-900 dark:border-white/10";
+function HoverBadge({ score, label, colorVariant }: { score: number; label: string; colorVariant: "violet" | "cyan" }) {
+    // 依照明度分色：优秀(>80, 绿)、及格(40-80, 主色)、不及格(<40, 红)
+    let colorClass = colorVariant === "cyan"
+        ? "text-cyan-700 bg-white border-zinc-100 dark:text-cyan-300 dark:bg-zinc-900 dark:border-white/10"
+        : "text-violet-700 bg-white border-zinc-100 dark:text-violet-300 dark:bg-zinc-900 dark:border-white/10";
+
     if (score >= 80) colorClass = "text-emerald-700 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-900/50";
     else if (score < 40) colorClass = "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-950/30 dark:border-rose-900/50";
 
     return (
-        <div className={`text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 rounded shadow-sm border ${colorClass} transition-colors`}>
+        <div className={`text-[10px] sm:text-xs font-mono font-bold px-1.5 py-0.5 rounded shadow-sm border ${colorClass} transition-colors whitespace-nowrap`}>
             {label} ({score}%)
         </div>
     );

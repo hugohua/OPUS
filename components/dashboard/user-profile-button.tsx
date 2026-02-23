@@ -16,17 +16,7 @@ export function UserProfileButton({ user }: UserProfileButtonProps) {
 
     return (
         <Link href="/dashboard/profile">
-            <button className="group flex items-center gap-3 pl-3 pr-1 py-1 rounded-full bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-300">
-
-                <div className="text-right hidden sm:block">
-                    {/* 暂时硬编码 Level 和 Title，后续可接入真实数据 */}
-                    <div className="text-[10px] font-bold font-mono text-zinc-800 dark:text-zinc-200 group-hover:text-violet-500 transition-colors">
-                        Lvl. 12
-                    </div>
-                    <div className="text-[8px] text-zinc-400 uppercase tracking-wider">
-                        Syntax Architect
-                    </div>
-                </div>
+            <button className="group flex items-center justify-center rounded-full active:scale-95 transition-all duration-300">
 
                 <div className="relative">
                     {/* Gradient Ring / Blur Effect */}
