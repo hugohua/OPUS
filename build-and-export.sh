@@ -26,11 +26,17 @@ SERVICES="web:opus-web worker:opus-worker tts:opus-tts"
 BASE_IMAGES="nginx:nginx:alpine pgvector:ankane/pgvector:latest redis:redis:7-alpine"
 
 # ==================== 部署配置 ====================
-NAS_USER="None"
-NAS_IP="192.168.5.23"
-NAS_PORT="2002"
-NAS_PATH="/volume1/docker/opus"
-NAS_PASSWORD="@Baofen13964332"
+# 尝试从 .env 文件加载环境变量
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs -0) 2>/dev/null || true
+fi
+
+NAS_USER="${NAS_USER:-root}"
+NAS_IP="${NAS_IP:-192.168.5.23}"
+NAS_PORT="${NAS_PORT:-2002}"
+NAS_PATH="${NAS_PATH:-/volume1/docker/opus}"
+# 密码从环境变量中读取，切勿硬编码！
+NAS_PASSWORD="${NAS_PASSWORD:-}"
 DEPLOY_TO_NAS=false
 
 # SSH/SCP 命令封装 (自动使用 sshpass)

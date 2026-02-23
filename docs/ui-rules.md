@@ -187,6 +187,10 @@ const buttonVariants = cva(
 3. **Context-Aware Nav:**
 * The Floating Dock should be visible on Dashboard but **hidden** during immersive Drill Sessions.
 
+4. **Header Architecture (Top Navigation):**
+* All headers MUST strictly adhere to the Dual-Variant Constraint system (Global Fusion vs. Immersive Focus).
+* For detailed rules on slot anatomy, zero-boundaries, and safe-area constraints, consult the **[Header UX / UI Guidelines](dev-notes/header-ux-guidelines.md)**.
+
 
 
 ---

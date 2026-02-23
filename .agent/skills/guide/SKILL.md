@@ -27,6 +27,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 ### 1. User Interface (UI/UX)
 - **Rules**: `docs/ui-rules.md` (Design tokens, layout principles)
 - **System**: `docs/dev-notes/unified-ui-system-v1.md` (Component library, Shadcn/Aceternity integration)
+- **Header Top Navigation**: `docs/dev-notes/header-ux-guidelines.md` (**NEW**: Global Fusion vs. Immersive Focus 空间槽位、滚动及避坑规范)
 - **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**v2.0**: 组件架构重构、Zinc Glassmorphism、Config-Driven)
 - **Weaver Config**: `config/weaver-scenarios.ts` (场景 UI 配置) + `lib/constants/weaver-scenario-map.ts` (6→21 DB 标签映射) + `lib/constants/weaver-density.ts` (Density 枚举)
 - **中文化术语规范**: `docs/dev-notes/ui-localization-terminology.md` (**NEW**: 全站翻译一致性标准)
