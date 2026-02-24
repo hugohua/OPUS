@@ -41,6 +41,9 @@ export async function processArenaPart6Queue(
                     mode: 'ARENA_PART6',
                     target_word_blank_index: rawPart6.target_word_blank_index,
                     seed_origin: llmInputs[0].input.seed?.part === 6 ? 'part6_native' : 'part5_fallback',
+                    questionSeedId: llmInputs[0].input.seed?.id, // [Fix] Ensure ID reaches frontend
+                    questionType: llmInputs[0].input.seed?.questionType,
+                    part: llmInputs[0].input.seed?.part ?? 6,
                 },
                 passage_markdown: rawPart6.passage_markdown,
                 segments: rawPart6.interactions.map((interactionRaw: any) => ({
@@ -68,6 +71,12 @@ export async function processArenaPart6Queue(
                 systemPrompt: p.system,
                 userPrompt: p.user,
                 provider: provider,
+                // [V7.0/V8.0] 保留 seed 元数据用于遥测和 BKT 算分
+                seedInfo: {
+                    id: llmInputs[0].input.seed?.id,
+                    questionType: llmInputs[0].input.seed?.questionType,
+                    part: llmInputs[0].input.seed?.part ?? 6,
+                }
             });
         } catch (err: any) {
             log.error({ error: err.message }, 'Failed to process Arena Part 6 chunk (LLM), using static fallback');
@@ -75,11 +84,22 @@ export async function processArenaPart6Queue(
             // Fallback logic
             const targetWord = llmInputs[0].input.targetWord || chunk[0].word;
             generatedDrills.push({
-                drill: await buildArenaPart6FallbackDrill(targetWord),
+                drill: await buildArenaPart6FallbackDrill(
+                    targetWord,
+                    llmInputs[0].input.seed?.id,
+                    llmInputs[0].input.seed?.questionType ?? undefined,
+                    llmInputs[0].input.seed?.part
+                ),
                 candidate: chunk[0],
                 systemPrompt: 'PIVOT_FALLBACK',
                 userPrompt: 'PIVOT_FALLBACK',
-                provider: 'static_fallback'
+                provider: 'static_fallback',
+                // [V7.0/V8.0] 保留 seed 元数据用于遥测和 BKT 算分
+                seedInfo: {
+                    id: llmInputs[0].input.seed?.id,
+                    questionType: llmInputs[0].input.seed?.questionType,
+                    part: llmInputs[0].input.seed?.part ?? 6,
+                }
             });
         }
     }

@@ -125,7 +125,10 @@ export function buildArenaFallbackDrill(
 // ARENA_PART6 (长文完形) 独立兜底生成
 // ============================================
 export async function buildArenaPart6FallbackDrill(
-    targetWord: string
+    targetWord: string,
+    questionSeedId?: string,
+    questionType?: string,
+    part?: number
 ): Promise<BriefingPayload> {
     // 采用稳定版本的 IT 服务维护通知模板作为通用兜底，即使完全断网或 LLM 熔断，前端也有内容展示
     return {
@@ -138,6 +141,10 @@ export async function buildArenaPart6FallbackDrill(
             generation_ms: 0,
             target_word_blank_index: 2,
             target_word: targetWord,
+            questionSeedId: questionSeedId,
+            questionType: questionType,
+            part: part ?? 6,
+            seed_origin: part === 6 ? 'part6_native' : 'part5_fallback'
         },
         passage_markdown: "Dear Team,\n\nPlease note that the server maintenance scheduled for tonight has been [__BLANK_1__]. We apologize for any [__BLANK_2__] this may cause. The IT department will [__BLANK_3__] you when the new schedule is confirmed. Thank you for your continued [__BLANK_4__].\n\nBest,\nIT Support",
         segments: [
