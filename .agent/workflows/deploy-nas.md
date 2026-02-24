@@ -27,7 +27,7 @@ npx tsc --noEmit
 3. 验证部署（检查 NAS 上的容器运行状态）:
 ```bash
 # 读取密码
-export $(grep -v '^#' .env | xargs -0) 2>/dev/null || true
+set -a; while IFS= read -r line || [ -n "$line" ]; do if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then continue; fi; line="${line%$'\r'}"; eval "export $line"; done < .env; set +a
 # 验证状态
-sshpass -p "${NAS_PASSWORD}" ssh -o StrictHostKeyChecking=no -p ${NAS_PORT:-2002} ${NAS_USER:-None}@${NAS_IP:-192.168.5.23} "echo '${NAS_PASSWORD}' | sudo -S /usr/local/bin/docker ps --format 'table {{.Names}}\t{{.Status}}' | grep opus"
+sshpass -p "${NAS_PASSWORD}" ssh -o StrictHostKeyChecking=no -p ${NAS_PORT:-2002} ${NAS_USER:-None}@${NAS_IP:-192.168.5.23} "echo '${NAS_PASSWORD}' | sudo -S /usr/local/bin/docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'opus|antigravity'"
 ```
