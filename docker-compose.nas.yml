@@ -86,6 +86,8 @@ services:
       - ETL_HTTPS_PROXY=
     env_file:
       - .env
+    volumes:
+      - ./data/audio:/app/public/audio
     depends_on:
       opus-db:
         condition: service_healthy

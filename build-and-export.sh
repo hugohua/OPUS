@@ -28,7 +28,17 @@ BASE_IMAGES="nginx:nginx:alpine pgvector:ankane/pgvector:latest redis:redis:7-al
 # ==================== 部署配置 ====================
 # 尝试从 .env 文件加载环境变量
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs -0) 2>/dev/null || true
+    set -a
+    while IFS= read -r line || [ -n "$line" ]; do
+        # 忽略注释和空行
+        if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]]; then
+            continue
+        fi
+        # 移除可能存在的 \r
+        line="${line%$'\r'}"
+        eval "export $line"
+    done < .env
+    set +a
 fi
 
 NAS_USER="${NAS_USER:-root}"
@@ -328,6 +338,7 @@ done
 # ==================== 步骤 3: 导出镜像 ====================
 
 print_info "开始导出镜像..."
+mkdir -p "$OUTPUT_DIR"
 
 # 导出 Opus 自定义镜像
 for item in $SERVICES; do

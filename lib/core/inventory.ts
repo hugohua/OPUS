@@ -281,6 +281,7 @@ export const inventory = {
             VISUAL: parseInt(raw.VISUAL || '0'),
             CONTEXT: parseInt(raw.CONTEXT || '0'),
             ARENA_PART5: parseInt(raw.ARENA_PART5 || '0'),
+            ARENA_PART6: parseInt(raw.ARENA_PART6 || '0'),
             total: Object.values(raw).reduce((a: number, b: string) => a + (parseInt(b) || 0), 0)
         };
     },

@@ -7,8 +7,8 @@ Extract multi-blank reading passages from OCR text → {"passages":[...]}. If no
 RULES:
 1. Identify Part 6 texts (usually an email, letter, notice, memo, or article) that have EXACTLY 4 blanks.
 2. Fix OCR errors silently: merged words, hyphenated line-breaks.
-3. For the passageContext, capture the ENTIRE text of the passage from beginning to end.
-4. The blanks in passageContext MUST BE replaced with numbered placeholders corresponding to their question number (e.g. ___[131]___).
+3. For the content, capture the ENTIRE text of the passage from beginning to end.
+4. The blanks in content MUST BE replaced with numbered placeholders corresponding to their question number (e.g. ___[131]___).
 5. Then extract the 4 questions that correspond to these 4 blanks.
 6. For the 'sentence' field:
    - For normal blanks: Extract the immediate sentence containing the blank, and replace the blank with exactly 7 underscores: _______.
@@ -34,7 +34,7 @@ OUTPUT FORMAT:
 {
   "passages": [
     {
-      "passageContext": "Dear Mr. Smith,\\n\\nWe are writing to ___[131]___ you that your subscription will expire next month. If you would like to continue, please sign the attached form. ___[132]___ We appreciate your business.",
+      "content": "Dear Mr. Smith,\\n\\nWe are writing to ___[131]___ you that your subscription will expire next month. If you would like to continue, please sign the attached form. ___[132]___ We appreciate your business.",
       "questions": [
         {
            "originalNumber": "131",
@@ -80,7 +80,7 @@ export const QuestionSeedItemSchema = z.object({
 
 export const Part6SeedSchema = z.object({
   passages: z.array(z.object({
-    passageContext: z.string(),
+    content: z.string(),
     questions: z.array(QuestionSeedItemSchema).length(4)
   }))
 });

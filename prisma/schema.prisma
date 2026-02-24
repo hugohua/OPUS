@@ -377,6 +377,18 @@ enum EtymologyMode {
 // ----------------------------------------------------------------------
 // [V3.0] The Arena - Question Seed Library (The Anchor Strategy)
 // ----------------------------------------------------------------------
+
+// === [STATIC_DATA] 静态题库语篇数据 (The Passage Level) ===
+model Passage {
+  id       String  @id @default(cuid())
+  part     Int // 题型：6 或 7
+  content  String  @db.Text // 文章全文本，包含占位符如 ___[1]___
+  scenario String? // 场景：如 "Welcome Letter", "Notice"
+
+  // 反向关联
+  questions QuestionSeed[]
+}
+
 // === [STATIC_DATA] 静态题库数据 ===
 model QuestionSeed {
   id String @id @default(cuid())
@@ -390,7 +402,11 @@ model QuestionSeed {
   rationale      String  @db.Text // 解析（中文，50字以内）
 
   // 长文语境（针对 Part 6/7）
-  passageContext String? @db.Text // 所在段落/文章（如果是 Part 5 则为 null）
+
+  // [新增] 题组挂载逻辑 (The Anchor Strategy - Passage Level)
+  passageId    String? // Part 5 题目此处为 null
+  passageOrder Int? // 在本篇内的顺序，如 1, 2, 3, 4
+  passage      Passage? @relation(fields: [passageId], references: [id], onDelete: Cascade)
 
   // 2. 锚点桥接 (The Anchor Strategy)
   anchorVocabId Int? // 外键关联 Vocab.id（纯语法题为 null）
@@ -420,6 +436,7 @@ model QuestionSeed {
   anchorVocab    Vocab?          @relation(fields: [anchorVocabId], references: [id])
   attemptRecords AttemptRecord[]
 
+  @@unique([passageId, passageOrder]) // 防复排联合唯一索引
   // 索引
   @@index([grammarNodeId])
   @@index([isGrammarTagged])
@@ -427,6 +444,7 @@ model QuestionSeed {
   @@index([questionType, posTested]) // 精确匹配题型和词性
   @@index([part])
   @@index([isActive, usedCount])
+  @@index([passageId]) // 新增索引
 }
 
 enum QuestionType {
@@ -453,8 +471,8 @@ model AttemptRecord {
   anchorVocabId  Int? // 关联的底层核心词汇
 
   // [V3.0] 语法树冗余 (避免 JOIN QuestionSeed 再 JOIN GrammarNode)
-  grammarNodeId  String?
-  grammarNode    GrammarNode? @relation(fields: [grammarNodeId], references: [id])
+  grammarNodeId String?
+  grammarNode   GrammarNode? @relation(fields: [grammarNodeId], references: [id])
 
   // 答题表现
   isCorrect      Boolean
@@ -485,14 +503,14 @@ model AttemptRecord {
 
 // === [STATIC_DATA] 静态语法技能树配置 ===
 model GrammarNode {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String  @id @default(cuid())
+  code        String  @unique
   name        String
   nameEn      String?
   parentId    String?
   level       Int
-  description String?  @db.Text
-  sortOrder   Int      @default(0)
+  description String? @db.Text
+  sortOrder   Int     @default(0)
 
   parent         GrammarNode?             @relation("NodeHierarchy", fields: [parentId], references: [id])
   children       GrammarNode[]            @relation("NodeHierarchy")
@@ -506,15 +524,15 @@ model GrammarNode {
 
 // === [USER_DATA] 用户语法熟练度追踪 ===
 model UserGrammarProficiency {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   userId        String
   grammarNodeId String
 
-  masteryScore  Float    @default(0.5) // BKT 初始 0.5 防冷启动满盘红预警
-  exposureCount Int      @default(0)
-  correctCount  Int      @default(0)
+  masteryScore  Float @default(0.5) // BKT 初始 0.5 防冷启动满盘红预警
+  exposureCount Int   @default(0)
+  correctCount  Int   @default(0)
 
-  updatedAt     DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   grammarNode GrammarNode @relation(fields: [grammarNodeId], references: [id], onDelete: Restrict)

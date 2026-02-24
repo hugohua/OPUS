@@ -26,6 +26,7 @@ interface CacheStatsCardProps {
         READING: number;
         BLITZ: number;
         ARENA_PART5: number;
+        ARENA_PART6: number;
         total: number;
         targets: Record<string, number>;
     };
@@ -76,6 +77,7 @@ const MODE_GROUPS = [
         icon: Swords,
         modes: [
             { key: 'ARENA_PART5', label: MODE_LABELS['ARENA_PART5'] || 'Part 5' },
+            { key: 'ARENA_PART6', label: MODE_LABELS['ARENA_PART6'] || 'Part 6' },
         ]
     }
 ];

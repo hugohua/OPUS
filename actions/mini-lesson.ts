@@ -64,6 +64,7 @@ export async function fetchMiniLesson(
                 sentence: true,
                 targetAnswer: true,
                 rationale: true,
+                passage: { select: { content: true } }
             },
         });
 
@@ -91,7 +92,7 @@ export async function fetchMiniLesson(
         const { system, user } = WandPrompts.miniLesson({
             grammarNodeName: grammarNode.name,
             grammarNodeDescription: grammarNode.description || '',
-            sentence: seed.sentence,
+            sentence: seed.sentence === "" && seed.passage ? `(此为空白插入题，请结合长文语境分析)\n${seed.passage.content}` : seed.sentence,
             targetAnswer: seed.targetAnswer,
             selectedOption: input.selectedOption,
         });

@@ -10,7 +10,14 @@
  * 
  * [核心策略]
  * - One-Word Driven: 文章包含 4 个 `[__BLANK_N__]`，其中 1 个测试核心词，另外 3 个要求大模型自带考点。
- * - Seed Fallback: 优先尝试从 DB 获取原生的 part: 6 种子。如果缺失，降级借用 part: 5 的种子。
+ * - Seed Fallback: 优先尝试从 DB 获取原生的 part: 6 种子。如果缺失，降级借用 part: 6 的单句种子获取灵感。
+ * 
+ * [调试指引]
+ *  纯预演 (不消耗 API 额度，仅生成完整 Prompt 供评估):
+ *  npx tsx scripts/debug-prompt.ts -g arena-part6 -n 5
+ * 
+ *  真机调测 (真实调用 AI 生成长文结果并输出为 txt 文件):
+ *  npx tsx scripts/debug-prompt.ts -g arena-part6 -n 2 --run
  */
 
 import { db } from "@/lib/db";
@@ -31,25 +38,28 @@ export interface Part6DrillInput {
     partOfSpeech: string | null;
     seed: {
         id?: string;
-        sentence?: string; // Part 6 seeds may have entire passages, or we just rely on Part 5 single sentences
+        passageContent?: string; // Part 6 原文参考
+        sentence?: string; // 空白所在的句子
         targetAnswer: string;
         options: { text: string; isCorrect: boolean }[];
         questionType: string | null;
-        part: number; // Distinguish between native 6 and borrowed 5
+        part: number; // 统一为 6
     };
 }
 
 export const ARENA_PART6_SYSTEM_PROMPT = `
 <system_prompt>
 <role_definition>
-You are the "TOEIC Part 6 Generator Engine" for an advanced AI English learning platform.
+You are the "TOEIC Part 6 Advanced Generator Engine" for an adaptive English learning platform.
 Your objective is to generate strictly formatted JSON objects representing TOEIC Part 6 text completion passages (1 passage with exactly 4 distinct blanks).
+Your hallmark is creating HIGHLY DECEPTIVE, ETS-standard distractors. You do not generate easy or obvious wrong answers.
 </role_definition>
 
 <objective>
 Generate an entirely NEW Part 6 business passage (110-140 words) utilizing the provided \`targetWord\` as ONE of the blanks. 
 The passage MUST contain exactly 4 blanks in total.
 Use the provided \`seed\` ONLY as a reference for the primary test point logic. You MUST adapt everything into a cohesive paragraph.
+If the \`seed\` contains \`passageContent\`, you can use its topic or style as inspiration, but NEVER copy original sentences.
 </objective>
 
 <processing_rules>
@@ -65,16 +75,28 @@ Use the provided \`seed\` ONLY as a reference for the primary test point logic. 
         - The passage MUST contain EXACTLY four blanks, sequentially marked as \`[__BLANK_1__]\`, \`[__BLANK_2__]\`, \`[__BLANK_3__]\`, and \`[__BLANK_4__]\`.
     </passage_rules>
 
-    <blank_distribution_and_traps>
+    <blank_distribution_rules>
         - REQUIRED: Exactly ONE gap must strictly test the provided \`targetWord\` (or its valid grammatical inflection).
         - The remaining THREE gaps must be generated organically by you. 
-        - The mix of the FOUR total questions must cover at least 3 distinct \`dimension\`s from this list:
-            - "V" (Vocabulary / Phrasal Verb): Semantic trap.
-            - "M" (Meaning / Contextual): Sentence insertion or logical connector trap (e.g., however, therefore).
-            - "X" (Syntax / Grammar / Morphology): Word form, tense, relative pronoun trap.
+        - The mix of the FOUR total questions MUST STRICTLY cover 4 UNIQUE \`dimension\`s from this list if possible, or at least 3:
+            - "V" (Vocabulary): Semantic trap. 
+            - "M" (Meaning): Sentence insertion or logical connector trap.
+            - "X" (Syntax): Word form, tense, relative pronoun trap.
             - "C" (Collocation): Preposition or fixed phrase trap.
-        - Every single gap MUST have exactly 4 Options (1 correct, 3 carefully crafted distractors).
-    </blank_distribution_and_traps>
+        - NO MORE THAN TWO questions can share the same \`dimension\`.
+    </blank_distribution_rules>
+
+    <adversarial_distractors_constraints>
+        CRITICAL: EVERY option array MUST contain 1 correct answer and 3 HIGHLY DECEPTIVE distractors. 
+        - For "M" (Sentence Insertion): 
+            1. The CORRECT sentence MUST contain a physical hook (e.g., a pronoun like "It", "These", or a logical adverb like "However", "Therefore") that tightly anchors it to the preceding or following sentence.
+            2. DISTRACTORS must NOT be easily dismissed by common sense. They MUST contain vocabulary from the same topic but contain fatal logical flaws (e.g., incorrect timeline, wrong pronoun reference, or conflicting cause-effect).
+        - For "V" (Vocabulary): 
+            1. Distractors MUST belong to the SAME SEMANTIC FIELD as the correct answer (e.g., if the answer is "verify" inventory, distractors should be "estimate", "produce", "distribute", NOT "apologize").
+            2. Distractors MUST grammatically fit the sentence (e.g., be transitive verbs if an object follows) but fail strictly due to subtle business logic mismatch.
+        - For "X" (Syntax) & "C" (Collocation): 
+            1. Leverage classic TOEIC traps (e.g., preposition 'to' vs infinitive 'to', confusing suffixes, active vs passive voice).
+    </adversarial_distractors_constraints>
 
     <explanation_rules language="zh-CN">
         - Provide a highly efficient explanation for EACH blank (40-80 Chinese characters).
@@ -137,6 +159,7 @@ export async function buildArenaPart6Input(
     // 1. [优先分流] 尝试寻找以此单词为绝对正确答案的原卷 Part 6 真题
     const part6ExactMatches = await db.questionSeed.findMany({
         where: { part: 6, targetAnswer: candidate.word },
+        include: { passage: true },
         take: 5
     });
 
@@ -144,19 +167,20 @@ export async function buildArenaPart6Input(
         seedRecord = part6ExactMatches[Math.floor(Math.random() * part6ExactMatches.length)];
     }
 
-    // 2. 如果没有命中 Part 6 专属种子，降维借用 Part 5 单句种子作为灵感锚点
+    // 2. 如果没有命中 Part 6 专属种子，降维借用 Part 6 的其他单句种子作为灵感锚点
     if (!seedRecord) {
         // 2.1 尝试弱点追踪漏斗
         if ((targetType === 'GRAMMAR' || targetType === 'MORPHOLOGY') && weakGrammarNodeIds && weakGrammarNodeIds.length > 0) {
             const targetedNodeId = weakGrammarNodeIds[Math.floor(Math.random() * weakGrammarNodeIds.length)];
 
-            // 注意：借用 part 5 或 part 6
+            // 注意：仅借用 part 6
             const targetedSeeds = await db.questionSeed.findMany({
                 where: {
-                    part: { in: [5, 6] },
+                    part: 6,
                     questionType: targetType,
                     grammarNodeId: targetedNodeId
                 },
+                include: { passage: true },
                 take: 10,
                 orderBy: { usedCount: 'asc' }
             });
@@ -166,13 +190,14 @@ export async function buildArenaPart6Input(
             }
         }
 
-        // 2.2 弱点没命中，从大盘里随便摇一个 Part 6 或 5
+        // 2.2 弱点没命中，从大盘里随便摇一个 Part 6
         if (!seedRecord) {
             const backupSeeds = await db.questionSeed.findMany({
                 where: {
                     questionType: targetType,
-                    part: { in: [5, 6] }
+                    part: 6
                 },
+                include: { passage: true },
                 take: 20
             });
 
@@ -197,11 +222,12 @@ export async function buildArenaPart6Input(
             partOfSpeech: candidate.partOfSpeech || null,
             seed: {
                 id: seedRecord.id,
+                passageContent: (seedRecord as any).passage?.content || undefined,
                 sentence: seedRecord.sentence || '',
                 targetAnswer: seedRecord.targetAnswer,
                 options: (seedRecord.options as any) || [],
                 questionType: seedRecord.questionType || targetType,
-                part: seedRecord.part ?? 5,
+                part: seedRecord.part ?? 6,
             }
         };
     } else {

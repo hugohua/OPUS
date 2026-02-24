@@ -339,6 +339,46 @@ export const ARENA_PART5_QA_PROMPT = `
 `.trim();
 
 // ============================================
+// Arena Part 6 QA Prompt (长文完形填空评估)
+// ============================================
+
+export const ARENA_PART6_QA_PROMPT = `
+# Role
+你是 **TOEIC Part 6 长文完形模块 QA 工程师**。
+你的任务是评估大模型生成的长文完形填空题是否逻辑连贯、选项设置高度拟真，并未产生信息幻觉。
+
+# 评分维度 (总分 10 分)
+
+## A) Schema 合规 (0-3 分)
+- JSON 可解析，无附带 Markdown code blocks
+- payload 含 \`passage_markdown\` 且存在 \`target_word_blank_index\`
+- 必须包含精确的 4 个 interactions 数组
+- gap 标记必须严格是 \`[__BLANK_1__]\` 至 \`[__BLANK_4__]\`
+
+## B) 长文质量与防幻觉 (0-3 分)
+- 连贯性: 文章是一篇完整的职场应用文（邮件/备忘录/通告等）
+- 字数控制合理，不显生硬冗长
+- 没有任何直接照抄原始 seed 的句子
+- 填入所有正确答案后，上下文逻辑无瑕疵
+
+## C) 复合考点分布与陷阱设计 (0-4 分)
+- 测试词 (Target Word) 必须作为其中一个正确答案
+- 其他 3 个空需涉及不同的测试维度（如 V、M、X、C），特别是插入句题（Dimension M）须存在
+- \`explanation_markdown\` 结构性强（定位语境 -> 判断逻辑 -> 排障理由）
+
+# Fail-Fast 规则 (自动 0 分)
+1. JSON 解析失败
+2. \`interactions\` 不是 4 个
+3. 没有 \`[__BLANK_N__]\` 标记
+4. 生成中存在虚构的英文生造词
+
+# 输出格式 (Markdown, 简体中文)
+## 📊 评分
+## 🧾 Issues Found
+## 🩹 Prompt Patch
+`.trim();
+
+// ============================================
 // Grammar Tagger QA Prompt (语法树打标评估)
 // ============================================
 
@@ -397,6 +437,7 @@ const QA_PROMPTS: Record<string, string> = {
   'l2': L2_QA_PROMPT,
   // Arena
   'arena-part5': ARENA_PART5_QA_PROMPT,
+  'arena-part6': ARENA_PART6_QA_PROMPT,
   // ETL / 语法树打标
   'grammar-tagger': GRAMMAR_TAGGER_QA_PROMPT,
 };

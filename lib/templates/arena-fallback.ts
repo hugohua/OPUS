@@ -120,3 +120,91 @@ export function buildArenaFallbackDrill(
     // 2. 如果不属于专属卡片格式，最终都退化为 PHRASE 记忆卡
     return buildPhraseFallbackDrill(candidate, mode);
 }
+
+// ============================================
+// ARENA_PART6 (长文完形) 独立兜底生成
+// ============================================
+export async function buildArenaPart6FallbackDrill(
+    targetWord: string
+): Promise<BriefingPayload> {
+    // 采用稳定版本的 IT 服务维护通知模板作为通用兜底，即使完全断网或 LLM 熔断，前端也有内容展示
+    return {
+        meta: {
+            format: "part6",
+            mode: "ARENA_PART6",
+            batch_size: 4,
+            sys_prompt_version: "static-fallback-v2",
+            source: 'static_fallback',
+            generation_ms: 0,
+            target_word_blank_index: 2,
+            target_word: targetWord,
+        },
+        passage_markdown: "Dear Team,\n\nPlease note that the server maintenance scheduled for tonight has been [__BLANK_1__]. We apologize for any [__BLANK_2__] this may cause. The IT department will [__BLANK_3__] you when the new schedule is confirmed. Thank you for your continued [__BLANK_4__].\n\nBest,\nIT Support",
+        segments: [
+            {
+                type: "interaction",
+                dimension: "V",
+                task: {
+                    style: "bubble_select",
+                    question_markdown: "",
+                    options: [
+                        { id: '1', text: "postponed", is_correct: true, type: "Correct", explanation_chunk: "此处表示原定计划被'推迟'。" },
+                        { id: '2', text: "promoted", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '3', text: "predicted", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '4', text: "prevented", is_correct: false, type: "Distractor", explanation_chunk: "" }
+                    ],
+                    answer_key: "postponed",
+                    explanation_markdown: "此处表示原定计划被'推迟'。"
+                }
+            },
+            {
+                type: "interaction",
+                dimension: "X",
+                task: {
+                    style: "bubble_select",
+                    question_markdown: "",
+                    options: [
+                        { id: '5', text: "inconvenience", is_correct: true, type: "Correct", explanation_chunk: "cause后接名词形式，表示'造成不便'。" },
+                        { id: '6', text: "inconvenient", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '7', text: "inconveniently", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '8', text: "inconveniences", is_correct: false, type: "Distractor", explanation_chunk: "" }
+                    ],
+                    answer_key: "inconvenience",
+                    explanation_markdown: "cause后接名词形式，表示'造成不便'。"
+                }
+            },
+            {
+                type: "interaction",
+                dimension: "V",
+                task: {
+                    style: "bubble_select",
+                    question_markdown: "",
+                    options: [
+                        { id: '9', text: "notify", is_correct: true, type: "Correct", explanation_chunk: "notify sb. (通知某人) 为固定用法。" },
+                        { id: '10', text: "notice", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '11', text: "state", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '12', text: "remark", is_correct: false, type: "Distractor", explanation_chunk: "" }
+                    ],
+                    answer_key: "notify",
+                    explanation_markdown: "notify sb. (通知某人) 为固定用法。"
+                }
+            },
+            {
+                type: "interaction",
+                dimension: "V",
+                task: {
+                    style: "bubble_select",
+                    question_markdown: "",
+                    options: [
+                        { id: '13', text: "cooperation", is_correct: true, type: "Correct", explanation_chunk: "thank you for your cooperation 是标准商务信函结语定式用法。" },
+                        { id: '14', text: "collaboration", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '15', text: "coordination", is_correct: false, type: "Distractor", explanation_chunk: "" },
+                        { id: '16', text: "contribution", is_correct: false, type: "Distractor", explanation_chunk: "" }
+                    ],
+                    answer_key: "cooperation",
+                    explanation_markdown: "thank you for your cooperation 是标准商务信函结语定式用法。"
+                }
+            }
+        ]
+    };
+}

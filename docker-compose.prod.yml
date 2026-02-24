@@ -67,6 +67,8 @@ services:
       - REDIS_URL=redis://opus-redis:6379
     env_file:
       - .env
+    volumes:
+      - opus_audio:/app/public/audio
     depends_on:
       opus-db:
         condition: service_healthy

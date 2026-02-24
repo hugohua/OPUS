@@ -235,6 +235,15 @@ export function OperationPanel({ isPaused: initialPaused, userId, queuedCount }:
                         loading={loading === 'trigger-ARENA_PART5'}
                         clearing={loading === 'clear-ARENA_PART5'}
                     />
+                    <TriggerButton
+                        mode="ARENA_PART6"
+                        label={MODE_LABELS['ARENA_PART6'] || 'Part 6'}
+                        color="amber"
+                        onClick={() => handleTrigger('ARENA_PART6' as any)}
+                        onClear={() => setConfirmClearMode('ARENA_PART6' as any)}
+                        loading={loading === 'trigger-ARENA_PART6'}
+                        clearing={loading === 'clear-ARENA_PART6'}
+                    />
                 </div>
             </div>
 

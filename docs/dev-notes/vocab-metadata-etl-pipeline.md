@@ -15,13 +15,16 @@
 npx tsx scripts/data-etl-vocabulary-ai.ts --paid
 
 # 步骤 2：读音双音标补全 (生成 UK/US 国际音标)
-npx tsx scripts/data-fix-phonetics.ts --paid
+npx tsx scripts/data-fix-phonetics.ts --paid --continuous
 
 # 步骤 3：词源与记忆钩子 (生成高级联想记忆法)
-npx tsx scripts/data-gen-etymology.ts --paid
+npx tsx scripts/data-gen-etymology.ts --paid --continuous
 
-# 步骤 4：基于市场排名的频率分回填 (瞬间计算，无需 AI)
+# 步骤 4：基于市场排名的频率分回填 (瞬间计算，无需 AI)（可选）
 npx tsx scripts/data-backfill-frequency.ts
+
+# 步骤 5：向量数据导入 (导入生成的 Embedding JSONL 文件)
+npx tsx scripts/data-import-batch-embedding.ts output/7fc694c6-6b84-4a31-95f9-21452580b094_1771889899151_success.jsonl
 ```
 
 > **参数说明 (`--paid`)**：加上该参数将解除 API 免费层的限流控制（改为 2s 间隔，高并发模式）。如果你使用的是免费的 Gemini Key，请移除 `--paid` 走缓慢休眠模式以免触发 HTTP 429 熔断。
@@ -55,6 +58,11 @@ npx tsx scripts/data-backfill-frequency.ts
 - **目标字段**：`cefrLevel` (例如 A1, A2, B2, C1)。
 - **工作原理**：专门用于对未拥有原生牛津词典 CEFR 标志的新外部丛书词汇进行一键打标。例如针对“银のフレーズ”批量标 A2，针对“黒のフレーズ”批量标 C1。
 - **使用方式**：`npx tsx scripts/data-backfill-cefr.ts`
+
+### 2.6 向量数据导入：`data-import-batch-embedding.ts`
+- **目标字段**：`embedding` (pgvector 向量数据，用于语义搜索和相似度匹配)。
+- **工作原理**：读取由 OpenAI Batch API 等生成的包含 embedding 数据的 `.jsonl` 结果文件，并将其批量解析、提取向量并更新到数据库中对应词条的记录里。
+- **使用方式**：`npx tsx scripts/data-import-batch-embedding.ts <jsonl_file_path>`
 
 ---
 

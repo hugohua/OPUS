@@ -27,7 +27,7 @@ const BATCH_SIZE = 10; // Number of questions per LLM call
 async function main() {
     log.info(`🚀 Starting Empty Rationale Filler with model: ${modelName}`);
 
-    // Find all seeds missing rationale or passageContext
+    // Find all seeds missing rationale
     const emptySeeds = await prisma.questionSeed.findMany({
         where: { rationale: '' },
         select: {
@@ -37,7 +37,8 @@ async function main() {
             options: true,
             questionType: true,
             posTested: true,
-            grammarNode: { select: { code: true, name: true } }
+            grammarNode: { select: { code: true, name: true } },
+            passage: { select: { content: true } }
         }
     });
 
@@ -73,10 +74,11 @@ async function main() {
                     const optsText = Array.isArray(optsArray)
                         ? optsArray.map((o: any, i: number) => `(${String.fromCharCode(65 + i)}) ${o.text}`).join(' ')
                         : '';
+                    const passageInfo = q.passage ? `\n原文章长文语境: ${q.passage.content}` : '';
                     return `
 【Question ${index + 1}】
 ID: ${q.id}
-题干: ${q.sentence}
+题干: ${q.sentence === "" ? "(此为空白插入题，请结合【原文章长文语境】作答)" : q.sentence}${passageInfo}
 选项: ${optsText}
 正确答案: ${q.targetAnswer}
 已知考点标签: ${q.questionType} (考查词性: ${q.posTested || '无'})
@@ -88,7 +90,7 @@ ID: ${q.id}
 作为专业的 TOEIC 考试老师，请为以下这批 Part 5 题目分别写一段内容详实的中文解析。
 要求：
 1. 每道题的解析篇幅限制在 100~200 个汉字之间。
-2. 必须明确解释为什么正确答案是对的，并且必须逐一指出另外3个干扰项为什么是错的（例如：词性不符、时态错误、句意不通等）。
+2. 必须明确解释为什么正确答案是对的，并且必须逐一指出另外3个干扰项为什么是错的（例如：词性不符、时态错误、句意不通等）。对于包含【原文章长文语境】的题目，解析必须贴合所在语境。
 3. 如果是固定搭配/短语，请列出该短语的中英文。
 4. 保持专业和高效，不要写成冗长的教科书式理论说教。
 5. 必须严格返回如下 JSON 结构（包含 results 数组），不要输出任何其他内容。绝对不要包含 \`\`\`json 标记，只需返回纯正的 JSON 文本：

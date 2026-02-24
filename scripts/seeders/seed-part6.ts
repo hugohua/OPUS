@@ -46,6 +46,17 @@ async function main() {
                     continue;
                 }
 
+                // [Fix] 1. 首先写入 Passage
+                const dbPassage = await tx.passage.create({
+                    data: {
+                        part: 6,
+                        content: passage.content,
+                        scenario: passage.questions[0]?.scenario || null
+                    }
+                });
+
+                // [Fix] 2. 写入关联的 QuestionSeed
+                let orderIndex = 1;
                 for (const q of passage.questions) {
                     let anchorVocabId: number | null = null;
                     if (q.anchorText) {
@@ -69,9 +80,12 @@ async function main() {
                             part: 6,
                             scenario: q.scenario,
                             source: sourceName,
-                            passageContext: passage.passageContext
+                            passageId: dbPassage.id, // [Fix] 挂载
+                            passageOrder: orderIndex // [Fix] 排序
                         }
                     });
+
+                    orderIndex++;
                     successCount++;
                 }
             }

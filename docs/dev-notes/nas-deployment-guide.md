@@ -3,6 +3,35 @@
 > **部署目标**: Mac (ARM) → Synology NAS (AMD64)
 > **部署路径**: `/volume1/docker/opus`
 > **访问地址**: `http://<NAS_IP>:30010` 或自定义域名
+> **最后更新**: 2026-02-23 (自动化脚本已完全修复)
+
+---
+
+## 🚀 一键部署 (推荐)
+
+部署流程已被完全自动化并集成在 `build-and-export.sh` 脚本中。该脚本会自动读取 `.env` 配置，执行跨平台构建、镜像导出、SCP 传输、远程加载以及 Docker Compose 重启。
+
+### 1. 确保 `.env` 已配置
+
+你的本地 `.env` 文件中必须包含以下 NAS 连接信息：
+
+```env
+NAS_USER="None"
+NAS_IP="192.168.5.23"
+NAS_PORT="2002"
+NAS_PATH="/volume1/docker/opus"
+NAS_PASSWORD="你的实际密码"
+```
+
+### 2. 执行一键部署
+
+```bash
+# 构建 latest 标签并直接部署到 NAS
+./build-and-export.sh latest --deploy
+```
+
+> [!NOTE]
+> 脚本会自动通过 `sshpass` 和 `sudo -S` 处理群晖权限，执行全程无需人工干预。
 
 ---
 
@@ -26,40 +55,6 @@ graph TD
 
 ---
 
-## 核心文件
-
-| 文件 | 用途 |
-|------|------|
-| `build-and-export.sh` | 构建脚本（已加入 `.gitignore`，含密码） |
-| `docker-compose.nas.yml` | NAS 专用 Compose（预构建镜像 + 绑定挂载） |
-| `docker-compose.prod.yml` | 生产构建 Compose（用于 `docker compose build`） |
-| `nginx/nginx.conf` | Nginx 反向代理配置 |
-| `.env` | 环境变量（API Keys、数据库密码等） |
-
----
-
-## 一键部署
-
-```bash
-# 首次完整构建 + 部署
-./build-and-export.sh v1.0.1 --deploy
-
-# 仅部署已有镜像（跳过构建）
-./build-and-export.sh v1.0.1 --deploy-only
-```
-
-### 脚本流程
-
-1. **设置代理** → 使用 `http://127.0.0.1:1087`
-2. **构建镜像** → `DOCKER_DEFAULT_PLATFORM=linux/amd64` 跨平台编译
-3. **打标签** → `opus/web:v1.0.1`、`opus/worker:v1.0.1`、`opus/tts:v1.0.1`
-4. **导出 tar** → `dockers/opus-web-v1.0.1.tar`
-5. **SCP 传输** → 通过 `sshpass` 密码认证传到 NAS `/tmp/`
-6. **Docker Load** → `sudo docker load -i /tmp/opus-web-v1.0.1.tar`
-7. **启动服务** → `docker-compose up -d`
-
----
-
 ## 数据持久化
 
 使用**绑定挂载**到 NAS 固定目录，便于备份管理：
@@ -80,143 +75,87 @@ graph TD
 
 ---
 
-## 数据库管理
+## 数据库管理 (针对新建/迁移)
 
-### 初始化（首次部署）
+### 数据表分类 (`prisma/schema.prisma`)
 
-NAS 是全新环境，需要手动初始化数据库 Schema：
+| 分类 | 标记 | 说明 |
+|------|------|------|
+| 静态题库 | `[STATIC_DATA]` | `Vocab`, `QuestionSeed`, `GrammarNode`, `Etymology`, `SmartContent`, `TTSCache` 等 |
+| 用户数据 | `[USER_DATA]` | `User`, `UserProgress`, `AttemptRecord`, `DrillCache`, `DrillAudit` 等 |
 
-```bash
-# 1. 启用 pgvector 扩展
-docker exec opus-db-prod psql -U postgres -d opus -c \
-  'CREATE EXTENSION IF NOT EXISTS vector;'
-
-# 2. 从本地生成 Schema SQL
-npx prisma migrate diff \
-  --from-empty \
-  --to-schema-datamodel prisma/schema.prisma \
-  --script > /tmp/schema.sql
-
-# 3. 传到 NAS 并执行
-scp /tmp/schema.sql NAS:/tmp/
-docker exec opus-db-prod psql -U postgres -d opus -f /tmp/schema.sql
-```
-
-### 数据迁移（本地 → NAS）
-
-使用 `pg_dump --column-inserts` 导出精确 SQL：
-
-```bash
-# 1. 从本地 Docker 导出指定表
-docker exec opus-db pg_dump -U postgres -d opus \
-  --data-only --column-inserts --disable-triggers \
-  -t '"User"' -t '"Vocab"' -t '"Etymology"' -t '"SmartContent"' \
-  > /tmp/data-dump.sql
-
-# 2. 传到 NAS 并导入
-scp /tmp/data-dump.sql NAS:/tmp/
-docker cp /tmp/data-dump.sql opus-db-prod:/tmp/
-docker exec opus-db-prod psql -U postgres -d opus -f /tmp/data-dump.sql
-```
+### 方案 A：整库全量覆盖 (适合全新部署)
 
 > [!CAUTION]
-> **不要使用** `pg_dump --inserts`（不带 `--column`），因为本地和 NAS 的表结构列顺序可能不同，会导致数据类型不匹配。
-
-### 数据备份
+> 此方案会丢弃生产环境的一切现有数据（包含用户学习进度）。
 
 ```bash
-# 本地备份所有表到 JSON
-npx tsx scripts/db-backup.ts
-# 输出到 backups/ 目录
+# 1. 本地全量导出 (Custom 格式)
+docker exec opus-db pg_dump -U postgres -d opus -Fc -f /tmp/opus_full.dump
+docker cp opus-db:/tmp/opus_full.dump ./opus_full.dump
+
+# 2. 上传并恢复
+scp -O -P 2002 opus_full.dump None@192.168.5.23:/tmp/
+ssh -p 2002 None@192.168.5.23
+  # 在 NAS 上执行:
+  sudo /usr/local/bin/docker stop opus-web-prod opus-worker-prod
+  sudo /usr/local/bin/docker cp /tmp/opus_full.dump opus-db-prod:/tmp/
+  sudo /usr/local/bin/docker exec opus-db-prod bash -c 'psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='\''opus'\'' AND pid <> pg_backend_pid();" && dropdb -U postgres opus && createdb -U postgres opus && pg_restore -U postgres -d opus /tmp/opus_full.dump'
+  sudo /usr/local/bin/docker start opus-web-prod opus-worker-prod
 ```
 
----
+### 方案 B：仅同步更新题库 (保留用户进度)
 
-## 网络与域名
+> [!WARNING]
+> **切勿使用 `--clean` 参数或导出为纯文本 SQL！**
+> 纯文本 SQL 在 `definition_jp` 日文字段存在编码踩坑风险。`--clean` 会删除表结构触发外键冲突。
 
-### Nginx 反向代理
-
-- **容器内端口**: 80（映射到 NAS 的 30010）
-- **`server_name _`**: 匹配所有域名/IP
-- **`Host $http_host`**: 透传浏览器原始 Host 头
-
-### 多域名/IP 访问
-
-> [!IMPORTANT]
-> **不要设置** `AUTH_URL` 或 `NEXTAUTH_URL` 环境变量。
-> `auth.config.ts` 中的 `trustHost: true` 会自动从请求头推导 URL，支持任意域名/IP 访问。
-
-如果通过外部反向代理（如 NAS 自带的 Nginx）转发域名流量，必须确保：
-1. **正确传递 `Host` 头**（`proxy_set_header Host $http_host;`）
-2. **不要设置 `X-Forwarded-Port`**（容器内端口是 80，会干扰 NextAuth）
-
-### Server Actions Origin 检查
-
-```js
-// next.config.mjs
-serverActions: {
-    allowedOrigins: ["*"],  // 个人项目，允许所有来源
-}
-```
-
----
-
-## 踩坑记录
-
-### 1. `docker restart` 不会刷新环境变量
-
-**现象**: 修改了 `docker-compose.yml` 或 `.env`，但 `docker restart` 后旧环境变量仍然存在。
-
-**原因**: `docker restart` 只重启进程，不重建容器。环境变量是在容器创建时注入的。
-
-**解决**: 必须使用 **`docker-compose up -d --force-recreate`** 重建容器。
-
-### 2. Mac → NAS 跨平台构建
-
-**现象**: Mac (ARM) 构建的镜像在 NAS (AMD64) 上运行报 `exec format error`。
-
-**解决**: 构建时指定平台：
 ```bash
-DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build
+# 1. 本地使用 Custom 格式导出纯数据 (--data-only)
+docker exec opus-db pg_dump -U postgres -d opus -Fc --data-only \
+  -t '"Vocab"' -t '"Etymology"' -t '"SmartContent"' \
+  -t '"TTSCache"' -t '"QuestionSeed"' -t '"GrammarNode"' \
+  -t '"InvitationCode"' \
+  -f /tmp/opus_static.dump
+docker cp opus-db:/tmp/opus_static.dump ./opus_static.dump
+
+# 2. 上传到 NAS
+scp -O -P 2002 opus_static.dump None@192.168.5.23:/tmp/
+
+# 3. 登入 NAS 并手动 TRUNCATE 后恢复
+# (注: TRUNCATE CASCADE 会级联清空关联了静态表的用户进度数据，请谨慎)
+ssh -p 2002 None@192.168.5.23
+  sudo /usr/local/bin/docker cp /tmp/opus_static.dump opus-db-prod:/tmp/
+  sudo /usr/local/bin/docker exec opus-db-prod psql -U postgres -d opus -c "TRUNCATE TABLE \"InvitationCode\", \"SmartContent\", \"Etymology\", \"QuestionSeed\", \"GrammarNode\", \"TTSCache\", \"Vocab\" CASCADE;"
+  sudo /usr/local/bin/docker exec opus-db-prod pg_restore -U postgres -d opus --data-only --disable-triggers /tmp/opus_static.dump
 ```
-
-### 3. SCP 传输失败 (`Connection closed`)
-
-**现象**: `scp` 传输大文件时报 `Connection closed`。
-
-**解决**: 使用旧版 SCP 协议：`scp -O`
-
-### 4. Redis 权限问题
-
-**现象**: Redis 容器启动失败 `Can't open the append-only file`。
-
-**解决**: NAS 上创建目录后设置权限：`chmod 777 data/redis`
-
-### 5. Prisma 7 `migrate deploy` 不可用
-
-**现象**: 容器内 `npx prisma migrate deploy` 报 `url` 不再支持。
-
-**原因**: Standalone 构建不包含完整 Prisma CLI，且 Prisma 7 改变了配置方式。
-
-**解决**: 使用 `prisma migrate diff` 在本地生成 SQL，然后通过 `psql` 在 NAS 上执行。
-
-### 6. X-Forwarded-Port 导致域名跳转
-
-**现象**: 通过域名访问时，被重定向到 IP 地址。
-
-**原因**: Nginx 设置了 `X-Forwarded-Port: $server_port`，容器内是 80，NextAuth 据此构造了错误的回调 URL。
-
-**解决**: 移除 `proxy_set_header X-Forwarded-Port`，让 NextAuth 从 `Host` 头解析端口。
 
 ---
 
-## NAS SSH 信息
+## 踩坑记录 (实战排雷)
+
+### 1. `.env` 变量双引号导致 SSH 失败
+**现象**: 脚本加载 `.env` 未清理引号，导致请求变为 `ssh "None"@"192.168.5.23"`。
+**修复**: 脚本现采用严格的 `eval export` 循环解析去除隐藏字符。
+
+### 2. Mac → NAS 跨平台报错 `exec format error`
+**现象**: Mac ARM 构建的镜像无法在 NAS 运行。
+**修复**: 脚本中已默认强制 `DOCKER_DEFAULT_PLATFORM=linux/amd64`。
+
+### 3. `--clean` 导致数据库表级联消失
+**现象**: 使用 `pg_restore --clean` 更新静态表时，`QuestionSeed` 及对应的 `Enum` 意外被删且重建失败。
+**修复**: 更新静态表时**只用 `--data-only --disable-triggers`**，并用 `TRUNCATE CASCADE` 清理旧数据。
+
+### 4. SCP 与 SFS subsystem
+**现象**: `scp` 传输超过数百 MB 镜像时报 `Connection closed` 或权限问题。
+**修复**: 脚本已统一加入 `-O` 参数使用传统 SCP 协议。配置文件需先传 `/tmp/` 再使用 `sudo cp`。
+
+---
+
+## NAS 原始备忘录
 
 | 项目 | 值 |
 |------|------|
-| IP | `192.168.5.23` |
-| SSH 端口 | `2002` |
-| 用户名 | `None` |
-| 部署路径 | `/volume1/docker/opus` |
 | Docker 路径 | `/usr/local/bin/docker` |
-| Compose 版本 | v1 (`docker-compose`) |
+| Compose 版本 | `/usr/local/bin/docker-compose` (V1 语法) |
+| 网络模式 | 自定义 Bridge 网络 `opus-net` |

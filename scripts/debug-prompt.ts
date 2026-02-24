@@ -26,7 +26,11 @@
  *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run     # 调用 AI 查看打标结果
  *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run -n 5  # 只测试 5 题
  *
- *   5. 高速并发模式 (跳过 Free 额度下的 5 分钟限制保护倒计时):
+ *   5. Arena Part 6 长文完形生成调测:
+ *      npx tsx scripts/debug-prompt.ts -g arena-part6 -n 5
+ *      npx tsx scripts/debug-prompt.ts -g arena-part6 -n 2 --run
+ * 
+ *   6. 高速并发模式 (跳过 Free 额度下的 5 分钟限制保护倒计时):
  *      npx tsx scripts/debug-prompt.ts -g grammar-tagger --run -n 10 -t paid
  * 
  * 参数说明:
@@ -96,6 +100,12 @@ import {
     Part5DrillInput,
     buildArenaPart5Inputs
 } from "@/lib/generators/arena/part5-drill";
+import {
+    ARENA_PART6_SYSTEM_PROMPT,
+    getPart6DrillBatchPrompt,
+    Part6DrillInput,
+    buildArenaPart6Input
+} from "@/lib/generators/arena/part6-drill";
 import {
     GRAMMAR_TAGGER_SYSTEM_PROMPT,
     buildTaggerUserPrompt,
@@ -341,6 +351,16 @@ const Adapters: Record<string, GeneratorAdapter> = {
         }),
         getBatchPrompts: (inputs: Part5DrillInput[]) => {
             return getPart5DrillBatchPrompt(inputs);
+        }
+    },
+    'arena-part6': {
+        name: 'Arena Part 6 / 长文完形填空',
+        dataRequirements: '需要: 任意有释义的词汇，系统将尝试抽取或构造 Part 6 长文上下文兜底。',
+        buildInput: async (vocab: VocabItem) => {
+            return await buildArenaPart6Input(vocab as any);
+        },
+        getPrompts: (input: Part6DrillInput) => {
+            return getPart6DrillBatchPrompt(input);
         }
     },
 
