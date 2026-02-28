@@ -69,6 +69,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **DB Indexing**: `docs/dev-notes/tts-db-schema-v6.md` (**New**: `TTSCache` Schema & GC Strategy)
 - **Setup**: `docs/dev-notes/tts-quickstart.md` (How to run the Python service & Docker)
 - **Audio Preload Strategy**: `docs/dev-notes/audio-preload-architecture.md` (**New**: Zero-Wait Generic Hook, Debounce, Cache Synergy)
+- **Edge-TTS 离线批量生成**: `docs/dev-notes/edge-tts-offline-generation.md` (**New**: 两步工作流、断点续传、DB 直写、声音映射)
 - **Frontend Hook**: `hooks/use-tts.ts` (React interface for playback)
 
 ### 6. SmartContent (AI 内容资产库)
@@ -127,6 +128,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.
 - **If discovering low cache hits / many fallbacks** -> Read `cache-hit-rate-optimization.md`.
 - **If modifying Audio/Playback** -> Read `tts-architecture.md` and `use-tts.ts`.
+- **If 需要离线批量预生成音频 / 扩展 Edge-TTS** -> Read `edge-tts-offline-generation.md` (**两步工作流、声音映射、断点续传**).
 - **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md`.
 - **If adding a new game mode / answer type** -> **CRITICAL**: Read `new-drill-mode-end-to-end-guide.md` for the 8-step full-stack checklist.
 - **If 修改语法结构树 / BKT 追踪 / Arena 靶向出题** -> Read `docs/PRD-GRAMMAR-SKILL-TREE.md`.

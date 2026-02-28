@@ -297,6 +297,9 @@ export async function processDrillJob(job: Job<DrillJobData>) {
                     ...(mode === 'ARENA_PART6' && {
                         target_word_blank_index: (rawDrill.meta as any).target_word_blank_index,
                         seed_origin: (rawDrill.meta as any).seed_origin,
+                        questionSeedId: item.seedInfo?.id || (rawDrill.meta as any).questionSeedId,
+                        questionType: item.seedInfo?.questionType || (rawDrill.meta as any).questionType,
+                        part: item.seedInfo?.part ?? (rawDrill.meta as any).part ?? 6,
                     }),
                 },
                 ...(mode === 'ARENA_PART6' && {

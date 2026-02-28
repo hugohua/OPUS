@@ -252,8 +252,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             console.error('[FSRS] recordOutcome failed:', e);
         });
 
-        // [V7.0] Arena Telemetry: 为 ARENA_PART5 模式额外记录 AttemptRecord
-        if (mode === 'ARENA_PART5') {
+        // [V7.0] Arena Telemetry: 为 ARENA_PART5 / ARENA_PART6 模式额外记录 AttemptRecord
+        if (mode === 'ARENA_PART5' || mode === 'ARENA_PART6') {
             const meta = currentDrill.meta as any;
             const interactSeg = currentDrill.segments.find(s => s.type === 'interaction');
             const questionSeedId = meta?.questionSeedId;
@@ -266,7 +266,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
                     responseTimeMs: duration,
                     selectedOption: selectedOption || '',
                     questionType: meta?.questionType || 'GRAMMAR',
-                    part: meta?.part || 5,
+                    part: meta?.part || (mode === 'ARENA_PART6' ? 6 : 5),
                 }).catch((e) => {
                     console.error('[Arena Telemetry] recordArenaOutcome failed:', e);
                 });

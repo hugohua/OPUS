@@ -323,6 +323,10 @@ model TTSCache {
   // 'phrase' - 短语音频 (永久保留)
   // 'temporary' - AI 生成临时句子 (90天清理)
   cacheType String @default("temporary")
+  
+  // 音频来源 [V6.1]
+  // 'aliyun' | 'edge-tts' | 'azure' | 'local'
+  source    String @default("aliyun")
 
   // 文件存储
   filePath String // 相对路径: "2026/02/01/abc123.wav"
