@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/drawer";
 import { VocabListItem } from "@/actions/get-vocab-list";
 import { getVocabDetail } from "@/actions/get-vocab-detail";
-import { X, Loader2, ArrowUpRight } from "lucide-react";
+import { X, ArrowUpRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -72,7 +73,7 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
-            <DrawerContent className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 border-t max-h-[90vh] focus:outline-none">
+            <DrawerContent className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-900 border-t rounded-t-[20px] h-[96vh] focus:outline-none">
                 {/* 
                    Fix: DialogContent requires a DialogTitle for accessibility. 
                    We hide it visually but keep it for screen readers.
@@ -96,10 +97,50 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                     {/* 主内容区域 */}
                     <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
                         {isLoading ? (
-                            // Loading 骨架屏
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-4" />
-                                <p className="text-sm text-zinc-500">加载中...</p>
+                            // 骨架屏 (mirrors VocabHero + CommonChunks layout)
+                            <div className="animate-in fade-in duration-300">
+                                {/* Hero Skeleton */}
+                                <section className="px-6 pt-8 pb-6 border-b border-zinc-100 dark:border-zinc-900">
+                                    {/* Meta row */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <Skeleton className="h-5 w-24 rounded-full" />
+                                        <Skeleton className="h-3 w-16" />
+                                    </div>
+                                    {/* Word + Play button */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Skeleton className="h-12 w-48" />
+                                        <Skeleton className="h-8 w-8 rounded-full" />
+                                    </div>
+                                    {/* Phonetic */}
+                                    <Skeleton className="h-4 w-28 mb-6" />
+                                    {/* Definition rows */}
+                                    <div className="space-y-3 mb-6">
+                                        <div className="flex items-start gap-3">
+                                            <Skeleton className="h-5 w-10 rounded shrink-0" />
+                                            <Skeleton className="h-5 w-40" />
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <Skeleton className="h-5 w-10 rounded shrink-0" />
+                                            <Skeleton className="h-5 w-36" />
+                                        </div>
+                                    </div>
+                                    {/* Synonym pills */}
+                                    <div className="flex items-center gap-2">
+                                        <Skeleton className="h-3 w-12" />
+                                        <Skeleton className="h-6 w-16 rounded-full" />
+                                        <Skeleton className="h-6 w-20 rounded-full" />
+                                        <Skeleton className="h-6 w-14 rounded-full" />
+                                    </div>
+                                </section>
+                                {/* CommonChunks Skeleton */}
+                                <section className="px-6 py-6">
+                                    <Skeleton className="h-4 w-32 mb-4" />
+                                    <div className="space-y-2.5">
+                                        <Skeleton className="h-10 w-full rounded-lg" />
+                                        <Skeleton className="h-10 w-5/6 rounded-lg" />
+                                        <Skeleton className="h-10 w-4/6 rounded-lg" />
+                                    </div>
+                                </section>
                             </div>
                         ) : vocab ? (
                             // 详情内容
@@ -121,14 +162,7 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                                     mainWord={vocab.word}
                                 />
 
-                                <div className="mx-6 mb-8 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 text-center">
-                                    <p className="text-sm text-indigo-900 dark:text-indigo-200 mb-2 font-medium">
-                                        想查看完整记忆档案？
-                                    </p>
-                                    <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                                        进入详情页查看 AI 分析与语境快照。
-                                    </p>
-                                </div>
+
                             </>
                         ) : (
                             // 错误状态
@@ -144,7 +178,7 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                         <div className="w-full mb-3">
                             <Link href={`/dashboard/vocab/${item.word}`} className="block w-full">
                                 <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 group">
-                                    深度分析
+                                    查看详情
                                     <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                 </Button>
                             </Link>

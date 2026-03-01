@@ -10,7 +10,7 @@ import { VocabFilterStatus, VocabSortOption, VocabListItem } from "@/actions/get
 import { getUserAllTags } from "@/actions/vocab-actions";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function VocabularyList({
     initialTags = []
@@ -90,7 +90,7 @@ export function VocabularyList({
              * ─ 虚拟列表         : @tanstack/react-virtual 绝对定位渲染
              */}
 
-            <main ref={parentRef} className="flex-1 overflow-y-auto scrollbar-hide w-full relative">
+            <main ref={parentRef} className="flex-1 overflow-y-auto scrollbar-hide w-full relative pb-24">
 
                 {/* ① HUD — 独立作为页面全局头部 */}
                 <VocabHud stats={stats} totalCount={stats.totalVocab} />
@@ -127,8 +127,25 @@ export function VocabularyList({
 
                 {/* ③ 虚拟列表 */}
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+                    <div className="space-y-0">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="flex items-start justify-between p-3.5 border-b border-zinc-100 dark:border-white/5">
+                                <div className="flex-1 flex flex-col gap-2 pl-3">
+                                    <div className="flex items-center gap-2">
+                                        <Skeleton className="h-5 w-24" />
+                                        <Skeleton className="h-4 w-10 rounded" />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Skeleton className="h-3.5 w-8 rounded" />
+                                        <Skeleton className="h-3.5 w-32" />
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5 ml-4">
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-20" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <div

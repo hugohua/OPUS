@@ -1,7 +1,8 @@
 "use client";
 
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { Sparkles, X, BookOpen, AlertCircle, Lightbulb, Loader2 } from "lucide-react";
+import { Sparkles, X, BookOpen, AlertCircle, Lightbulb, Loader2, Target, Bone, Wand2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useState, useEffect, useRef } from "react";
 import { fetchMiniLesson, type MiniLessonData } from "@/actions/mini-lesson";
@@ -66,20 +67,19 @@ export function MagicWandDrawer({
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
-            <DrawerContent className="bg-background rounded-t-2xl outline-none max-h-[85vh] border-border pb-safe">
+            <DrawerContent className="bg-background rounded-t-[20px] outline-none h-[96vh] border-border pb-safe">
                 <VisuallyHidden.Root>
                     <DrawerTitle>{showMiniLesson ? 'Mini-Lesson' : 'AI 深度解析'}</DrawerTitle>
                 </VisuallyHidden.Root>
 
                 {/* Header */}
-                <div className="flex-none pt-3 pb-4 border-b border-border flex flex-col items-center sticky top-0 bg-background rounded-t-2xl z-20">
-                    <div className="w-10 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-3"></div>
-                    <div className="w-full px-6 flex justify-between items-center">
+                <div className="flex-none pt-2 pb-4 border-b border-border flex flex-col items-center sticky top-0 bg-background rounded-t-[20px] z-20">
+                    <div className="w-full px-6 flex justify-between items-center mt-2">
                         <h3 className="text-base font-bold text-primary flex items-center gap-2">
                             {showMiniLesson ? (
                                 <>
-                                    <BookOpen className="w-5 h-5 text-amber-500" />
-                                    <span>🧙 Mini-Lesson: {miniLesson.grammarNodeName}</span>
+                                    <Wand2 className="w-5 h-5 text-amber-500" />
+                                    <span>Mini-Lesson: {miniLesson.grammarNodeName}</span>
                                 </>
                             ) : (
                                 <>
@@ -97,7 +97,38 @@ export function MagicWandDrawer({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-6">
-                    {showMiniLesson ? (
+                    {isLoading && !showMiniLesson ? (
+                        /* ===== Loading Skeleton ===== */
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                            {/* §1 skeleton */}
+                            <section>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Skeleton className="h-4 w-4 rounded" />
+                                    <Skeleton className="h-4 w-28" />
+                                </div>
+                                <Skeleton className="h-24 w-full rounded-xl" />
+                            </section>
+                            {/* §2 skeleton */}
+                            <section>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Skeleton className="h-4 w-4 rounded" />
+                                    <Skeleton className="h-4 w-24" />
+                                </div>
+                                <Skeleton className="h-20 w-full rounded-xl" />
+                            </section>
+                            {/* §3 skeleton */}
+                            <section>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Skeleton className="h-4 w-4 rounded" />
+                                    <Skeleton className="h-4 w-20" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Skeleton className="h-12 w-full rounded-xl" />
+                                    <Skeleton className="h-12 w-full rounded-xl" />
+                                </div>
+                            </section>
+                        </div>
+                    ) : showMiniLesson ? (
                         /* ===== Mini-Lesson 三段式 ===== */
                         <>
                             {/* §1 错因剖析 */}
@@ -143,7 +174,7 @@ export function MagicWandDrawer({
                         <>
                             <div>
                                 <h4 className="flex items-center gap-2 text-sm font-bold text-primary mb-3">
-                                    <span className="text-lg">🎯</span> 语境义与解析
+                                    <Target className="w-4 h-4 text-indigo-500" /> 语境义与解析
                                 </h4>
                                 <p className="text-sm text-primary leading-relaxed whitespace-pre-wrap">
                                     {rationale || "暂无解析。"}
@@ -153,7 +184,7 @@ export function MagicWandDrawer({
                             {sentence && (
                                 <div>
                                     <h4 className="flex items-center gap-2 text-sm font-bold text-primary mb-4">
-                                        <span className="text-lg">🦴</span> 句子原句
+                                        <Bone className="w-4 h-4 text-slate-500" /> 句子原句
                                     </h4>
                                     <div className="bg-white dark:bg-zinc-900 border border-border rounded-xl p-4 text-sm shadow-sm flex flex-col gap-2">
                                         <div className="text-primary font-medium">{sentence}</div>

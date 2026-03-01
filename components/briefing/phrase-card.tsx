@@ -195,7 +195,7 @@ export function PhraseCard({
                 <h1
                     onClick={handlePlaySentence}
                     className={cn(
-                        "font-serif text-[22px] md:text-3xl leading-relaxed text-left text-zinc-800 dark:text-zinc-100 animate-in fade-in duration-500 cursor-pointer hover:opacity-70 active:scale-[0.99] transition-all origin-left select-none",
+                        "font-serif text-[22px] md:text-3xl leading-[1.6] text-left text-zinc-800 dark:text-zinc-100 animate-in fade-in duration-500 cursor-pointer hover:opacity-70 active:scale-[0.99] transition-all origin-left select-none",
                         isSentencePlaying && "text-indigo-600 dark:text-indigo-400"
                     )}
                 >
@@ -207,7 +207,7 @@ export function PhraseCard({
                     "mt-6 transition-all duration-700 ease-out text-left",
                     isRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 )}>
-                    <p className="text-xl text-zinc-500 dark:text-zinc-400 font-sans font-medium leading-relaxed">
+                    <p className="text-xl text-zinc-500 dark:text-zinc-400 font-sans font-medium leading-[1.6]">
                         {renderTranslation(translation || "暂无翻译")}
                     </p>
                 </div>
@@ -232,7 +232,7 @@ export function PhraseCard({
                     </div>
 
                     {/* Definition Text Row (With Markdown Support) */}
-                    <div className="text-zinc-600 dark:text-zinc-300 text-base font-medium text-center leading-relaxed">
+                    <div className="text-zinc-600 dark:text-zinc-300 text-base font-medium text-center leading-[1.6]">
                         {partOfSpeech && <span className="italic mr-2 text-zinc-400 font-serif">{partOfSpeech}</span>}
                         {renderSmartText(wordDefinition || "")}
                     </div>

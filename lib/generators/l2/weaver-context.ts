@@ -62,7 +62,9 @@ You must output in a strict format with separators:
 ===TITLE===
 (Write a concise, professional title here)
 ===BODY===
-(Write the article content here. Use paragraphs.)
+(Write the article content here in English. Use paragraphs.)
+===TRANSLATION===
+(Provide the Chinese translation here. The number of paragraphs MUST EXACTLY MATCH the BODY paragraphs.)
 `.trim();
 
 // ============================================

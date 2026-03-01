@@ -7,6 +7,7 @@ import { inventory } from "@/lib/core/inventory";
 import { buildArenaPart6FallbackDrill } from "@/lib/templates/arena-fallback";
 import { auditInventoryEvent, auditSessionFallback } from "@/lib/services/audit-service";
 import { logger } from "@/lib/logger";
+import { shuffleBriefingOptions } from "@/lib/core/shuffle-options";
 
 const log = logger.child({ module: 'part6-queue' });
 
@@ -80,7 +81,7 @@ export async function generatePart6Session(): Promise<BriefingPayload> {
         // Check triggers Replenish silently in background.
         // 注意：popDrillBatch 会自动触发 checkAndTriggerReplenish，所以此处通常不需要再手动触发
 
-        return drill;
+        return shuffleBriefingOptions(drill);
 
     } catch (error) {
         log.error({ error: (error as Error).message }, "[Part 6 Queue] End-to-end failure, firing Last Resort Fallback");

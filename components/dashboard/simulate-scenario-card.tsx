@@ -72,7 +72,7 @@ export function SimulateScenarioCard({
     const styles = themeStyles[theme];
 
     const baseClassName = cn(
-        "group relative flex p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all text-left items-center",
+        "group relative flex p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:opacity-90 md:active:opacity-100 text-left items-center",
         styles.hoverBorder
     );
 

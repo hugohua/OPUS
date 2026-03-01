@@ -8,6 +8,7 @@ import { DiagnosticRadar } from "@/components/arena/diagnostic-radar";
 import { SimulateScenarioCard } from "@/components/dashboard/simulate-scenario-card";
 import { GlobalHeader } from "@/components/ui/global-header";
 import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
+import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
 
 // --- Matrix UI Configuration ---
 interface ScenarioCard {
@@ -316,6 +317,7 @@ export default function SimulatePage() {
                 </section>
 
             </main>
+            <FloatingDockClient />
         </div>
     );
 }

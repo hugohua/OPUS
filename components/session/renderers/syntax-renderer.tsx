@@ -16,6 +16,7 @@ import { FocusShell, FocusShellVariant } from '@/components/drill/focus-shell';
 import { ControlDeck, ControlDeckMode } from '@/components/drill/control-deck';
 import { previewIntervals } from '@/lib/client/fsrs-preview';
 import { useRouter } from 'next/navigation';
+import { Sparkles } from 'lucide-react';
 
 // --- Animations ---
 // Using strict bezier curve for type safety
@@ -184,7 +185,11 @@ export function SyntaxRenderer({
                         gradeIntervals={deckMode === 'grade' ? gradeIntervals : undefined}
                         // 如果是 Part 5 并且已经答完题，显示 AI 解析按钮
                         extraButton={isArenaPart5 && status !== 'idle' ? {
-                            label: "✨ AI 解析",
+                            label: (
+                                <span className="flex items-center gap-1.5">
+                                    <Sparkles className="w-4 h-4 text-amber-500" /> AI 解析
+                                </span>
+                            ) as any,
                             onClick: () => setIsWandOpen(true),
                         } : undefined}
                     />

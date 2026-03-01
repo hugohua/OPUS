@@ -223,17 +223,26 @@
     @apply bg-background text-foreground;
   }
 
-  /* iOS Safari 终极防滚动策略
-     核心原理：position:fixed 会让 html/body 脱离正常文档流，
-     彻底切断 Safari 地址栏动态调整触发的滚动行为。
-     仅在答题页面(.in-session)激活，不影响其他页面正常滚动。 */
-  html.in-session,
-  html.in-session body {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    overscroll-behavior: none;
-    /* 防止 iOS 弹性拉伸 */
-    -webkit-overflow-scrolling: auto;
+  /* === 仅移动端生效的 PWA 原生体验优化 === */
+  @media (max-width: 768px) {
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    /* iOS Safari 终极防滚动策略
+       核心原理：position:fixed 会让 html/body 脱离正常文档流，
+       彻底切断 Safari 地址栏动态调整触发的滚动行为。
+       仅在答题页面(.in-session)激活，不影响其他页面正常滚动。 */
+    html.in-session,
+    html.in-session body {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      /* 防止 iOS 弹性拉伸 */
+      -webkit-overflow-scrolling: auto;
+    }
   }
 }

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { boldToHtml } from '@/lib/utils/markdown';
+import { useHaptic } from '@/hooks/use-haptic';
 
 interface InteractionTask {
     style: 'swipe_card' | 'bubble_select';
@@ -25,6 +26,7 @@ interface InteractionZoneProps {
 export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneProps) {
     const [selected, setSelected] = useState<string | null>(null);
     const [submitted, setSubmitted] = useState(false);
+    const { vibrateSuccess, vibrateError } = useHaptic();
 
     // Parse Question: "The manager _______ the budget."
     // We want to render the hole?
@@ -39,6 +41,13 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
         // User wants "Safety". Maybe immediate show result.
         // Call parent after short delay?
         const isCorrect = option === task.answer_key;
+
+        // Vibrate physically based on answer result
+        if (isCorrect) {
+            vibrateSuccess();
+        } else {
+            vibrateError();
+        }
 
         // Notify parent immediately for visual reveal
         if (onAnswer) {
@@ -57,7 +66,7 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
         <div className="w-full space-y-8 pt-8 px-2 max-w-2xl mx-auto">
             {/* Question Text */}
             <div className="relative group">
-                <h3 className="text-2xl font-bold text-left leading-relaxed tracking-tight px-4 text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-2xl font-bold text-left leading-[1.6] tracking-tight px-4 text-zinc-900 dark:text-zinc-100">
                     {task.question_markdown.split('_______').map((part, i, arr) => (
                         <span key={i}>
                             {part}
@@ -98,7 +107,7 @@ export function InteractionZone({ task, onComplete, onAnswer }: InteractionZoneP
                             key={opt}
                             disabled={submitted}
                             className={cn(
-                                "relative flex items-center justify-between p-4 rounded-xl border-2 font-bold text-lg transition-all duration-200 active:scale-[0.98] group shadow-sm",
+                                "relative flex items-center justify-between min-h-[56px] p-4 rounded-xl border-2 font-bold text-lg transition-all duration-200 active:scale-[0.98] group shadow-sm",
                                 variantClass
                             )}
                             onClick={() => handleSelect(opt)}

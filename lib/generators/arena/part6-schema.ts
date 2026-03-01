@@ -11,6 +11,7 @@ const OptionSchema = z.object({
 const Part6InteractionSchema = z.object({
     type: z.literal("interaction"),
     dimension: z.enum(["V", "M", "X", "C"]),
+    option_level: z.enum(["word", "phrase", "sentence"]).optional(), // [V9.0] 选项粒度标记
     task: z.object({
         style: z.literal("bubble_select").describe("Part 6 strictly uses bubble_select"),
         question_markdown: z.string().describe("Contextual question prompt if needed"),

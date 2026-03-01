@@ -57,15 +57,17 @@ export default function RootLayout({
                     jetbrainsMono.variable
                 )}
             >
-                <Providers
-                    attribute="class"
-                    defaultTheme="dark"
-                    enableSystem
-                    disableTransitionOnChange
-                >
-                    {children}
-                    <Toaster />
-                </Providers>
+                <div vaul-drawer-wrapper="" className="bg-background min-h-screen">
+                    <Providers
+                        attribute="class"
+                        defaultTheme="dark"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        {children}
+                        <Toaster />
+                    </Providers>
+                </div>
             </body>
         </html>
     );

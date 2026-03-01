@@ -25,6 +25,24 @@ describe('recordArenaOutcome', () => {
         mockReset(mockPrisma);
         vi.clearAllMocks();
         mockAuth.mockResolvedValue({ user: { id: 'user-1' } });
+
+        // Mock QuestionSeed 查询
+        (mockPrisma.questionSeed.findUnique as any).mockResolvedValue({
+            grammarNodeId: null,
+            difficulty: 2,
+            targetAnswer: 'comply',
+        });
+
+        // Mock $transaction: 执行传入的回调
+        (mockPrisma.$transaction as any).mockImplementation(async (fn: any) => fn(mockPrisma));
+
+        // Mock AttemptRecord.create 默认返回
+        (mockPrisma.attemptRecord.create as any).mockResolvedValue({
+            id: 'attempt-1',
+            userId: 'user-1',
+            questionSeedId: 'seed-1',
+            isCorrect: true,
+        });
     });
 
     it('应该拒绝未认证的请求', async () => {
@@ -41,13 +59,6 @@ describe('recordArenaOutcome', () => {
     });
 
     it('应该成功创建 AttemptRecord', async () => {
-        (mockPrisma.attemptRecord.create as any).mockResolvedValue({
-            id: 'attempt-1',
-            userId: 'user-1',
-            questionSeedId: 'seed-1',
-            isCorrect: true,
-        });
-
         const result = await recordArenaOutcome({
             questionSeedId: 'seed-1',
             anchorVocabId: 100,
@@ -72,14 +83,10 @@ describe('recordArenaOutcome', () => {
     });
 
     it('答对时不应触发降维打击检查', async () => {
-        (mockPrisma.attemptRecord.create as any).mockResolvedValue({
-            id: 'attempt-1', userId: 'user-1',
-        });
-
         await recordArenaOutcome({
             questionSeedId: 'seed-1',
             anchorVocabId: 100,
-            isCorrect: true, // 答对了
+            isCorrect: true,
             responseTimeMs: 2000,
             selectedOption: 'comply',
             questionType: 'COLLOCATION',
@@ -97,7 +104,7 @@ describe('recordArenaOutcome', () => {
 
         await recordArenaOutcome({
             questionSeedId: 'seed-1',
-            anchorVocabId: null, // 无锚点词（纯语法题）
+            anchorVocabId: null,
             isCorrect: false,
             responseTimeMs: 5000,
             selectedOption: 'wrong',
@@ -120,3 +127,4 @@ describe('recordArenaOutcome', () => {
         })).rejects.toThrow();
     });
 });
+

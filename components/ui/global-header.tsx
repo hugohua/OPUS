@@ -22,7 +22,7 @@ export function GlobalHeader({
         <header
             className={cn(
                 "sticky top-0 z-50 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 px-5 flex flex-col gap-3 pointer-events-none",
-                "bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC]/95 dark:from-zinc-950 dark:via-zinc-950/95 to-transparent",
+                "bg-white/70 dark:bg-zinc-950/60 backdrop-blur-xl border-b border-zinc-200/50 dark:border-white/5",
                 className
             )}
         >

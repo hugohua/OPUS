@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { FileText, Bone } from "lucide-react";
 
 interface WandStreamProps {
     completion: string;
@@ -18,9 +19,18 @@ export function WandStreamView({ completion, isLoading, type, target }: WandStre
             const titleLine = lines[0];
             const content = lines.slice(1).join('\n').trim();
 
-            // Extract Emoji
+            // Extract Emoji (We no longer use emojis directly, but parse the text title instead)
+            // Wait, we still get emojis from LLM output potentially, but we want to render them correctly or map them.
+            // Since this is just a fallback view for wand (MagicWandContent is the main one), we'll do best effort map or pass through string
+            let icon: string | ReactNode = type === "word" ? <FileText className="w-3.5 h-3.5" /> : <Bone className="w-3.5 h-3.5" />;
+
             const emojiMatch = titleLine.match(/^([\p{Emoji}]+)\s*(.+)/u);
-            const icon = emojiMatch ? emojiMatch[1] : (type === "word" ? "📝" : "🦴");
+            if (emojiMatch) {
+                // If the LLM generates an emoji, we let it pass through since it's dynamic output
+                // But we default to Lucide if none generated
+                icon = emojiMatch[1];
+            }
+
             const title = emojiMatch ? emojiMatch[2] : titleLine;
 
             return { icon, title, content };
@@ -63,10 +73,10 @@ export function WandStreamView({ completion, isLoading, type, target }: WandStre
                         transition={{ delay: idx * 0.1 }}
                     >
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 text-xs">
+                            <span className="flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 text-xs text-center">
                                 {section.icon}
                             </span>
-                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest pt-0.5">
                                 {section.title}
                             </span>
                         </div>

@@ -18,6 +18,7 @@ import { inventory } from '@/lib/core/inventory';
 import { buildChunkingDrillFallback } from '@/lib/templates/deterministic-drill';
 import { buildArenaFallbackDrill } from '@/lib/templates/arena-fallback';
 import { buildPhraseFallbackDrill } from '@/lib/templates/phrase-fallback';
+import { shuffleBriefingOptions } from '@/lib/core/shuffle-options';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
 import { auditInventoryEvent, auditSessionFallback, auditMixedModeDistribution } from '@/lib/services/audit-service';
 import { isMixedMode, MIXED_MODE_SCENARIOS, selectScenario } from '@/lib/core/scenario-selector';
@@ -151,7 +152,7 @@ export async function getNextDrillBatch(
             });
 
             log.info({ grammarNodeId, count: drills.length }, '✅ Quick Drill: 靶向题目生成完成');
-            return { status: 'success', message: `Quick Drill: ${drills.length} seeds`, data: drills };
+            return { status: 'success', message: `Quick Drill: ${drills.length} seeds`, data: drills.map(shuffleBriefingOptions) };
         }
 
         // 1.5 混合模式路由
@@ -327,7 +328,7 @@ export async function getNextDrillBatch(
         return {
             status: 'success',
             message: `Batch retrieved (Cache Hit: ${hitRate}%)`,
-            data: drills,
+            data: drills.map(shuffleBriefingOptions),
             meta: { count: drills.length, hitRate }
         };
 
@@ -573,7 +574,7 @@ async function getMixedDrillBatch(
     return {
         status: 'success',
         message: `Mixed mode (${mixedMode}) drills fetched`,
-        data: drills,
+        data: drills.map(shuffleBriefingOptions),
     };
 }
 

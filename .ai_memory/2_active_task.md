@@ -1,28 +1,11 @@
 # 当前任务状态
 
-## 当前阶段
-Phase 1.5: 沉浸式体验 (The Immersion Release)
+- **当前任务**: 处理 Part 6 图片 OCR 并完成 LLM 题目转换与结构化入库
+- **状态**: ✅ 已完成
+- **详细进展**:
+  1. **资产盘点**：审计现存脚本（`ocr_pdf_to_text.py` 和 `seed-part6.ts`），确认原脚本偏向全量 PDF 文本流水线。
+  2. **新增架构**：基于现有 `@ai-sdk/openai` (`lib/ai/client.ts`) 扩展了原生支持图片解析的多模态脚本。
+  3. **数据接入**：新增 `scripts/seeders/seed-part6-image.ts`。应用 `PART6_SEED_SYSTEM_PROMPT` 识别包含正确插空语法和题目。
+  4. **入库校验**：成功处理 `books/part6/` 目录下的 4 张 PNG 测试图片。无报错，所有目标题目（共 16 题）已挂载至特定的 `source` 顺利入库题库数据库中。
 
-## 当前任务
-Task 1.5: Topic Briefing & Phase 1.5 Features
-
-## 待办事项
-- [x] Optimization: 模拟页预加载机制 (Drill Cache + Prefetch)
-- [ ] Task 1.5.1: Magic Paste (语境注入) [P0]
-- [ ] Task 1.5.2: Commute Mode (Audio Playlist & TTS)
-  - [x] Enable TTS service in `dev:all`
-  - [x] Infrastructure: Global AI Service Migration (Unified LLM SDK)
-  - [x] Infrastructure: Architecture Unification (Article/Vocab Services)
-- [x] Task 1.5.3: PRD Update (Topic Briefing) - Doc Integration
-- [ ] Task 1.5.4: Topic Briefing (AI Context Generator) - Implementation
-- [x] Task 1.5.5: Arena Mission (Part 6/7) 悬浮指挥舱 Split-Dock UI 重构
-- [ ] Task 3.2: Rest Card UI (每日休息卡)
-- [x] 替换本地数据库 (Import `opus_export.sql`)
-
-## 上下文
-- 发现 `dashboard/simulate` 页面存在 10s+ 的 LLM 生成延迟。
-- 实施了 "Drill Cache" 机制 (Schema + Logic)。
-- 实现了 "生产者-消费者" 模型：首页进入 `simulate` 时预热缓存，`session` 页面优先消费缓存。
-- 验证脚本 `scripts/verify-drill-cache.ts` 通过。
-- [Fix] 修复了 Audio 模式下由于 Inventory 缺失导致 100% Fallback 时，Session 进度无法保存导致刷新重置的问题。
-- [DB] 已用项目根目录的 `opus_export.sql` 覆盖本地 Docker 数据库 (清理并重建了 public schema)。
+- **下一步行动**: [等待输入] 是否需要调整或校验这批题库，或转至下个需求？

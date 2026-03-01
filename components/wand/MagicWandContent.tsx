@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils"; // Assuming utils exists, or I will use a local helper
+import { BookOpen, Dna, Target, Lightbulb, Link, Bone, Scissors, Rocket, FileText } from "lucide-react";
 
 // --- Types ---
 
@@ -13,7 +14,7 @@ interface ParsedHeader {
 interface ParsedSection {
     rawTitle: string; // Full title line: "### 🎯 语境义 (Meaning)"
     type: SectionType;
-    icon: string;     // Emoji: 🎯
+    icon: ReactNode;  // Lucide Icon component
     label: string;    // Text: Context / Meaning
     content: string;
 }
@@ -38,45 +39,45 @@ interface MagicWandContentProps {
 
 // --- Helpers ---
 
-function identifySectionType(titleLine: string): { type: SectionType, icon: string, label: string } {
+function identifySectionType(titleLine: string): { type: SectionType, icon: ReactNode, label: string } {
     // Default fallback
     let type: SectionType = "default";
-    let icon = "📝";
+    let icon: ReactNode = <FileText className="w-4 h-4" />;
     let label = titleLine.replace(/^###\s*/, "").trim();
 
     const lower = titleLine.toLowerCase();
 
     if (lower.includes("释义")) {
         type = "definition";
-        icon = "📖";
+        icon = <BookOpen className="w-4 h-4" />;
         label = "释义";
     } else if (lower.includes("词源") || lower.includes("etymology")) {
         type = "etymology";
-        icon = "🧬";
+        icon = <Dna className="w-4 h-4" />;
         label = "词源记忆";
     } else if (lower.includes("meaning") || lower.includes("语境义")) {
         type = "meaning";
-        icon = "🎯";
+        icon = <Target className="w-4 h-4" />;
         label = "Meaning in Context";
     } else if (lower.includes("nuance") || lower.includes("辨析")) {
         type = "nuance";
-        icon = "💡";
+        icon = <Lightbulb className="w-4 h-4" />;
         label = "Nuance";
     } else if (lower.includes("collocation") || lower.includes("搭配")) {
         type = "collocation";
-        icon = "🔗";
+        icon = <Link className="w-4 h-4" />;
         label = "Collocation";
     } else if (lower.includes("skeleton") || lower.includes("骨架")) {
         type = "skeleton";
-        icon = "🦴";
+        icon = <Bone className="w-4 h-4" />;
         label = "The Skeleton";
     } else if (lower.includes("chunking") || lower.includes("拆解")) {
         type = "chunking";
-        icon = "✂️";
+        icon = <Scissors className="w-4 h-4" />;
         label = "Chunking";
     } else if (lower.includes("insight") || lower.includes("点拨")) {
         type = "insight";
-        icon = "🚀";
+        icon = <Rocket className="w-4 h-4" />;
         label = "Takeaway";
     }
 
@@ -85,12 +86,12 @@ function identifySectionType(titleLine: string): { type: SectionType, icon: stri
 
 // --- Renderers ---
 
-const SectionHeader = ({ icon, label, colorClass }: { icon: string, label: string, colorClass: string }) => (
+const SectionHeader = ({ icon, label, colorClass }: { icon: ReactNode, label: string, colorClass: string }) => (
     <div className="flex items-center gap-2 mb-3">
-        <span className={cn("flex items-center justify-center w-5 h-5 rounded text-xs", colorClass)}>
+        <span className={cn("flex items-center justify-center w-6 h-6 rounded text-xs", colorClass)}>
             {icon}
         </span>
-        <span className="text-xs font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+        <span className="text-xs font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
             {label}
         </span>
     </div>
@@ -103,7 +104,7 @@ const DefinitionRenderer = ({ content }: { content: string }) => {
 
     return (
         <div>
-            <SectionHeader icon="📖" label="释义" colorClass="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" />
+            <SectionHeader icon={<BookOpen className="w-3.5 h-3.5" />} label="释义" colorClass="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" />
             <div className="space-y-2">
                 {lines.map((line, idx) => {
                     const clean = line.replace(/^-\s*/, '').trim();
@@ -125,7 +126,7 @@ const DefinitionRenderer = ({ content }: { content: string }) => {
 const EtymologyRenderer = ({ content }: { content: string }) => {
     return (
         <div>
-            <SectionHeader icon="🧬" label="词源记忆" colorClass="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400" />
+            <SectionHeader icon={<Dna className="w-3.5 h-3.5" />} label="词源记忆" colorClass="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400" />
             <div className="bg-violet-50/50 dark:bg-violet-500/10 rounded-lg p-4 border border-violet-100/50 dark:border-violet-500/20">
                 <p className="font-mono text-sm text-slate-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
                     {content}
@@ -143,7 +144,7 @@ const MeaningRenderer = ({ content }: { content: string }) => {
 
     return (
         <div>
-            <SectionHeader icon="🎯" label="语境释义" colorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400" />
+            <SectionHeader icon={<Target className="w-3.5 h-3.5" />} label="语境释义" colorClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400" />
             <p
                 className="text-base text-slate-700 dark:text-zinc-300 leading-relaxed font-serif"
                 dangerouslySetInnerHTML={{ __html }}
@@ -159,7 +160,7 @@ const NuanceRenderer = ({ content }: { content: string }) => {
 
     return (
         <div>
-            <SectionHeader icon="💡" label="深度辨析" colorClass="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400" />
+            <SectionHeader icon={<Lightbulb className="w-3.5 h-3.5" />} label="深度辨析" colorClass="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400" />
             <div className="bg-amber-50/50 dark:bg-amber-500/10 rounded-lg p-3 border border-amber-100/50 dark:border-amber-500/20">
                 <p
                     className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed"
@@ -177,7 +178,7 @@ const CollocationRenderer = ({ content }: { content: string }) => {
 
     return (
         <div>
-            <SectionHeader icon="🔗" label="黄金搭配" colorClass="bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400" />
+            <SectionHeader icon={<Link className="w-3.5 h-3.5" />} label="黄金搭配" colorClass="bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400" />
             <ul className="space-y-2">
                 {lines.map((line, idx) => {
                     const cleanLine = line.replace(/^-\s*/, '');
@@ -218,7 +219,7 @@ const SkeletonRenderer = ({ content }: { content: string }) => {
 
     return (
         <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4 border border-slate-100 dark:border-zinc-800">
-            <SectionHeader icon="🦴" label="句子骨架" colorClass="text-slate-600 dark:text-zinc-400" />
+            <SectionHeader icon={<Bone className="w-3.5 h-3.5" />} label="句子骨架" colorClass="text-slate-600 dark:text-zinc-400" />
             <div
                 className="font-serif text-lg leading-relaxed text-slate-800 dark:text-zinc-200"
                 dangerouslySetInnerHTML={{ __html }}
@@ -237,7 +238,7 @@ const ChunkingRenderer = ({ content }: { content: string }) => {
 
     return (
         <div>
-            <SectionHeader icon="✂️" label="结构拆解" colorClass="text-slate-400" />
+            <SectionHeader icon={<Scissors className="w-3.5 h-3.5 -scale-x-100" />} label="结构拆解" colorClass="text-slate-400" />
             <div className="space-y-6 relative pl-4 border-l-2 border-slate-100 dark:border-zinc-800 ml-2">
                 {lines.map((line, idx) => {
                     const cleanLine = line.replace(/^-\s*/, '');
@@ -275,9 +276,11 @@ const ChunkingRenderer = ({ content }: { content: string }) => {
 const InsightRenderer = ({ content }: { content: string }) => {
     return (
         <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-lg p-4 border border-indigo-100/50 dark:border-indigo-500/20">
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-start">
                 <div className="shrink-0 mt-0.5">
-                    <span className="flex items-center justify-center w-5 h-5 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold">🚀</span>
+                    <span className="flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold">
+                        <Rocket className="w-3.5 h-3.5" />
+                    </span>
                 </div>
                 <div>
                     <h4 className="text-xs font-mono font-bold text-indigo-400 dark:text-indigo-300 uppercase mb-1">点拨</h4>

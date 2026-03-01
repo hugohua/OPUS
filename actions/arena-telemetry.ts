@@ -10,19 +10,23 @@ import { updateBkt } from "@/lib/algorithm/bkt";
 const log = logger.child({ module: 'arena-telemetry' });
 
 const attemptSchema = z.object({
-    questionSeedId: z.string(),
+    questionSeedId: z.string().optional(),
     anchorVocabId: z.number().nullable(),
     isCorrect: z.boolean(),
     responseTimeMs: z.number(),
     selectedOption: z.string(),
     questionType: z.nativeEnum(QuestionType),
     part: z.number().int(),
+    // [V9.0] 错题本：仅答错时前端传入完整 BriefingPayload 快照
+    snapshotPayload: z.any().optional(),
 });
 
 export type AttemptRecordPayload = z.infer<typeof attemptSchema>;
 
 /**
  * 记录 The Arena 的单次答题结果。
+ * [V9.0] 新增错题本双写逻辑：答错且携带 snapshotPayload 时，
+ *        在同一 $transaction 中写入 UserMistakeBook。
  */
 export async function recordArenaOutcome(payload: AttemptRecordPayload) {
     const session = await auth();
@@ -33,19 +37,76 @@ export async function recordArenaOutcome(payload: AttemptRecordPayload) {
     const data = attemptSchema.parse(payload);
     const userId = session.user.id;
 
-    // 0. [🔴 审计修复] 查询 QuestionSeed 获取 grammarNodeId + difficulty
-    const seed = await prisma.questionSeed.findUnique({
-        where: { id: data.questionSeedId },
-        select: { grammarNodeId: true, difficulty: true },
-    });
+    // 0. 查询 QuestionSeed 获取 grammarNodeId + difficulty + targetAnswer
+    let seed = null;
+    if (data.questionSeedId) {
+        seed = await prisma.questionSeed.findUnique({
+            where: { id: data.questionSeedId },
+            select: { grammarNodeId: true, difficulty: true, targetAnswer: true },
+        });
+    }
 
-    // 1. 插入 AttemptRecord，冗余写入 grammarNodeId
-    const attempt = await prisma.attemptRecord.create({
-        data: {
-            userId,
-            ...data,
-            grammarNodeId: seed?.grammarNodeId ?? null, // 🔴 审计修复 #1
-        },
+    // 1. [V9.0] $transaction 双写：AttemptRecord + UserMistakeBook
+    const attempt = await prisma.$transaction(async (tx) => {
+        // 1.1 插入 AttemptRecord（原逻辑不变）
+        const record = await tx.attemptRecord.create({
+            data: {
+                userId,
+                questionSeedId: seed ? data.questionSeedId : undefined,
+                anchorVocabId: data.anchorVocabId,
+                isCorrect: data.isCorrect,
+                responseTimeMs: data.responseTimeMs,
+                selectedOption: data.selectedOption,
+                questionType: data.questionType,
+                part: data.part,
+                grammarNodeId: seed?.grammarNodeId ?? null,
+            },
+        });
+
+        // 1.2 [V9.0] 仅答错且携带快照时写入错题本
+        if (!data.isCorrect && data.snapshotPayload) {
+            const snapshotMeta = data.snapshotPayload?.meta || {};
+
+            // 提取快照中特定题目的 correctAnswer
+            let extractedCorrectAnswer = '';
+            const interactions = data.snapshotPayload.segments?.filter((s: any) => s.type === 'interaction') || [];
+            if (interactions.length > 0) {
+                // 对于 Part 6，前端写入了 target_word_blank_index (1-based) 代表当前题号
+                const qIdx = snapshotMeta.target_word_blank_index;
+                const interaction = (qIdx && typeof qIdx === 'number' && qIdx <= interactions.length)
+                    ? interactions[qIdx - 1]
+                    : interactions[0];
+
+                if (interaction?.task?.answer_key) {
+                    extractedCorrectAnswer = interaction.task.answer_key;
+                } else if (Array.isArray(interaction?.task?.options)) {
+                    const corr = interaction.task.options.find((o: any) => o.is_correct || o.isCorrect);
+                    if (corr && corr.text) extractedCorrectAnswer = corr.text;
+                }
+            }
+
+            const finalCorrectAnswer = extractedCorrectAnswer || seed?.targetAnswer || '';
+
+            await tx.userMistakeBook.create({
+                data: {
+                    userId,
+                    attemptRecordId: record.id,
+                    mode: snapshotMeta.mode || `ARENA_PART${data.part}`,
+                    part: data.part,
+                    vocabId: data.anchorVocabId,
+                    grammarNodeId: seed?.grammarNodeId ?? null,
+                    questionType: data.questionType,
+                    snapshot: data.snapshotPayload,
+                    userWrongAnswer: data.selectedOption,
+                    correctAnswer: finalCorrectAnswer,
+                    status: 'ACTIVE',
+                },
+            });
+            log.info({ userId, part: data.part, selectedOption: data.selectedOption, finalCorrectAnswer },
+                '[MistakeBook] 错题快照已写入');
+        }
+
+        return record;
     });
 
     // 2. 词汇轨：只有答错了才去尝试分析是否需要"降维打击"
@@ -55,7 +116,7 @@ export async function recordArenaOutcome(payload: AttemptRecordPayload) {
         });
     }
 
-    // 3. [V3.0 新增] 语法轨：异步 BKT 更新（fire-and-forget）
+    // 3. [V3.0] 语法轨：异步 BKT 更新（fire-and-forget）
     if (seed?.grammarNodeId) {
         updateGrammarMastery(
             userId, seed.grammarNodeId, data.isCorrect, seed.difficulty ?? 2

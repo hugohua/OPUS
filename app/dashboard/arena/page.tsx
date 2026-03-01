@@ -12,6 +12,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
 
 export default async function ArenaDashboard({ searchParams }: { searchParams: Promise<{ tab?: string, domain?: string }> }) {
     const params = await searchParams;
@@ -113,7 +114,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
                 )}
             </main>
 
-
+            <FloatingDockClient />
         </div>
     );
 }

@@ -267,6 +267,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
                     selectedOption: selectedOption || '',
                     questionType: meta?.questionType || 'GRAMMAR',
                     part: meta?.part || (mode === 'ARENA_PART6' ? 6 : 5),
+                    // [V9.0] 错题本：答错时传递完整 BriefingPayload 快照
+                    snapshotPayload: !isCorrect ? currentDrill : undefined,
                 }).catch((e) => {
                     console.error('[Arena Telemetry] recordArenaOutcome failed:', e);
                 });
@@ -296,7 +298,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             clearSession(userId, mode, grammarNodeId);
             setCompleted(true);
         }
-    }, [currentDrill, userId, mode, grammarNodeId, queue.length, index]);
+    }, [currentDrill, userId, mode, grammarNodeId, queue.length, index, selectedOption]);
 
     // --- Action: Handle Next (for modes like CHUNKING) ---
     const handleNext = useCallback(() => {

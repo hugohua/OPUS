@@ -70,6 +70,9 @@ export function ArticleReader({
 
     const articleRef = useRef<HTMLDivElement>(null);
 
+    // Track which translation paragraphs have been revealed (by index)
+    const [revealedTranslations, setRevealedTranslations] = useState<Set<number>>(new Set());
+
     // ✅ Memoize target word set for O(1) lookup (prevents flicker from slow comparison)
     const targetWordSet = useMemo(
         () => new Set(currentTargetWords.map(t => t.word.toLowerCase())),
@@ -150,7 +153,7 @@ export function ArticleReader({
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ✅ V2.0: 使用 ===TITLE=== / ===BODY=== 分隔符解析标题和正文
+    // ✅ V2.0: 使用 ===TITLE=== / ===BODY=== (及 ===TRANSLATION===) 分隔符解析标题和正文
     // ❗ 必须在 early return 之前调用，确保 Hooks 调用顺序稳定
     const parsedContent = useMemo(() => {
         if (!completion) return null;
@@ -159,20 +162,26 @@ export function ArticleReader({
         const titleMatch = cleaned.match(/===TITLE===\s*([\s\S]*?)\s*===BODY===/);
         const titleText = titleMatch ? titleMatch[1].trim() : "";
 
-        const bodyText = cleaned.split("===BODY===")[1]?.trim();
+        const bodyMatch = cleaned.match(/===BODY===\s*([\s\S]*?)(?:===TRANSLATION===|$)/);
+        const bodyText = bodyMatch ? bodyMatch[1].trim() : "";
         const bodyParts = bodyText ? bodyText.split("\n\n").filter(Boolean) : [];
+
+        const translationMatch = cleaned.match(/===TRANSLATION===\s*([\s\S]*?)$/);
+        const translationText = translationMatch ? translationMatch[1].trim() : "";
+        const translationParts = translationText ? translationText.split("\n\n").filter(Boolean) : [];
 
         // Fallback for streaming incomplete states or legacy format
         if (!titleMatch && !bodyText && cleaned.length > 0) {
             // Maybe it's just raw text?
-            return { titleText: "", bodyParts: cleaned.split("\n\n").filter(Boolean) };
+            return { titleText: "", bodyParts: cleaned.split("\n\n").filter(Boolean), translationParts: [] };
         }
 
-        if (!titleText && bodyParts.length === 0) return null;
+        if (!titleText && bodyParts.length === 0 && translationParts.length === 0) return null;
 
         return {
             titleText: titleText || "",
-            bodyParts
+            bodyParts,
+            translationParts
         };
     }, [completion]);
 
@@ -322,7 +331,7 @@ export function ArticleReader({
     // 段落渲染
     const renderContent = () => {
         if (!parsedContent) return null;
-        const { titleText, bodyParts } = parsedContent;
+        const { titleText, bodyParts, translationParts } = parsedContent;
 
         return (
             <>
@@ -331,15 +340,60 @@ export function ArticleReader({
                         {titleText}
                     </h1>
                 )}
-                {bodyParts.map((para, pIdx) => (
-                    <p key={`p-${pIdx}`} className="mb-6 leading-loose text-lg text-zinc-700 dark:text-zinc-300 font-serif break-words">
-                        {isLoading ? para : renderInteractiveParagraph(para, pIdx)}
-                        {/* ✅ 光标跟随最后一个段落末尾，不独立占位 */}
-                        {isLoading && pIdx === bodyParts.length - 1 && (
-                            <span className="inline-block w-0.5 h-5 bg-indigo-500 dark:bg-indigo-400 animate-pulse ml-1 align-text-bottom" />
-                        )}
-                    </p>
-                ))}
+                {bodyParts.map((para, pIdx) => {
+                    const translation = translationParts?.[pIdx];
+                    const isRevealed = revealedTranslations.has(pIdx);
+
+                    return (
+                        <div key={`p-${pIdx}`} className="mb-10 last:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <p className="leading-loose text-lg text-zinc-700 dark:text-zinc-300 font-serif break-words">
+                                {isLoading ? para : renderInteractiveParagraph(para, pIdx)}
+                                {/* cursor when generating body */}
+                                {isLoading && pIdx === bodyParts.length - 1 && (!translationParts || translationParts.length === 0) && (
+                                    <span className="inline-block w-0.5 h-5 bg-indigo-500 dark:bg-indigo-400 animate-pulse ml-1 align-text-bottom" />
+                                )}
+                            </p>
+
+                            {/* Interleaved Translation */}
+                            {translation && (
+                                <div
+                                    className={cn(
+                                        "relative mt-4 pl-4 border-l-2 animate-in fade-in duration-500 cursor-pointer transition-all group",
+                                        isRevealed ? "border-indigo-300 dark:border-indigo-700/80" : "border-zinc-200 dark:border-zinc-800"
+                                    )}
+                                    onClick={() => {
+                                        if (isRevealed) return;
+                                        setRevealedTranslations(prev => {
+                                            const next = new Set(prev);
+                                            next.add(pIdx);
+                                            return next;
+                                        });
+                                    }}
+                                >
+                                    <p className={cn(
+                                        "leading-[1.6] text-base transition-all duration-300 selection:bg-transparent",
+                                        isRevealed
+                                            ? "text-zinc-600 dark:text-zinc-400 blur-none"
+                                            : "text-zinc-400 dark:text-zinc-500 blur-sm hover:blur-[2px] opacity-70"
+                                    )}>
+                                        {translation}
+                                        {/* cursor when generating translation */}
+                                        {isLoading && pIdx === translationParts.length - 1 && (
+                                            <span className="inline-block w-0.5 h-5 bg-indigo-500 dark:bg-indigo-400 animate-pulse ml-1 align-text-bottom blur-none opacity-100" />
+                                        )}
+                                    </p>
+                                    {!isRevealed && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <span className="text-xs font-medium tracking-wider text-zinc-500 dark:text-zinc-400 bg-white/80 dark:bg-zinc-950/80 px-3 py-1.5 rounded-full backdrop-blur-md border border-zinc-200 dark:border-zinc-800 shadow-sm transition-opacity group-hover:opacity-100 md:opacity-80">
+                                                点击查看翻译
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
             </>
         );
     };
@@ -410,7 +464,7 @@ export function ArticleReader({
     };
 
     return (
-        <div ref={scrollContainerRef} className="w-full max-w-3xl mx-auto min-h-screen flex flex-col bg-white dark:bg-zinc-950 overflow-y-scroll [scrollbar-gutter:stable] [overflow-anchor:auto]">
+        <div ref={scrollContainerRef} className="w-full max-w-3xl mx-auto min-h-screen flex flex-col bg-white dark:bg-zinc-950 overflow-y-scroll [scrollbar-gutter:stable] [overflow-anchor:auto] pb-24">
 
             {/* 统一 Header 组件 (reader variant) */}
             <Header
@@ -421,7 +475,7 @@ export function ArticleReader({
             />
 
             {/* 文章主体 */}
-            <main ref={articleRef} className="flex-1 px-8 py-12 md:px-12 md:py-16 relative">
+            <main ref={articleRef} className="flex-1 px-8 py-12 md:px-12 md:py-16 relative select-text">
                 <article>
                     {renderContent()}
                 </article>

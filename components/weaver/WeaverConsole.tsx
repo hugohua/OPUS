@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, History, Factory } from "lucide-react";
 import Link from "next/link";
 import { GlobalHeader } from "@/components/ui/global-header";
+import { useHaptic } from "@/hooks/use-haptic";
 
 import { RawMaterials, WordItem } from "./console/RawMaterials";
 import { ContextSelector } from "./console/ContextSelector";
@@ -46,6 +47,7 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
     const [fillerWords, setFillerWords] = useState<WordItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { vibrateSelection } = useHaptic();
 
     // 加载词汇
     useEffect(() => {
@@ -73,6 +75,7 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
     }
 
     const handleWeave = () => {
+        vibrateSelection();
         onStart(selectedScenario, selectedDensity, [...priorityWords, ...fillerWords]);
     };
 
@@ -103,7 +106,7 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
                 }
             />
 
-            <main className="flex-1 overflow-y-auto pb-32 relative z-10">
+            <main className="flex-1 overflow-y-auto pb-48 relative z-10">
 
                 <RawMaterials
                     isLoading={isLoading}
@@ -128,8 +131,8 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
             </main>
 
             {/* Footer / Floating Bar */}
-            <div className="fixed bottom-0 left-0 w-full px-6 py-4 bg-white/90 dark:bg-zinc-900/90 border-t border-zinc-200 dark:border-zinc-800 backdrop-blur-lg z-30">
-                <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[95%] max-w-[400px] px-6 py-4 bg-white/70 dark:bg-zinc-950/60 border border-zinc-200/50 dark:border-white/10 rounded-2xl backdrop-blur-2xl shadow-xl dark:shadow-black/60 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] z-30">
+                <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
                         <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-widest mb-1">
                             Estimated Output

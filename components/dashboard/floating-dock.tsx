@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Layers, Zap, User, Sparkles, Swords } from "lucide-react";
+import { useHaptic } from "@/hooks/use-haptic";
 
 interface FloatingDockProps {
     hasDue?: boolean;
@@ -11,6 +12,7 @@ interface FloatingDockProps {
 
 export function FloatingDock({ hasDue = false }: FloatingDockProps) {
     const pathname = usePathname();
+    const { vibrateLight } = useHaptic();
 
     const isActive = (path: string) => {
         if (path === '/dashboard' && pathname === '/dashboard') return true;
@@ -49,7 +51,7 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
     ];
 
     return (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[400px] h-16 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-2xl shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 flex items-center justify-around px-1 z-50">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[400px] h-16 bg-white/70 dark:bg-zinc-950/60 backdrop-blur-2xl border border-zinc-200/50 dark:border-white/10 rounded-2xl shadow-2xl shadow-zinc-200/50 dark:shadow-black/60 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] flex items-center justify-around px-1 z-50">
             {navItems.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
@@ -58,8 +60,9 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
                     <Link
                         key={item.href}
                         href={item.href}
+                        onClick={vibrateLight}
                         className={cn(
-                            "flex flex-col items-center justify-center w-[20%] h-full transition-all duration-300 relative group",
+                            "flex flex-col items-center justify-center w-[20%] h-full transition-all duration-150 relative group active:opacity-80 md:active:opacity-100",
                             active
                                 ? "text-violet-600 dark:text-violet-400"
                                 : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"

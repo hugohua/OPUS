@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfileStats } from "@/actions/get-profile-stats";
 import { getUserSettings } from "@/actions/update-user-settings";
+import { getErrorLogs } from "@/actions/get-error-logs";
 import { SkillRadar } from "@/components/profile/skill-radar";
 import { MemoryHealth } from "@/components/profile/memory-health";
 import { LoadForecast } from "@/components/profile/load-forecast";
@@ -11,6 +12,7 @@ import { ConsistencyLog } from "@/components/profile/consistency-log";
 import { PreferenceToggle } from "@/components/profile/preference-toggle";
 import { ProfileRadarTabs } from "@/components/profile/profile-radar-tabs";
 import { GlobalHeader } from "@/components/ui/global-header";
+import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
@@ -24,9 +26,10 @@ export default async function ProfilePage() {
     const initials = name ? name.charAt(0).toUpperCase() : "U";
 
     // ── 并行获取所有数据 ──
-    const [stats, settings] = await Promise.all([
+    const [stats, settings, mistakeLogs] = await Promise.all([
         getProfileStats(),
         getUserSettings(),
+        getErrorLogs(),
     ]);
 
     return (
@@ -111,7 +114,30 @@ export default async function ProfilePage() {
                     知识保险库
                 </h2>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <Link href="/dashboard/profile/mistakes" className="group relative flex flex-col justify-between bg-slate-900 dark:bg-zinc-900 rounded-2xl border border-slate-800 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-indigo-500/50 transition-all active:scale-[0.98]">
+                        <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/30 transition-all" />
+                        <div className="flex justify-between items-start mb-2 relative z-10">
+                            <div className="p-1.5 rounded-lg bg-white/10 text-indigo-400">
+                                <BookOpen className="w-5 h-5" />
+                            </div>
+                            {mistakeLogs.totalUnresolved > 0 && (
+                                <span className="text-[10px] font-mono font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
+                                    {mistakeLogs.totalUnresolved} 待解决
+                                </span>
+                            )}
+                        </div>
+                        <div className="relative z-10">
+                            <span className="text-xs font-medium text-slate-400 dark:text-zinc-400">错题档案 (日志)</span>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-2xl font-bold font-mono text-white dark:text-white">{mistakeLogs.totalUnresolved}</span>
+                                <span className="text-[10px] text-slate-400">项</span>
+                            </div>
+                            <p className="text-[9px] text-slate-500 mt-2 leading-tight">
+                                高频错题: {mistakeLogs.highFrequencyLogs.length}
+                            </p>
+                        </div>
+                    </Link>
                     <Link href="/dashboard/cards?filter=weak" className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-rose-500/50 transition-all active:scale-[0.98]">
                         <div className="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition-all" />
                         <div className="flex justify-between items-start mb-2 relative z-10">
@@ -204,6 +230,7 @@ export default async function ProfilePage() {
                 </div>
             </section>
 
+            <FloatingDockClient />
         </div>
     );
 }

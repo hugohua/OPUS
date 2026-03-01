@@ -1,5 +1,6 @@
 import React from "react";
-import { Loader2, AlertCircle, RefreshCcw, ChevronRight } from "lucide-react";
+import { AlertCircle, RefreshCcw, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
     Dialog,
@@ -60,9 +61,10 @@ export function RawMaterials({
             {/* Word Chips - Flow Layout */}
             <div>
                 {isLoading ? (
-                    <div className="flex items-center gap-2 text-zinc-400 py-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-xs font-mono">同步原料中...</span>
+                    <div className="flex flex-wrap gap-2 py-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <Skeleton key={i} className="h-8 rounded-md" style={{ width: `${60 + Math.random() * 40}px` }} />
+                        ))}
                     </div>
                 ) : error ? (
                     <div className="flex items-center gap-2 text-rose-500 py-2">

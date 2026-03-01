@@ -223,6 +223,7 @@ model User {
   drillCaches          DrillCache[]
   attemptRecords       AttemptRecord[]
   grammarProficiencies UserGrammarProficiency[] // [V3.0] 语法树熟练度追踪
+  mistakeBooks         UserMistakeBook[]        // [V9.0] 错题本快照
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -471,7 +472,7 @@ model AttemptRecord {
   userId String
 
   // 关联题源
-  questionSeedId String
+  questionSeedId String?
   anchorVocabId  Int? // 关联的底层核心词汇
 
   // [V3.0] 语法树冗余 (避免 JOIN QuestionSeed 再 JOIN GrammarNode)
@@ -491,7 +492,7 @@ model AttemptRecord {
 
   // 关联
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  questionSeed QuestionSeed @relation(fields: [questionSeedId], references: [id], onDelete: Cascade)
+  questionSeed QuestionSeed? @relation(fields: [questionSeedId], references: [id], onDelete: Cascade)
   anchorVocab  Vocab?       @relation(fields: [anchorVocabId], references: [id], onDelete: SetNull)
 
   @@index([userId, questionType, isCorrect])
@@ -543,4 +544,44 @@ model UserGrammarProficiency {
 
   @@unique([userId, grammarNodeId])
   @@index([userId, masteryScore]) // 核心热路径：靶向出题
+}
+
+// ----------------------------------------------------------------------
+// [V9.0] 错题本 - 快照冗余架构 (Snapshot Denormalization)
+// ----------------------------------------------------------------------
+
+// === [USER_DATA] 用户错题快照 ===
+model UserMistakeBook {
+  id              String   @id @default(cuid())
+  userId          String
+  attemptRecordId String?  // 关联原始作答流水（可选溯源）
+
+  // 筛选维度冗余（免 JOIN）
+  mode            String   // 'ARENA_PART5' | 'ARENA_PART6'
+  part            Int      // 5 | 6
+  vocabId         Int?     // 锚点词汇
+  grammarNodeId   String?  // 语法考点
+  questionType    String?  // MORPHOLOGY | COLLOCATION | GRAMMAR | ...
+
+  // 🔴 核心：完整 BriefingPayload 快照（前端零改造渲染）
+  snapshot        Json
+
+  // 错选记录
+  userWrongAnswer String   // 用户当时选错的选项
+  correctAnswer   String   // 正确答案
+
+  // 生命周期（纯算法内部使用，UI 不暴露）
+  status          String   @default("ACTIVE") // ACTIVE | RESOLVED
+  resolvedAt      DateTime?
+
+  // [V3.1] AI 诊断 Markdown 缓存（首次流式生成后写回，复访秒开）
+  diagnosticMarkdown String?
+
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, part])
+  @@index([userId, vocabId])
 }

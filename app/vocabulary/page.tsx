@@ -8,12 +8,18 @@ export const metadata: Metadata = {
 };
 
 import { getUserAllTags } from "@/actions/vocab-actions";
+import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
 
 export default async function VocabularyPage() {
     const initialTags = await getUserAllTags();
     return (
-        <VocabularyProvider>
-            <VocabularyList initialTags={initialTags} />
-        </VocabularyProvider>
+        <div className="min-h-screen bg-background font-sans flex justify-center selection:bg-primary/20">
+            <div className="w-full max-w-md bg-background min-h-[100dvh] shadow-2xl ring-1 ring-border/5 relative flex flex-col">
+                <VocabularyProvider>
+                    <VocabularyList initialTags={initialTags} />
+                    <FloatingDockClient />
+                </VocabularyProvider>
+            </div>
+        </div>
     );
 }

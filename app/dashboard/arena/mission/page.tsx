@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { X, Search, Check, Sparkles, ArrowRight, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { MagicWandDrawer } from "@/components/arena/magic-wand-drawer";
 import { ImmersiveHeader } from "@/components/ui/immersive-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { generatePart6Session } from "@/actions/part6-queue";
+import { recordArenaOutcome } from "@/actions/arena-telemetry";
 import { BriefingPayload, InteractionSegment } from "@/types/briefing";
+import { QuestionType } from "@prisma/client";
 
 export default function MissionPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +18,9 @@ export default function MissionPage() {
     const [isWandOpen, setIsWandOpen] = useState(false);
     const [activeBlank, setActiveBlank] = useState<number | null>(null);
     const [dockHeight, setDockHeight] = useState(380);
+
+    // 追踪每个挖空的开始答题时间用于分析
+    const startTimeRef = useRef<number>(Date.now());
 
     // Initial Load
     useEffect(() => {
@@ -36,9 +41,46 @@ export default function MissionPage() {
         return () => { mounted = false; }
     }, []);
 
-    const handleSelect = (qIdx: number, optionId: string) => {
+    const handleSelect = async (qIdx: number, optionId: string) => {
         if (selectedOptions[qIdx]) return; // Already answered
         setSelectedOptions(prev => ({ ...prev, [qIdx]: optionId }));
+
+        if (payload) {
+            const interaction = payload.segments[qIdx - 1] as InteractionSegment;
+            const selectedOpt = interaction.task?.options.find(o => (o.id || o.text) === optionId);
+            const isCorrect = !!selectedOpt?.is_correct;
+            const duration = Date.now() - startTimeRef.current;
+
+            // Generate a synthetic or actual seed ID for Part 6 items
+            const questionSeedId = payload.meta?.questionSeedId
+                ? `${payload.meta.questionSeedId}-${qIdx}`
+                : `p6-fallback-${Date.now()}-${qIdx}`;
+
+            // 为了在错题本中正确回放 Part 6，我们对快照加以限制，记录其所属的 qIdx
+            const snapshotPayload = {
+                ...payload,
+                meta: {
+                    ...payload.meta,
+                    target_word_blank_index: qIdx
+                }
+            };
+
+            try {
+                await recordArenaOutcome({
+                    questionSeedId,
+                    anchorVocabId: payload.meta?.vocabId || null,
+                    isCorrect,
+                    responseTimeMs: duration,
+                    selectedOption: selectedOpt?.text || optionId,
+                    questionType: payload.meta?.questionType as QuestionType || 'GRAMMAR',
+                    part: 6,
+                    // 仅答错时记录快照录入错题本
+                    snapshotPayload: !isCorrect ? snapshotPayload : undefined,
+                });
+            } catch (error) {
+                console.error("[Part6] Telemetry recording failed:", error);
+            }
+        }
     };
 
     if (isLoading || !payload) {

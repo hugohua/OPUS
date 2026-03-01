@@ -58,9 +58,6 @@ export function MagicWandSheet({ target, type, context, isOpen, onOpenChange }: 
                                 AI 解析
                             </SheetTitle>
                         </div>
-                        <span className="text-[10px] font-mono text-slate-300 dark:text-zinc-600">
-                            由 Qwen-Turbo 生成
-                        </span>
                     </div>
                 </SheetHeader>
 

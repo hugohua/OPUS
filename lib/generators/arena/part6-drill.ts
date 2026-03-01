@@ -76,26 +76,39 @@ If the \`seed\` contains \`passageContent\`, you can use its topic or style as i
     </passage_rules>
 
     <blank_distribution_rules>
-        - REQUIRED: Exactly ONE gap must strictly test the provided \`targetWord\` (or its valid grammatical inflection).
-        - The remaining THREE gaps must be generated organically by you. 
-        - The mix of the FOUR total questions MUST STRICTLY cover 4 UNIQUE \`dimension\`s from this list if possible, or at least 3:
-            - "V" (Vocabulary): Semantic trap. 
-            - "M" (Meaning): Sentence insertion or logical connector trap.
-            - "X" (Syntax): Word form, tense, relative pronoun trap.
-            - "C" (Collocation): Preposition or fixed phrase trap.
-        - NO MORE THAN TWO questions can share the same \`dimension\`.
+        CRITICAL: The 4 blanks MUST follow this STRICT option-type distribution (reflecting real TOEIC Part 6 design):
+
+        | Slot | option_level   | dimension | What is tested                        | Option example                                                |
+        |------|----------------|-----------|---------------------------------------|---------------------------------------------------------------|
+        | 1 of 4 | "sentence"   | "M"       | Sentence Insertion (logical cohesion) | "We hope you will consider joining us for this event."        |
+        | 1 of 4 | "phrase"     | "C" or "X"| Discourse connector / transition phrase | "In addition" / "On the contrary" / "As a result"          |
+        | 2 of 4 | "word"       | "V" or "X"| Vocabulary / Grammar / Morphology     | "eligible" / "determined" / "announcing"                     |
+
+        - Exactly ONE blank must have \`option_level: "sentence"\` and \`dimension: "M"\`. Each of its 4 options must be a COMPLETE SENTENCE (9+ words).
+        - Exactly ONE blank must have \`option_level: "phrase"\` and \`dimension: "C"\` or \`"X"\`. Each of its 4 options must be a SHORT PHRASE or CONNECTOR (2-6 words, e.g., "In addition", "As a result", "On the other hand").
+        - Exactly TWO blanks must have \`option_level: "word"\` and \`dimension: "V"\` or \`"X"\`. Each of its 4 options must be a SINGLE WORD or TWO-WORD form (e.g., "eligible", "to come", "cleanliness").
+        - REQUIRED: Exactly ONE of the 4 blanks must strictly test the provided \`targetWord\` (or its valid grammatical inflection).
+        - The order of sentence/phrase/word blanks within the passage should feel NATURAL. Typically the sentence insertion blank appears in the MIDDLE or NEAR THE END of the passage.
     </blank_distribution_rules>
 
     <adversarial_distractors_constraints>
         CRITICAL: EVERY option array MUST contain 1 correct answer and 3 HIGHLY DECEPTIVE distractors. 
-        - For "M" (Sentence Insertion): 
+
+        - For "M" (Sentence Insertion / option_level: "sentence"): 
             1. The CORRECT sentence MUST contain a physical hook (e.g., a pronoun like "It", "These", or a logical adverb like "However", "Therefore") that tightly anchors it to the preceding or following sentence.
-            2. DISTRACTORS must NOT be easily dismissed by common sense. They MUST contain vocabulary from the same topic but contain fatal logical flaws (e.g., incorrect timeline, wrong pronoun reference, or conflicting cause-effect).
-        - For "V" (Vocabulary): 
-            1. Distractors MUST belong to the SAME SEMANTIC FIELD as the correct answer (e.g., if the answer is "verify" inventory, distractors should be "estimate", "produce", "distribute", NOT "apologize").
-            2. Distractors MUST grammatically fit the sentence (e.g., be transitive verbs if an object follows) but fail strictly due to subtle business logic mismatch.
-        - For "X" (Syntax) & "C" (Collocation): 
-            1. Leverage classic TOEIC traps (e.g., preposition 'to' vs infinitive 'to', confusing suffixes, active vs passive voice).
+            2. DISTRACTORS must also be COMPLETE SENTENCES that sound plausible in a business context but contain fatal logical flaws (e.g., incorrect timeline, wrong pronoun reference, conflicting cause-effect, or topic drift).
+            3. All 4 option sentences MUST be roughly equal in length (8-18 words each) to prevent length-based guessing.
+
+        - For "C"/"X" (Phrase / Connector / option_level: "phrase"):
+            1. All 4 options must be discourse connectors or transition phrases of similar length.
+            2. Each distractor must be a REAL English connector that is grammatically valid in isolation but creates a LOGICAL contradiction in context (e.g., using "However" when the context requires addition, not contrast).
+
+        - For "V" (Vocabulary / option_level: "word"): 
+            1. Distractors MUST belong to the SAME SEMANTIC FIELD as the correct answer.
+            2. Distractors MUST grammatically fit the sentence but fail due to subtle business logic mismatch.
+
+        - For "X" (Syntax / Grammar / option_level: "word"): 
+            1. Leverage classic TOEIC traps (e.g., preposition 'to' vs infinitive 'to', confusing suffixes like -tion/-ment/-ness, active vs passive voice).
     </adversarial_distractors_constraints>
 
     <explanation_rules language="zh-CN">
@@ -111,26 +124,77 @@ If the \`seed\` contains \`passageContent\`, you can use its topic or style as i
 CRITICAL: You must return a RAW JSON object matching the exact structure below. NO markdown code blocks. NO surrounding text.
 
 {
-  "passage_markdown": "Passage text with exactly four [__BLANK_N__] markers incorporated naturally into the sentences...",
-  "target_word_blank_index": 2, // The integer index (1, 2, 3, or 4) indicating which blank represents the target word.
+  "passage_markdown": "Dear Valued Customers, ... [__BLANK_1__] ... [__BLANK_2__] ... [__BLANK_3__] ... [__BLANK_4__] ...",
+  "target_word_blank_index": 2,
   "interactions": [
     {
       "type": "interaction",
-      "dimension": "X", // Must be V, M, X, or C
+      "dimension": "X",
+      "option_level": "word",
       "task": {
         "style": "bubble_select",
-        "question_markdown": "", // Optional extra context snippet
+        "question_markdown": "",
         "options": [
-          { "text": "distractor1", "is_correct": false, "explanation_markdown": "" },
-          { "text": "CorrectOption", "is_correct": true, "explanation_markdown": "" },
-          { "text": "distractor2", "is_correct": false, "explanation_markdown": "" },
-          { "text": "distractor3", "is_correct": false, "explanation_markdown": "" }
+          { "text": "determining", "is_correct": false, "explanation_markdown": "" },
+          { "text": "determined", "is_correct": true, "explanation_markdown": "" },
+          { "text": "determines", "is_correct": false, "explanation_markdown": "" },
+          { "text": "determinedly", "is_correct": false, "explanation_markdown": "" }
         ],
-        "answer_key": "CorrectOption",
-        "explanation_markdown": "Chinese explanation..."
+        "answer_key": "determined",
+        "explanation_markdown": "空格前为 be 动词 was，需要过去分词构成被动语态。A为现在分词，C为第三人称单数，D为副词，均不符合。"
       }
     },
-    // ... MUST have exactly 3 more interactions here, 4 in total!
+    {
+      "type": "interaction",
+      "dimension": "V",
+      "option_level": "word",
+      "task": {
+        "style": "bubble_select",
+        "question_markdown": "",
+        "options": [
+          { "text": "eligible", "is_correct": true, "explanation_markdown": "" },
+          { "text": "capable", "is_correct": false, "explanation_markdown": "" },
+          { "text": "responsible", "is_correct": false, "explanation_markdown": "" },
+          { "text": "available", "is_correct": false, "explanation_markdown": "" }
+        ],
+        "answer_key": "eligible",
+        "explanation_markdown": "上下文为资格审查场景，eligible for 为固定搭配，意为"有资格的"。capable 搭配 of，responsible 搭配 for 但语义为负责，available 语义不符。"
+      }
+    },
+    {
+      "type": "interaction",
+      "dimension": "C",
+      "option_level": "phrase",
+      "task": {
+        "style": "bubble_select",
+        "question_markdown": "",
+        "options": [
+          { "text": "In addition", "is_correct": true, "explanation_markdown": "" },
+          { "text": "On the contrary", "is_correct": false, "explanation_markdown": "" },
+          { "text": "As a result", "is_correct": false, "explanation_markdown": "" },
+          { "text": "For example", "is_correct": false, "explanation_markdown": "" }
+        ],
+        "answer_key": "In addition",
+        "explanation_markdown": "前后两句为递进关系，补充额外信息。On the contrary 表转折，As a result 表因果，For example 表举例，均与语境逻辑不符。"
+      }
+    },
+    {
+      "type": "interaction",
+      "dimension": "M",
+      "option_level": "sentence",
+      "task": {
+        "style": "bubble_select",
+        "question_markdown": "",
+        "options": [
+          { "text": "We hope you will consider joining us for this event.", "is_correct": false, "explanation_markdown": "" },
+          { "text": "Please do not hesitate to contact us if you have any questions.", "is_correct": true, "explanation_markdown": "" },
+          { "text": "The new policy will take effect starting next quarter.", "is_correct": false, "explanation_markdown": "" },
+          { "text": "All employees are required to attend the training session.", "is_correct": false, "explanation_markdown": "" }
+        ],
+        "answer_key": "Please do not hesitate to contact us if you have any questions.",
+        "explanation_markdown": "此处为邮件结尾的礼貌收束语，前文已完成信息传达，需要结语呼应。A为活动邀请语，与上下文主题不符。C引入新政策话题，偏离主线。D为强制要求，语域过于正式且与前文逻辑断裂。"
+      }
+    }
   ]
 }
 </response_template>
