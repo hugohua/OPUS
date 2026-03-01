@@ -104,15 +104,36 @@ EDGE_VOICE_MAP = {
     "en-UK": "en-GB-SoniaNeural"      # 兼容有时传入的 en-UK
 }
 
+def sanitize_for_tts(text: str) -> str:
+    """
+    清洗文本中的格式标记，确保 Hash 输入是纯净的自然语言。
+    ⚠️ CRITICAL: 必须与前端 lib/tts/hash.ts 的 sanitizeForTTS() 完全一致
+    
+    处理内容:
+    1. Markdown 加粗: **word** → word
+    2. Markdown 斜体: *word* 或 _word_ → word
+    3. Markdown 链接: [text](url) → text
+    4. XML/HTML 标签: <chunk>, <s>, <v>, <o>, <emotional_tone="..."> 等 → 移除
+    5. 多余空白: 压缩为单空格
+    """
+    import re
+    result = text
+    result = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', result) # Strip markdown links, keep text
+    result = re.sub(r'(\*\*|__)(.*?)\1', r'\2', result)      # Strip bold (** or __)
+    result = re.sub(r'(\*|_)(.*?)\1', r'\2', result)         # Strip italic (* or _)
+    result = re.sub(r'<[^>]*>', '', result)                  # Strip XML/HTML tags
+    result = re.sub(r'\s+', ' ', result).strip()             # Collapse whitespace
+    return result
+
 def generate_audio_hash(text: str, voice: str = "Cherry", language: str = "en-US", speed: float = 1.0) -> str:
     """
     生成音频缓存 Hash
     ⚠️ CRITICAL: 必须与前端 lib/tts/hash.ts 以及 python_tts_service/core/hash.py 的算法一致
+    [V6.2] 在 Hash 前统一清洗 Markdown/XML 标记
     """
-    # ❗️ 不要在这里清洗 text，必须保证与前端完全一致的原始字符串来进行 Hash，否则会导致前端永远 Miss 缓存。
-    # 前端 hash_input = `${text}_${voice}_${language}_${speed.toFixed(1)}`
+    cleaned_text = sanitize_for_tts(text)
     speed_str = f"{speed:.1f}"
-    hash_input = f"{text}_{voice}_{language}_{speed_str}"
+    hash_input = f"{cleaned_text}_{voice}_{language}_{speed_str}"
     return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
 
 def normalize_speed(speed: float) -> str:
@@ -197,33 +218,35 @@ def upsert_tts_cache(conn, hash_val: str, text: str, voice: str, language: str, 
 async def process_single_tts(text: str, voice: str, language: str, speed: float, output_dir: str, db_conn):
     """处理单个 TTS 音频生成，带有基于 tenacity 的防封存保护与 DB 写入"""
     speed_str = f"{speed:.1f}"
-    hash_val = generate_audio_hash(text, voice, language, speed)
+    cleaned_text = sanitize_for_tts(text) # [Audit Fix]: 统一清洗
+    hash_val = generate_audio_hash(text, voice, language, speed) # generate_audio_hash 会再次独立清洗计算 Hash
     file_path = os.path.join(output_dir, f"{hash_val}.wav")
     
     # 检查缓存是否存在且体量合理（>0 bytes）
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        logger.info(f"[CACHE HIT] {hash_val}.wav | {text[:20]}...")
+        logger.info(f"[CACHE HIT] {hash_val}.wav | {cleaned_text[:20]}...")
         # 防护性同步一次数据库，防止前台没有这条记录
-        upsert_tts_cache(db_conn, hash_val, text, voice, language, speed, file_path, os.path.getsize(file_path))
+        # [Audit Fix]: 必须写入 cleaned_text，保证 DB 面貌干净
+        upsert_tts_cache(db_conn, hash_val, cleaned_text, voice, language, speed, file_path, os.path.getsize(file_path))
         return True
-    
-    # 清洗文本仅用于发音，不然 edge-tts 遇到乱七八糟的换行可能会报错
-    import re
-    cleaned_text = re.sub(r'\s+', ' ', text).strip()
     
     # 确定实际调用的 Edge TTS Voice
     edge_voice = EDGE_VOICE_MAP.get(language, "en-US-AriaNeural")
     rate_str = normalize_speed(speed)
     
     try:
+        # [Audit Fix]: 主动限流防封禁防沉迷，每生成一个间隔 0.5s 
+        await asyncio.sleep(0.5)
+        
         # 尝试生成
         communicate = edge_tts.Communicate(cleaned_text, edge_voice, rate=rate_str)
         await communicate.save(file_path)
         file_size = os.path.getsize(file_path)
         logger.info(f"[SUCCESS] {hash_val}.wav | {edge_voice} | size={file_size} | {cleaned_text[:20]}...")
         
-        # 成功后写入数据库 (写入原始 text，保证 DB 存的也是真实串)
-        upsert_tts_cache(db_conn, hash_val, text, voice, language, speed, file_path, file_size)
+        # 成功后写入数据库 
+        # [Audit Fix]: 写入 cleaned_text 保证数据库中永远只有纯自然语言
+        upsert_tts_cache(db_conn, hash_val, cleaned_text, voice, language, speed, file_path, file_size)
             
         return True
     except Exception as e:

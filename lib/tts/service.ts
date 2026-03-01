@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import { generateAudioHash } from '@/lib/tts/hash';
+import { generateAudioHash, sanitizeForTTS } from '@/lib/tts/hash';
 
 // Python TTS 服务地址
 const PYTHON_TTS_URL = process.env.PYTHON_TTS_URL || 'http://127.0.0.1:8000';
@@ -29,10 +29,11 @@ export interface TTSResult {
  * 获取 TTS 音频 URL
  * 
  * 流程:
- * 1. 计算 Hash
- * 2. 查 DB (极速)
- * 3. 命中 → 更新 lastUsedAt → 返回 URL
- * 4. 未命中 → 调用 Python → 写 DB → 返回 URL
+ * 1. 清洗文本 (去除 Markdown/XML 标记)
+ * 2. 计算 Hash
+ * 3. 查 DB (极速)
+ * 4. 命中 → 更新 lastUsedAt → 返回 URL
+ * 5. 未命中 → 调用 Python → 写 DB → 返回 URL
  */
 export async function getTTSAudioCore(options: TTSOptions): Promise<TTSResult> {
     const {
@@ -43,8 +44,11 @@ export async function getTTSAudioCore(options: TTSOptions): Promise<TTSResult> {
         cacheType = 'temporary',
     } = options;
 
-    // 1. 计算 Hash
-    const hash = generateAudioHash({ text, voice, language, speed });
+    // [V6.2] 清洗文本: 去除 **markdown** 和 <xml> 标记
+    const cleanText = sanitizeForTTS(text);
+
+    // 1. 计算 Hash (generateAudioHash 内部也会清洗，但这里提前清洗用于后续 Python 调用)
+    const hash = generateAudioHash({ text: cleanText, voice, language, speed });
 
     // 2. 查 DB (极速，不触碰文件系统 IO)
     const cache = await prisma.tTSCache.findUnique({
@@ -65,11 +69,11 @@ export async function getTTSAudioCore(options: TTSOptions): Promise<TTSResult> {
         };
     }
 
-    // 3. 未命中 → 调用 Python 服务
+    // 3. 未命中 → 调用 Python 服务 (传入清洗后的文本，避免 TTS 引擎朗读 Markdown 标记)
     const pyResponse = await fetch(`${PYTHON_TTS_URL}/tts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice, language, speed }),
+        body: JSON.stringify({ text: cleanText, voice, language, speed }),
     });
 
     if (!pyResponse.ok) {
@@ -89,7 +93,7 @@ export async function getTTSAudioCore(options: TTSOptions): Promise<TTSResult> {
             where: { id: hash },
             create: {
                 id: hash,
-                text,
+                text: cleanText,
                 voice,
                 language,
                 speed,
