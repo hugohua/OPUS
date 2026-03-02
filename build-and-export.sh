@@ -153,6 +153,13 @@ deploy_to_nas() {
     print_info "创建远程目录..."
     remote_ssh "mkdir -p ${NAS_PATH}/{data/postgres,data/redis,data/audio,data/logs,nginx}"
 
+    print_info "修复目标目录权限..."
+    if [ -n "$NAS_PASSWORD" ]; then
+        remote_ssh "echo '$NAS_PASSWORD' | sudo -S chown -R ${NAS_USER} ${NAS_PATH}" || true
+    else
+        remote_ssh "sudo chown -R ${NAS_USER} ${NAS_PATH}" || true
+    fi
+
     # 2. 传输配置文件
     print_info "传输配置文件..."
     # 使用 NAS 专用的 compose 文件 (预构建镜像，无需 build context)

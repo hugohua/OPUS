@@ -1,11 +1,9 @@
 # 当前任务状态
 
-- **当前任务**: 处理 Part 6 图片 OCR 并完成 LLM 题目转换与结构化入库
+- **当前任务**: 根据反馈改进 `db-sync-to-nas.sh` 的流程并写入 Workflow
 - **状态**: ✅ 已完成
 - **详细进展**:
-  1. **资产盘点**：审计现存脚本（`ocr_pdf_to_text.py` 和 `seed-part6.ts`），确认原脚本偏向全量 PDF 文本流水线。
-  2. **新增架构**：基于现有 `@ai-sdk/openai` (`lib/ai/client.ts`) 扩展了原生支持图片解析的多模态脚本。
-  3. **数据接入**：新增 `scripts/seeders/seed-part6-image.ts`。应用 `PART6_SEED_SYSTEM_PROMPT` 识别包含正确插空语法和题目。
-  4. **入库校验**：成功处理 `books/part6/` 目录下的 4 张 PNG 测试图片。无报错，所有目标题目（共 16 题）已挂载至特定的 `source` 顺利入库题库数据库中。
-
-- **下一步行动**: [等待输入] 是否需要调整或校验这批题库，或转至下个需求？
+  1. 完成对 `scripts/db-sync-to-nas.sh` 的全部结构重构。
+  2. 参考 `.agent/workflows/deploy-nas.md` 的格调成功写出对应的数据库同步工作流文件 `.agent/workflows/db-sync-to-nas.md`。
+  3. 日常流水记录已推入 `3_work_log.md`。
+- **下一步行动**: [等待输入] NAS 方面的自动化基础设施目前已全部完善。是否开始新一轮的功能迭代或 UI/UX 优化？

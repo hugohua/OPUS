@@ -60,7 +60,6 @@ export default async function MistakeDetailPage(
         <div className="relative w-full min-h-screen max-w-md mx-auto bg-white text-slate-900 font-sans antialiased flex flex-col shadow-2xl sm:border-x sm:border-slate-200 overflow-hidden selection:bg-indigo-100 pb-24">
 
             <ImmersiveHeader
-                className="bg-white/90 border-b border-slate-100"
                 leftAction={
                     <Link href="/dashboard/profile/mistakes" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors active:scale-95">
                         <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
