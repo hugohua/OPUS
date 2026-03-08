@@ -76,12 +76,6 @@ export default function WeaverPage() {
     return (
         <div className="relative min-h-screen w-full bg-background text-foreground font-sans antialiased flex justify-center selection:bg-indigo-500/30">
 
-            {/* Background Grid Pattern (Neutral) */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none fixed" />
-
-            {/* Ambient Background Glow (Dark Mode Only) */}
-            <div className="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none dark:block hidden" />
-
             {/* Content Container (Mobile First) */}
             <div className="w-full max-w-md bg-transparent min-h-screen shadow-2xl ring-1 ring-border/5 relative flex flex-col z-10">
                 <Suspense fallback={<WeaverSkeleton />}>

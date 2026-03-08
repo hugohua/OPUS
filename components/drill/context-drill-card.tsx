@@ -11,13 +11,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lightbulb, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BriefingPayload } from "@/types/briefing";
-import { calculateImplicitGrade } from "@/lib/algorithm/grading";
+
 import { boldToHtml } from "@/lib/utils/markdown";
 
 interface ContextDrillCardProps {
     drill: BriefingPayload;
     progress: number;
-    onGrade: (grade: 1 | 2 | 3 | 4) => void;
+    onGrade: (grade: boolean | number) => void;
     onExit: () => void;
 }
 
@@ -32,6 +32,7 @@ export function ContextDrillCard({
     const [state, setState] = useState<ContextState>("reading");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [showAnswer, setShowAnswer] = useState(false);
+    const wrongCount = useRef(0); // FSRS: 错误次数追踪
 
     const [optimisticProgress, setOptimisticProgress] = useOptimistic(
         progress,
@@ -41,12 +42,17 @@ export function ContextDrillCard({
     const startTimeRef = useRef<number>(Date.now());
     useEffect(() => {
         startTimeRef.current = Date.now();
+        wrongCount.current = 0; // 新题重置
     }, [drill]);
 
     const textSegment = drill.segments.find(s => s.type === "text");
     const interactionSegment = drill.segments.find(s => s.type === "interaction");
     const task = interactionSegment?.task;
-    const options = task?.options || [];
+    const rawOptions = task?.options || [];
+    // V2 兼容: 归一化 options（支持 string[] 和 {id, text}[] 双格式）
+    const options = rawOptions.map((opt: any) =>
+        typeof opt === 'string' ? opt : opt.text
+    ).filter(Boolean);
     const correctAnswer = task?.answer_key || "";
     const explanation = task?.explanation_markdown || "";
     const socraticHint = task?.socraticHint || "Look at the context clues around the blank.";
@@ -66,7 +72,7 @@ export function ContextDrillCard({
         );
     }
 
-    // Logic
+    // Logic (与 SYNTAX 对齐: 选择 → 结果 → Continue → 下一题)
     const handleDeckAction = (action: string) => {
         if (state === "reading" || state === "socratic") {
             // Option Selection
@@ -79,14 +85,24 @@ export function ContextDrillCard({
                         setState("answered");
                         setShowAnswer(true);
                     } else {
+                        wrongCount.current += 1;
                         setState("socratic");
                     }
                 }
             }
         } else if (state === "answered") {
-            // Grading
-            if (action === '1') handleGrade(1); // Hard
-            if (action === '2') handleGrade(3); // Got it
+            // Continue → 隐式 FSRS 评分 (由 useDrillSession 的 calculateImplicitGrade 处理)
+            if (action === 'continue') {
+                startTransition(() => {
+                    setOptimisticProgress(5);
+                    // 0错=3(Good), 1错=2(Hard), ≥2错=1(Again/猜的)
+                    const grade = wrongCount.current === 0 ? 3 : wrongCount.current === 1 ? 2 : 1;
+                    onGrade(grade);
+                });
+                setState("reading");
+                setSelectedOption(null);
+                setShowAnswer(false);
+            }
         }
     };
 
@@ -95,22 +111,8 @@ export function ContextDrillCard({
         setState("reading");
     };
 
-    const handleGrade = (inputGrade: 1 | 3) => {
-        const duration = Date.now() - startTimeRef.current;
-        const implicitGrade = calculateImplicitGrade(inputGrade, duration, false, 'CONTEXT');
-
-        startTransition(() => {
-            setOptimisticProgress(5);
-            onGrade(implicitGrade as 1 | 2 | 3 | 4);
-        });
-
-        setState("reading");
-        setSelectedOption(null);
-        setShowAnswer(false);
-    };
-
-    // Control Deck Config
-    const deckMode: ControlDeckMode = state === "answered" ? "binary" : "options";
+    // Control Deck Config (answered → continue, 与 SYNTAX 一致)
+    const deckMode: ControlDeckMode = state === "answered" ? "continue" : "options";
     const optionLabels: any = {};
     if (deckMode === 'options') {
         options.forEach((opt: string, i: number) => {
@@ -128,11 +130,7 @@ export function ContextDrillCard({
                 <ControlDeck
                     mode={deckMode}
                     onAction={handleDeckAction}
-                    labels={
-                        deckMode === 'binary'
-                            ? { '1': 'Hard', '2': 'Got it' }
-                            : optionLabels
-                    }
+                    labels={deckMode === 'options' ? optionLabels : {}}
                 />
             }
         >
@@ -145,7 +143,7 @@ export function ContextDrillCard({
                         <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-500 rounded">
                             {drill.meta.format || "EMAIL"}
                         </span>
-                        {drill.meta.target_word && (
+                        {showAnswer && drill.meta.target_word && (
                             <span className="text-xs text-zinc-400 font-mono">
                                 <span className="text-indigo-600 dark:text-indigo-400 font-bold">{drill.meta.target_word}</span>
                             </span>

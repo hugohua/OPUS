@@ -8,14 +8,24 @@ import { revalidatePath } from "next/cache";
 // ────────────────────────────────────────
 // 输入校验 (Zod)
 // ────────────────────────────────────────
-const UpdateSettingsSchema = z.object({
-    key: z.enum(["autoPlay", "hapticFeedback"]),
-    value: z.boolean(),
+const EnginePreferencesSchema = z.object({
+    review_ratio: z.number().min(0.1).max(1.0),
 });
+
+const UpdateSettingsSchema = z.discriminatedUnion("key", [
+    z.object({ key: z.literal("autoPlay"), value: z.boolean() }),
+    z.object({ key: z.literal("hapticFeedback"), value: z.boolean() }),
+    z.object({ key: z.literal("engine_preferences"), value: EnginePreferencesSchema }),
+]);
+
+export type EnginePreferences = {
+    review_ratio: number;
+};
 
 export type UserSettings = {
     autoPlay?: boolean;
     hapticFeedback?: boolean;
+    engine_preferences?: EnginePreferences;
 };
 
 // ────────────────────────────────────────
@@ -71,9 +81,27 @@ export async function updateUserSettings(
             data: { settings: newSettings as any },
         });
         revalidatePath('/dashboard/profile');
+        revalidatePath('/dashboard/simulate');
         return { success: true };
     } catch (error) {
         console.error("[updateUserSettings] Failed:", error);
         return { success: false };
+    }
+}
+
+// ────────────────────────────────────────
+// 按 userId 直接读取引擎偏好 (跳过 auth，供热路径使用)
+// ────────────────────────────────────────
+export async function getEnginePreferencesByUserId(userId: string): Promise<EnginePreferences | undefined> {
+    try {
+        const user = await db.user.findUnique({
+            where: { id: userId },
+            select: { settings: true },
+        });
+        if (!user?.settings || typeof user.settings !== 'object') return undefined;
+        const settings = user.settings as UserSettings;
+        return settings.engine_preferences;
+    } catch {
+        return undefined;
     }
 }

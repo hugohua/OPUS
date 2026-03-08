@@ -4,6 +4,7 @@ import { logger as log } from '@/lib/logger';
 import { ContextSelector } from '@/lib/ai/context-selector';
 import { getL2ContextBatchPrompt, ContextGeneratorInput, ContextStage } from '@/lib/generators/l2/context-script';
 import { buildPhraseFallbackDrill } from '@/lib/templates/phrase-fallback';
+import { normalizeContextDrill } from '@/lib/core/normalize-context-drill';
 
 export async function processContextQueue(
     userId: string,
@@ -68,7 +69,8 @@ export async function processContextQueue(
 
             result.items.forEach((drill: any, idx: number) => {
                 if (idx < inputs.length) {
-                    generatedDrills.push({ drill, candidate: inputs[idx].candidate, systemPrompt: p.system, userPrompt: p.user, provider });
+                    const normalized = normalizeContextDrill(drill);
+                    generatedDrills.push({ drill: normalized, candidate: inputs[idx].candidate, systemPrompt: p.system, userPrompt: p.user, provider });
                 }
             });
         } catch (err: any) {

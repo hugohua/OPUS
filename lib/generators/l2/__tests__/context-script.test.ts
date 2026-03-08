@@ -128,11 +128,10 @@ describe('L2 Context Generator', () => {
         it('should have 4 options in template for all stages', () => {
             for (const stage of [1, 2, 3] as ContextStage[]) {
                 const result = getL2ContextBatchPrompt([baseInput], stage);
-                // Check template has 4 options in the example
-                const optionsMatch = result.system.match(/"options":\s*\[([^\]]+)\]/);
-                expect(optionsMatch).toBeTruthy();
-                const optionsCount = optionsMatch![1].split(',').length;
-                expect(optionsCount).toBe(4);
+                // V2 Rich Object format: count "id" keys to determine option count
+                const optionIdMatches = result.system.match(/"id":\s*"/g);
+                expect(optionIdMatches).toBeTruthy();
+                expect(optionIdMatches!.length).toBe(4);
             }
         });
 

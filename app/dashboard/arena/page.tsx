@@ -59,7 +59,7 @@ export default async function ArenaDashboard({ searchParams }: { searchParams: P
             {/* Main Container */}
             <main className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
                 {tab === 'overview' ? (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+                    <div className="space-y-8">
                         {/* 1. Grammar Proficiency Radar (L1 Domains) */}
                         <GrammarRadar initialData={radarDomains} />
 

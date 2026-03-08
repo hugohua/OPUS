@@ -24,6 +24,7 @@ interface RawMaterialsProps {
     priorityWords: WordItem[];
     fillerWords: WordItem[];
     onRefresh: () => void;
+    actionSlot?: React.ReactNode;
 }
 
 export function RawMaterials({
@@ -31,7 +32,8 @@ export function RawMaterials({
     error,
     priorityWords,
     fillerWords,
-    onRefresh
+    onRefresh,
+    actionSlot
 }: RawMaterialsProps) {
     const totalCount = priorityWords.length + fillerWords.length;
     const isFreeReading = !isLoading && totalCount === 0 && !error;
@@ -39,7 +41,7 @@ export function RawMaterials({
     return (
         <section className="px-6 py-8">
             {/* Header with SVG Icon */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mb-4">
                 <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -56,6 +58,7 @@ export function RawMaterials({
                         <RefreshCcw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
                     </button>
                 </div>
+                {actionSlot}
             </div>
 
             {/* Word Chips - Flow Layout */}

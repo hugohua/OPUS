@@ -8,6 +8,7 @@
 import { useRouter } from 'next/navigation';
 import { SessionMode } from '@/types/briefing';
 import { FocusShellVariant } from '@/components/drill/focus-shell';
+import { normalizeContextDrill } from '@/lib/core/normalize-context-drill';
 
 // --- Hooks ---
 import { useDrillSession } from '@/hooks/use-drill-session';
@@ -157,15 +158,26 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
 
     // --- RENDERERS (Direct Return - FocusShell handles layout) ---
 
-    // 1. CONTEXT
+    // 1. CONTEXT — 归一化 + 渲染路由
     if (mode === 'CONTEXT') {
-        return (
-            <ContextRenderer
-                drill={session.currentDrill}
-                progress={session.progress}
-                onGrade={(g) => session.handleComplete(g)}
-            />
-        );
+        // 消费端归一化 (不可变): 将扁平格式转为标准 BriefingPayload
+        const drill = normalizeContextDrill(session.currentDrill);
+
+        const interactSeg = drill.segments.find((s: any) => s.type === 'interaction');
+        const task = interactSeg?.task;
+        const hasValidOptions = task?.options && Array.isArray(task.options) && task.options.length > 0;
+        const canRenderAsContext = hasValidOptions && task?.style !== 'bubble_select';
+
+        if (canRenderAsContext) {
+            return (
+                <ContextRenderer
+                    drill={drill}
+                    progress={session.progress}
+                    onGrade={(g) => session.handleComplete(g)}
+                />
+            );
+        }
+        // else: fall through to STANDARD SyntaxRenderer below
     }
 
     // 2. AUDIO

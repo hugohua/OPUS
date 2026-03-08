@@ -22,6 +22,7 @@ import { shuffleBriefingOptions } from '@/lib/core/shuffle-options';
 import { fetchOMPSCandidates, OMPSCandidate } from '@/lib/services/omps-core';
 import { auditInventoryEvent, auditSessionFallback, auditMixedModeDistribution } from '@/lib/services/audit-service';
 import { isMixedMode, MIXED_MODE_SCENARIOS, selectScenario } from '@/lib/core/scenario-selector';
+import { getEnginePreferencesByUserId } from '@/actions/update-user-settings';
 
 const log = createLogger('actions:get-next-drill');
 
@@ -58,9 +59,13 @@ export async function getNextDrillBatch(
         // 1. 验证输入
         const validated = GetBriefingSchema.parse(input);
         const { userId, mode, limit: inputLimit, excludeVocabIds, grammarNodeId } = validated;
-        const limit = inputLimit || 10;
 
-        log.info({ userId, mode, limit, grammarNodeId }, 'Fetching drill batch (OMPS V1.1)');
+        // 读取用户引擎调度偏好 (跳过重复 auth，直接用已验证的 userId)
+        const enginePrefs = await getEnginePreferencesByUserId(userId);
+        const limit = inputLimit || 10;
+        const reviewRatio = enginePrefs?.review_ratio; // 向下透传到 fetchOMPSCandidates
+
+        log.info({ userId, mode, limit, enginePrefs, grammarNodeId }, 'Fetching drill batch (OMPS V1.1)');
 
         // ============================================
         // [Quick Drill] 靶向语法训练旁路
@@ -157,7 +162,7 @@ export async function getNextDrillBatch(
 
         // 1.5 混合模式路由
         if (isMixedMode(mode)) {
-            return getMixedDrillBatch(userId, mode, limit, excludeVocabIds);
+            return getMixedDrillBatch(userId, mode, limit, excludeVocabIds, reviewRatio);
         }
 
         // 2. 通过 OMPS 获取候选词
@@ -170,7 +175,10 @@ export async function getNextDrillBatch(
         const candidates = await fetchOMPSCandidates(
             userId,
             limit,
-            { posFilter },
+            {
+                posFilter,
+                ...(reviewRatio !== undefined ? { reviewRatio } : {})
+            },
             excludeVocabIds,
             mode  // 传入 mode 启用库存优先策略
         );
@@ -350,7 +358,8 @@ async function getMixedDrillBatch(
     userId: string,
     mixedMode: SessionMode,
     limit: number,
-    excludeVocabIds: number[] = []
+    excludeVocabIds: number[] = [],
+    reviewRatio?: number
 ): Promise<ActionState<BriefingPayload[]>> {
     const allowedScenarios = MIXED_MODE_SCENARIOS[mixedMode];
     if (!allowedScenarios || allowedScenarios.length === 0) {
@@ -373,7 +382,9 @@ async function getMixedDrillBatch(
     const candidates = await fetchOMPSCandidates(
         userId,
         limit,
-        {},
+        {
+            ...(reviewRatio !== undefined ? { reviewRatio } : {})
+        },
         excludeVocabIds,
         primaryTrack  // ✅ 使用动态 Track 而不是硬编码 VISUAL
     );

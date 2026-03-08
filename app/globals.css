@@ -223,6 +223,15 @@
     @apply bg-background text-foreground;
   }
 
+  /* 防止 Radix UI 的 Dialog / Dropdown 等弹窗锁定滚动条时导致页面宽度抖动 */
+  html {
+    margin-right: calc(100vw - 100%);
+  }
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
   /* === 仅移动端生效的 PWA 原生体验优化 === */
   @media (max-width: 768px) {
     * {

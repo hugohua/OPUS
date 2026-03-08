@@ -1,16 +1,22 @@
 import { auth, signOut } from "@/auth";
-import { ArrowLeft, Settings, RefreshCw, BookOpen, AlertTriangle, ShieldCheck, Terminal, Activity, LogOut, Calendar, Award } from "lucide-react";
+import {
+    ArrowLeft, Settings, RefreshCw, BookOpen,
+    AlertTriangle, ShieldCheck, Terminal,
+    Activity, LogOut, Calendar, Award
+} from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfileStats } from "@/actions/get-profile-stats";
 import { getUserSettings } from "@/actions/update-user-settings";
 import { getErrorLogs } from "@/actions/get-error-logs";
-import { SkillRadar } from "@/components/profile/skill-radar";
-import { MemoryHealth } from "@/components/profile/memory-health";
+import { VocabPipeline } from "@/components/profile/vocab-pipeline";
 import { LoadForecast } from "@/components/profile/load-forecast";
 import { ConsistencyLog } from "@/components/profile/consistency-log";
 import { PreferenceToggle } from "@/components/profile/preference-toggle";
 import { ProfileRadarTabs } from "@/components/profile/profile-radar-tabs";
+import { LevelBadge } from "@/components/profile/level-badge";
+import { MultiTrackOverview } from "@/components/profile/multi-track-overview";
+import { ArenaSummary } from "@/components/profile/arena-summary";
 import { GlobalHeader } from "@/components/ui/global-header";
 import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
 export const dynamic = 'force-dynamic';
@@ -50,7 +56,7 @@ export default async function ProfilePage() {
             />
 
             {/* ═══════════════════════ Hero Section ═══════════════════════ */}
-            <section className="relative z-10 px-6 pt-16 mb-8">
+            <section className="relative z-10 px-6 pt-3 mb-8">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                         <div className="relative">
@@ -85,19 +91,23 @@ export default async function ProfilePage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Level Badge */}
+                <LevelBadge level={stats.userLevel} />
             </section>
 
             {/* ═══════════════════════ 认知遥测 ═══════════════════════ */}
             <section className="relative z-10 px-6 mb-8">
                 <h2 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <RefreshCw className="w-3 h-3" />
-                    认知遥测
+                    学习仪表盘
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <SkillRadar data={stats.skillRadar} />
-                    <MemoryHealth data={stats.memoryHealth} />
+                <div className="space-y-3">
+                    <VocabPipeline data={stats.memoryHealth} />
                     <LoadForecast data={stats.loadForecast} />
+                    <MultiTrackOverview data={stats.multiTrack} />
+                    <ArenaSummary data={stats.arenaSummary} />
                     <ConsistencyLog activeDays={stats.activeDays} />
                 </div>
 

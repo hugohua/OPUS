@@ -22,6 +22,7 @@ interface CacheStatsCardProps {
         PHRASE: number;
         CHUNKING: number;
         AUDIO: number;
+        CONTEXT: number;
         NUANCE: number;
         READING: number;
         BLITZ: number;

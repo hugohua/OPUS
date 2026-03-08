@@ -60,6 +60,7 @@ export async function getCacheStats(): Promise<{
     PHRASE: number;
     CHUNKING: number;
     AUDIO: number;
+    CONTEXT: number;
     NUANCE: number;
     READING: number;
     BLITZ: number;
@@ -71,6 +72,7 @@ export async function getCacheStats(): Promise<{
         PHRASE: number;
         CHUNKING: number;
         AUDIO: number;
+        CONTEXT: number;
         NUANCE: number;
         READING: number;
         BLITZ: number;
@@ -90,7 +92,7 @@ export async function getCacheStats(): Promise<{
     try {
         const session = await import('@/auth').then(m => m.auth());
         if (!session?.user?.id) return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, ARENA_PART6: 0, total: 0,
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, CONTEXT: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, ARENA_PART6: 0, total: 0,
             targets: emptyTargets
         };
 
@@ -102,6 +104,7 @@ export async function getCacheStats(): Promise<{
             PHRASE: stats.PHRASE || 0,
             CHUNKING: stats.CHUNKING || 0,
             AUDIO: stats.AUDIO || 0,
+            CONTEXT: stats.CONTEXT || 0,
             NUANCE: stats.NUANCE || 0,
             READING: stats.READING || 0,
             BLITZ: stats.BLITZ || 0,
@@ -113,7 +116,7 @@ export async function getCacheStats(): Promise<{
     } catch (error) {
         console.error('getCacheStats error:', error);
         return {
-            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, ARENA_PART6: 0, total: 0,
+            SYNTAX: 0, PHRASE: 0, CHUNKING: 0, AUDIO: 0, CONTEXT: 0, NUANCE: 0, READING: 0, BLITZ: 0, ARENA_PART5: 0, ARENA_PART6: 0, total: 0,
             targets: emptyTargets
         };
     }

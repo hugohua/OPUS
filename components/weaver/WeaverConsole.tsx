@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, History, Factory } from "lucide-react";
 import Link from "next/link";
 import { GlobalHeader } from "@/components/ui/global-header";
+import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
 import { useHaptic } from "@/hooks/use-haptic";
 
 import { RawMaterials, WordItem } from "./console/RawMaterials";
@@ -91,18 +92,8 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
             <GlobalHeader
                 title="简报生成"
                 showStatusLight={true}
-                leftSlot={
-                    <Factory className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
-                }
                 rightSlot={
-                    <Link
-                        href="/weaver/history"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm hover:shadow active:scale-95 group"
-                        title="查看历史记录"
-                    >
-                        <History className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors" />
-                        <span className="text-sm font-medium text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">简报中心</span>
-                    </Link>
+                    <HeaderActionDropdown variant="weaver" />
                 }
             />
 
@@ -114,6 +105,16 @@ export function WeaverConsole({ onStart }: WeaverConsoleProps) {
                     priorityWords={priorityWords}
                     fillerWords={fillerWords}
                     onRefresh={() => session?.user?.id && loadIngredients(session.user.id, selectedScenario, true)}
+                    actionSlot={
+                        <Link
+                            href="/weaver/history"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-all shadow-sm hover:shadow active:scale-95 group ml-auto"
+                            title="查看历史记录"
+                        >
+                            <History className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100 transition-colors" />
+                            <span className="text-xs font-medium text-zinc-600 group-hover:text-zinc-900 dark:text-zinc-300 dark:group-hover:text-zinc-100 transition-colors">简报中心</span>
+                        </Link>
+                    }
                 />
 
                 <ContextSelector

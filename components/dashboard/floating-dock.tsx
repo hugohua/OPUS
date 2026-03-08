@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, Zap, User, Sparkles, Swords } from "lucide-react";
+import { Layers, Zap, Home, Sparkles, Swords } from "lucide-react";
 import { useHaptic } from "@/hooks/use-haptic";
 
 interface FloatingDockProps {
@@ -21,6 +21,11 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
     };
 
     const navItems = [
+        {
+            href: "/dashboard",
+            icon: Home,
+            label: "首页"
+        },
         {
             href: "/dashboard/simulate",
             icon: Zap,
@@ -42,11 +47,6 @@ export function FloatingDock({ hasDue = false }: FloatingDockProps) {
             href: "/weaver",
             icon: Sparkles,
             label: "简报"
-        },
-        {
-            href: "/dashboard/profile",
-            icon: User,
-            label: "我的"
         }
     ];
 

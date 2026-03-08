@@ -36,6 +36,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 ### 2. Drill Engine (Core Mechanic)
 - **Implementation**: `docs/dev-notes/drill-engine-implementation.md` (The "Briefing" generation logic)
 - **Prompt Structure**: `docs/dev-notes/prompt-structure-v2.md` (**Standard V2 Output Specification**, 包含 Rich Option/Explanation 定义)
+- **全模式链路参考**: `docs/dev-notes/drill-mode-options-audit.md` (**NEW**: 8 种 Drill 模式的完整 生成→存储→消费→渲染 链路、Options V2 双格式规范、Fallback 策略、Renderer 映射)
 - **L0 Syntax Generator**: `lib/generators/l0/syntax.ts` (**Source of Truth**: S-V-O 公式、Slot-Based Explanation、挖空算法)
 - **Word Selection (OMPS)**: `docs/dev-notes/omps-word-selection-engine.md` (**核心选词引擎**，所有场景必读)
 - **Context Selection**: `docs/dev-notes/context-selector-guide.md` (How we pick words/sentences)
@@ -130,6 +131,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If modifying Audio/Playback** -> Read `tts-architecture.md` and `use-tts.ts`.
 - **If 需要离线批量预生成音频 / 扩展 Edge-TTS** -> Read `edge-tts-offline-generation.md` (**两步工作流、声音映射、断点续传**).
 - **If implementing L1 Audio Gym features** -> Read `l1-audio-gym-implementation.md`.
+- **If 修改 Prompt 模板 / options 格式 / Renderer / Fallback** -> **必读** `drill-mode-options-audit.md`（8 种模式全链路参考、V2 双格式规范、兼容消费模式）.
 - **If adding a new game mode / answer type** -> **CRITICAL**: Read `new-drill-mode-end-to-end-guide.md` for the 8-step full-stack checklist.
 - **If 修改语法结构树 / BKT 追踪 / Arena 靶向出题** -> Read `docs/PRD-GRAMMAR-SKILL-TREE.md`.
 - **If DB schema changes** -> Update `prisma/schema.prisma` AND run `npm run db:push` (or generate migration).

@@ -16,7 +16,7 @@ import { ContextDrillCard } from '@/components/drill/context-drill-card';
 export interface ContextRendererProps {
     drill: BriefingPayload;
     progress: number;
-    onGrade: (grade: number) => void;
+    onGrade: (grade: boolean | number) => void;
 }
 
 export function ContextRenderer({ drill, progress, onGrade }: ContextRendererProps) {

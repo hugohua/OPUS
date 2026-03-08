@@ -47,6 +47,7 @@ export function SyntaxRenderer({
     status,
     selectedOption,
     onOptionSelect,
+    onNext,
     onComplete,
     setStatus,
     variant = 'L0',
@@ -156,7 +157,22 @@ export function SyntaxRenderer({
     const shellVariant = variant || 'L0';
     const label = `${shellVariant} • ${isPhraseMode ? 'PHRASE' : drill.meta?.mode === 'ARENA_PART5' ? 'PART 5' : 'SYNTAX'}`;
 
-    if (!textSegment || !interactSegment) return null;
+    if (!textSegment || !interactSegment) {
+        // 畸形 drill: 跳过，不记录 FSRS (用 onComplete(3) 不合理)
+        return (
+            <FocusShell variant={shellVariant} progress={progress} onExit={() => router.push('/dashboard')} footer={<div />}>
+                <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                    <p className="text-zinc-400 text-sm">内容加载异常，自动跳过...</p>
+                    <button
+                        className="text-xs text-zinc-500 underline"
+                        onClick={onNext}
+                    >
+                        下一题
+                    </button>
+                </div>
+            </FocusShell>
+        );
+    }
 
     // Prep Labels for Options Mode
     const optionLabels: any = {};

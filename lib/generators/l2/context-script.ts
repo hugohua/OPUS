@@ -68,11 +68,33 @@ Example: "Look at the word 'penalty' in the sentence. What usually helps avoid a
 </socratic_tutor>
 
 <response_template>
+CRITICAL: Follow this JSON structure exactly. Return raw JSON array only.
 [
     {
       "meta": { "format": "email", "target_word": "compliance", "stage": 1 },
       "segments": [
-        // ... (rest of segments)
+        {
+          "type": "text",
+          "content_markdown": "The company must ensure full [___] with the new regulations to avoid any penalties.",
+          "translation_cn": "公司必须确保完全遵守新法规以避免任何处罚。"
+        },
+        {
+          "type": "interaction",
+          "dimension": "X",
+          "task": {
+            "style": "slot_machine",
+            "question_markdown": "The company must ensure full [___] with the new regulations to avoid any penalties.",
+            "options": [
+              { "id": "A", "text": "compliance", "is_correct": true, "type": "Correct" },
+              { "id": "B", "text": "complaint", "is_correct": false, "type": "Visual_Trap" },
+              { "id": "C", "text": "completion", "is_correct": false, "type": "Semantic_Trap" },
+              { "id": "D", "text": "competence", "is_correct": false, "type": "Semantic_Trap" }
+            ],
+            "answer_key": "compliance",
+            "explanation_markdown": "此处需要名词。'compliance' 意为「合规」，与 'with regulations' 搭配。'complaint' 是「投诉」，语义不通。",
+            "socraticHint": "Look at the phrase 'with the new regulations'. What word naturally pairs with this to mean 'following the rules'?"
+          }
+        }
       ]
     }
 ]
@@ -114,11 +136,33 @@ Point to specific words in Sentence 1 that signal the answer.
 </socratic_tutor>
 
 <response_template>
+CRITICAL: Follow this JSON structure exactly. Return raw JSON array only.
 [
     {
       "meta": { "format": "email", "target_word": "strategy", "stage": 2 },
       "segments": [
-        // ...
+        {
+          "type": "text",
+          "content_markdown": "Subject: Q3 Marketing Update\n\nAfter reviewing the declining engagement metrics, the marketing team decided to revise their [___]. The new approach focuses on digital channels and aims to increase brand awareness by 20% before the fiscal year ends.",
+          "translation_cn": "主题：Q3 营销更新\n\n在审查了下降的参与度指标后，营销团队决定修改他们的策略。新方案聚焦数字渠道，旨在财年结束前将品牌知名度提高 20%。"
+        },
+        {
+          "type": "interaction",
+          "dimension": "X",
+          "task": {
+            "style": "slot_machine",
+            "question_markdown": "After reviewing the declining engagement metrics, the marketing team decided to revise their [___].",
+            "options": [
+              { "id": "A", "text": "strategy", "is_correct": true, "type": "Correct" },
+              { "id": "B", "text": "statistics", "is_correct": false, "type": "Visual_Trap" },
+              { "id": "C", "text": "structure", "is_correct": false, "type": "Semantic_Trap" },
+              { "id": "D", "text": "schedule", "is_correct": false, "type": "Semantic_Trap" }
+            ],
+            "answer_key": "strategy",
+            "explanation_markdown": "'strategy' 意为「策略/战略」，是可以 'revise'（修改）的行动方案。'statistics' 是「统计数据」，不适合搭配 'revise'。",
+            "socraticHint": "The team wants to change their overall plan. What word describes a high-level plan or approach?"
+          }
+        }
       ]
     }
 ]
@@ -156,11 +200,33 @@ Focus on subtle meaning differences, not just dictionary definitions.
 </socratic_tutor>
 
 <response_template>
+CRITICAL: Follow this JSON structure exactly. Return raw JSON array only.
 [
     {
       "meta": { "format": "memo", "target_word": "strategy", "stage": 3 },
       "segments": [
-        // ...
+        {
+          "type": "text",
+          "content_markdown": "The board approved a long-term [___] to expand into three new Asian markets over the next five years.",
+          "translation_cn": "董事会批准了一项长期战略，计划在未来五年内进入三个新的亚洲市场。"
+        },
+        {
+          "type": "interaction",
+          "dimension": "X",
+          "task": {
+            "style": "slot_machine",
+            "question_markdown": "The board approved a long-term [___] to expand into three new Asian markets over the next five years.",
+            "options": [
+              { "id": "A", "text": "strategy", "is_correct": true, "type": "Correct" },
+              { "id": "B", "text": "tactic", "is_correct": false, "type": "Nuance_Trap" },
+              { "id": "C", "text": "method", "is_correct": false, "type": "Nuance_Trap" },
+              { "id": "D", "text": "approach", "is_correct": false, "type": "Nuance_Trap" }
+            ],
+            "answer_key": "strategy",
+            "explanation_markdown": "'strategy' 强调长期全局规划。'tactic' 侧重短期具体行动。'method' 指具体方法步骤。'approach' 虽然近义但缺少战略层面的正式感。",
+            "socraticHint": "Notice the phrase 'long-term' and 'five years'. Which word implies a comprehensive, high-level plan rather than a short-term action?"
+          }
+        }
       ]
     }
 ]

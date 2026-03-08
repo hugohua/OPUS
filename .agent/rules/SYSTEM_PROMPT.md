@@ -117,34 +117,61 @@ System has 3 levels. **ALL USERS START AT LEVEL 0.**
 3. Generate via LLM  
 4. Return structured JSON ONLY
 
-### Standard Output (Immutable)
+### Standard Output (V2)
+
+> See also: `docs/dev-notes/prompt-structure-v2.md` (Full V2 Specification)
+> Runtime Type: `types/briefing.ts`
 
 ```ts
 interface BriefingPayload {
   meta: {
-    format: "chat" | "email" | "memo";
-    sender: string;
-    level: 0 | 1 | 2;
+    format: "chat" | "email" | "memo" | "article" | "part6";
+    mode: SessionMode;         // "SYNTAX" | "BLITZ" | "PHRASE" | "AUDIO" | "CHUNKING" | "CONTEXT" | "NUANCE" | "ARENA_PART5" | "ARENA_PART6"
+    target_word?: string;
+    vocabId?: number;
+    // ... other metadata
   };
-  segments: [
-    {
-      type: "text";
-      content_markdown: string;
-      audio_text?: string;
-    },
-    {
-      type: "interaction";
-      dimension: "V" | "C" | "M" | "X";
-      task: {
-        style: "swipe_card" | "bubble_select";
-        question_markdown: string;
-        options: string[];
-        answer_key: string;
-        explanation_markdown: string;
-      };
-    }
-  ];
+  segments: BriefingSegment[];  // TextSegment | InteractionSegment | ChunkingSegment
 }
+```
+
+#### Options Format (V2 Dual-Format)
+
+Options 支持两种格式，**UI 层必须兼容两种**：
+
+```ts
+// Format A: Rich Object (推荐, 支持埋点和陷阱分析)
+options: [
+  { id: "A", text: "approve",  is_correct: true,  type: "Correct" },
+  { id: "B", text: "approval", is_correct: false, type: "POS_Trap" }
+]
+
+// Format B: String Array (Legacy, 仅限简单场景)
+options: ["approval", "approved"]
+```
+
+**消费端兼容模式** (所有 Renderer/Card 必须实现):
+```ts
+const optText = typeof opt === 'string' ? opt : opt.text;
+```
+
+#### Interaction Segment
+
+```ts
+{
+  type: "interaction";
+  dimension: "V" | "C" | "M" | "X" | "A";
+  task: {
+    style: "swipe_card" | "bubble_select" | "slot_machine";
+    question_markdown: string;
+    options: RichOption[] | string[];       // V2 双格式
+    answer_key: string;
+    explanation_markdown?: string;          // Legacy
+    explanation?: ExplanationObject;        // V2 Rich
+    socraticHint?: string;                  // L2 Context
+  };
+}
+```
 
 ### 6.1 HYBRID FETCH ENGINE (V3.0 RULES)
 
