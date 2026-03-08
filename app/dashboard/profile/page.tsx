@@ -50,7 +50,7 @@ export default async function ProfilePage() {
             />
 
             {/* ═══════════════════════ Hero Section ═══════════════════════ */}
-            <section className="relative z-10 px-6 mb-8">
+            <section className="relative z-10 px-6 pt-16 mb-8">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                         <div className="relative">
