@@ -173,9 +173,9 @@ def upsert_tts_cache(conn, hash_val: str, text: str, voice: str, language: str, 
     if not conn:
         return
     
-    relative_path = os.path.basename(file_path)
+    relative_path = f"audio/{os.path.basename(file_path)}"
     # 因为挂载点通常在 /public/audio 下面
-    url = f"/audio/{relative_path}"
+    url = f"/{relative_path}"
     
     query = """
         INSERT INTO "TTSCache" (

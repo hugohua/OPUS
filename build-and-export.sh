@@ -153,11 +153,11 @@ deploy_to_nas() {
     print_info "创建远程目录..."
     remote_ssh "mkdir -p ${NAS_PATH}/{data/postgres,data/redis,data/audio,data/logs,nginx}"
 
-    print_info "修复目标目录权限..."
+    print_info "修复目标目录权限 (跳过 data 数据卷避免破坏容器内应用专属权限)..."
     if [ -n "$NAS_PASSWORD" ]; then
-        remote_ssh "echo '$NAS_PASSWORD' | sudo -S chown -R ${NAS_USER} ${NAS_PATH}" || true
+        remote_ssh "echo '$NAS_PASSWORD' | sudo -S find ${NAS_PATH} -mindepth 1 -maxdepth 1 ! -name data -exec chown -R ${NAS_USER} {} + || sudo -S chown ${NAS_USER} ${NAS_PATH}" || true
     else
-        remote_ssh "sudo chown -R ${NAS_USER} ${NAS_PATH}" || true
+        remote_ssh "sudo find ${NAS_PATH} -mindepth 1 -maxdepth 1 ! -name data -exec chown -R ${NAS_USER} {} + || sudo chown ${NAS_USER} ${NAS_PATH}" || true
     fi
 
     # 2. 传输配置文件
@@ -216,8 +216,55 @@ deploy_to_nas() {
         remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker compose up -d"
     fi
 
-    print_info "✅ 部署完成！"
-    print_info "服务地址: http://${NAS_IP}"
+    # 5. 部署后自动验证与清理 (Post-Deploy Assertions & GC)
+    print_info "等待服务启动 (10s)..."
+    sleep 10
+
+    print_info "执行容器状态自动审查..."
+    # 获取处于 Exited 或 Restarting 状态的容器 (仅限 opus 服务)
+    BAD_CONTAINERS=""
+    if [ -n "$NAS_PASSWORD" ]; then
+        BAD_CONTAINERS=$(remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null)
+    else
+        BAD_CONTAINERS=$(remote_ssh "sudo /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null)
+    fi
+
+    if [ -n "$BAD_CONTAINERS" ]; then
+        print_error "❌ 发现以下容器启动失败或无限重启："
+        echo "$BAD_CONTAINERS"
+        
+        # 自动抓取死亡容器崩溃日志
+        for bc in $BAD_CONTAINERS; do
+            print_info "---- 容器 $bc 的最后 20 行报错日志 ----"
+            if [ -n "$NAS_PASSWORD" ]; then
+                remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker logs --tail 20 $bc"
+            else
+                remote_ssh "sudo /usr/local/bin/docker logs --tail 20 $bc"
+            fi
+        done
+        print_error "服务容器运行异常，请查阅上方日志！"
+        exit 1
+    fi
+
+    print_info "执行网关 HTTP 探针检查..."
+    # 注意 NAS Nginx 端口配置 (这里我们探测默认配置中提供的 HTTP 端口或 NAS IP)
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://${NAS_IP}:30010)
+    # Next.js 可能会返回 200, 308 (Redirect)
+    if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "308" ]; then
+        print_info "✅ 部署与健康检查全部通过！网关响应正常 (HTTP $HTTP_STATUS)。"
+    else
+        print_warning "⚠️ 容器虽在运行，但网关 HTTP 状态异常 (HTTP $HTTP_STATUS)，服务可能未对外暴露或有内部访问死锁。"
+    fi
+
+    print_info "执行冗余镜像清理防爆盘 (自动化 GC)..."
+    if [ -n "$NAS_PASSWORD" ]; then
+        remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker image prune -f" >/dev/null 2>&1
+    else
+        remote_ssh "sudo /usr/local/bin/docker image prune -f" >/dev/null 2>&1
+    fi
+
+    print_info "✅ 部署流水线完全结束！"
+    print_info "服务地址: http://${NAS_IP}:30010"
 }
 
 # ==================== 工具函数 ====================

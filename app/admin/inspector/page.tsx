@@ -11,8 +11,8 @@ import { redirect } from 'next/navigation';
 import { InspectorClient } from './_components/inspector-client';
 
 export const metadata: Metadata = {
-    title: 'Opus 审查器 | 全视模式',
-    description: '实时生成器监控与反馈回路',
+    title: 'Opus Admin | 神之眼',
+    description: '实时生成监控与质量审计',
 };
 
 export default async function InspectorPage() {

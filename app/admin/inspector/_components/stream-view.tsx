@@ -148,9 +148,9 @@ export function GeneratorStreamView() {
             await fetch('/api/admin/history', { method: 'DELETE' });
             setQueue([]);
             setSelectedId(null);
-            toast.success('历史缓冲已清空');
+            toast.success('记录已清空');
         } catch (e) {
-            toast.error('清空历史失败');
+            toast.error('清空失败');
         }
     };
 
@@ -208,31 +208,30 @@ export function GeneratorStreamView() {
 
             {/* Header */}
             <header className="h-16 shrink-0 border-b flex items-center justify-between px-6 bg-background/30 backdrop-blur">
-                <h2 className="text-lg font-bold text-foreground">实时数据流</h2>
+                <h2 className="text-lg font-bold text-foreground">实时生成流</h2>
                 <div className="flex items-center gap-4">
-                    <span className="text-xs font-mono text-muted-foreground">队列: {queue.length} 条</span>
+                    <span className="text-xs font-mono text-muted-foreground">共 {queue.length} 条</span>
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <button
                                 className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors"
-                                title="清空历史"
+                                title="清空记录"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>清空历史缓冲？</AlertDialogTitle>
+                                <AlertDialogTitle>确定清空生成记录？</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    这将删除 Redis 缓冲区中最近的 Drill 历史记录。
-                                    此操作无法撤销。
+                                    将清空 Redis 中最近的 Drill 生成记录，此操作不可撤销。
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>取消</AlertDialogCancel>
                                 <AlertDialogAction onClick={handleClear} className="bg-rose-600 hover:bg-rose-700 text-white">
-                                    清空历史
+                                    清空记录
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -283,7 +282,7 @@ export function GeneratorStreamView() {
                                 "text-[10px]",
                                 item.status === 'error' ? "text-rose-400" : "text-muted-foreground"
                             )}>
-                                {item.status === 'error' ? 'JSON 解析错误' : `上下文: ${item.context}`}
+                                {item.status === 'error' ? 'JSON 解析错误' : `模式: ${item.context}`}
                             </div>
                         </div>
                     ))}
@@ -337,7 +336,7 @@ function DetailPanel({
 }) {
     if (!item) return (
         <div className="flex-1 p-8 flex items-center justify-center text-muted-foreground bg-muted/20">
-            等待流数据...
+            等待数据…
         </div>
     );
 
@@ -419,7 +418,7 @@ function DetailPanel({
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">渲染输出</span>
+                        <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground">渲染预览</span>
                     </div>
                     <span className="text-[10px] font-mono text-muted-foreground">模型: {item.debug?.model || '未知'}</span>
                 </div>
@@ -435,7 +434,7 @@ function DetailPanel({
                     />
                 ) : (
                     <div className="w-full bg-zinc-50 text-zinc-900 rounded-2xl p-6 shadow-2xl relative text-center py-10 opacity-50 font-mono text-xs">
-                        原始数据视图 (无交互内容)
+                        原始数据（无交互段）
                         <br />
                         {JSON.stringify(segments.slice(0, 1))}
                     </div>

@@ -86,7 +86,7 @@ export function AuditButton({ target, context, payload }: AuditButtonProps) {
                 }
                 setStreamingText(""); // Clear raw text
             } else {
-                toast.error("无法解析审计结果 (Format Error)");
+                toast.error("审计结果解析失败（格式错误）");
                 console.error("JSON Match Error. Full Text:", fullText);
             }
 
@@ -154,7 +154,7 @@ export function AuditButton({ target, context, payload }: AuditButtonProps) {
                 {/* Redundancy Warning */}
                 {result.redundancy_detected && (
                     <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-600 dark:text-rose-300 text-xs font-bold">
-                        ⚠️ 检测到冗余 (同义词滥用)
+                        ⚠️ 检测到冗余（同义词滥用）
                     </div>
                 )}
 
@@ -173,7 +173,7 @@ export function AuditButton({ target, context, payload }: AuditButtonProps) {
                 {/* Suggested Content Revision */}
                 {result.suggested_revision && (
                     <div className="space-y-2 border-t pt-2 mt-2">
-                        <label className="text-xs font-bold text-emerald-600 uppercase">建议修改内容</label>
+                        <label className="text-xs font-bold text-emerald-600 uppercase">推荐修订</label>
 
                         {result.suggested_revision.question && (
                             <div className="space-y-0.5">
@@ -207,14 +207,14 @@ export function AuditButton({ target, context, payload }: AuditButtonProps) {
                     {!streamingText && (
                         <div className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-xs font-bold animate-pulse">正在智能审计...</span>
+                            <span className="text-xs font-bold animate-pulse">正在审计…</span>
                         </div>
                     )}
                     {streamingText && (
                         <div className="w-full text-left">
                             <div className="flex items-center gap-2 mb-2 text-xs font-bold text-violet-400">
                                 <Loader2 className="w-3 h-3 animate-spin" />
-                                正在分析...
+                                分析中…
                             </div>
                             <pre className="text-[10px] font-mono whitespace-pre-wrap text-muted-foreground leading-relaxed opacity-80 h-[100px] overflow-y-auto no-scrollbar">
                                 {streamingText}
@@ -228,7 +228,7 @@ export function AuditButton({ target, context, payload }: AuditButtonProps) {
                     className="w-full h-12 rounded-xl bg-violet-600/10 border border-violet-500/50 hover:bg-violet-600 hover:text-white text-violet-400 flex items-center justify-center gap-2 transition-all group"
                 >
                     <Gavel className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-bold">开始 AI 审计</span>
+                    <span className="text-xs font-bold">开始审计</span>
                 </button>
             )}
         </div>

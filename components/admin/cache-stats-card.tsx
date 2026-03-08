@@ -39,7 +39,7 @@ const MODE_GROUPS = [
     {
         level: 'L0',
         label: '基础训练 (Foundation)',
-        subLabel: '语法 & 短语',
+        subLabel: '语法 · 短语',
         color: 'emerald',
         icon: Wrench,
         modes: [
@@ -51,7 +51,7 @@ const MODE_GROUPS = [
     {
         level: 'L1',
         label: '韵律训练 (Rhythm)',
-        subLabel: '听力 & 分块',
+        subLabel: '听力 · 语块',
         color: 'sky',
         icon: Activity,
         modes: [
@@ -62,7 +62,7 @@ const MODE_GROUPS = [
     {
         level: 'L2',
         label: '认知训练 (Cognitive)',
-        subLabel: '细微差异 & 逻辑',
+        subLabel: '辨析 · 语境',
         color: 'violet',
         icon: Brain,
         modes: [

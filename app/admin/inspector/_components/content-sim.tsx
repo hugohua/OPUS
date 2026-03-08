@@ -55,7 +55,7 @@ export function ContentSimView() {
                 if (result.stats) {
                     setStats(result.stats as { vocabCoverage: number, targetScore: number });
                 }
-                if (forceRefresh) toast.success('已强制刷新模拟数据');
+                if (forceRefresh) toast.success('模拟数据已刷新');
             } else {
                 toast.error('模拟失败: ' + result.error);
             }
@@ -69,8 +69,8 @@ export function ContentSimView() {
 
     const modeLabels: Record<string, string> = {
         'L0_MIXED': 'L0 混合模式',
-        'SYNTAX': '句法模式 (Syntax)',
-        'PHRASE': '词块模式 (Phrase)',
+        'SYNTAX': '句法 Syntax',
+        'PHRASE': '词块 Phrase',
         'L1_MIXED': 'L1 商务进阶'
     };
 
@@ -102,10 +102,10 @@ export function ContentSimView() {
                                     L0 混合模式
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setMode('SYNTAX')}>
-                                    句法模式 (Syntax)
+                                    句法 Syntax
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setMode('PHRASE')}>
-                                    词块模式 (Phrase)
+                                    词块 Phrase
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setMode('L1_MIXED')}>
                                     L1 商务进阶
@@ -120,7 +120,7 @@ export function ContentSimView() {
                             className="flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded hover:opacity-90 disabled:opacity-50 h-8"
                         >
                             {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                            <span>模拟 (强制)</span>
+                            <span>强制模拟</span>
                         </button>
 
                         {/* Help Popover */}
@@ -155,8 +155,8 @@ export function ContentSimView() {
 
                 <div className="flex items-center justify-between w-full md:w-auto gap-4">
                     <div className="text-right flex-1 md:flex-none">
-                        <div className="text-xs font-bold text-foreground">当前估分: {stats.targetScore}</div>
-                        <div className="text-[10px] text-muted-foreground">词汇覆盖率: {stats.vocabCoverage}%</div>
+                        <div className="text-xs font-bold text-foreground">估分: {stats.targetScore}</div>
+                        <div className="text-[10px] text-muted-foreground">覆盖率: {stats.vocabCoverage}%</div>
                     </div>
                 </div>
             </div>
@@ -179,11 +179,11 @@ export function ContentSimView() {
                     {isPending && data.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground text-sm">
                             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                            正在模拟 OMPS 选词...
+                            正在模拟 OMPS 选词…
                         </div>
                     ) : data.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground text-sm">
-                            无数据
+                            暂无数据
                         </div>
                     ) : (
                         data.map((item) => (

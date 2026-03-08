@@ -255,21 +255,21 @@ export function OperationPanel({ isPaused: initialPaused, userId, queuedCount }:
                             disabled={loading !== null}
                             className="flex-1 py-2 text-xs font-medium text-rose-400 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors disabled:opacity-50"
                         >
-                            {loading === 'clear' ? '清空中...' : `清空队列 (${queuedCount})`}
+                            {loading === 'clear' ? '清空中…' : `清空队列 (${queuedCount})`}
                         </button>
                     </AlertDialogTrigger>
                     {/* ... content ... */}
                     <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="text-foreground">确认清空队列？</AlertDialogTitle>
+                            <AlertDialogTitle className="text-foreground">确定清空队列？</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
-                                此操作将清除所有等待中和失败的任务。如果您的队列因旧任务积压而堵塞，这很有用。正在处理中的任务不会被中断。
+                                将移除所有排队中和失败的任务，已在处理的任务不受影响。
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
                             <AlertDialogAction onClick={handleClear} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                确认清空
+                                确定清空
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -281,20 +281,20 @@ export function OperationPanel({ isPaused: initialPaused, userId, queuedCount }:
                             disabled={loading !== null}
                             className="flex-1 py-2 text-xs font-medium text-amber-400 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors disabled:opacity-50"
                         >
-                            {loading === 'clear-inventory' ? '清空中...' : '清空全站库存'}
+                            {loading === 'clear-inventory' ? '清空中…' : '重置全部缓存'}
                         </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="text-foreground">确认清空全站库存？</AlertDialogTitle>
+                            <AlertDialogTitle className="text-foreground">确定重置全部缓存？</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
-                                ⚠️ 此操作将清除您账户下 **所有 Mode** 的已缓存 Drill 数据。
+                                将清除所有模式下的 Drill 缓存数据，需要重新生成。
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
                             <AlertDialogAction onClick={handleClearInv} className="bg-amber-500 text-white hover:bg-amber-600">
-                                确认清空
+                                确定清空
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -314,16 +314,16 @@ export function OperationPanel({ isPaused: initialPaused, userId, queuedCount }:
                 <AlertDialogContent className="sm:max-w-[400px] bg-card border-border">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-foreground">
-                            确认清空 {confirmClearMode ? MODE_LABELS[confirmClearMode] : ''} 库存？
+                            确定清空 {confirmClearMode ? MODE_LABELS[confirmClearMode] : ''} 缓存？
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-muted-foreground">
-                            此操作仅清除当前 Mode 的缓存数据，不会影响其他 Mode。
+                            仅清除该模式的缓存，其他模式不受影响。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="border-border text-foreground hover:bg-muted hover:text-foreground">取消</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmClearOneMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            确认清空
+                            确定清空
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -385,7 +385,7 @@ function TriggerButton({
                         activeStyle,
                         "disabled:opacity-50 disabled:pointer-events-none opacity-80 hover:opacity-100"
                     )}
-                    title={`清空 ${mode} 库存`}
+                    title={`清空 ${mode} 缓存`}
                 >
                     {clearing ? (
                         <span className="text-[10px] animate-pulse">...</span>

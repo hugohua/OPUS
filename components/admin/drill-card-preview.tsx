@@ -42,7 +42,7 @@ export function DrillCardPreview({
 
             <h3 className="font-serif text-xl leading-relaxed text-center mt-6 mb-8">
                 {/* 简化渲染 markdown - 实际项目中可能需要 React Markdown */}
-                {question || "无问题内容"}
+                {question || "无题目内容"}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -80,7 +80,7 @@ export function DrillCardPreview({
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>点击查看详细解释</p>
+                                <p>查看详细解释</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>

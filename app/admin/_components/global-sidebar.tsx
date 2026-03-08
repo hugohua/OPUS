@@ -7,7 +7,8 @@ import {
     ListOrdered,
     Settings,
     ShieldAlert,
-    Menu
+    Menu,
+    DatabaseZap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -26,6 +27,7 @@ import {
     SidebarFooter,
     SidebarItem
 } from '@/components/admin/sidebar';
+import { AudioCacheCleanupButton } from '@/app/admin/_components/audio-cache-cleanup-button';
 
 export function GlobalAdminSidebar() {
     const pathname = usePathname();
@@ -79,7 +81,10 @@ export function GlobalAdminSidebar() {
 
                     {/* Footer */}
                     <SidebarFooter>
-                        <StatusIndicator />
+                        <div className="w-full flex flex-col gap-4">
+                            <AudioCacheCleanupButton />
+                            <StatusIndicator />
+                        </div>
                     </SidebarFooter>
                 </AdminSidebar>
             </div>
@@ -106,7 +111,7 @@ export function GlobalAdminSidebar() {
                     </DrawerTrigger>
                     <DrawerContent className="bg-background border-border text-foreground">
                         <DrawerHeader>
-                            <DrawerTitle className="text-foreground">管理后台导航</DrawerTitle>
+                            <DrawerTitle className="text-foreground">导航</DrawerTitle>
                         </DrawerHeader>
                         <div className="p-4 space-y-2">
                             {navItems.map(item => (
@@ -125,9 +130,10 @@ export function GlobalAdminSidebar() {
                                 </button>
                             ))}
                         </div>
-                        <DrawerFooter className="border-t border-border pt-4 mt-2">
+                        <div className="p-4 border-t border-border space-y-4">
+                            <AudioCacheCleanupButton />
                             <StatusIndicator mobile />
-                        </DrawerFooter>
+                        </div>
                     </DrawerContent>
                 </Drawer>
             </div>

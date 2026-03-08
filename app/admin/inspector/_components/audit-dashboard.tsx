@@ -55,7 +55,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
                     toast.error('审计失败: ' + result.error);
                 }
             } catch (e) {
-                toast.error('审计调用异常');
+                toast.error('审计请求异常');
             }
         });
     };
@@ -68,7 +68,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
     if (!log) return (
         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50 p-8">
             <Brain className="w-16 h-16 mb-4" />
-            <p>选择一条日志查看详情</p>
+            <p>选择日志查看详情</p>
         </div>
     );
 
@@ -78,7 +78,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
             <div className="rounded-xl border bg-card p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold flex items-center gap-2">
-                        <span className="text-violet-500">目标词:</span>
+                        <span className="text-violet-500">目标词</span>
                         {log.targetWord}
                     </h3>
                     <div className="flex items-center gap-2">
@@ -89,18 +89,18 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
                                     log.auditScore > 0 ? "bg-rose-500/10 text-rose-600 border-rose-200" :
                                         "bg-zinc-100 text-zinc-500 border-zinc-200"
                         )}>
-                            {log.auditScore ? `Score: ${log.auditScore}` : '无评分'}
+                            {log.auditScore ? `Score: ${log.auditScore}` : '未评分'}
                         </span>
                         <span className="font-mono text-xs text-muted-foreground">#{log.id.slice(0, 8)}...</span>
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <div className="text-muted-foreground text-xs uppercase mb-1">上下文模式</div>
+                        <div className="text-muted-foreground text-xs uppercase mb-1">训练模式</div>
                         <div className="font-mono">{log.contextMode}</div>
                     </div>
                     <div>
-                        <div className="text-muted-foreground text-xs uppercase mb-1">时间戳</div>
+                        <div className="text-muted-foreground text-xs uppercase mb-1">生成时间</div>
                         <div className="font-mono">{new Date(log.createdAt).toLocaleString()}</div>
                     </div>
                 </div>
@@ -108,7 +108,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
                 {/* Audit Reason Display */}
                 {log.auditReason && (
                     <div className="mt-4 pt-4 border-t border-dashed">
-                        <div className="text-muted-foreground text-xs uppercase mb-1">审计评价</div>
+                        <div className="text-muted-foreground text-xs uppercase mb-1">审计意见</div>
                         <p className="text-sm text-foreground/80 leading-relaxed">
                             {log.auditReason}
                         </p>
@@ -127,7 +127,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-md text-xs font-bold hover:bg-violet-700 disabled:opacity-50 transition-all shadow-sm active:scale-95"
                         >
                             {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            {isAuditing ? "正在分析..." : "立即审计"}
+                            {isAuditing ? "分析中…" : "立即审计"}
                         </button>
                     )}
                 </div>
@@ -142,7 +142,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
                     />
                 ) : (
                     <div className="p-8 border rounded-xl text-center text-muted-foreground bg-muted/20">
-                        无法渲染预览 (无交互数据)
+                        无法预览（无交互数据）
                     </div>
                 )}
             </div>
@@ -166,7 +166,7 @@ function LogDetailContent({ log, onAuditUpdate }: { log: any, onAuditUpdate?: (n
 
             {/* Payload Inspector */}
             <div>
-                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">原始快照</h4>
+                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">原始数据</h4>
                 <div className="rounded-xl border bg-zinc-100 dark:bg-zinc-950 p-4 overflow-x-auto">
                     <pre className="font-mono text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
                         {JSON.stringify(log.payload, null, 2)}
@@ -206,7 +206,7 @@ export function AuditDashboard() {
             }
         } catch (error) {
             console.error(error);
-            toast.error('加载审计数据失败');
+            toast.error('审计数据加载失败');
         } finally {
             setIsLoading(false);
         }
@@ -263,9 +263,9 @@ export function AuditDashboard() {
                                                 <HelpCircle className="w-3 h-3 text-emerald-600/50 hover:text-emerald-600 transition-colors" />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-xs text-xs">
-                                                <p className="font-bold mb-1">OMPS 算法选词合规性</p>
+                                                <p className="font-bold mb-1">OMPS 选词合规率</p>
                                                 <p>公式：1 - (Selection Shortage / Total Requests)</p>
-                                                <p className="mt-1 opacity-70">指标 &lt; 98% 意味着库存不足或筛选条件过严，导致用户无法获取足够的生词。</p>
+                                                <p className="mt-1 opacity-70">低于 98% 表示库存不足或筛选条件过严。</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -273,7 +273,7 @@ export function AuditDashboard() {
                                 </div>
                                 <Filter className="w-5 h-5 text-emerald-500/50" />
                             </div>
-                            <p className="text-[10px] text-emerald-600/60 mt-2">目标 &gt; 98% (无短缺)</p>
+                            <p className="text-[10px] text-emerald-600/60 mt-2">目标 ≥ 98%</p>
                         </div>
 
                         {/* FSRS */}
@@ -287,9 +287,9 @@ export function AuditDashboard() {
                                                 <HelpCircle className="w-3 h-3 text-violet-600/50 hover:text-violet-600 transition-colors" />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-xs text-xs">
-                                                <p className="font-bold mb-1">FSRS 记忆保留率稳健性</p>
+                                                <p className="font-bold mb-1">FSRS 保留率</p>
                                                 <p>公式：1 - (Stability Drop / Total Transitions)</p>
-                                                <p className="mt-1 opacity-70">指标 &lt; 90% 意味着大量词汇的记忆稳定性出现异常下降，可能预示模型拟合偏差。</p>
+                                                <p className="mt-1 opacity-70">低于 90% 表示记忆稳定性异常，可能存在模型偏差。</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -297,7 +297,7 @@ export function AuditDashboard() {
                                 </div>
                                 <Brain className="w-5 h-5 text-violet-500/50" />
                             </div>
-                            <p className="text-[10px] text-violet-600/60 mt-2">目标 &gt; 90% (稳定增长)</p>
+                            <p className="text-[10px] text-violet-600/60 mt-2">目标 ≥ 90%</p>
                         </div>
 
                         {/* Anomalies */}
@@ -311,9 +311,9 @@ export function AuditDashboard() {
                                                 <HelpCircle className="w-3 h-3 text-rose-600/50 hover:text-rose-600 transition-colors" />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-xs text-xs">
-                                                <p className="font-bold mb-1">系统全链路异常事件</p>
-                                                <p>包含：LLM 生成失败、幻觉检测、库存阻塞、算法降级等。</p>
-                                                <p className="mt-1 opacity-70">点击列表筛选 'ANOMALY' 查看详情。</p>
+                                                <p className="font-bold mb-1">全链路异常</p>
+                                                <p>LLM 生成失败、幻觉检测、库存阻塞、算法降级等。</p>
+                                                <p className="mt-1 opacity-70">筛选 ANOMALY 查看详情</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -321,7 +321,7 @@ export function AuditDashboard() {
                                 </div>
                                 <AlertCircle className="w-5 h-5 text-rose-500/50" />
                             </div>
-                            <p className="text-[10px] text-rose-600/60 mt-2">当前异常数</p>
+                            <p className="text-[10px] text-rose-600/60 mt-2">异常计数</p>
                         </div>
                     </div>
                 </header>

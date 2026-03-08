@@ -27,7 +27,7 @@ export function InspectorClient() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    生成器调试
+                    生成流
                 </button>
 
                 <button
@@ -39,7 +39,7 @@ export function InspectorClient() {
                             : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    内容模拟
+                    选词模拟
                 </button>
 
                 <button

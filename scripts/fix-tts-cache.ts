@@ -79,13 +79,72 @@ async function main() {
         }
     }
 
-    // 4. 输出报告
+    // 4. 反向检查：找到并清理孤儿实体文件
+    console.log('\n🔍 开始跨目录扫描物理文件...');
+    let totalFilesCount = 0;
+    let orphanDeletedCount = 0;
+
+    const audioDir = path.join(process.cwd(), 'public', 'audio');
+
+    // 递归获取目录下所有文件
+    function getFiles(dir: string): string[] {
+        let results: string[] = [];
+        if (!fs.existsSync(dir)) return results;
+
+        const list = fs.readdirSync(dir);
+        list.forEach((file) => {
+            const filePath = path.join(dir, file);
+            const stat = fs.statSync(filePath);
+            if (stat && stat.isDirectory()) {
+                results = results.concat(getFiles(filePath));
+            } else {
+                if (!file.endsWith('.DS_Store')) {
+                    results.push(filePath);
+                }
+            }
+        });
+        return results;
+    }
+
+    const localFiles = getFiles(audioDir);
+    totalFilesCount = localFiles.length;
+    console.log(`📂 本地音频文件总数: ${totalFilesCount}`);
+
+    // 构建数据库记录路径的 Set（使用绝对路径，方便匹配）
+    const dbAbsolutePaths = new Set<string>();
+    for (const cache of allCaches) {
+        let relPath = cache.filePath.startsWith('/') ? cache.filePath.slice(1) : cache.filePath;
+        // 有些数据库记录可能只带文件名或者带有额外的 audio/ 前缀
+        // 这里需要将其统一为相对于 public/audio 的路径，但从刚才的查询逻辑来看
+        // 它的 absolutePath 是 path.join(process.cwd(), 'public', relPath)
+        dbAbsolutePaths.add(path.join(process.cwd(), 'public', relPath));
+    }
+
+    // 检查哪些本地文件不在数据库中记录里
+    for (const localFile of localFiles) {
+        if (!dbAbsolutePaths.has(localFile)) {
+            console.warn(`🗑️ [孤儿文件] 被删除: ${localFile}`);
+            try {
+                fs.unlinkSync(localFile);
+                orphanDeletedCount++;
+            } catch (err) {
+                console.error(`❌ 删除实体文件失败: ${localFile}`, err);
+            }
+        }
+    }
+
+    // 5. 输出报告
     console.log('\n✅ 扫描完成');
     console.log('-----------------------------------');
+    console.log(`【数据库清理】`);
     console.log(`总记录数:   ${allCaches.length}`);
     console.log(`有效文件:   ${validCount}`);
     console.log(`丢失文件:   ${missingCount}`);
-    console.log(`已删除记录: ${deletedCount}`);
+    console.log(`已删除无效记录: ${deletedCount}`);
+    console.log('-----------------------------------');
+    console.log(`【实体文件清理】`);
+    console.log(`本地文件总数: ${totalFilesCount}`);
+    console.log(`已删除孤儿文件: ${orphanDeletedCount}`);
     console.log('-----------------------------------');
 }
 

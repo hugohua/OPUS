@@ -35,7 +35,7 @@ export function QueueStatusCard({ status }: QueueStatusCardProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Pending */}
                 <div className="flex flex-col">
-                    <span className="text-muted-foreground text-xs mb-1">等待中 (Pending)</span>
+                    <span className="text-muted-foreground text-xs mb-1">排队中 (Pending)</span>
                     <span className="text-4xl font-mono font-bold text-foreground max-md:text-3xl">
                         {waiting}
                     </span>
@@ -56,7 +56,7 @@ export function QueueStatusCard({ status }: QueueStatusCardProps) {
 
                 {/* Success */}
                 <div className="flex flex-col">
-                    <span className="text-emerald-400 text-xs mb-1">成功 (Success)</span>
+                    <span className="text-emerald-400 text-xs mb-1">已完成 (Success)</span>
                     <span className="text-4xl font-mono font-bold text-emerald-400 max-md:text-3xl">
                         {completed}
                     </span>
@@ -64,7 +64,7 @@ export function QueueStatusCard({ status }: QueueStatusCardProps) {
 
                 {/* Errors */}
                 <div className="flex flex-col">
-                    <span className="text-rose-400 text-xs mb-1">错误 (Errors)</span>
+                    <span className="text-rose-400 text-xs mb-1">失败 (Errors)</span>
                     <span className="text-4xl font-mono font-bold text-muted-foreground max-md:text-3xl">
                         {failed}
                     </span>
