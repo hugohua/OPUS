@@ -115,37 +115,37 @@ export default async function ProfilePage() {
                 </h2>
 
                 <div className="grid grid-cols-2 gap-3">
-                    <Link href="/dashboard/profile/mistakes" className="group relative flex flex-col justify-between bg-slate-900 dark:bg-zinc-900 rounded-2xl border border-slate-800 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-indigo-500/50 transition-all active:scale-[0.98]">
-                        <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/30 transition-all" />
+                    <Link href="/dashboard/profile/mistakes" className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] p-4 overflow-hidden text-left hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all active:scale-[0.98]">
+                        <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/20 dark:group-hover:bg-indigo-500/30 transition-all" />
                         <div className="flex justify-between items-start mb-2 relative z-10">
-                            <div className="p-1.5 rounded-lg bg-white/10 text-indigo-400">
+                            <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-white/10 text-indigo-500 dark:text-indigo-400">
                                 <BookOpen className="w-5 h-5" />
                             </div>
                             {mistakeLogs.totalUnresolved > 0 && (
-                                <span className="text-[10px] font-mono font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
+                                <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-500 bg-rose-100 dark:bg-rose-500/10 px-1.5 py-0.5 rounded animate-pulse">
                                     {mistakeLogs.totalUnresolved} 待解决
                                 </span>
                             )}
                         </div>
                         <div className="relative z-10">
-                            <span className="text-xs font-medium text-slate-400 dark:text-zinc-400">错题档案 (日志)</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">错题档案 (日志)</span>
                             <div className="flex items-baseline gap-1 mt-1">
-                                <span className="text-2xl font-bold font-mono text-white dark:text-white">{mistakeLogs.totalUnresolved}</span>
-                                <span className="text-[10px] text-slate-400">项</span>
+                                <span className="text-2xl font-bold font-mono text-zinc-900 dark:text-white">{mistakeLogs.totalUnresolved}</span>
+                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400">项</span>
                             </div>
-                            <p className="text-[9px] text-slate-500 mt-2 leading-tight">
+                            <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-2 leading-tight">
                                 高频错题: {mistakeLogs.highFrequencyLogs.length}
                             </p>
                         </div>
                     </Link>
-                    <Link href="/dashboard/cards?filter=weak" className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 overflow-hidden text-left hover:border-rose-500/50 transition-all active:scale-[0.98]">
+                    <Link href="/dashboard/cards?filter=weak" className="group relative flex flex-col justify-between bg-white dark:bg-zinc-900/60 rounded-2xl border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] p-4 overflow-hidden text-left hover:border-rose-500/50 transition-all active:scale-[0.98]">
                         <div className="absolute -right-4 -top-4 w-16 h-16 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition-all" />
                         <div className="flex justify-between items-start mb-2 relative z-10">
-                            <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500">
+                            <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-white/10 text-rose-500 dark:text-rose-400">
                                 <AlertTriangle className="w-5 h-5" />
                             </div>
                             {stats.errorWords > 0 && (
-                                <span className="text-[10px] font-mono font-bold text-rose-500 bg-rose-100 dark:bg-rose-500/20 px-1.5 py-0.5 rounded animate-pulse">
+                                <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-500 bg-rose-100 dark:bg-rose-500/20 px-1.5 py-0.5 rounded animate-pulse">
                                     需要复习
                                 </span>
                             )}
@@ -154,9 +154,9 @@ export default async function ProfilePage() {
                             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">薄弱词汇</span>
                             <div className="flex items-baseline gap-1 mt-1">
                                 <span className="text-2xl font-bold font-mono text-zinc-900 dark:text-white">{stats.errorWords}</span>
-                                <span className="text-[10px] text-zinc-400">词</span>
+                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400">词</span>
                             </div>
-                            <p className="text-[9px] text-zinc-400 mt-2 leading-tight">
+                            <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-2 leading-tight">
                                 {stats.weakWordsCriteria}
                             </p>
                         </div>
