@@ -59,6 +59,15 @@ export async function getOrGenerateL2Context(
 
     if (cached) {
         log.debug({ vocabId, word, cached: true }, 'SmartContent cache hit');
+
+        // [Fix] 异步触发 TTS 生成，如果当前记录缺少音频 (解决前端一直在"生成中"轮询的问题)
+        if (!cached.ttsHash) {
+            const payload = cached.payload as L2SentencePayload;
+            triggerTTSGeneration(cached.id, payload.text).catch(err => {
+                log.error({ err, contentId: cached.id }, 'TTS generation failed for cached content');
+            });
+        }
+
         return {
             id: cached.id,
             text: (cached.payload as L2SentencePayload).text,
