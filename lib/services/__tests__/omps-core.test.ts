@@ -495,3 +495,222 @@ describe('Suite E: Inventory First Strategy', () => {
 });
 
 
+// ============================================
+// Suite F: Rescue Queue (30/50/20 Arena Protocol)
+// ============================================
+
+describe('Suite F: Rescue Queue', () => {
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        // Redis 默认无库存
+        (redis.keys as any).mockResolvedValue([]);
+    });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 📋 规格定义 (Specification)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Input:  fetchOMPSCandidates(userId, 20, { rescueRatio: 0.3, reviewRatio: 0.5 })
+    // Output: OMPSCandidate[] — 30% rescue(dim_v<30) + 50% review(due) + 20% new
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    it('F1: Arena 协议 - 6 Rescue + 10 Review + 4 New (30/50/20)', async () => {
+        // Rescue: dim_v_score < 30 的薄弱词
+        const rescueRecords = Array.from({ length: 6 }, (_, i) =>
+            createProgress(i + 1, new Date())
+        );
+        // Review: 到期复习词
+        const reviewRecords = Array.from({ length: 10 }, (_, i) =>
+            createProgress(100 + i, new Date(Date.now() - 1000 * i))
+        );
+
+        // Mock: 第一次 findMany = rescue, 第二次 = review
+        let callIndex = 0;
+        (prisma.userProgress.findMany as any).mockImplementation(({ where }: any) => {
+            callIndex++;
+            // Rescue 查询 (dim_v_score < 30)
+            if (where?.dim_v_score) {
+                return Promise.resolve(rescueRecords);
+            }
+            // Review 查询 (next_review_at <= now)
+            return Promise.resolve(reviewRecords);
+        });
+
+        // 新词
+        let newId = 500;
+        (prisma.vocab.findMany as any).mockImplementation(({ take }: any) =>
+            Promise.resolve(Array.from({ length: take }, () => createVocab(newId++)))
+        );
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 20, {
+            rescueRatio: 0.3,
+            reviewRatio: 0.5,
+        });
+
+        expect(result).toHaveLength(20);
+
+        const rescueItems = result.filter(c => c.source === 'rescue');
+        const reviewItems = result.filter(c => c.source === 'review');
+        const newItems = result.filter(c => c.source === 'new' || c.type === 'NEW');
+
+        expect(rescueItems).toHaveLength(6);    // 30% of 20
+        expect(reviewItems).toHaveLength(10);   // 50% of 20
+        expect(newItems).toHaveLength(4);       // 20% of 20
+    });
+
+    it('F2: Rescue 溢出 - 不足时名额自动转给 Review', async () => {
+        // 只有 2 个 rescue 词
+        const rescueRecords = [
+            createProgress(1, new Date()),
+            createProgress(2, new Date()),
+        ];
+        // Review 充足
+        const reviewRecords = Array.from({ length: 20 }, (_, i) =>
+            createProgress(100 + i, new Date(Date.now() - 1000 * i))
+        );
+
+        (prisma.userProgress.findMany as any).mockImplementation(({ where, take }: any) => {
+            if (where?.dim_v_score) {
+                return Promise.resolve(rescueRecords.slice(0, take));
+            }
+            // Review: 尊重 take 参数 + 排除 rescue 的 vocabIds
+            const excludeVocabIds = where?.vocab?.id?.notIn || [];
+            const filtered = reviewRecords.filter(
+                (r: any) => !excludeVocabIds.includes(r.vocabId)
+            );
+            return Promise.resolve(filtered.slice(0, take));
+        });
+
+        let newId = 500;
+        (prisma.vocab.findMany as any).mockImplementation(({ take }: any) =>
+            Promise.resolve(Array.from({ length: take }, () => createVocab(newId++)))
+        );
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 20, {
+            rescueRatio: 0.3,
+            reviewRatio: 0.5,
+        });
+
+        expect(result).toHaveLength(20);
+
+        // Rescue 只有 2 个，溢出 4 个给 Review
+        const rescueItems = result.filter(c => c.source === 'rescue');
+        expect(rescueItems).toHaveLength(2);
+
+        // Review 应该吃掉溢出的名额：原 10 + 溢出 4 = 14
+        const reviewItems = result.filter(c => c.source === 'review');
+        expect(reviewItems).toHaveLength(14);
+    });
+
+    it('F3: rescueRatio=0 向后兼容 - 不触发 Rescue 查询', async () => {
+        // 默认 config (rescueRatio=0)
+        const reviews = Array.from({ length: 7 }, (_, i) =>
+            createProgress(i + 1, new Date())
+        );
+        (prisma.userProgress.findMany as any).mockResolvedValue(reviews);
+
+        let newId = 100;
+        (prisma.vocab.findMany as any).mockImplementation(({ take }: any) =>
+            Promise.resolve(Array.from({ length: take }, () => createVocab(newId++)))
+        );
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10);
+
+        // 验证无 rescue 来源
+        const rescueItems = result.filter(c => c.source === 'rescue');
+        expect(rescueItems).toHaveLength(0);
+
+        // 验证 dim_v_score 查询没有被调用
+        const dimVCalls = (prisma.userProgress.findMany as any).mock.calls.filter(
+            (call: any[]) => call[0]?.where?.dim_v_score
+        );
+        expect(dimVCalls).toHaveLength(0);
+    });
+
+    it('F4: Rescue 去重 - 与 Review 不重复', async () => {
+        // vocabId=1 同时符合 rescue 和 review 条件
+        const rescueRecords = [createProgress(1, new Date())]; // vocabId=1
+        const reviewRecords = [
+            createProgress(1, new Date()),  // 重复！
+            createProgress(2, new Date()),
+            createProgress(3, new Date()),
+        ];
+
+        (prisma.userProgress.findMany as any).mockImplementation(({ where, take }: any) => {
+            if (where?.dim_v_score) return Promise.resolve(rescueRecords.slice(0, take));
+            // Review: 排除 rescue 已选中的 vocabIds
+            const excludeVocabIds = where?.vocab?.id?.notIn || [];
+            const filtered = reviewRecords.filter(
+                (r: any) => !excludeVocabIds.includes(r.vocabId)
+            );
+            return Promise.resolve(filtered.slice(0, take));
+        });
+
+        (prisma.vocab.findMany as any).mockResolvedValue([]);
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10, {
+            rescueRatio: 0.3,
+            reviewRatio: 0.5,
+        });
+
+        // vocabId=1 只出现一次（来自 rescue）
+        const vocab1 = result.filter(c => c.vocabId === 1);
+        expect(vocab1).toHaveLength(1);
+        expect(vocab1[0].source).toBe('rescue');
+    });
+
+    it('F5: source 标记 - 所有候选词都携带来源', async () => {
+        const reviews = Array.from({ length: 3 }, (_, i) =>
+            createProgress(i + 1, new Date())
+        );
+        (prisma.userProgress.findMany as any).mockResolvedValue(reviews);
+
+        let newId = 100;
+        (prisma.vocab.findMany as any).mockImplementation(({ take }: any) =>
+            Promise.resolve(Array.from({ length: take }, () => createVocab(newId++)))
+        );
+
+        const result = await fetchOMPSCandidates(MOCK_USER_ID, 10);
+
+        // 每个候选词都应该有 source 标记
+        for (const c of result) {
+            expect(c.source).toBeDefined();
+            expect(['rescue', 'review', 'new', 'hot']).toContain(c.source);
+        }
+    });
+});
+
+// ============================================
+// Suite G: Protocol Presets (协议预设)
+// ============================================
+
+describe('Suite G: Protocol Presets', () => {
+
+    it('G1: OMPS_DOJO_CONFIG 应为 70/30（无 Rescue）', async () => {
+        // 此测试仅验证常量定义，不调用函数
+        const { OMPS_DOJO_CONFIG } = await import('@/lib/services/omps-core');
+
+        expect(OMPS_DOJO_CONFIG).toBeDefined();
+        expect(OMPS_DOJO_CONFIG.rescueRatio).toBe(0);
+        expect(OMPS_DOJO_CONFIG.reviewRatio).toBe(0.7);
+    });
+
+    it('G2: OMPS_ARENA_CONFIG 应为 30/50/20', async () => {
+        const { OMPS_ARENA_CONFIG } = await import('@/lib/services/omps-core');
+
+        expect(OMPS_ARENA_CONFIG).toBeDefined();
+        expect(OMPS_ARENA_CONFIG.rescueRatio).toBe(0.3);
+        expect(OMPS_ARENA_CONFIG.reviewRatio).toBe(0.5);
+    });
+
+    it('G3: 预设 ratio 之和应等于 1.0', async () => {
+        const { OMPS_ARENA_CONFIG } = await import('@/lib/services/omps-core');
+
+        const rescueRatio = OMPS_ARENA_CONFIG.rescueRatio || 0;
+        const reviewRatio = OMPS_ARENA_CONFIG.reviewRatio || 0;
+        const newRatio = 1 - rescueRatio - reviewRatio;
+
+        expect(newRatio).toBeCloseTo(0.2, 2);
+        expect(rescueRatio + reviewRatio + newRatio).toBeCloseTo(1.0, 2);
+    });
+});

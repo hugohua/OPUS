@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Drive 顶部导航栏
+ * 
+ * 显示当前模式名称、进度、时间。点击中间 badge 打开模式选择 Drawer。
+ */
+
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Moon, Sun, ChevronLeft } from 'lucide-react';
@@ -7,15 +13,15 @@ import { cn } from '@/lib/utils';
 import { useDrive } from './DriveLayout';
 import { ImmersiveHeader } from '@/components/ui/immersive-header';
 import { useRouter } from 'next/navigation';
+import { REVIEW_MODES } from '@/lib/constants/review-modes';
 
 export function DriveHeader() {
     const { theme, setTheme } = useTheme();
-    const { playlist, currentIndex } = useDrive();
+    const { playlist, currentIndex, reviewMode, batchSize, isLoading, openModePicker } = useDrive();
     const [currentTime, setCurrentTime] = useState('');
     const [mounted, setMounted] = useState(false);
     const router = useRouter();
 
-    // Prevent hydration mismatch for time and theme
     useEffect(() => {
         setMounted(true);
         const updateTime = () => {
@@ -38,6 +44,7 @@ export function DriveHeader() {
     const totalWords = playlist.length;
     const currentWordNum = currentIndex + 1;
     const progress = totalWords > 0 ? (currentWordNum / totalWords) * 100 : 0;
+    const modeLabel = REVIEW_MODES[reviewMode]?.label || '三明治';
 
     return (
         <ImmersiveHeader
@@ -52,12 +59,19 @@ export function DriveHeader() {
                 </button>
             }
             centerContent={
-                <div className="flex bg-rose-50 dark:bg-rose-900/20 px-3 py-1 rounded-full items-center gap-2">
+                <button
+                    onClick={openModePicker}
+                    className={cn(
+                        'flex bg-rose-50 dark:bg-rose-900/20 px-3 py-1 rounded-full items-center gap-2',
+                        'hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors active:scale-95',
+                        isLoading && 'animate-pulse'
+                    )}
+                >
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_#f43f5e]"></span>
                     <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest leading-none">
-                        Auto-Cycle • {currentWordNum}/{totalWords}
+                        {modeLabel} • {currentWordNum}/{totalWords}
                     </span>
-                </div>
+                </button>
             }
             rightAction={
                 <>

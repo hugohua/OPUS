@@ -153,13 +153,6 @@ deploy_to_nas() {
     print_info "创建远程目录..."
     remote_ssh "mkdir -p ${NAS_PATH}/{data/postgres,data/redis,data/audio,data/logs,nginx}"
 
-    print_info "修复目标目录权限 (跳过 data 数据卷避免破坏容器内应用专属权限)..."
-    if [ -n "$NAS_PASSWORD" ]; then
-        remote_ssh "echo '$NAS_PASSWORD' | sudo -S find ${NAS_PATH} -mindepth 1 -maxdepth 1 ! -name data -exec chown -R ${NAS_USER} {} + || sudo -S chown ${NAS_USER} ${NAS_PATH}" || true
-    else
-        remote_ssh "sudo find ${NAS_PATH} -mindepth 1 -maxdepth 1 ! -name data -exec chown -R ${NAS_USER} {} + || sudo chown ${NAS_USER} ${NAS_PATH}" || true
-    fi
-
     # 2. 传输配置文件
     print_info "传输配置文件..."
     # 使用 NAS 专用的 compose 文件 (预构建镜像，无需 build context)
@@ -206,14 +199,16 @@ deploy_to_nas() {
         fi
     done
 
-    # 4. 重启服务 (群晖使用 docker-compose v1)
+    # 4. 重启服务 (群晖使用 docker-compose v1 或 docker compose)
     print_info "重启远程服务..."
     if [ -n "$NAS_PASSWORD" ]; then
-        remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker-compose up -d" 2>/dev/null || \
-        remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker compose up -d"
+        if ! remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker-compose up -d" 2>/dev/null; then
+            remote_ssh "cd ${NAS_PATH} && echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker compose up -d"
+        fi
     else
-        remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker-compose up -d" 2>/dev/null || \
-        remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker compose up -d"
+        if ! remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker-compose up -d" 2>/dev/null; then
+            remote_ssh "cd ${NAS_PATH} && sudo /usr/local/bin/docker compose up -d"
+        fi
     fi
 
     # 5. 部署后自动验证与清理 (Post-Deploy Assertions & GC)
@@ -224,9 +219,9 @@ deploy_to_nas() {
     # 获取处于 Exited 或 Restarting 状态的容器 (仅限 opus 服务)
     BAD_CONTAINERS=""
     if [ -n "$NAS_PASSWORD" ]; then
-        BAD_CONTAINERS=$(remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null)
+        BAD_CONTAINERS=$(remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null || true)
     else
-        BAD_CONTAINERS=$(remote_ssh "sudo /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null)
+        BAD_CONTAINERS=$(remote_ssh "sudo /usr/local/bin/docker ps --filter 'status=exited' --filter 'status=restarting' --format '{{.Names}}' | grep opus" 2>/dev/null || true)
     fi
 
     if [ -n "$BAD_CONTAINERS" ]; then

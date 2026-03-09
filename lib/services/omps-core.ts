@@ -44,10 +44,12 @@ export interface OMPSCandidate {
     confusion_audio?: string[]; // [New] L1 Audio
     etymology?: any; // [New] Source Code
     userNote?: string; // [New] Feature A: User custom memory hook
+    source?: 'rescue' | 'review' | 'new' | 'hot'; // [V3] 来源标记
 }
 
 export interface OMPSConfig {
     reviewRatio: number;   // 默认 0.7
+    rescueRatio: number;   // [V3] 默认 0（Dojo 不需要）；Arena 传 0.3
     simpleRatio: number;   // 默认 0.2
     coreRatio: number;     // 默认 0.6 (实际通过 1 - simple - hard 计算)
     hardRatio: number;     // 默认 0.2
@@ -55,14 +57,29 @@ export interface OMPSConfig {
 }
 
 // --- 默认配置 ---
-// reviewRatio: 0.7 是 FSRS 标准平衡值，优先清理复习债务，防止遗忘雪崩。
-// 注意："救援 (Rescue)" 逻辑由 FSRS 排序隐式处理 (Due 队列按 next_review_at 排序)，
-// 无需人为拆分单独的救援桶，避免破坏 FSRS 的最优调度。
+// reviewRatio: 0.7 是 FSRS 标准平衡值（Dojo 70/30 协议）。
+// rescueRatio: 0 → 向后兼容，现有消费方无需改动。
+// Arena 场景通过 OMPS_ARENA_CONFIG 传 rescueRatio: 0.3。
 const DEFAULT_CONFIG: OMPSConfig = {
     reviewRatio: 0.7,   // 复习优先 ~70%
+    rescueRatio: 0,     // [V3] 默认不启用 Rescue（Dojo 不需要）
     simpleRatio: 0.2,   // 新词分层: 简单 20%
     coreRatio: 0.6,     // 新词分层: 核心 60%
     hardRatio: 0.2,     // 新词分层: 困难 20%
+};
+
+// --- [V3] 协议预设 ---
+
+/** Dojo 协议: 70% Review + 30% New（无 Rescue） */
+export const OMPS_DOJO_CONFIG: Partial<OMPSConfig> = {
+    rescueRatio: 0,
+    reviewRatio: 0.7,
+};
+
+/** Arena 协议: 30% Rescue + 50% Review + 20% New (PRD §4.2) */
+export const OMPS_ARENA_CONFIG: Partial<OMPSConfig> = {
+    rescueRatio: 0.3,
+    reviewRatio: 0.5,
 };
 
 // ============================================
@@ -114,6 +131,8 @@ export async function fetchOMPSCandidates(
     let hotCandidates: OMPSCandidate[] = [];
     if (mode) {
         hotCandidates = await getInventoryBackedWords(userId, mode, limit, excludeIds);
+        // [V3] 标记来源
+        hotCandidates.forEach(c => c.source = 'hot');
         if (hotCandidates.length >= limit) {
             log.info({
                 userId,
@@ -125,12 +144,48 @@ export async function fetchOMPSCandidates(
         }
     }
 
-    // --- Phase 1: 宏观调度 (70/30) ---
-    const remaining = limit - hotCandidates.length;
-    const reviewQuota = Math.floor(remaining * cfg.reviewRatio);
+    // --- Phase 0.5: Rescue Queue (显式语法补救, PRD §4.2) ---
+    let rescueCandidates: OMPSCandidate[] = [];
+    if (cfg.rescueRatio > 0) {
+        const rescueQuota = Math.floor(limit * cfg.rescueRatio);
+        const rescueExcludeIds = [...excludeIds, ...hotCandidates.map(c => c.vocabId)];
+        const rescueExcludeFilter = rescueExcludeIds.length > 0 ? { id: { notIn: rescueExcludeIds } } : {};
 
-    const hotVocabIds = hotCandidates.map(c => c.vocabId);
-    const allExcludeIds = [...excludeIds, ...hotVocabIds];
+        const rescueRecords = await prisma.userProgress.findMany({
+            where: {
+                userId,
+                track: currentTrack,
+                status: { in: ['LEARNING', 'REVIEW'] },
+                dim_v_score: { lt: 30 },  // PRD 标准: Visual < 30
+                vocab: { ...rescueExcludeFilter }
+            },
+            take: rescueQuota,
+            orderBy: { vocab: { frequency_score: 'desc' } }, // 高价值优先
+            include: { vocab: { include: { etymology: true } } }
+        });
+        rescueCandidates = rescueRecords.map(r => {
+            const c = mapToCandidate(r.vocab, 1, 'REVIEW', r);
+            c.source = 'rescue';
+            return c;
+        });
+
+        log.info({ rescueQuota, rescueFilled: rescueCandidates.length }, 'Rescue queue');
+    }
+
+    // --- Phase 1: 宏观调度 ---
+    // [V3] remaining 减去 hot + rescue 已占用
+    const filledBeforeReview = hotCandidates.length + rescueCandidates.length;
+    const remaining = limit - filledBeforeReview;
+    // 直接从 limit 计算 reviewQuota，rescue 溢出自然转给 review
+    const reviewQuota = cfg.rescueRatio > 0
+        ? Math.floor(limit * cfg.reviewRatio) + (Math.floor(limit * cfg.rescueRatio) - rescueCandidates.length)
+        : Math.floor(remaining * cfg.reviewRatio);
+
+    const prevVocabIds = [
+        ...hotCandidates.map(c => c.vocabId),
+        ...rescueCandidates.map(c => c.vocabId)
+    ];
+    const allExcludeIds = [...excludeIds, ...prevVocabIds];
     const excludeFilter = allExcludeIds.length > 0 ? { id: { notIn: allExcludeIds } } : {};
 
     // 1. 获取到期复习词 (Debt) - [Fix] Multi-Track Filtering
@@ -147,10 +202,14 @@ export async function fetchOMPSCandidates(
         include: { vocab: { include: { etymology: true } } }
     });
 
-    const reviewsMapped = reviews.map(r => mapToCandidate(r.vocab, 2, 'REVIEW', r));
+    const reviewsMapped = reviews.map(r => {
+        const c = mapToCandidate(r.vocab, 2, 'REVIEW', r);
+        c.source = 'review';
+        return c;
+    });
 
     // 计算剩余名额
-    const slotsFilled = hotCandidates.length + reviewsMapped.length;
+    const slotsFilled = filledBeforeReview + reviewsMapped.length;
     const slotsRemaining = limit - slotsFilled;
 
     // --- Phase 2: 微观采样 (分层新词) ---
@@ -180,8 +239,11 @@ export async function fetchOMPSCandidates(
         );
     }
 
+    // [V3] 标记新词来源
+    newWordsMapped.forEach(c => c.source = 'new');
+
     // --- Phase 3: 整合 + 洗牌 ---
-    const finalBatch = [...hotCandidates, ...reviewsMapped, ...newWordsMapped];
+    const finalBatch = [...hotCandidates, ...rescueCandidates, ...reviewsMapped, ...newWordsMapped];
 
     log.info({
         userId,
@@ -189,9 +251,10 @@ export async function fetchOMPSCandidates(
         track: currentTrack,
         limit,
         hotCount: hotCandidates.length,
+        rescueCount: rescueCandidates.length,
         reviewCount: reviewsMapped.length,
         newCount: newWordsMapped.length
-    }, 'OMPS candidates fetched');
+    }, 'OMPS candidates fetched (V3)');
 
     // --- [V5.1] Panoramic Audit: Selection Logging ---
     auditOMPSSelection(userId, {
@@ -202,6 +265,7 @@ export async function fetchOMPSCandidates(
         reviewQuota
     }, {
         hotCount: hotCandidates.length,
+        rescueCount: rescueCandidates.length,
         reviewCount: reviewsMapped.length,
         newCount: newWordsMapped.length,
         totalSelected: finalBatch.length,
@@ -233,12 +297,14 @@ export async function getStratifiedNewWords(
     const hardCount = Math.round(count * 0.2);
     const coreCount = count - simpleCount - hardCount;
 
-    // 并行查询
-    const [simple, core, hard] = await Promise.all([
-        fetchNewBucket(userId, 'SIMPLE', simpleCount, excludeIds, posFilter, track),
-        fetchNewBucket(userId, 'CORE', coreCount, excludeIds, posFilter, track),
-        fetchNewBucket(userId, 'HARD', hardCount, excludeIds, posFilter, track)
-    ]);
+    // 顺序查询以避免跨桶重复（例如某词既是 Simple 又是 Core）
+    const simple = await fetchNewBucket(userId, 'SIMPLE', simpleCount, excludeIds, posFilter, track);
+
+    const excludeForCore = [...excludeIds, ...simple.map(x => x.vocabId)];
+    const core = await fetchNewBucket(userId, 'CORE', coreCount, excludeForCore, posFilter, track);
+
+    const excludeForHard = [...excludeForCore, ...core.map(x => x.vocabId)];
+    const hard = await fetchNewBucket(userId, 'HARD', hardCount, excludeForHard, posFilter, track);
 
     // 兜底：如果 Simple/Hard 不足，用 Core 补位
     let result = [...simple, ...core, ...hard];

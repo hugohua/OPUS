@@ -132,6 +132,7 @@ export function auditOMPSSelection(
     },
     decision: {
         hotCount: number;
+        rescueCount?: number; // [V3] Rescue 桶
         reviewCount: number;
         newCount: number;
         totalSelected: number;

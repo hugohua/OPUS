@@ -1,15 +1,24 @@
 'use client';
 
+/**
+ * Drive 布局组件 (V3)
+ * 
+ * V3 变更：
+ *   - 支持复习模式 + 选词数量切换
+ *   - 移除分页逻辑 (cursor/hasMore/loadMore)
+ *   - 播放完自动循环
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useTTS } from '@/hooks/use-tts';
 import { DriveItem, DRIVE_VOICE_CONFIG, DriveMode, DriveTrack, DRIVE_VOICE_SPEED_PRESETS, DashScopeVoice } from '@/lib/constants/drive';
+import { ReviewModeId, BatchSize, DEFAULT_BATCH_SIZE, REVIEW_MODES } from '@/lib/constants/review-modes';
 import { generateDrivePlaylist } from '@/actions/drive';
 import { DriveHeader } from './DriveHeader';
 import { DriveMain } from './DriveMain';
 import { DriveControls } from './DriveControls';
 import { useAudioPreload } from '@/hooks/use-audio-preload';
-
-
+import { ReviewModePicker } from '@/components/shared/ReviewModePicker';
 
 // ------------------------------------------------------------------
 // Types
@@ -23,11 +32,15 @@ interface DriveContextType {
     playbackStage: PlaybackStage;
     duration: number;
     currentTime: number;
+    reviewMode: ReviewModeId;
+    batchSize: BatchSize;
+    isLoading: boolean;
     play: () => void;
     pause: () => void;
     next: () => void;
     prev: () => void;
     seek: (time: number) => void;
+    openModePicker: () => void;
 }
 
 // ------------------------------------------------------------------
@@ -46,25 +59,29 @@ export const useDrive = () => {
 // ------------------------------------------------------------------
 interface DriveLayoutProps {
     initialPlaylist: DriveItem[];
-    initialCursor: number | null;
-    initialHasMore: boolean;
     track: DriveTrack;
+    initialMode: ReviewModeId;
+    initialBatchSize: BatchSize;
 }
 
 export function DriveLayout({
     initialPlaylist,
-    initialCursor,
-    initialHasMore,
-    track
+    track,
+    initialMode,
+    initialBatchSize,
 }: DriveLayoutProps) {
-    // ✅ V2: 支持动态加载
+    // 播放列表状态
     const [playlist, setPlaylist] = useState<DriveItem[]>(initialPlaylist);
-    const [cursor, setCursor] = useState<number | null>(initialCursor);
-    const [hasMore, setHasMore] = useState(initialHasMore);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // 复习模式状态
+    const [reviewMode, setReviewMode] = useState<ReviewModeId>(initialMode);
+    const [batchSize, setBatchSize] = useState<BatchSize>(initialBatchSize);
+
+    // Drawer 状态
+    const [pickerOpen, setPickerOpen] = useState(false);
 
     // Playback State Machine
     const [playbackStage, setPlaybackStage] = useState<PlaybackStage>('idle');
@@ -73,47 +90,39 @@ export function DriveLayout({
     // TTS Engine
     const tts = useTTS();
 
-    // ------------------------------------------------------------------
-    // Load More Logic (V2)
-    // ------------------------------------------------------------------
-    // ✅ 使用 ref 存储 loading 状态，避免 useCallback 频繁重建
-    const isLoadingRef = React.useRef(false);
-
-    const loadMore = useCallback(async () => {
-        // 使用 ref 双重检查，防止并发调用
-        if (!hasMore || isLoadingRef.current || cursor === null) return;
-
-        isLoadingRef.current = true;
-        setIsLoadingMore(true);
-        try {
-            const res = await generateDrivePlaylist({ track, cursor, pageSize: 15 });
-            setPlaylist(prev => [...prev, ...res.items]);
-            setCursor(res.nextCursor);
-            setHasMore(res.hasMore);
-            console.log('[Drive] Loaded more items:', res.items.length, 'hasMore:', res.hasMore);
-        } catch (error) {
-            console.error('[Drive] Load more failed:', error);
-        } finally {
-            isLoadingRef.current = false;
-            setIsLoadingMore(false);
-        }
-    }, [hasMore, cursor, track]); // ✅ 移除 isLoadingMore 依赖，使用 ref 代替
-
-    // 自动触发 Load More：剩余 3 个时预加载
-    useEffect(() => {
-        const remaining = playlist.length - currentIndex;
-        if (remaining <= 3 && hasMore && !isLoadingRef.current) {
-            loadMore();
-        }
-    }, [currentIndex, playlist.length, hasMore, loadMore]); // ✅ 移除 isLoadingMore
-
     // Derived Current Item
     const currentItem = playlist[currentIndex];
 
     // ------------------------------------------------------------------
+    // 模式/数量切换 → 重新生成 Playlist
+    // ------------------------------------------------------------------
+    const handleModeChange = useCallback(async (newMode: ReviewModeId, newBatch: BatchSize) => {
+        // 如果没有变化则不刷新
+        if (newMode === reviewMode && newBatch === batchSize) return;
+
+        setIsLoading(true);
+        setIsPlaying(false);
+        tts.stop();
+        clearTimeout(stageTimeoutRef.current!);
+
+        try {
+            const res = await generateDrivePlaylist({ track, mode: newMode, batchSize: newBatch });
+            setPlaylist(res.items);
+            setCurrentIndex(0);
+            setPlaybackStage('idle');
+            setReviewMode(newMode);
+            setBatchSize(newBatch);
+
+        } catch (error) {
+            console.error('[Drive] Mode change failed:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [reviewMode, batchSize, track, tts]);
+
+    // ------------------------------------------------------------------
     // Core Orchestrator
     // ------------------------------------------------------------------
-    // Watch for 'isPlaying' and 'playbackStage' changes to drive the engine
 
     // 1. Start Engine Trigger
     useEffect(() => {
@@ -123,7 +132,6 @@ export function DriveLayout({
             return;
         }
 
-        // If we just started playing (from idle), kick off the first stage
         if (playbackStage === 'idle') {
             startItemSequence(currentItem);
         }
@@ -131,7 +139,6 @@ export function DriveLayout({
 
     // 2. Sequence Logic
     const startItemSequence = (item: DriveItem) => {
-        // Reset Logic based on Mode
         if (item.mode === 'QUIZ') {
             setPlaybackStage('word');
             playTTS(item.word || item.text, DRIVE_VOICE_CONFIG.QUIZ_QUESTION);
@@ -146,7 +153,6 @@ export function DriveLayout({
 
     const playTTS = (text: string, voiceOverride?: string) => {
         const finalVoice = (voiceOverride || currentItem.voice) as DashScopeVoice;
-        // Use preset speed for the voice, fallback to item speed or 1.0
         const finalSpeed = DRIVE_VOICE_SPEED_PRESETS[finalVoice] || currentItem.speed || 1.0;
 
         tts.play({
@@ -158,7 +164,7 @@ export function DriveLayout({
     };
 
     // ------------------------------------------------------------------
-    // Prefetch Logic (Incremental Background Preloading via Generic Hook)
+    // Prefetch Logic
     // ------------------------------------------------------------------
     const extractDriveAudio = React.useCallback((item: DriveItem) => {
         const targets = [];
@@ -191,8 +197,6 @@ export function DriveLayout({
     });
 
     // 3. Stage Transition (On TTS End)
-    // We listen to tts.status changes. When it goes from 'playing' -> 'idle', and we are isPlaying, move next.
-    // Issue: useTTS 'idle' might be initial state. We need to track if we *were* playing.
     const wasTTSPlayingRef = React.useRef(false);
 
     useEffect(() => {
@@ -200,7 +204,6 @@ export function DriveLayout({
         const isTTSIdle = tts.status === 'idle';
 
         if (wasTTSPlayingRef.current && isTTSIdle && isPlaying) {
-            // TTS just finished. Decide next step.
             handleStageComplete();
         }
 
@@ -212,29 +215,19 @@ export function DriveLayout({
 
         if (currentItem.mode === 'QUIZ') {
             if (playbackStage === 'word') {
-                // Word finished -> Go to Gap
                 setPlaybackStage('gap');
-                // Wait 2s
                 stageTimeoutRef.current = setTimeout(() => {
                     setPlaybackStage('meaning');
-                    // Play Meaning/Sentence
-                    // Quiz Step 3: "Answer: Meaning + Collocation"
-                    // If trans implies the sentence, play trans or the full text if it was just a word?
-                    // Let's assume input text is the word. We should play the example sentence or meaning.
-                    // For now, let's play the item.trans (which we mapped to commonExample or def)
                     playTTS(currentItem.trans, DRIVE_VOICE_CONFIG.QUIZ_ANSWER);
-                }, 2500); // 2.5s Gap
+                }, 2500);
             } else if (playbackStage === 'meaning') {
-                // Meaning finished -> Next
                 next();
             }
         } else if (currentItem.mode === 'WASH') {
-            // WASH: 短语播放完后停顿 1 秒,让用户有时间吸收
             stageTimeoutRef.current = setTimeout(() => {
                 next();
             }, 1000);
         } else {
-            // STORY -> Next
             next();
         }
     };
@@ -247,9 +240,9 @@ export function DriveLayout({
 
     const next = () => {
         clearTimeout(stageTimeoutRef.current!);
-        setPlaybackStage('idle'); // Reset stage
-        setCurrentIndex((prev) => (prev + 1) % playlist.length);
-        setIsPlaying(true); // Ensure we keep playing
+        setPlaybackStage('idle');
+        setCurrentIndex((prev) => (prev + 1) % playlist.length); // 循环播放
+        setIsPlaying(true);
     };
 
     const prev = () => {
@@ -259,21 +252,37 @@ export function DriveLayout({
         setIsPlaying(true);
     };
 
+    const openModePicker = () => setPickerOpen(true);
+
     return (
         <DriveContext.Provider value={{
             playlist,
             currentIndex,
             isPlaying,
-            playbackStage, // Exposed for UI
+            playbackStage,
             duration: tts.duration,
             currentTime: tts.currentTime,
+            reviewMode,
+            batchSize,
+            isLoading,
             play, pause, next, prev,
-            seek: () => { } // TTS Seek not fully supported yet in this simplified hook usage
+            seek: () => { },
+            openModePicker,
         }}>
             <div className="relative w-full h-screen bg-background text-foreground overflow-hidden flex flex-col font-sans selection:bg-primary/30">
                 <DriveHeader />
                 <DriveMain />
                 <DriveControls />
+
+                {/* 模式选择 Drawer */}
+                <ReviewModePicker
+                    scene="drive"
+                    currentMode={reviewMode}
+                    currentBatchSize={batchSize}
+                    onSelect={handleModeChange}
+                    open={pickerOpen}
+                    onOpenChange={setPickerOpen}
+                />
             </div>
         </DriveContext.Provider>
     );

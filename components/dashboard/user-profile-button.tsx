@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { User } from "next-auth";
+import { Button } from "@/components/ui/button";
 
 interface UserProfileButtonProps {
     user?: User;
@@ -16,7 +17,7 @@ export function UserProfileButton({ user }: UserProfileButtonProps) {
 
     return (
         <Link href="/dashboard/profile">
-            <button className="group flex items-center justify-center rounded-full active:scale-95 transition-all duration-300">
+            <Button variant="ghost" size="icon" className="group rounded-full">
 
                 <div className="relative">
                     {/* Gradient Ring / Blur Effect */}
@@ -41,7 +42,7 @@ export function UserProfileButton({ user }: UserProfileButtonProps) {
                     {/* Status Dot (Optional - can signify notification or online status) */}
                     <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-zinc-900 rounded-full z-10"></div>
                 </div>
-            </button>
+            </Button>
         </Link>
     );
 }

@@ -51,6 +51,7 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
             <body
                 suppressHydrationWarning
+                style={{ backgroundColor: '#09090B' }}
                 className={cn(
                     "min-h-screen bg-background font-sans antialiased",
                     inter.variable,

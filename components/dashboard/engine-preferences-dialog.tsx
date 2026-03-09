@@ -7,6 +7,7 @@ import { getUserSettings, updateUserSettings, EnginePreferences } from "@/action
 import { SlidersHorizontal, Save, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // ─────────────────────────────────────
 // 策略选项定义
@@ -176,17 +177,11 @@ export function EnginePreferencesDialog({ open, onOpenChange }: EnginePreference
 
                 {/* ── Footer ── */}
                 <div className="p-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 flex justify-end">
-                    <button
+                    <Button
+                        variant="default"
                         disabled={isLoading || isSaving}
                         onClick={handleSave}
-                        className={cn(
-                            "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-bold transition-all h-10 px-6 w-full sm:w-auto",
-                            "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900",
-                            "shadow-[0_3px_0_theme(colors.zinc.950)] dark:shadow-[0_3px_0_theme(colors.zinc.300)]",
-                            "hover:bg-zinc-800 dark:hover:bg-zinc-100",
-                            "active:translate-y-[3px] active:shadow-none",
-                            "disabled:opacity-50 disabled:pointer-events-none",
-                        )}
+                        className="w-full sm:w-auto"
                     >
                         {isSaving ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -194,7 +189,7 @@ export function EnginePreferencesDialog({ open, onOpenChange }: EnginePreference
                             <Save className="w-4 h-4 opacity-60" />
                         )}
                         {isSaving ? "保存中..." : "应用调度偏好"}
-                    </button>
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>

@@ -3,11 +3,9 @@
 * 功能：
 *   获取极速跟读模式 (Phrase Blitz) 的复习队列
 * 逻辑：
-*   采用 "Smart Stream" 混合流 + "30/50/20" 协议 (Rescue/Review/New)
-*   1. Rescue Bucket (30% = 6): 救援队列 (Weak Syntax, V < 30)
-*   2. Review Bucket (50% = 10): 复习队列 (Memory Decay, Due Now)
-*   3. New Bucket (20% = 4): 新词队列 (Acquisition, Status=NEW)
-*   4. Waterfall Fill: 瀑布流填充与去重，不足时自动回填
+*   [V3] 迁移至 OMPS 统一选词引擎
+*   采用 OMPS_ARENA_CONFIG (30/50/20) 协议
+*   Phrase Mask 生成保留独立逻辑
 */
 'use server';
 
@@ -16,15 +14,11 @@ import { prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { ActionState } from '@/types/action';
 import { BlitzSessionData } from '@/lib/validations/blitz';
+import { fetchOMPSCandidates, OMPS_ARENA_CONFIG } from '@/lib/services/omps-core';
 import { redirect } from 'next/navigation';
 
 const log = createLogger('actions:get-blitz-session');
 
-// [Protocol Constants]
-// Total Batch Size = 20
-const RESCUE_COUNT = 6;  // 30%
-const REVIEW_COUNT = 10; // 50%
-const NEW_COUNT = 4;     // 20%
 const TOTAL_COUNT = 20;
 
 export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> {
@@ -35,115 +29,21 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
 
     try {
         const userId = session.user.id;
-        const now = new Date();
 
-        log.info({ userId }, 'Starting Daily Blitz Session Generation (30/50/20 Protocol)');
-
-        // ==========================================
-        // 1. Parallel Bucket Fetch
-        // ==========================================
-
-        const [rescueCandidates, reviewCandidates, newCandidates] = await Promise.all([
-            // Bucket A: Rescue (Weak Syntax)
-            prisma.userProgress.findMany({
-                where: {
-                    userId,
-                    track: { in: ['VISUAL', 'AUDIO', 'CONTEXT'] },
-                    status: { in: ['LEARNING', 'REVIEW'] },
-                    dim_v_score: { lt: 30 } // Logic: Rescue low syntax score
-                },
-                include: { vocab: { select: vocabSelector } },
-                orderBy: { vocab: { frequency_score: 'desc' } }, // High Value First
-                take: RESCUE_COUNT // Strict Cap
-            }),
-
-            // Bucket B: Review (Memory Decay)
-            prisma.userProgress.findMany({
-                where: {
-                    userId,
-                    track: { in: ['VISUAL', 'AUDIO', 'CONTEXT'] },
-                    status: { in: ['LEARNING', 'REVIEW'] },
-                    next_review_at: { lte: now }
-                },
-                include: { vocab: { select: vocabSelector } },
-                orderBy: { next_review_at: 'asc' }, // Most Urgent First
-                take: 20 // Fetch extra to handle overlaps
-            }),
-
-            // Bucket C: New (Acquisition)
-            prisma.userProgress.findMany({
-                where: {
-                    userId,
-                    status: 'NEW'
-                },
-                include: { vocab: { select: vocabSelector } },
-                orderBy: { vocab: { frequency_score: 'desc' } }, // High Value First
-                take: 10 // Fetch extra buffer
-            })
-        ]);
-
-        log.info({
-            rescueFound: rescueCandidates.length,
-            reviewFound: reviewCandidates.length,
-            newFound: newCandidates.length
-        }, 'Buckets fetched');
+        log.info({ userId }, 'Starting Blitz Session (OMPS V3 Arena Protocol)');
 
         // ==========================================
-        // 2. Waterfall Fill & Deduplication
+        // 1. OMPS 统一选词 (30/50/20)
         // ==========================================
+        const candidates = await fetchOMPSCandidates(
+            userId,
+            TOTAL_COUNT,
+            OMPS_ARENA_CONFIG,
+            [],
+            'BLITZ'
+        );
 
-        const finalSession: any[] = [];
-        const seenVocabIds = new Set<number>();
-
-        // Helper to add unique items (deduplicate by vocabId to prevent same word appearing twice)
-        const addItems = (items: any[], limit: number) => {
-            let addedCount = 0;
-            for (const item of items) {
-                if (addedCount >= limit) break;
-                // [Fix] Deduplicate by vocabId, not UserProgress.id
-                if (!seenVocabIds.has(item.vocabId)) {
-                    finalSession.push(item);
-                    seenVocabIds.add(item.vocabId);
-                    addedCount++;
-                }
-            }
-            return addedCount;
-        };
-
-        // Step 1: Fill Rescue (Target: 6)
-        const rescueCount = addItems(rescueCandidates, RESCUE_COUNT);
-
-        // Step 2: Fill Review (Target: 10)
-        // Note: Review items might duplicate Rescue items, 'seenIds' prevents this.
-        const reviewCount = addItems(reviewCandidates, REVIEW_COUNT);
-
-        // Step 3: Fill New (Target: 4)
-        const newCount = addItems(newCandidates, NEW_COUNT);
-
-        log.info({ rescueCount, reviewCount, newCount }, 'Initial Fill Complete');
-
-        // Step 4: Backfill (Ensure 20 items)
-        let needed = TOTAL_COUNT - finalSession.length;
-        if (needed > 0) {
-            log.info({ needed }, 'Performing Backfill');
-
-            // Priority 1: More Review
-            if (needed > 0) {
-                const extraReview = addItems(reviewCandidates, needed); // Add remaining unique review items
-                needed -= extraReview;
-            }
-
-            // Priority 2: More New
-            if (needed > 0) {
-                const extraNew = addItems(newCandidates, needed); // Add remaining unique new items
-                needed -= extraNew;
-            }
-
-            // Priority 3: (Future) Emergency Fetch from Global Vocab if still needed
-            // For MVP, we accept < 20 if user has no data
-        }
-
-        if (finalSession.length === 0) {
+        if (candidates.length === 0) {
             return {
                 status: 'success',
                 message: 'No items available for session',
@@ -151,22 +51,39 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
             };
         }
 
-        // ==========================================
-        // 3. Transform & Mask (Payload Generation)
-        // ==========================================
+        log.info({
+            total: candidates.length,
+            rescue: candidates.filter(c => c.source === 'rescue').length,
+            review: candidates.filter(c => c.source === 'review' || c.source === 'hot').length,
+            new: candidates.filter(c => c.source === 'new').length,
+        }, 'OMPS candidates received');
 
-        const items = finalSession.map(p => {
-            const word = p.vocab.word;
+        // ==========================================
+        // 2. 补充 collocations（OMPS 不返回此字段）
+        // ==========================================
+        const vocabIds = candidates.map(c => c.vocabId);
+        const vocabsWithCollocations = await prisma.vocab.findMany({
+            where: { id: { in: vocabIds } },
+            select: { id: true, collocations: true }
+        });
+        const collocMap = new Map(vocabsWithCollocations.map(v => [v.id, v.collocations]));
+
+        // ==========================================
+        // 3. Transform & Mask (Phrase 生成)
+        // ==========================================
+        const items = candidates.map(c => {
+            const word = c.word;
             let collocations: any[] = [];
 
-            if (Array.isArray(p.vocab.collocations)) {
-                collocations = p.vocab.collocations;
+            const rawColloc = collocMap.get(c.vocabId);
+            if (Array.isArray(rawColloc)) {
+                collocations = rawColloc;
             }
 
             // Fallback Logic
             let chosenPhrase = {
                 text: word,
-                trans: p.vocab.definition_cn || '暂无释义'
+                trans: c.definition_cn || '暂无释义'
             };
 
             if (collocations.length > 0) {
@@ -182,16 +99,15 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
 
             // Generate Mask (Case Insensitive, Word Boundary)
             const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // We use \b boundary to prevent partial matches like "lead" inside "leadership"
             const maskRegex = new RegExp(`\\b${escapedWord}(?:s|es|d|ed|ing)?\\b`, 'gi');
             const maskedText = chosenPhrase.text.replace(maskRegex, '_______');
 
             return {
-                id: p.id,
-                vocabId: p.vocab.id,
+                id: `blitz-${c.vocabId}`,
+                vocabId: c.vocabId,
                 word: word,
-                frequency_score: p.vocab.frequency_score,
-                track: p.track, // [NEW] Pass source track for FSRS persistence
+                frequency_score: c.frequency_score,
+                track: 'VISUAL' as const,
                 context: {
                     text: chosenPhrase.text,
                     maskedText: maskedText,
@@ -200,7 +116,7 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
             };
         });
 
-        // Final Shuffle (so user doesn't feel the buckets)
+        // Final Shuffle
         const shuffledItems = items.sort(() => Math.random() - 0.5);
 
         log.info({ totalItems: shuffledItems.length }, 'Session Generated Successfully');
@@ -222,12 +138,3 @@ export async function getBlitzSession(): Promise<ActionState<BlitzSessionData>> 
         };
     }
 }
-
-// Projection Helper
-const vocabSelector = {
-    id: true,
-    word: true,
-    frequency_score: true,
-    collocations: true,
-    definition_cn: true,
-};

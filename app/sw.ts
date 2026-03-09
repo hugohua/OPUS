@@ -30,8 +30,8 @@ const serwist = new Serwist({
     skipWaiting: true,
     // 新 SW 激活后立即接管所有页面
     clientsClaim: true,
-    // 启用 Next.js App Router 的导航预加载
-    navigationPreload: true,
+    // iOS Safari 不支持 Navigation Preload API，开启会增加 SW 冷启动开销但无实际收益
+    navigationPreload: false,
     // 运行时缓存策略（使用 Serwist 默认策略，已排除 API 路由）
     runtimeCaching: defaultCache,
 });

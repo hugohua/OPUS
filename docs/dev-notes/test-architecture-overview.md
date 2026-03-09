@@ -21,7 +21,7 @@
 
 | 类别 | 数量 | 位置 |
 |------|------|------|
-| **Vitest Unit Tests** | 24 | `*/__tests__/*.test.ts(x)` |
+| **Vitest Unit Tests** | 27 | `*/__tests__/*.test.ts(x)` |
 | **Hurl API Tests** | 5 | `tests/l{1,2}-*.hurl` |
 | **手动测试脚本** | 8 | `scripts/test-*.ts` |
 | **LLM 评估脚本** | 2 | `scripts/eval*.ts` |
@@ -73,9 +73,12 @@
 ├─────────────────────────────────────────────────────────────────────┤
 │  ✅ OMPS 选词引擎          │  lib/services/__tests__/omps-core.test.ts │
 │     - 70/30 配比 (Review/New)                                       │
+│     - 30/50/20 Arena (Rescue/Review/New) [V3]                       │
 │     - 分层采样 (2简单 + 6核心 + 2困难)                                │
 │     - excludeIds 过滤                                                │
 │     - posFilter 词性过滤                                             │
+│     - Rescue Queue + source 标记 [V3]                                │
+│     - 协议预设 (Dojo/Arena) [V3]                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ✅ 多轨隔离               │  actions/__tests__/multi-track.test.ts    │
 │     - Track Isolation (VISUAL vs AUDIO)                              │
@@ -151,7 +154,6 @@
 │                        OTHER MODULES                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ✅ Phrase Mode Algorithm  │  lib/algorithm/__tests__/phrase-mode.test.ts │
-│  ✅ Hybrid Selector        │  lib/engine/__tests__/hybrid-selector.test.ts │
 │  ✅ Inventory Queue        │  lib/queue/__tests__/inventory-queue.test.ts │
 │  ✅ Word Selection Service │  lib/services/__tests__/WordSelectionService.test.ts │
 │  ✅ Article Action         │  actions/__tests__/article.test.ts         │

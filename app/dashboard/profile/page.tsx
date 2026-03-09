@@ -19,6 +19,7 @@ import { MultiTrackOverview } from "@/components/profile/multi-track-overview";
 import { ArenaSummary } from "@/components/profile/arena-summary";
 import { GlobalHeader } from "@/components/ui/global-header";
 import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
+import { Button } from "@/components/ui/button";
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
@@ -228,10 +229,10 @@ export default async function ProfilePage() {
                             await signOut({ redirectTo: "/login" });
                         }}
                     >
-                        <button className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-rose-100/50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200/50 dark:hover:bg-rose-500/20 transition-all active:scale-[0.98]">
+                        <Button variant="destructive" className="w-full">
                             <LogOut className="w-4 h-4" />
                             <span className="text-xs font-bold">退出登录</span>
-                        </button>
+                        </Button>
                     </form>
 
                     <div className="mt-6 flex gap-4 justify-center">

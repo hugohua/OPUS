@@ -125,6 +125,24 @@ const drillMap = await inventory.popDrillBatch(userId, scenarioGroups);
 ---
 
 **相关文档**:
-- [OMPS 选词引擎](./omps-word-selection-engine.md)
+- [OMPS 选词引擎 V3](./omps-word-selection-engine.md) — 统一选词引擎（含 Arena 30/50/20 协议）
 - [Redis Inventory Schema](./redis-inventory-schema.md)
 - [Phase 2 架构总结](./phase2-architecture-summary.md)
+
+---
+
+## 9. Arena 协议 (V3 补充)
+
+混合模式使用 **Dojo 协议** (70/30)，而 Blitz 和 Arena 场景使用 **Arena 协议** (30/50/20)。
+两者均由同一个 OMPS 引擎 (`fetchOMPSCandidates`) 驱动，通过传入不同的 `OMPSConfig` 切换：
+
+```typescript
+// 混合模式 (L0/L1/L2) — 默认 Dojo
+await fetchOMPSCandidates(userId, 10, {}, [], mode);
+
+// Blitz 使用 Arena
+import { OMPS_ARENA_CONFIG } from '@/lib/services/omps-core';
+await fetchOMPSCandidates(userId, 20, OMPS_ARENA_CONFIG, [], 'BLITZ');
+```
+
+> 详见 [OMPS 选词引擎 V3 — §2 协议预设](./omps-word-selection-engine.md#2-协议预设-protocol-presets)

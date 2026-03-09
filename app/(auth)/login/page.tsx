@@ -89,7 +89,7 @@ export default function LoginPage() {
                     )}
                 </div>
 
-                <Button type="submit" className="w-full mt-6" disabled={isPending}>
+                <Button variant="brand" type="submit" className="w-full mt-6" disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "验证身份"}
                 </Button>
 

@@ -61,19 +61,20 @@ export const DRIVE_VOICE_SPEED_PRESETS: Record<DashScopeVoice, number> = {
 };
 
 // ------------------------------------------------------------------
-// Multi-Track & Pagination Types (V2)
+// Multi-Track & Mode Types (V3)
 // ------------------------------------------------------------------
+import { ReviewModeId, BatchSize } from './review-modes';
+
 export type DriveTrack = 'VISUAL' | 'AUDIO' | 'CONTEXT';
 
 export interface DrivePlaylistResponse {
     items: DriveItem[];
-    nextCursor: number | null;
-    hasMore: boolean;
     track: DriveTrack;
+    mode: ReviewModeId;
 }
 
 export interface DrivePlaylistOptions {
     track?: DriveTrack;
-    cursor?: number;
-    pageSize?: number;
+    mode?: ReviewModeId;
+    batchSize?: BatchSize;
 }

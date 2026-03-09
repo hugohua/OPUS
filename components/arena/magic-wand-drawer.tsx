@@ -4,6 +4,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Sparkles, X, BookOpen, AlertCircle, Lightbulb, Loader2, Target, Bone, Wand2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef } from "react";
 import { fetchMiniLesson, type MiniLessonData } from "@/actions/mini-lesson";
 
@@ -89,9 +90,9 @@ export function MagicWandDrawer({
                                 </>
                             )}
                         </h3>
-                        <button onClick={() => onOpenChange(false)} className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
+                        <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} className="rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-100">
                             <X className="w-4 h-4" />
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
@@ -202,9 +203,9 @@ export function MagicWandDrawer({
 
                 {/* Footer */}
                 <div className="flex-none p-6 pt-2 bg-background border-t border-border">
-                    <button onClick={() => onOpenChange(false)} className="w-full inline-flex items-center justify-center rounded-lg text-sm font-bold transition-colors h-12 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-md active:scale-[0.98]">
+                    <Button onClick={() => onOpenChange(false)} className="w-full">
                         继续刷题
-                    </button>
+                    </Button>
                 </div>
             </DrawerContent>
         </Drawer>

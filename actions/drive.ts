@@ -1,9 +1,20 @@
 'use server';
 
+/**
+ * Drive 播放列表 Server Action (V3)
+ * 
+ * V3 变更：
+ *   - 支持 5 种复习模式 (ReviewModeId)，通过 slots 比例动态分配各队列数量
+ *   - 支持 batchSize 选词数量 (30/50/100)
+ *   - 移除分页逻辑 (cursor/hasMore)，一次性加载后循环播放
+ *   - 所有数据源随机化，避免每次听到相同内容
+ */
+
 import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
+import { getStratifiedNewWords } from '@/lib/services/omps-core';
 
 const log = createLogger('actions:drive');
 
@@ -19,10 +30,15 @@ import {
     DRIVE_VOICE_CONFIG,
     DRIVE_VOICE_SPEED_PRESETS
 } from '@/lib/constants/drive';
+import {
+    ReviewModeId,
+    BatchSize,
+    REVIEW_MODES,
+    DEFAULT_BATCH_SIZE
+} from '@/lib/constants/review-modes';
 
 // ------------------------------------------------------------------
-// Algorithm: Sandwich (Warmup -> Review -> Break)
-// V2: 支持多轨道 + Cursor-based 分页
+// 主入口: 生成播放列表 (V3 - 模式 + 数量驱动)
 // ------------------------------------------------------------------
 export async function generateDrivePlaylist(
     options: DrivePlaylistOptions = {}
@@ -35,60 +51,80 @@ export async function generateDrivePlaylist(
 
     // 解构参数，设置默认值
     const track: DriveTrack = options.track || 'VISUAL';
-    const cursor = options.cursor || 0;
-    const pageSize = options.pageSize || 15;
+    const mode: ReviewModeId = options.mode || 'SANDWICH';
+    const batchSize: number = options.batchSize || DEFAULT_BATCH_SIZE;
+    const config = REVIEW_MODES[mode];
 
-    log.info({ userId, track, cursor, pageSize }, 'Generating playlist V2');
+    // 根据 slots 比例计算各队列数量（最大槽位用减法兜底，防止 Math.round 总和漂移）
+    const warmupCount = Math.round(batchSize * config.slots.warmup);
+    const weakCount = Math.round(batchSize * config.slots.weak);
+    const newWordCount = Math.round(batchSize * config.slots.newWord);
+    const phraseCount = Math.round(batchSize * config.slots.phrase);
+    const reviewCount = batchSize - warmupCount - weakCount - newWordCount - phraseCount;
+
+    log.info({ userId, track, mode, batchSize, warmupCount, reviewCount, weakCount, newWordCount, phraseCount }, 'Generating playlist V3');
 
     // ✅ Transaction: 确保所有查询在同一快照下执行
-    const [warmupItems, reviewItems, breakItems, totalCount] = await db.$transaction(async (tx) => {
-        // 获取总数用于判断 hasMore
-        const total = await tx.userProgress.count({
-            where: { userId, track }
-        });
+    const fetchResults = await db.$transaction(async (tx) => {
+        const results: DriveItem[] = [];
+        const seenVocabIds = new Set<number>();
 
-        return await Promise.all([
-            fetchWarmupItems(userId, 3, track, tx),
-            fetchReviewItems(userId, pageSize - 5, track, tx, cursor), // Review 承担主要分页
-            fetchBreakChunks(userId, 2, tx),
-            Promise.resolve(total)
-        ]);
+        // 1. Warmup (高稳定度暖身词)
+        if (warmupCount > 0) {
+            const items = await fetchWarmupItems(userId, warmupCount, track, tx);
+            for (const item of items) {
+                const vid = parseInt(item.id);
+                if (!isNaN(vid)) seenVocabIds.add(vid);
+            }
+            results.push(...items);
+        }
+
+        // 2. Review (SRS 到期复习词)
+        if (reviewCount > 0) {
+            const items = await fetchReviewItems(userId, reviewCount, track, tx, seenVocabIds);
+            for (const item of items) {
+                const vid = parseInt(item.id);
+                if (!isNaN(vid)) seenVocabIds.add(vid);
+            }
+            results.push(...items);
+        }
+
+        // 3. Weak (低稳定度薄弱词)
+        if (weakCount > 0) {
+            const items = await fetchWeakItems(userId, weakCount, track, tx, seenVocabIds);
+            for (const item of items) {
+                const vid = parseInt(item.id);
+                if (!isNaN(vid)) seenVocabIds.add(vid);
+            }
+            results.push(...items);
+        }
+
+        // 4. New Words (未学新词 - 仅曝光)
+        if (newWordCount > 0) {
+            const items = await fetchNewWords(userId, newWordCount, tx, seenVocabIds);
+            results.push(...items);
+        }
+
+        // 5. Phrases (搭配短语)
+        if (phraseCount > 0) {
+            const items = await fetchBreakChunks(userId, phraseCount, tx);
+            results.push(...items);
+        }
+
+        return results;
     });
 
-    // 组装 Playlist
-    const rawPlaylist: DriveItem[] = [
-        ...warmupItems,
-        ...reviewItems,
-        ...breakItems
-    ];
-
-    // DJ Shuffle (场景聚类 + 难度穿插)
-    const items = opusDjShuffle(rawPlaylist);
-
-    // 计算分页元数据
-    // ⚠️ 注意: hasMore 是基于 track 总记录数的近似估算
-    // 实际可用词可能因 stability/due 过滤而更少，但这个估算足够用于 UI 决策
-    const nextCursor = cursor + reviewItems.length;
-    const hasMore = nextCursor < totalCount;
+    // DJ Shuffle (难度穿插)
+    const items = opusDjShuffle(fetchResults);
 
     log.info({
         total: items.length,
-        warmup: warmupItems.length,
-        review: reviewItems.length,
-        break: breakItems.length,
+        mode,
+        batchSize,
         track,
-        cursor,
-        nextCursor: hasMore ? nextCursor : null,
-        hasMore,
-        totalInTrack: totalCount
-    }, 'Generated playlist V2');
+    }, 'Generated playlist V3');
 
-    return {
-        items,
-        nextCursor: hasMore ? nextCursor : null,
-        hasMore,
-        track
-    };
+    return { items, track, mode };
 }
 
 // ------------------------------------------------------------------
@@ -96,10 +132,8 @@ export async function generateDrivePlaylist(
 // ------------------------------------------------------------------
 
 /**
- * 🥪 Warmup: 3 High Stability Words (Stability > 20)
- * Mode: QUIZ (Relaxed? Or just simple?)
- * Requirement: "Easy Words", build confidence.
- * Logic: Stability desc.
+ * 🥪 Warmup: 高稳定度暖身词
+ * 从稳定度最高的池子中随机采样，建立信心
  */
 async function fetchWarmupItems(
     userId: string,
@@ -107,92 +141,193 @@ async function fetchWarmupItems(
     track: DriveTrack,
     client: Prisma.TransactionClient | typeof db = db
 ): Promise<DriveItem[]> {
+    // 扩大候选池，再随机采样
+    const poolSize = Math.max(limit * 5, 30);
     const records = await client.userProgress.findMany({
         where: {
             userId,
             track,
-            stability: { gt: 1 }, // ✅ 降低门槛,使用相对排序
+            stability: { gt: 1 },
         },
         include: { vocab: true },
-        orderBy: { stability: 'desc' }, // 最稳定的优先
-        take: limit * 2, // 取 2 倍,确保有足够数据
+        orderBy: { stability: 'desc' },
+        take: poolSize,
     });
 
-    // ✅ Fail-Safe: 如果没有 stability > 1 的记录,降级为任何已复习的词
+    // ✅ Fail-Safe: 如果没有 stability > 1 的记录，降级为任何已复习的词
     if (records.length === 0) {
         log.warn({ track }, 'No stability > 1 records, falling back to any reviewed words');
         const fallback = await client.userProgress.findMany({
             where: {
                 userId,
                 track,
-                status: { not: 'NEW' } // 任何非新词
+                status: { not: 'NEW' }
             },
             include: { vocab: true },
             orderBy: { last_review_at: 'desc' },
             take: limit
         });
 
-        return fallback.map(r => ({
+        return shuffleArray(fallback).slice(0, limit).map(r => ({
             ...mapToDriveItem(r.vocab, 'QUIZ', 'warmup'),
-            stability: r.stability || 0.1 // 兆底默认值
+            stability: r.stability || 0.1
         }));
     }
 
-    // 传递真实 stability 值
-    return records.slice(0, limit).map(r => ({
+    // 随机采样
+    return shuffleArray(records).slice(0, limit).map(r => ({
         ...mapToDriveItem(r.vocab, 'QUIZ', 'warmup'),
-        stability: r.stability // ✅ 传入真实 stability
+        stability: r.stability
     }));
 }
 
+/**
+ * 📚 Review: SRS 到期复习词
+ * 严格按到期时间排序（这是正确的 SRS 行为），fallback 加随机偏移
+ */
 async function fetchReviewItems(
     userId: string,
     limit: number,
     track: DriveTrack,
     client: Prisma.TransactionClient | typeof db = db,
-    skipCount: number = 0
+    excludeIds: Set<number> = new Set()
 ): Promise<DriveItem[]> {
+    const excludeArray = Array.from(excludeIds);
+
     const records = await client.userProgress.findMany({
         where: {
             userId,
             track,
-            next_review_at: { lte: new Date() }, // Due
+            next_review_at: { lte: new Date() },
+            ...(excludeArray.length > 0 ? { vocabId: { notIn: excludeArray } } : {}),
         },
         include: { vocab: true },
-        orderBy: { next_review_at: 'asc' }, // Overdue first
-        skip: skipCount,
+        orderBy: { next_review_at: 'asc' },
         take: limit,
     });
 
-    // Fallback: If no due reviews, pick Review/Mastered items
+    // Fallback: 到期词不够时，从 REVIEW/MASTERED 中随机补齐
     if (records.length < limit) {
         const needed = limit - records.length;
+        const existingIds = [...excludeArray, ...records.map(r => r.vocabId)];
+
+        // 统计可补齐的总量，用于随机偏移
+        const pool = await client.userProgress.count({
+            where: {
+                userId,
+                track,
+                status: { in: ['REVIEW', 'MASTERED'] },
+                vocabId: { notIn: existingIds }
+            }
+        });
+        const maxSkip = Math.max(0, pool - needed);
+        const randomSkip = Math.floor(Math.random() * (maxSkip + 1));
+
         const extra = await client.userProgress.findMany({
             where: {
                 userId,
                 track,
-                status: { in: ['REVIEW', 'MASTERED'] }, // No NEW
-                id: { notIn: records.map(r => r.id) }
+                status: { in: ['REVIEW', 'MASTERED'] },
+                vocabId: { notIn: existingIds }
             },
             include: { vocab: true },
             orderBy: { next_review_at: 'asc' },
+            skip: randomSkip,
             take: needed
         });
         records.push(...extra);
     }
 
-    // ✅ 传递真实 stability 值
     return records.map(r => ({
         ...mapToDriveItem(r.vocab, 'QUIZ', 'review'),
-        stability: r.stability // ✅ 关键修复
+        stability: r.stability
     }));
 }
 
+/**
+ * 🔧 Weak: 低稳定度薄弱词 (WEAK_REPAIR 模式专用)
+ * 按 stability ASC 排序，优先修复最弱的词
+ */
+async function fetchWeakItems(
+    userId: string,
+    limit: number,
+    track: DriveTrack,
+    client: Prisma.TransactionClient | typeof db = db,
+    excludeIds: Set<number> = new Set()
+): Promise<DriveItem[]> {
+    const excludeArray = Array.from(excludeIds);
+
+    const records = await client.userProgress.findMany({
+        where: {
+            userId,
+            track,
+            status: { not: 'NEW' },
+            ...(excludeArray.length > 0 ? { vocabId: { notIn: excludeArray } } : {}),
+        },
+        include: { vocab: true },
+        orderBy: { stability: 'asc' }, // 最弱的优先
+        take: limit,
+    });
+
+    return records.map(r => ({
+        ...mapToDriveItem(r.vocab, 'QUIZ', 'review'),
+        stability: r.stability
+    }));
+}
+
+/**
+ * 🆕 New Words: 未学新词 (DISCOVERY 模式曝光用)
+ * [V3] 复用 OMPS getStratifiedNewWords 分层采样
+ * ⚠️ 仅曝光，不会修改 FSRS 状态
+ */
+async function fetchNewWords(
+    userId: string,
+    limit: number,
+    client: Prisma.TransactionClient | typeof db = db,
+    excludeIds: Set<number> = new Set()
+): Promise<DriveItem[]> {
+    try {
+        const candidates = await getStratifiedNewWords(
+            userId,
+            limit,
+            Array.from(excludeIds)
+        );
+
+        return candidates.map(c => ({
+            ...mapToDriveItem({
+                id: c.vocabId,
+                word: c.word,
+                definition_cn: c.definition_cn,
+                phoneticUs: c.phoneticUs || null,
+                commonExample: c.commonExample,
+                scenarios: [],
+                frequency_score: c.frequency_score,
+            } as any, 'QUIZ', 'review'),
+            stability: 0 // 新词无稳定度
+        }));
+    } catch (e) {
+        log.error({ error: e }, 'Failed to fetch new words for DISCOVERY mode');
+        return [];
+    }
+}
+
+/**
+ * ☕ Break Chunks: 搭配短语
+ * 使用随机偏移避免每次取到相同的 top-N
+ */
 async function fetchBreakChunks(
     userId: string,
     limit: number,
     client: Prisma.TransactionClient | typeof db = db
 ): Promise<DriveItem[]> {
+    // 统计总量，用于随机偏移
+    const totalWithCollocations = await client.vocab.count({
+        where: { collocations: { not: Prisma.DbNull } }
+    });
+    const sampleSize = Math.min(20, totalWithCollocations);
+    const maxSkip = Math.max(0, totalWithCollocations - sampleSize);
+    const randomSkip = Math.floor(Math.random() * (maxSkip + 1));
+
     const vocabs = await client.vocab.findMany({
         where: {
             collocations: { not: Prisma.DbNull }
@@ -203,10 +338,11 @@ async function fetchBreakChunks(
             word: true,
             phoneticUs: true,
             definition_cn: true,
-            scenarios: true // ✅ 添加 scenarios 字段
+            scenarios: true
         },
-        take: 20, // Sample size
-        orderBy: { frequency_score: 'desc' } // Prefer high-frequency words
+        skip: randomSkip,
+        take: sampleSize,
+        orderBy: { frequency_score: 'desc' }
     });
 
     if (vocabs.length === 0) {
@@ -214,18 +350,15 @@ async function fetchBreakChunks(
         return [];
     }
 
-    const chunks: DriveItem[] = [];
-
-    // Flatten collocations
+    // 收集所有合法搭配，再随机采样
+    const allChunks: DriveItem[] = [];
     for (const v of vocabs) {
         if (!v.collocations || !Array.isArray(v.collocations)) continue;
 
         const validCols = (v.collocations as any[]).filter((c: any) => c.text && c.text.split(' ').length > 1);
 
         for (const col of validCols) {
-            if (chunks.length >= limit) break;
-
-            chunks.push({
+            allChunks.push({
                 id: `chunk-${v.id}-${Math.random()}`,
                 text: col.text,
                 trans: col.trans || v.definition_cn || '',
@@ -234,58 +367,45 @@ async function fetchBreakChunks(
                 pos: 'phrase',
                 meaning: v.definition_cn || '',
                 scenarios: v.scenarios,
-                stability: undefined, // WASH mode: no FSRS tracking
+                stability: undefined,
                 mode: 'WASH',
                 voice: DRIVE_VOICE_CONFIG.WASH_PHRASE,
-                speed: DRIVE_VOICE_SPEED_PRESETS[DRIVE_VOICE_CONFIG.WASH_PHRASE] || 1.0 // ✅ 应用语速校准
+                speed: DRIVE_VOICE_SPEED_PRESETS[DRIVE_VOICE_CONFIG.WASH_PHRASE] || 1.0
             });
         }
-        if (chunks.length >= limit) break;
     }
 
-    log.debug({ count: chunks.length }, 'Fetched break chunks');
-    return chunks;
+    // 随机采样 limit 个
+    return shuffleArray(allChunks).slice(0, limit);
 }
 
 // ------------------------------------------------------------------
 // Mapper
 // ------------------------------------------------------------------
 function mapToDriveItem(v: any, mode: DriveMode, context: 'warmup' | 'review'): DriveItem {
-    // Voice Strategy:
-    // - Warmup: Ethan (阳光活力,建立信心)
-    // - Review: Kai (磁性舒缓,适合专注)
-    // Frontend will override for Quiz Answer stage (Serena温柔)
-
     return {
         id: v.id.toString(),
         text: v.word,
-        trans: v.commonExample || v.definition_cn || 'No translation',
+        trans: v.commonExample || v.definition_cn || '暂无翻译',
         phonetic: v.phoneticUs || v.phoneticUk || '',
         word: v.word,
         pos: v.partOfSpeech || 'n.',
         meaning: v.definition_cn || '',
         scenarios: v.scenarios,
-        stability: undefined, // Will be populated from UserProgress if needed
+        stability: undefined,
         mode: mode,
         voice: context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION,
-        speed: DRIVE_VOICE_SPEED_PRESETS[context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION] || 1.0 // ✅ 应用语速校准
+        speed: DRIVE_VOICE_SPEED_PRESETS[context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION] || 1.0
     };
 }
 
 // ------------------------------------------------------------------
 // Opus DJ Shuffle Algorithm
-// 场景聚类 + 难度穿插
+// 难度穿插，避免认知干扰
 // ------------------------------------------------------------------
-
-/**
- * Opus DJ Shuffle: 优化播放顺序,避免认知干扰
- * 策略:
- * 1. 难度穿插 - Easy-Hard-Hard-Easy-Chunk 模式,防止疲劳
- */
 function opusDjShuffle(items: DriveItem[]): DriveItem[] {
     if (items.length === 0) return items;
 
-    // Step 1: 按难度分层
     const easy = items.filter(i => (i.stability || 0) > 10 && i.mode === 'QUIZ');
     const hard = items.filter(i => (i.stability || 0) <= 10 && i.mode === 'QUIZ');
     const chunks = items.filter(i => i.mode === 'WASH');
@@ -293,7 +413,7 @@ function opusDjShuffle(items: DriveItem[]): DriveItem[] {
 
     log.debug({ easy: easy.length, hard: hard.length, chunks: chunks.length, story: story.length }, 'DJ Shuffle layering');
 
-    // Step 2: 难度穿插 (三明治模式: E-H-H-E-C)
+    // 难度穿插 (三明治模式: E-H-H-E-C)
     const result: DriveItem[] = [];
 
     while (easy.length || hard.length || chunks.length || story.length) {
@@ -301,10 +421,24 @@ function opusDjShuffle(items: DriveItem[]): DriveItem[] {
         if (hard.length) result.push(hard.shift()!);
         if (hard.length) result.push(hard.shift()!);
         if (easy.length) result.push(easy.shift()!);
-        if (chunks.length) result.push(chunks.shift()!); // Chunk 作为休息
+        if (chunks.length) result.push(chunks.shift()!);
         if (story.length) result.push(story.shift()!);
     }
 
     log.debug({ count: result.length }, 'DJ Shuffle result');
     return result;
+}
+
+// ------------------------------------------------------------------
+// Utils
+// ------------------------------------------------------------------
+
+/** Fisher-Yates 洗牌算法 */
+function shuffleArray<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
 }
