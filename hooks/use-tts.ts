@@ -19,6 +19,7 @@ export function useTTS() {
         error: null,
         duration: 0,
         currentTime: 0,
+        isCached: undefined,
     });
 
     const currentHashRef = useRef<string | null>(null);
@@ -56,7 +57,8 @@ export function useTTS() {
         setState((prev) => ({
             ...prev,
             status: "idle",
-            currentTime: 0
+            currentTime: 0,
+            isCached: undefined
         }));
     }, []);
 
@@ -74,7 +76,8 @@ export function useTTS() {
         currentHashRef.current = hash;
         abortControllerRef.current = new AbortController();
 
-        setState((prev) => ({ ...prev, status: "loading", error: null }));
+        const isMemoryCached = ttsMemoryCache.has(hash);
+        setState((prev) => ({ ...prev, status: "loading", error: null, isCached: isMemoryCached ? true : undefined }));
 
         try {
             let audioUrl = ttsMemoryCache.get(hash);
@@ -101,6 +104,10 @@ export function useTTS() {
 
                 audioUrl = data.url;
                 ttsMemoryCache.set(hash, audioUrl);
+
+                if (currentHashRef.current === hash) {
+                    setState((prev) => ({ ...prev, isCached: !!data.cached }));
+                }
             }
 
             // Check if we aborted while fetching (e.g. user clicked Next)

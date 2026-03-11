@@ -63,10 +63,14 @@ def split_text(text: str, max_length: int = 500) -> list:
 
 async def save_audio_file(pcm_data: bytearray, text: str, voice: str, language: str):
     """
-    将 PCM 数据保存为 WAV 文件 (Stream-and-Save 策略)
+    将音频数据保存为 WAV 文件 (Stream-and-Save 策略)
+    
+    注意: DashScope 返回的 base64 chunk 解码后可能已经是完整 WAV 数据(带 RIFF 头)。
+    如果直接用 wave.open 再包装一次，会产生双重 RIFF 头，
+    导致第二个 RIFF 头字节被当做 PCM 采样播放，出现开头"哔"声杂音。
     
     参数:
-        pcm_data: 原始 PCM 音频数据
+        pcm_data: 音频数据 (可能是裸 PCM 或已带 WAV 头)
         text: 原始文本
         voice: 音色
         language: 语言
@@ -88,14 +92,20 @@ async def save_audio_file(pcm_data: bytearray, text: str, voice: str, language: 
             logger.info("ws_audio_cache_exists", hash=audio_hash)
             return
         
-        # 写入 WAV 文件
-        with wave.open(str(file_path), 'wb') as wav_file:
-            wav_file.setnchannels(1)       # 单声道
-            wav_file.setsampwidth(2)       # 16-bit
-            wav_file.setframerate(24000)   # 阿里云 TTS 采样率
-            wav_file.writeframes(bytes(pcm_data))
-        
-        logger.info("ws_audio_saved", hash=audio_hash, size=len(pcm_data))
+        # 检测数据是否已经带有 WAV (RIFF) 头
+        if bytes(pcm_data[:4]) == b'RIFF' and bytes(pcm_data[8:12]) == b'WAVE':
+            # 数据已是完整 WAV，直接写入，避免双重头
+            with open(str(file_path), 'wb') as f:
+                f.write(bytes(pcm_data))
+            logger.info("ws_audio_saved", hash=audio_hash, size=len(pcm_data), format="wav_passthrough")
+        else:
+            # 裸 PCM 数据，需要包装 WAV 头
+            with wave.open(str(file_path), 'wb') as wav_file:
+                wav_file.setnchannels(1)       # 单声道
+                wav_file.setsampwidth(2)       # 16-bit
+                wav_file.setframerate(24000)   # 阿里云 TTS 采样率
+                wav_file.writeframes(bytes(pcm_data))
+            logger.info("ws_audio_saved", hash=audio_hash, size=len(pcm_data), format="pcm_wrapped")
             
     except Exception as e:
         logger.error("ws_audio_save_failed", error=str(e))

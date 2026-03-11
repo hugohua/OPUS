@@ -35,6 +35,7 @@ interface DriveContextType {
     reviewMode: ReviewModeId;
     batchSize: BatchSize;
     isLoading: boolean;
+    ttsIsCached?: boolean;
     play: () => void;
     pause: () => void;
     next: () => void;
@@ -265,6 +266,7 @@ export function DriveLayout({
             reviewMode,
             batchSize,
             isLoading,
+            ttsIsCached: tts.isCached,
             play, pause, next, prev,
             seek: () => { },
             openModePicker,

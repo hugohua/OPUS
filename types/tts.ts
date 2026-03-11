@@ -23,4 +23,5 @@ export interface TTSState {
     error: string | null;
     duration: number; // 秒
     currentTime: number; // 秒
+    isCached?: boolean; // 新增：是否命中缓存
 }

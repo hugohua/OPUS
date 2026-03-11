@@ -5,13 +5,24 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export function DriveMain() {
-    const { playlist, currentIndex, playbackStage } = useDrive();
+    const { playlist, currentIndex, playbackStage, ttsIsCached } = useDrive();
     const currentItem = playlist[currentIndex];
 
     if (!currentItem) return null;
 
     return (
-        <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 pb-20 select-none">
+        <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 pb-72 select-none">
+            {/* Audio Cache Indicator */}
+            {typeof ttsIsCached === 'boolean' && (
+                <div
+                    className={cn(
+                        "absolute top-6 right-8 w-2 h-2 rounded-full transition-colors duration-500",
+                        ttsIsCached ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                    )}
+                    title={ttsIsCached ? "Audio Cached" : "Audio Generated"}
+                />
+            )}
+
             <AnimatePresence mode="wait">
                 <motion.div
                     key={currentItem.id}
@@ -19,7 +30,7 @@ export function DriveMain() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 1.05, y: -10 }}
                     transition={{ duration: 0.4 }}
-                    className="flex flex-col items-center gap-8 w-full max-w-5xl"
+                    className="flex flex-col items-center gap-3 w-full max-w-5xl"
                 >
                     {/* ENGLISH TEXT */}
                     <h1 className="text-[5vh] md:text-[7vh] leading-[1.1] font-bold text-foreground mx-auto text-balance drop-shadow-md">
@@ -52,7 +63,7 @@ export function DriveMain() {
                             y: 0
                         }}
                         transition={{ delay: 0.2, duration: 0.5 }}
-                        className="mt-4"
+                        className="mt-2"
                     >
                         <p className="text-[3vh] md:text-[3.5vh] font-medium text-muted-foreground leading-relaxed">
                             {currentItem.trans}
@@ -60,14 +71,14 @@ export function DriveMain() {
                     </motion.div>
 
                     {/* DIVIDER */}
-                    <div className="w-16 h-1 bg-border rounded-full my-6 opacity-50"></div>
+                    <div className="w-16 h-1 bg-border rounded-full my-4 opacity-50"></div>
 
                     {/* METADATA (Phonetic / Word Meaning) */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4, duration: 0.5 }}
-                        className="flex items-center gap-6 mt-6"
+                        className="flex items-center gap-6 mt-2"
                     >
                         {/* Word Info (Left) */}
                         <div className="flex flex-col items-end">

@@ -4,7 +4,7 @@ Edge-TTS 离线批量语音生成脚本 (Batch Edge-TTS Generator)
 
 功能:
     利用微软免费 Edge-TTS 引擎离线批量生成英语发音音频。
-    生成的 .wav 文件通过 MD5 Hash 命名，与前端 lib/tts/hash.ts 完全一致，
+    生成的 .mp3 文件通过 MD5 Hash 命名，与前端 lib/tts/hash.ts 完全一致，
     实现无缝缓存命中。同时自动 UPSERT 写入 PostgreSQL TTSCache 表。
 
 依赖安装:
@@ -36,7 +36,7 @@ Edge-TTS 离线批量语音生成脚本 (Batch Edge-TTS Generator)
     --concurrency   并发数 (默认: 3, 建议不超过 5)
 
 断点续传:
-    脚本支持天然断点续传。中断后重跑同一命令，会自动跳过已存在的 .wav 文件。
+    脚本支持天然断点续传。中断后重跑同一命令，会自动跳过已存在的 .mp3 文件。
 
 日志:
     输出到控制台 + logs/edge_tts_batch_时间戳.log
@@ -220,11 +220,11 @@ async def process_single_tts(text: str, voice: str, language: str, speed: float,
     speed_str = f"{speed:.1f}"
     cleaned_text = sanitize_for_tts(text) # [Audit Fix]: 统一清洗
     hash_val = generate_audio_hash(text, voice, language, speed) # generate_audio_hash 会再次独立清洗计算 Hash
-    file_path = os.path.join(output_dir, f"{hash_val}.wav")
+    file_path = os.path.join(output_dir, f"{hash_val}.mp3")
     
     # 检查缓存是否存在且体量合理（>0 bytes）
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        logger.info(f"[CACHE HIT] {hash_val}.wav | {cleaned_text[:20]}...")
+        logger.info(f"[CACHE HIT] {hash_val}.mp3 | {cleaned_text[:20]}...")
         # 防护性同步一次数据库，防止前台没有这条记录
         # [Audit Fix]: 必须写入 cleaned_text，保证 DB 面貌干净
         upsert_tts_cache(db_conn, hash_val, cleaned_text, voice, language, speed, file_path, os.path.getsize(file_path))
@@ -242,7 +242,7 @@ async def process_single_tts(text: str, voice: str, language: str, speed: float,
         communicate = edge_tts.Communicate(cleaned_text, edge_voice, rate=rate_str)
         await communicate.save(file_path)
         file_size = os.path.getsize(file_path)
-        logger.info(f"[SUCCESS] {hash_val}.wav | {edge_voice} | size={file_size} | {cleaned_text[:20]}...")
+        logger.info(f"[SUCCESS] {hash_val}.mp3 | {edge_voice} | size={file_size} | {cleaned_text[:20]}...")
         
         # 成功后写入数据库 
         # [Audit Fix]: 写入 cleaned_text 保证数据库中永远只有纯自然语言
