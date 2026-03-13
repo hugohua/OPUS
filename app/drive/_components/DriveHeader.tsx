@@ -38,7 +38,7 @@ export function DriveHeader() {
     };
 
     if (!mounted) return (
-        <ImmersiveHeader className="opacity-80 h-[88px] bg-transparent dark:bg-transparent" />
+        <ImmersiveHeader className="opacity-80 h-[88px] landscape:h-14 bg-transparent dark:bg-transparent" />
     );
 
     const totalWords = playlist.length;

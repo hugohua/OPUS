@@ -11,7 +11,7 @@ export function DriveMain() {
     if (!currentItem) return null;
 
     return (
-        <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 pb-72 select-none">
+        <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 pb-72 landscape:pb-24 select-none">
             {/* Audio Cache Indicator */}
             {typeof ttsIsCached === 'boolean' && (
                 <div
@@ -33,7 +33,7 @@ export function DriveMain() {
                     className="flex flex-col items-center gap-3 w-full max-w-5xl"
                 >
                     {/* ENGLISH TEXT */}
-                    <h1 className="text-[5vh] md:text-[7vh] leading-[1.1] font-bold text-foreground mx-auto text-balance drop-shadow-md">
+                    <h1 className="text-[5vh] md:text-[7vh] landscape:text-[10vh] landscape:md:text-[12vh] leading-[1.1] font-bold text-foreground mx-auto text-balance drop-shadow-md">
                         {/* 
                            TODO: Ideally parse the 'text' to bold specific keywords. 
                            For now, we just display the full text. 
@@ -65,7 +65,7 @@ export function DriveMain() {
                         transition={{ delay: 0.2, duration: 0.5 }}
                         className="mt-2"
                     >
-                        <p className="text-[3vh] md:text-[3.5vh] font-medium text-muted-foreground leading-relaxed">
+                        <p className="text-[3vh] md:text-[3.5vh] landscape:text-[6vh] landscape:md:text-[7vh] font-medium text-muted-foreground leading-relaxed">
                             {currentItem.trans}
                         </p>
                     </motion.div>

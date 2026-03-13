@@ -116,6 +116,18 @@ class DashScopeTTSService:
             if not audio_buffer:
                 raise DashScopeError("No audio data received from API")
             
+            # 检查 API 返回的数据是否已经包含了 WAV (RIFF) 头
+            # DashScope 的某些模型流式返回的数据解码后已经是完整的 WAV 格式
+            if bytes(audio_buffer[:4]) == b'RIFF' and bytes(audio_buffer[8:12]) == b'WAVE':
+                final_audio = bytes(audio_buffer)
+                logger.info(
+                    "tts_success",
+                    audio_size_bytes=len(final_audio),
+                    format="wav_passthrough",
+                    text_preview=text[:50]
+                )
+                return final_audio
+
             # 将 bytearray 转为 bytes (这是原始 PCM 数据)
             pcm_data = bytes(audio_buffer)
             
@@ -135,6 +147,7 @@ class DashScopeTTSService:
             logger.info(
                 "tts_success",
                 audio_size_bytes=len(final_audio),
+                format="pcm_wrapped",
                 text_preview=text[:50]
             )
             

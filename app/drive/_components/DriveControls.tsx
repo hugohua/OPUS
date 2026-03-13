@@ -16,14 +16,14 @@ export function DriveControls() {
     };
 
     return (
-        <footer className="absolute bottom-0 left-0 w-full h-28 border-t border-border bg-background flex z-50">
+        <footer className="absolute bottom-0 left-0 w-full h-28 landscape:h-20 border-t border-border bg-background flex z-50">
             {/* PREV */}
             <button
                 onClick={prev}
                 className="flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground border-r border-border active:bg-muted/20 transition-colors"
                 aria-label="Previous"
             >
-                <SkipBack className="w-10 h-10" />
+                <SkipBack className="w-10 h-10 landscape:w-8 landscape:h-8" />
             </button>
 
             {/* PLAY / PAUSE */}
@@ -34,9 +34,9 @@ export function DriveControls() {
             >
                 <div className="absolute inset-0 bg-brand-core/5 group-active:bg-brand-core/10 transition-colors"></div>
                 {isPlaying ? (
-                    <Pause className="w-14 h-14 text-brand-core fill-current" />
+                    <Pause className="w-14 h-14 landscape:w-10 landscape:h-10 text-brand-core fill-current" />
                 ) : (
-                    <Play className="w-14 h-14 text-foreground fill-current ml-2" />
+                    <Play className="w-14 h-14 landscape:w-10 landscape:h-10 text-foreground fill-current ml-2" />
                 )}
             </button>
 
@@ -46,7 +46,7 @@ export function DriveControls() {
                 className="flex-1 flex items-center justify-center text-muted-foreground hover:text-foreground border-l border-border active:bg-muted/20 transition-colors"
                 aria-label="Next"
             >
-                <SkipForward className="w-10 h-10" />
+                <SkipForward className="w-10 h-10 landscape:w-8 landscape:h-8" />
             </button>
         </footer>
     );
