@@ -243,9 +243,9 @@ deploy_to_nas() {
 
     print_info "执行网关 HTTP 探针检查..."
     # 注意 NAS Nginx 端口配置 (这里我们探测默认配置中提供的 HTTP 端口或 NAS IP)
-    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://${NAS_IP}:30010)
-    # Next.js 可能会返回 200, 308 (Redirect)
-    if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "308" ]; then
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://${NAS_IP}:30010/api/health)
+    # 期望返回 HTTP 200 JSON { status: "ok" }
+    if [ "$HTTP_STATUS" = "200" ]; then
         print_info "✅ 部署与健康检查全部通过！网关响应正常 (HTTP $HTTP_STATUS)。"
     else
         print_warning "⚠️ 容器虽在运行，但网关 HTTP 状态异常 (HTTP $HTTP_STATUS)，服务可能未对外暴露或有内部访问死锁。"
