@@ -6,8 +6,13 @@ const withSerwist = withSerwistInit({
     swDest: "public/sw.js",
     // 开发环境禁用 Service Worker，避免干扰热更新
     disable: process.env.NODE_ENV === "development",
-    // 排除 audio 目录文件，防止预缓存引发生产环境的大量 404 报错
-    exclude: [/\/audio\/.*$/i],
+    // 运行期生成的音频只走 runtime caching，不进入 precache manifest。
+    manifestTransforms: [
+        async (entries) => ({
+            manifest: entries.filter((entry) => !entry.url.startsWith("/audio/")),
+            warnings: [],
+        }),
+    ],
 });
 
 const nextConfig = {
