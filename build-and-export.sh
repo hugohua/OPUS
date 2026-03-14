@@ -165,39 +165,56 @@ deploy_to_nas() {
         remote_scp nginx/nginx.conf "${NAS_USER}@${NAS_IP}:${NAS_PATH}/nginx/"
     fi
 
-    # 3. 传输并加载镜像 (先传文件，再加载)
-    print_info "开始传输并加载镜像 (这可能需要几分钟)..."
+    # 3. 传输并加载镜像 (批量模式，防暴破)
+    print_info "开始批量传输并加载镜像 (这可能需要几分钟)..."
+    
+    # 收集所有的 tar 包路径和要在远端执行的 load 命令串
+    TAR_FILES=""
+    LOAD_CMDS=""
     
     for item in $SERVICES; do
         service="${item%%:*}"
-        tagged_name="opus/${service}:${VERSION}"
         tar_file="${OUTPUT_DIR}/opus-${service}-${VERSION}.tar"
         remote_tar="/tmp/opus-${service}-${VERSION}.tar"
         
-        print_info "  正在部署 ${service}..."
-        
-        # 步骤 1: 传输 tar 文件到 NAS
-        print_info "    传输文件..."
-        remote_scp "$tar_file" "${NAS_USER}@${NAS_IP}:${remote_tar}"
-        
-        # 步骤 2: 在 NAS 上加载镜像
-        print_info "    加载镜像..."
-        if [ -n "$NAS_PASSWORD" ]; then
-            if remote_ssh "echo '$NAS_PASSWORD' | sudo -S /usr/local/bin/docker load -i ${remote_tar} && rm -f ${remote_tar}"; then
-                print_info "  ✓ ${service} 部署成功"
-            else
-                print_error "  ✗ ${service} 部署失败"
-                exit 1
-            fi
+        # 确保本地文件存在
+        if [ -f "$tar_file" ]; then
+            TAR_FILES="${TAR_FILES} ${tar_file}"
+            LOAD_CMDS="${LOAD_CMDS} /usr/local/bin/docker load -i ${remote_tar} && rm -f ${remote_tar} && "
         else
-            if remote_ssh "sudo /usr/local/bin/docker load -i ${remote_tar} && rm -f ${remote_tar}"; then
-                print_info "  ✓ ${service} 部署成功"
-            else
-                print_error "  ✗ ${service} 部署失败"
-                exit 1
-            fi
+            print_warning "  未找到本地镜像包: ${tar_file}，跳过该服务部署。"
         fi
     done
+    
+    if [ -z "$TAR_FILES" ]; then
+        print_error "没有找到任何可部署的镜像包！"
+        exit 1
+    fi
+    
+    # 步骤 1: 一次性 SCP 传输所有的 tar 包
+    print_info "  📦 正在传输文件..."
+    remote_scp $TAR_FILES "${NAS_USER}@${NAS_IP}:/tmp/"
+    
+    # 步骤 2: 在 NAS 上一次性加载所有传输过去的镜像
+    print_info "  ⏳ 正在加载镜像..."
+    # 剥离最后的 " && "
+    LOAD_CMDS="${LOAD_CMDS% && }"
+    
+    if [ -n "$NAS_PASSWORD" ]; then
+        if remote_ssh "echo '$NAS_PASSWORD' | sudo -S sh -c '${LOAD_CMDS}'"; then
+            print_info "  ✓ 所有镜像加载成功"
+        else
+            print_error "  ✗ 镜像加载失败"
+            exit 1
+        fi
+    else
+        if remote_ssh "sudo sh -c '${LOAD_CMDS}'"; then
+            print_info "  ✓ 所有镜像加载成功"
+        else
+            print_error "  ✗ 镜像加载失败"
+            exit 1
+        fi
+    fi
 
     # 4. 重启服务 (群晖使用 docker-compose v1 或 docker compose)
     print_info "重启远程服务..."
