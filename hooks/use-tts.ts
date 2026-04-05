@@ -170,8 +170,14 @@ export function useTTS() {
                 return;
             }
             console.error("TTS Error:", err);
-            toast.error(err.message);
-            setState((prev) => ({ ...prev, status: "error", error: err.message }));
+            
+            // UX Enhancement: Translate opaque fetch failures to understandable UI
+            const errorMessage = err.message === 'fetch failed' 
+                ? 'TTS Backend (Python Server) Unreachable. Please check if port 8000 is running.' 
+                : err.message;
+                
+            toast.error(errorMessage);
+            setState((prev) => ({ ...prev, status: "error", error: errorMessage }));
             currentHashRef.current = null;
         }
     }, [stop]);

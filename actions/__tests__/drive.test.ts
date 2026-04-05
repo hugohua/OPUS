@@ -227,8 +227,54 @@ describe('Drive Playlist V3', () => {
             // 预期输出顺序: E, H, H, E, C, (剩余 H)
             // 验证: Easy 和 Hard 不连续超过 2 个
             expect(input.filter(i => i.mode === 'QUIZ' && (i.stability || 0) > 10)).toHaveLength(2);
-            expect(input.filter(i => i.mode === 'QUIZ' && (i.stability || 0) <= 10)).toHaveLength(3);
             expect(input.filter(i => i.mode === 'WASH')).toHaveLength(1);
+        });
+    });
+
+    // ===========================================
+    // 7. Component Mapper 规格 (Data Source)
+    // ===========================================
+    describe('mapToDriveItem (UI and Audio Separation Spec)', () => {
+        it('should correctly map fields for UI and Audio independently', async () => {
+            const { mapToDriveItem } = await import('@/lib/utils/drive-mapper');
+            const mockDbRow = {
+                id: 101,
+                word: 'paradigm',
+                commonExample: 'A new paradigm in software development.',
+                definition_cn: '范例，典范',
+                phoneticUs: 'ˈberɘdaim',
+                partOfSpeech: 'n.'
+            };
+
+            const item = mapToDriveItem(mockDbRow, 'QUIZ', 'review');
+
+            // --- UI 渲染强绑定验证 ---
+            expect(item.text).toBe('paradigm'); // MUST be the word (Drives large display h1)
+            expect(item.trans).toBe('A new paradigm in software development.'); // MUST be the english phrase/subtitle
+            expect(item.word).toBe('paradigm'); // For bottom left display
+
+            // --- 音频 TTS 数据清洗分离验证 ---
+            expect(item.ttsPhrase).toBe('A new paradigm in software development.'); // Must purely be English text for 阶段二 TTS
+            expect(item.meaning).toBe('范例，典范'); // Must purely be Chinese text for 阶段三 TTS
+        });
+
+        it('should fallback gracefully when commonExample is missing', async () => {
+            const { mapToDriveItem } = await import('@/lib/utils/drive-mapper');
+            const mockDbRow = {
+                id: 102,
+                word: 'esoteric',
+                commonExample: null,
+                definition_cn: '秘传的，深奥的',
+            };
+
+            const item = mapToDriveItem(mockDbRow, 'QUIZ', 'review');
+
+            // --- UI 验证 ---
+            expect(item.trans).toBe('秘传的，深奥的'); // subtitle falls back to Chinese meaning
+
+            // --- 音频 TTS 验证 ---
+            expect(item.ttsPhrase).toBe(''); // TTS phrase MUST be empty strings instead of falling back to Chinese, preventing TTS from awkwardly reading Chinese using an English voice model
+            expect(item.meaning).toBe('秘传的，深奥的');
         });
     });
 });

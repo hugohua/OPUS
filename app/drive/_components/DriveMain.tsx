@@ -54,12 +54,11 @@ export function DriveMain() {
                         })}
                     </h1>
 
-                    {/* TRANSLATION */}
-                    {/* TRANSLATION */}
+                    {/* TRANSLATION (PHRASE/SUBTITLE) */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{
-                            opacity: (currentItem.mode === 'QUIZ' && playbackStage !== 'meaning') ? 0 : 1,
+                            opacity: (currentItem.mode === 'QUIZ' && (playbackStage === 'idle' || playbackStage === 'word' || playbackStage === 'word_gap')) ? 0 : 1,
                             y: 0
                         }}
                         transition={{ delay: 0.2, duration: 0.5 }}
@@ -93,11 +92,11 @@ export function DriveMain() {
                         {/* Divider */}
                         <div className="w-px h-10 bg-border/60"></div>
 
-                        {/* Meaning Info (Right) - Hide in Gap/Word stage for QUIZ */}
+                        {/* Meaning Info (Right) - Reveal exactly at meaning stage */}
                         <motion.div
                             animate={{
-                                opacity: (currentItem.mode === 'QUIZ' && playbackStage !== 'meaning') ? 0.3 : 1,
-                                filter: (currentItem.mode === 'QUIZ' && playbackStage !== 'meaning') ? 'blur(4px)' : 'none'
+                                opacity: (currentItem.mode === 'QUIZ' && (playbackStage === 'meaning' || playbackStage === 'meaning_gap')) ? 1 : 0.3,
+                                filter: (currentItem.mode === 'QUIZ' && (playbackStage === 'meaning' || playbackStage === 'meaning_gap')) ? 'none' : 'blur(4px)'
                             }}
                             className="flex flex-col items-start"
                         >

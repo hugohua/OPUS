@@ -22,6 +22,7 @@ export interface DriveItem {
     text: string;     // Main text to display (word or sentence)
     trans: string;    // Main translation
     phonetic: string;
+    ttsPhrase?: string; // Optional English phrase specifically for the middle TTS stage
 
     // Detailed Metadata
     word: string;     // The target word

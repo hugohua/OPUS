@@ -15,6 +15,7 @@ import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
 import { createLogger } from '@/lib/logger';
 import { getStratifiedNewWords } from '@/lib/services/omps-core';
+import { mapToDriveItem } from '@/lib/utils/drive-mapper';
 
 const log = createLogger('actions:drive');
 
@@ -361,9 +362,10 @@ async function fetchBreakChunks(
             allChunks.push({
                 id: `chunk-${v.id}-${Math.random()}`,
                 text: col.text,
-                trans: col.trans || v.definition_cn || '',
+                trans: col.trans || v.definition_cn || '暂无翻译',
                 phonetic: '',
                 word: v.word,
+                ttsPhrase: col.text,
                 pos: 'phrase',
                 meaning: v.definition_cn || '',
                 scenarios: v.scenarios,
@@ -380,24 +382,6 @@ async function fetchBreakChunks(
 }
 
 // ------------------------------------------------------------------
-// Mapper
-// ------------------------------------------------------------------
-function mapToDriveItem(v: any, mode: DriveMode, context: 'warmup' | 'review'): DriveItem {
-    return {
-        id: v.id.toString(),
-        text: v.word,
-        trans: v.commonExample || v.definition_cn || '暂无翻译',
-        phonetic: v.phoneticUs || v.phoneticUk || '',
-        word: v.word,
-        pos: v.partOfSpeech || 'n.',
-        meaning: v.definition_cn || '',
-        scenarios: v.scenarios,
-        stability: undefined,
-        mode: mode,
-        voice: context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION,
-        speed: DRIVE_VOICE_SPEED_PRESETS[context === 'warmup' ? DRIVE_VOICE_CONFIG.WARMUP : DRIVE_VOICE_CONFIG.QUIZ_QUESTION] || 1.0
-    };
-}
 
 // ------------------------------------------------------------------
 // Opus DJ Shuffle Algorithm

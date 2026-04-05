@@ -21,9 +21,7 @@ import { useAudioPreload } from '@/hooks/use-audio-preload';
 import { ReviewModePicker } from '@/components/shared/ReviewModePicker';
 
 // ------------------------------------------------------------------
-// Types
-// ------------------------------------------------------------------
-export type PlaybackStage = 'word' | 'gap' | 'meaning' | 'idle';
+export type PlaybackStage = 'idle' | 'word' | 'word_gap' | 'phrase' | 'phrase_gap' | 'meaning' | 'meaning_gap';
 
 interface DriveContextType {
     playlist: DriveItem[];
@@ -142,10 +140,10 @@ export function DriveLayout({
     const startItemSequence = (item: DriveItem) => {
         if (item.mode === 'QUIZ') {
             setPlaybackStage('word');
-            playTTS(item.word || item.text, DRIVE_VOICE_CONFIG.QUIZ_QUESTION);
+            playTTS(item.word, DRIVE_VOICE_CONFIG.QUIZ_QUESTION);
         } else if (item.mode === 'WASH') {
             setPlaybackStage('word');
-            playTTS(item.text, DRIVE_VOICE_CONFIG.WASH_PHRASE);
+            playTTS(item.ttsPhrase || item.text, DRIVE_VOICE_CONFIG.WASH_PHRASE);
         } else {
             setPlaybackStage('meaning');
             playTTS(item.text, DRIVE_VOICE_CONFIG.STORY);
@@ -172,15 +170,19 @@ export function DriveLayout({
         if (item.mode === 'QUIZ') {
             const qVoice = DRIVE_VOICE_CONFIG.QUIZ_QUESTION;
             const qSpeed = DRIVE_VOICE_SPEED_PRESETS[qVoice] || item.speed || 1.0;
-            targets.push({ text: item.word || item.text, voice: qVoice, speed: qSpeed });
+            targets.push({ text: item.word, voice: qVoice, speed: qSpeed });
+            
+            if (item.ttsPhrase && item.ttsPhrase !== item.word) {
+                targets.push({ text: item.ttsPhrase, voice: qVoice, speed: qSpeed });
+            }
 
             const aVoice = DRIVE_VOICE_CONFIG.QUIZ_ANSWER;
             const aSpeed = DRIVE_VOICE_SPEED_PRESETS[aVoice] || 1.0;
-            targets.push({ text: item.trans, voice: aVoice, speed: aSpeed });
+            targets.push({ text: item.meaning, voice: aVoice, speed: aSpeed });
         } else if (item.mode === 'WASH') {
             const wVoice = DRIVE_VOICE_CONFIG.WASH_PHRASE;
             const wSpeed = DRIVE_VOICE_SPEED_PRESETS[wVoice] || item.speed || 1.0;
-            targets.push({ text: item.text, voice: wVoice, speed: wSpeed });
+            targets.push({ text: item.ttsPhrase || item.text, voice: wVoice, speed: wSpeed });
         } else {
             const sVoice = DRIVE_VOICE_CONFIG.STORY;
             const sSpeed = DRIVE_VOICE_SPEED_PRESETS[sVoice] || item.speed || 1.0;
@@ -203,8 +205,12 @@ export function DriveLayout({
     useEffect(() => {
         const isTTSPlaying = tts.status === 'playing';
         const isTTSIdle = tts.status === 'idle';
+        const isTTSError = tts.status === 'error';
 
         if (wasTTSPlayingRef.current && isTTSIdle && isPlaying) {
+            handleStageComplete();
+        } else if (isTTSError && isPlaying) {
+            // 兜底机制：遇到 TTS 生成失败（如 Python 服务离线），强制越过当前切片
             handleStageComplete();
         }
 
@@ -216,13 +222,27 @@ export function DriveLayout({
 
         if (currentItem.mode === 'QUIZ') {
             if (playbackStage === 'word') {
-                setPlaybackStage('gap');
+                setPlaybackStage('word_gap');
+                stageTimeoutRef.current = setTimeout(() => {
+                    if (currentItem.ttsPhrase && currentItem.ttsPhrase !== currentItem.word) {
+                        setPlaybackStage('phrase');
+                        playTTS(currentItem.ttsPhrase, DRIVE_VOICE_CONFIG.QUIZ_QUESTION);
+                    } else {
+                        setPlaybackStage('meaning');
+                        playTTS(currentItem.meaning, DRIVE_VOICE_CONFIG.QUIZ_ANSWER);
+                    }
+                }, 1500);
+            } else if (playbackStage === 'phrase') {
+                setPlaybackStage('phrase_gap');
                 stageTimeoutRef.current = setTimeout(() => {
                     setPlaybackStage('meaning');
-                    playTTS(currentItem.trans, DRIVE_VOICE_CONFIG.QUIZ_ANSWER);
-                }, 2500);
+                    playTTS(currentItem.meaning, DRIVE_VOICE_CONFIG.QUIZ_ANSWER);
+                }, 1000);
             } else if (playbackStage === 'meaning') {
-                next();
+                setPlaybackStage('meaning_gap');
+                stageTimeoutRef.current = setTimeout(() => {
+                    next();
+                }, 1500);
             }
         } else if (currentItem.mode === 'WASH') {
             stageTimeoutRef.current = setTimeout(() => {
