@@ -15,7 +15,7 @@ async function main() {
             schema: z.object({
                 drills: z.array(z.object({
                     meta: z.object({
-                        format: z.enum(['chat', 'email', 'memo']),
+                        format: z.string().optional(),
                         target_word: z.string()
                     }),
                     segments: z.array(z.any())

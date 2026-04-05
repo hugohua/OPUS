@@ -21,7 +21,40 @@ export class AIParseError extends Error {
  * 清理 Markdown 代码块标记
  */
 export function cleanMarkdown(content: string): string {
-    return content.replace(/```json\n?|\n?```/g, '').replace(/```\n?|\n?```/g, '').trim();
+    // 1. Try to extract content inside ```json or ```
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (match) {
+        return match[1].trim();
+    }
+
+    // 2. Fallback: extract between the first { or [ and the last } or ]
+    const firstBrace = content.indexOf('{');
+    const firstBracket = content.indexOf('[');
+    let startIndex = -1;
+    if (firstBrace !== -1 && firstBracket !== -1) {
+        startIndex = Math.min(firstBrace, firstBracket);
+    } else if (firstBrace !== -1) {
+        startIndex = firstBrace;
+    } else if (firstBracket !== -1) {
+        startIndex = firstBracket;
+    }
+
+    const lastBrace = content.lastIndexOf('}');
+    const lastBracket = content.lastIndexOf(']');
+    let endIndex = -1;
+    if (lastBrace !== -1 && lastBracket !== -1) {
+        endIndex = Math.max(lastBrace, lastBracket);
+    } else if (lastBrace !== -1) {
+        endIndex = lastBrace;
+    } else if (lastBracket !== -1) {
+        endIndex = lastBracket;
+    }
+
+    if (startIndex !== -1 && endIndex !== -1 && startIndex < endIndex) {
+        return content.substring(startIndex, endIndex + 1).trim();
+    }
+
+    return content.trim();
 }
 
 /**

@@ -221,20 +221,32 @@ export function PhraseCard({
             )}>
                 <div className="flex flex-col items-center gap-4 border-t border-zinc-200 dark:border-zinc-800 pt-8 w-full max-w-sm mx-auto">
 
-                    {/* Phonetic & Audio Row */}
-                    <div className="flex items-center gap-3 text-zinc-400">
-                        {phonetic && <span className="font-mono text-lg tracking-wide">/{phonetic.replace(/\//g, '')}/</span>}
-                        <TTSButton
-                            text={targetWord || ""}
-                            voice={DEFAULT_TTS_VOICE}
-                            className="bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500 rounded-full w-9 h-9"
-                        />
-                    </div>
+                    {/* Consolidated Definition & Audio Row (Clickable for Audio) */}
+                    <div 
+                        onClick={(e) => {
+                            if (targetWord) {
+                                e.stopPropagation();
+                                playSentence({ text: targetWord, voice: DEFAULT_TTS_VOICE });
+                            }
+                        }}
+                        className={cn(
+                            "text-center text-zinc-600 dark:text-zinc-300 text-base font-medium leading-[1.6]",
+                            targetWord && "cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all select-none"
+                        )}
+                        title={targetWord ? "点击播放相关单词发音" : undefined}
+                    >
+                        {/* Phonetic */}
+                        {phonetic && (
+                            <span className="font-mono text-[15px] tracking-wide text-zinc-400 mr-2 align-middle">
+                                /{phonetic.replace(/\//g, '')}/
+                            </span>
+                        )}
 
-                    {/* Definition Text Row (With Markdown Support) */}
-                    <div className="text-zinc-600 dark:text-zinc-300 text-base font-medium text-center leading-[1.6]">
-                        {partOfSpeech && <span className="italic mr-2 text-zinc-400 font-serif">{partOfSpeech}</span>}
-                        {renderSmartText(wordDefinition || "")}
+                        {/* POS & Definition */}
+                        <span className="align-middle">
+                            {partOfSpeech && <span className="italic mr-2 text-zinc-400 font-serif">{partOfSpeech}</span>}
+                            {renderSmartText(wordDefinition || "")}
+                        </span>
                     </div>
                     {/* Etymology Module */}
                     {isRevealed && etymology && (
