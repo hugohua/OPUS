@@ -123,23 +123,26 @@ async function main() {
     const prompt = generator(inputs);
 
     // A. Primary Model Phase
-    const primaryModelName = process.env.AI_MODEL_NAME || 'aliyun';
-    console.log(`[Primary] Calling ${primaryModelName} with ${inputs.length} items...`);
-    const primaryOutputs = await runBatchModel(primaryModelName, prompt, inputs.length);
-    console.log(`[Primary] Received ${primaryOutputs.length} valid items.`);
+    console.log(`[Primary] Starting batch generation for ${inputs.length} items...`);
+    const primaryResult = await runBatchModel('primary', prompt, inputs.length);
+    const primaryOutputs = primaryResult.list;
+    const actualPrimaryModel = primaryResult.provider;
+    console.log(`[Primary] Received ${primaryOutputs.length} valid items from provider: ${actualPrimaryModel}.`);
 
     // B. Secondary Model Phase (Optional)
     let secondaryOutputs: any[] = [];
-    const secondaryModelName = process.env.ETL_MODEL_NAME || 'openrouter';
+    let actualSecondaryModel = 'none';
 
     if (compare) {
         const originalOrder = process.env.AI_FAST_ORDER;
         // Force OpenRouter (or secondary) for comparison
         process.env.AI_FAST_ORDER = 'openrouter';
-        console.log(`[Secondary] Calling ${secondaryModelName} with ${inputs.length} items...`);
+        console.log(`[Secondary] Starting batch generation for ${inputs.length} items...`);
 
-        secondaryOutputs = await runBatchModel(secondaryModelName, prompt, inputs.length);
-        console.log(`[Secondary] Received ${secondaryOutputs.length} valid items.`);
+        const secondaryResult = await runBatchModel('secondary', prompt, inputs.length);
+        secondaryOutputs = secondaryResult.list;
+        actualSecondaryModel = secondaryResult.provider;
+        console.log(`[Secondary] Received ${secondaryOutputs.length} valid items from provider: ${actualSecondaryModel}.`);
 
         process.env.AI_FAST_ORDER = originalOrder;
     }
@@ -159,13 +162,13 @@ async function main() {
             id: caseId,
             description: description,
             input: testCase.input,
-            primary: { model: primaryModelName, text: '', structureOk: false }
+            primary: { model: actualPrimaryModel, text: '', structureOk: false }
         };
 
         process.stdout.write(`Evaluating ${caseId}... `);
 
         // Map Primary Result
-        const pOut = primaryOutputs[i];
+        const pOut = primaryOutputs.find(p => p.input_index === i) || primaryOutputs[i];
         if (pOut) {
             record.primary.text = JSON.stringify(pOut, null, 2);
             record.primary.structureOk = true;
@@ -179,8 +182,8 @@ async function main() {
 
         // Map Secondary Result
         if (compare) {
-            record.secondary = { model: secondaryModelName, text: '', structureOk: false };
-            const sOut = secondaryOutputs[i];
+            record.secondary = { model: actualSecondaryModel, text: '', structureOk: false };
+            const sOut = secondaryOutputs.find(s => s.input_index === i) || secondaryOutputs[i];
             if (sOut) {
                 record.secondary.text = JSON.stringify(sOut, null, 2);
                 record.secondary.structureOk = true;
@@ -369,7 +372,7 @@ async function fetchTestCasesFromDB(mode: string): Promise<any[]> {
  * Runs the model with failover and attempts to parse the Batch Response.
  * Expects { drills: [...] } or { items: [...] }
  */
-async function runBatchModel(modelName: string, prompt: { system: string, user: string }, expectedCount: number): Promise<any[]> {
+async function runBatchModel(modelName: string, prompt: { system: string, user: string }, expectedCount: number): Promise<{ list: any[], provider: string }> {
     try {
         const response = await AIService.generateText({
             system: prompt.system,
@@ -386,19 +389,20 @@ async function runBatchModel(modelName: string, prompt: { system: string, user: 
         }
 
         const json = JSON.parse(jsonStr);
-        const list = json.drills || json.items || json.cards || [];
+        // Handle both top-level arrays and objects with array properties
+        const list = Array.isArray(json) ? json : (json.drills || json.items || json.cards || []);
 
         if (!Array.isArray(list)) {
-            console.warn(`[Warn] Response is not an array wrapped in 'drills'/'items':`, jsonStr.slice(0, 100));
-            return [];
+            console.warn(`[Warn] Response is not an array wrapped in 'drills'/'items' or a top-level array:`, jsonStr.slice(0, 100));
+            return { list: [], provider: response.provider };
         }
 
         // Return raw objects
-        return list;
+        return { list, provider: response.provider };
 
     } catch (e) {
         console.error(`[Error] Batch Generation Failed: ${(e as Error).message}`);
-        return [];
+        return { list: [], provider: 'unknown' };
     }
 }
 
