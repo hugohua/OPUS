@@ -249,7 +249,7 @@ L1.masteryScore = AVG(所有子 L2 节点的 masteryScore)
 
 | 状态 | 条件 | 颜色 | 标识 |
 |------|------|------|------|
-| **Mastered** | `masteryScore >= 0.85` | 翠绿/金色 | ✓ 发光 |
+| **Mastered** | `masteryScore >= 0.85` | 翠绿/金色 | ✓ 高亮 |
 | **Learning** | `0.4 <= masteryScore < 0.85` | 浅灰/淡蓝 | — |
 | **Vulnerable** | `masteryScore < 0.4` | 橙色/柔红 | ⚠️ |
 

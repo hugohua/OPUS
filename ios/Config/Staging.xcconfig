@@ -1,0 +1,9 @@
+#include "Base.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = com.hugo.opus.ios.staging
+APP_DISPLAY_NAME = Opus Staging
+DISPLAY_NAME_SUFFIX = Staging
+APP_ENV = staging
+API_BASE_URL = https://staging.example.com
+ENABLE_NETWORK_LOGGING = YES
+ATS_ALLOW_INSECURE_LOCAL = NO

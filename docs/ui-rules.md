@@ -21,8 +21,7 @@ We maintain two distinct emotional states sharing one skeleton.
 
 * **Concept:** A futuristic HUD in a cockpit.
 * **Traits:**
-* **Background:** NEVER use solid black. MUST use `bg-zinc-950` with a top ambient glow:
-`<div class="fixed top-0 left-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-900/20 via-transparent to-transparent pointer-events-none"></div>`
+* **Background:** NEVER use solid black. MUST use a restrained layered surface on top of `bg-zinc-950`, avoiding decorative glow effects.
 * **Cards:** Use **Glassmorphism** with Inner Highlight for depth.
 `bg-zinc-900/60 backdrop-blur-xl border-white/15 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]`
 
@@ -225,7 +224,7 @@ const buttonVariants = cva(
 
 Before outputting code, verify:
 
-1. [ ] **Dark Mode:** Is the ambient light gradient present? Are borders visible (`border-white/15`)?
+1. [ ] **Dark Mode:** Is the background restrained and free of decorative glow effects? Are borders visible (`border-white/15`)?
 2. [ ] **Anti-Noise:** Are Card Titles neutral (Black/White), NOT Violet?
 3. [ ] **Backlog:** Is the "Warning" state implemented using `amber` border and badge?
 4. [ ] **Thumb Zone:** Is the Magic Paste button `h-16` and floating?

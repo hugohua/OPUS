@@ -1,0 +1,792 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0264F83855ED3AF5A68F55EA /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666EB4918792242D00EF7620 /* DashboardHomeView.swift */; };
+		1086ADC77E545E93B59242E4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */; };
+		15624EBADC41BBCFFD0FD10C /* OpusStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */; };
+		1BF452030E9BD0871CAE5C83 /* RuntimeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A61B132CB9F941DAEB64F7D /* RuntimeConfig.swift */; };
+		2F194059106FC330347CD2B1 /* URLSessionAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */; };
+		309EC6B6AA163D05F0BC1E16 /* DashboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */; };
+		42D0CF1375D45277B35EF744 /* NetworkLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23F8D99CEA6BAAB3E39FCA50 /* NetworkLogger.swift */; };
+		46825695E3735BB4F062B8F6 /* HealthCheckServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */; };
+		472901C28FD5A128BA2C0D07 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56B9E2506F80911E2FE10CD /* BuildInfo.swift */; };
+		48F044967F3E551AB7BA27C6 /* OpusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC8E436FC740DD5DE58E544 /* OpusCard.swift */; };
+		4CC58B2E749032AADDB54A39 /* DashboardPreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */; };
+		4E167CD678F050101A3A9E6A /* OpusTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 182E1EB8CFF879C3B429D2D4 /* OpusTheme.swift */; };
+		5FEC5218E236A75BA6010C4C /* OpusSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D401C8BE80EE8B20F2EE08 /* OpusSectionHeader.swift */; };
+		62339B810FCFEA01F8831812 /* HealthCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */; };
+		68EA8FE71BA8FDD1DB180688 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263DC8E8F42D945D914B65F /* Endpoint.swift */; };
+		6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */; };
+		6C43F787FBE5DC35B48ADED6 /* DiagnosticsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */; };
+		6CC3B4BEACF432E257725173 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */; };
+		7667EC5A508422FA0A2CD75B /* URLSessionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */; };
+		85758D0F576D4BB0A657C6C7 /* DashboardTabContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */; };
+		8FCB7380ED1A20B171E1BC93 /* RuntimeConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */; };
+		9D5009A72A82669F21F6FF9C /* RequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */; };
+		A0E81BF81F3EEFA1FDAC8C07 /* KeychainTokenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0A4B218DE4445A156E1A62 /* KeychainTokenStoreTests.swift */; };
+		A13A3CE7D842C348644C1BF0 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF33BE709520CCCF1C5BDE2 /* AppEnvironment.swift */; };
+		A774295448E663740E8F078D /* DashboardTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3315218A7CC6A03A5DA74314 /* DashboardTab.swift */; };
+		AB606746F929ECF560904904 /* HTTPMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8FD7937C99658BA846179D2 /* HTTPMethod.swift */; };
+		B3E43984040228E91651D237 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */; };
+		B42C81443E7B12BB01F6F977 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04669F51DC0F88996F304AA /* DashboardViewModel.swift */; };
+		C40A26794F4ADC97899C788F /* AuthTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A997D0D0AA2D3B2E423BF0 /* AuthTokenStore.swift */; };
+		DB13A0116C9FC0BAA2BBA3AB /* OpusPrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */; };
+		DFE9C4E8E4E8A00406DC88FA /* DiagnosticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66527F9F9DFC0DFF53D30E1F /* DiagnosticsViewModel.swift */; };
+		E9FADA501A2D5739F234BC49 /* OpusApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD56555672778BDB5E31E64 /* OpusApp.swift */; };
+		FBF75B649BF7647482C195C2 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853FAD1C1A474733938BCAAE /* APIClient.swift */; };
+		FE4DD8F0C1B79CBE0D0B3B49 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287B8D458A9036BAA93962D3 /* KeychainTokenStore.swift */; };
+		FF3FF0B15D8B27597A13E9E5 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A177E421DB40E995947453E /* AppDependencies.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		68A548AE76B098B6300DBBFD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97A78138E32A3DA0C81F2DE6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA3547E36E116487AD8BD65A;
+			remoteInfo = OpusApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		182E1EB8CFF879C3B429D2D4 /* OpusTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusTheme.swift; sourceTree = "<group>"; };
+		1DF33BE709520CCCF1C5BDE2 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		20A997D0D0AA2D3B2E423BF0 /* AuthTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthTokenStore.swift; sourceTree = "<group>"; };
+		23D401C8BE80EE8B20F2EE08 /* OpusSectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusSectionHeader.swift; sourceTree = "<group>"; };
+		23F8D99CEA6BAAB3E39FCA50 /* NetworkLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkLogger.swift; sourceTree = "<group>"; };
+		24FD6577AE76630734894FB1 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
+		287B8D458A9036BAA93962D3 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
+		298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
+		2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCheckService.swift; sourceTree = "<group>"; };
+		3315218A7CC6A03A5DA74314 /* DashboardTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardTab.swift; sourceTree = "<group>"; };
+		3A61B132CB9F941DAEB64F7D /* RuntimeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeConfig.swift; sourceTree = "<group>"; };
+		3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
+		419B1474D4A7E3A0A7BF3535 /* Production.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Production.xcconfig; sourceTree = "<group>"; };
+		43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsHomeView.swift; sourceTree = "<group>"; };
+		5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardTabContainerView.swift; sourceTree = "<group>"; };
+		5BC8E436FC740DD5DE58E544 /* OpusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCard.swift; sourceTree = "<group>"; };
+		6263DC8E8F42D945D914B65F /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
+		6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCheckServiceTests.swift; sourceTree = "<group>"; };
+		66527F9F9DFC0DFF53D30E1F /* DiagnosticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsViewModel.swift; sourceTree = "<group>"; };
+		666EB4918792242D00EF7620 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
+		70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPreviewData.swift; sourceTree = "<group>"; };
+		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		853FAD1C1A474733938BCAAE /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModelTests.swift; sourceTree = "<group>"; };
+		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A177E421DB40E995947453E /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
+		A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionAPIClientTests.swift; sourceTree = "<group>"; };
+		B56B9E2506F80911E2FE10CD /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusStatusBadge.swift; sourceTree = "<group>"; };
+		C04669F51DC0F88996F304AA /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilderTests.swift; sourceTree = "<group>"; };
+		C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionAPIClient.swift; sourceTree = "<group>"; };
+		C8FD7937C99658BA846179D2 /* HTTPMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPMethod.swift; sourceTree = "<group>"; };
+		CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusPrimaryButton.swift; sourceTree = "<group>"; };
+		E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeConfigTests.swift; sourceTree = "<group>"; };
+		EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusDashboardHeader.swift; sourceTree = "<group>"; };
+		EFD56555672778BDB5E31E64 /* OpusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusApp.swift; sourceTree = "<group>"; };
+		F6EEEF400AA9747B89AB3A89 /* Staging.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Staging.xcconfig; sourceTree = "<group>"; };
+		FF0A4B218DE4445A156E1A62 /* KeychainTokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStoreTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1B9D89470A5294A530E523CE /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				5BC8E436FC740DD5DE58E544 /* OpusCard.swift */,
+				EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */,
+				CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */,
+				23D401C8BE80EE8B20F2EE08 /* OpusSectionHeader.swift */,
+				BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		232853D9429C460F7C6FB42C /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				1DF33BE709520CCCF1C5BDE2 /* AppEnvironment.swift */,
+				B56B9E2506F80911E2FE10CD /* BuildInfo.swift */,
+				3A61B132CB9F941DAEB64F7D /* RuntimeConfig.swift */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		27FF30A82D4EE984209A2B06 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				853FAD1C1A474733938BCAAE /* APIClient.swift */,
+				6263DC8E8F42D945D914B65F /* Endpoint.swift */,
+				C8FD7937C99658BA846179D2 /* HTTPMethod.swift */,
+				298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */,
+				23F8D99CEA6BAAB3E39FCA50 /* NetworkLogger.swift */,
+				3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */,
+				C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		50F47EFDF0261CD408F08E51 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				24FD6577AE76630734894FB1 /* Local.xcconfig */,
+				419B1474D4A7E3A0A7BF3535 /* Production.xcconfig */,
+				F6EEEF400AA9747B89AB3A89 /* Staging.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		62E286861F5353553EF9E3C9 /* Diagnostics */ = {
+			isa = PBXGroup;
+			children = (
+				43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */,
+				66527F9F9DFC0DFF53D30E1F /* DiagnosticsViewModel.swift */,
+				2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */,
+			);
+			path = Diagnostics;
+			sourceTree = "<group>";
+		};
+		666A4F6A290163E10AC202AD /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				B3837A74BCC2F7EE83E7C2A6 /* Dashboard */,
+				62E286861F5353553EF9E3C9 /* Diagnostics */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		702EAA58A1C69A47A5F4C21F /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				20A997D0D0AA2D3B2E423BF0 /* AuthTokenStore.swift */,
+				287B8D458A9036BAA93962D3 /* KeychainTokenStore.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		76D98FB4571695DA65E480F7 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */,
+				A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		7B00E826025E7B0981145842 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				702EAA58A1C69A47A5F4C21F /* Auth */,
+				232853D9429C460F7C6FB42C /* Configuration */,
+				27FF30A82D4EE984209A2B06 /* Networking */,
+				97CEF74F3E6F4B60A172BE7E /* UI */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		97CEF74F3E6F4B60A172BE7E /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				182E1EB8CFF879C3B429D2D4 /* OpusTheme.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		9C87ACF5FD6845DE8BFDF4CA /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		A158C286DD3973A2DE45BD92 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8EFD253EBEB957E91A67F690 /* OpusApp.app */,
+				754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A3203D8AF2DF933208ABC1DE /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */,
+				6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B3837A74BCC2F7EE83E7C2A6 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				666EB4918792242D00EF7620 /* DashboardHomeView.swift */,
+				A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */,
+				70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */,
+				3315218A7CC6A03A5DA74314 /* DashboardTab.swift */,
+				5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */,
+				C04669F51DC0F88996F304AA /* DashboardViewModel.swift */,
+				1B9D89470A5294A530E523CE /* Components */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		B47631ECC40C089FDB362D2F /* App */ = {
+			isa = PBXGroup;
+			children = (
+				9A177E421DB40E995947453E /* AppDependencies.swift */,
+				EFD56555672778BDB5E31E64 /* OpusApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C3929E0424598DC34BFAAE79 = {
+			isa = PBXGroup;
+			children = (
+				B47631ECC40C089FDB362D2F /* App */,
+				50F47EFDF0261CD408F08E51 /* Config */,
+				7B00E826025E7B0981145842 /* Core */,
+				666A4F6A290163E10AC202AD /* Features */,
+				E71A4B36DBEABA1C4839B673 /* Tests */,
+				A158C286DD3973A2DE45BD92 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E71A4B36DBEABA1C4839B673 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				FEC1138FB6F38804031F78EB /* Auth */,
+				9C87ACF5FD6845DE8BFDF4CA /* Configuration */,
+				A3203D8AF2DF933208ABC1DE /* Features */,
+				76D98FB4571695DA65E480F7 /* Networking */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		FEC1138FB6F38804031F78EB /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				FF0A4B218DE4445A156E1A62 /* KeychainTokenStoreTests.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BA3547E36E116487AD8BD65A /* OpusApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 887B38F94C00EDF913CEBE2C /* Build configuration list for PBXNativeTarget "OpusApp" */;
+			buildPhases = (
+				A87F03484C9765E63E3BBAE6 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OpusApp;
+			packageProductDependencies = (
+			);
+			productName = OpusApp;
+			productReference = 8EFD253EBEB957E91A67F690 /* OpusApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C8BF1250E10DC226B94B9AB2 /* OpusAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E693C246882D1D84C44B18D3 /* Build configuration list for PBXNativeTarget "OpusAppTests" */;
+			buildPhases = (
+				22F4E94408B177CC6A88BF59 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				93A1EF74C42FD621F48F164C /* PBXTargetDependency */,
+			);
+			name = OpusAppTests;
+			packageProductDependencies = (
+			);
+			productName = OpusAppTests;
+			productReference = 754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		97A78138E32A3DA0C81F2DE6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					BA3547E36E116487AD8BD65A = {
+						ProvisioningStyle = Automatic;
+					};
+					C8BF1250E10DC226B94B9AB2 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = E05956669A030203D23E3A7B /* Build configuration list for PBXProject "OpusApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = C3929E0424598DC34BFAAE79;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A158C286DD3973A2DE45BD92 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BA3547E36E116487AD8BD65A /* OpusApp */,
+				C8BF1250E10DC226B94B9AB2 /* OpusAppTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		22F4E94408B177CC6A88BF59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				309EC6B6AA163D05F0BC1E16 /* DashboardViewModelTests.swift in Sources */,
+				46825695E3735BB4F062B8F6 /* HealthCheckServiceTests.swift in Sources */,
+				A0E81BF81F3EEFA1FDAC8C07 /* KeychainTokenStoreTests.swift in Sources */,
+				9D5009A72A82669F21F6FF9C /* RequestBuilderTests.swift in Sources */,
+				8FCB7380ED1A20B171E1BC93 /* RuntimeConfigTests.swift in Sources */,
+				2F194059106FC330347CD2B1 /* URLSessionAPIClientTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A87F03484C9765E63E3BBAE6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBF75B649BF7647482C195C2 /* APIClient.swift in Sources */,
+				FF3FF0B15D8B27597A13E9E5 /* AppDependencies.swift in Sources */,
+				A13A3CE7D842C348644C1BF0 /* AppEnvironment.swift in Sources */,
+				C40A26794F4ADC97899C788F /* AuthTokenStore.swift in Sources */,
+				472901C28FD5A128BA2C0D07 /* BuildInfo.swift in Sources */,
+				0264F83855ED3AF5A68F55EA /* DashboardHomeView.swift in Sources */,
+				6CC3B4BEACF432E257725173 /* DashboardModels.swift in Sources */,
+				4CC58B2E749032AADDB54A39 /* DashboardPreviewData.swift in Sources */,
+				A774295448E663740E8F078D /* DashboardTab.swift in Sources */,
+				85758D0F576D4BB0A657C6C7 /* DashboardTabContainerView.swift in Sources */,
+				B42C81443E7B12BB01F6F977 /* DashboardViewModel.swift in Sources */,
+				6C43F787FBE5DC35B48ADED6 /* DiagnosticsHomeView.swift in Sources */,
+				DFE9C4E8E4E8A00406DC88FA /* DiagnosticsViewModel.swift in Sources */,
+				68EA8FE71BA8FDD1DB180688 /* Endpoint.swift in Sources */,
+				AB606746F929ECF560904904 /* HTTPMethod.swift in Sources */,
+				62339B810FCFEA01F8831812 /* HealthCheckService.swift in Sources */,
+				FE4DD8F0C1B79CBE0D0B3B49 /* KeychainTokenStore.swift in Sources */,
+				B3E43984040228E91651D237 /* NetworkError.swift in Sources */,
+				42D0CF1375D45277B35EF744 /* NetworkLogger.swift in Sources */,
+				E9FADA501A2D5739F234BC49 /* OpusApp.swift in Sources */,
+				48F044967F3E551AB7BA27C6 /* OpusCard.swift in Sources */,
+				6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */,
+				DB13A0116C9FC0BAA2BBA3AB /* OpusPrimaryButton.swift in Sources */,
+				5FEC5218E236A75BA6010C4C /* OpusSectionHeader.swift in Sources */,
+				15624EBADC41BBCFFD0FD10C /* OpusStatusBadge.swift in Sources */,
+				4E167CD678F050101A3A9E6A /* OpusTheme.swift in Sources */,
+				1086ADC77E545E93B59242E4 /* RequestBuilder.swift in Sources */,
+				1BF452030E9BD0871CAE5C83 /* RuntimeConfig.swift in Sources */,
+				7667EC5A508422FA0A2CD75B /* URLSessionAPIClient.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		93A1EF74C42FD621F48F164C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA3547E36E116487AD8BD65A /* OpusApp */;
+			targetProxy = 68A548AE76B098B6300DBBFD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		05CFECBBDA30455724A8D9BF /* LocalDebug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hugo.opus.ios.tests;
+				PRODUCT_MODULE_NAME = OpusAppTests;
+				PRODUCT_NAME = OpusAppTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpusApp.app/OpusApp";
+			};
+			name = LocalDebug;
+		};
+		1EB61A1128478B7B9A3F25F9 /* StagingDebug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAPIBaseURL = "$(API_BASE_URL)";
+				INFOPLIST_KEY_OPUSATSAllowInsecureLocal = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAppEnv = "$(APP_ENV)";
+				INFOPLIST_KEY_OPUSDisplayNameSuffix = "$(DISPLAY_NAME_SUFFIX)";
+				INFOPLIST_KEY_OPUSEnableNetworkLogging = "$(ENABLE_NETWORK_LOGGING)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_MODULE_NAME = OpusApp;
+				PRODUCT_NAME = OpusApp;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = StagingDebug;
+		};
+		279453BAB6FF9E863C3AD482 /* LocalDebug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D46GBTB442;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAPIBaseURL = "$(API_BASE_URL)";
+				INFOPLIST_KEY_OPUSATSAllowInsecureLocal = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAppEnv = "$(APP_ENV)";
+				INFOPLIST_KEY_OPUSDisplayNameSuffix = "$(DISPLAY_NAME_SUFFIX)";
+				INFOPLIST_KEY_OPUSEnableNetworkLogging = "$(ENABLE_NETWORK_LOGGING)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_MODULE_NAME = OpusApp;
+				PRODUCT_NAME = OpusApp;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = LocalDebug;
+		};
+		518799531163AB379DF36F51 /* LocalDebug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 24FD6577AE76630734894FB1 /* Local.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = LocalDebug;
+		};
+		737446B2DF33E00D171B1870 /* StagingDebug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hugo.opus.ios.tests;
+				PRODUCT_MODULE_NAME = OpusAppTests;
+				PRODUCT_NAME = OpusAppTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpusApp.app/OpusApp";
+			};
+			name = StagingDebug;
+		};
+		82766B4D8F047A003430C648 /* ProductionRelease */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAPIBaseURL = "$(API_BASE_URL)";
+				INFOPLIST_KEY_OPUSATSAllowInsecureLocal = "$(ATS_ALLOW_INSECURE_LOCAL)";
+				INFOPLIST_KEY_OPUSAppEnv = "$(APP_ENV)";
+				INFOPLIST_KEY_OPUSDisplayNameSuffix = "$(DISPLAY_NAME_SUFFIX)";
+				INFOPLIST_KEY_OPUSEnableNetworkLogging = "$(ENABLE_NETWORK_LOGGING)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_MODULE_NAME = OpusApp;
+				PRODUCT_NAME = OpusApp;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ProductionRelease;
+		};
+		B9AD11E59BF7A8EB6887C8C3 /* StagingDebug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F6EEEF400AA9747B89AB3A89 /* Staging.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = StagingDebug;
+		};
+		C2793C7BBFC81AC3BD3674EA /* ProductionRelease */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hugo.opus.ios.tests;
+				PRODUCT_MODULE_NAME = OpusAppTests;
+				PRODUCT_NAME = OpusAppTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpusApp.app/OpusApp";
+			};
+			name = ProductionRelease;
+		};
+		CC5D9D4350EE80C7A9E11768 /* ProductionRelease */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 419B1474D4A7E3A0A7BF3535 /* Production.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = ProductionRelease;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		887B38F94C00EDF913CEBE2C /* Build configuration list for PBXNativeTarget "OpusApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				279453BAB6FF9E863C3AD482 /* LocalDebug */,
+				82766B4D8F047A003430C648 /* ProductionRelease */,
+				1EB61A1128478B7B9A3F25F9 /* StagingDebug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = LocalDebug;
+		};
+		E05956669A030203D23E3A7B /* Build configuration list for PBXProject "OpusApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				518799531163AB379DF36F51 /* LocalDebug */,
+				CC5D9D4350EE80C7A9E11768 /* ProductionRelease */,
+				B9AD11E59BF7A8EB6887C8C3 /* StagingDebug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = LocalDebug;
+		};
+		E693C246882D1D84C44B18D3 /* Build configuration list for PBXNativeTarget "OpusAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				05CFECBBDA30455724A8D9BF /* LocalDebug */,
+				C2793C7BBFC81AC3BD3674EA /* ProductionRelease */,
+				737446B2DF33E00D171B1870 /* StagingDebug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = LocalDebug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 97A78138E32A3DA0C81F2DE6 /* Project object */;
+}

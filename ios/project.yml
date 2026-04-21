@@ -1,0 +1,94 @@
+name: OpusApp
+
+options:
+  createIntermediateGroups: true
+
+configs:
+  LocalDebug: debug
+  StagingDebug: debug
+  ProductionRelease: release
+
+configFiles:
+  LocalDebug: Config/Local.xcconfig
+  StagingDebug: Config/Staging.xcconfig
+  ProductionRelease: Config/Production.xcconfig
+
+targets:
+  OpusApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: App
+      - path: Core
+      - path: Features
+    resources:
+      - path: Resources
+    settings:
+      base:
+        PRODUCT_NAME: OpusApp
+        PRODUCT_MODULE_NAME: OpusApp
+        SWIFT_VERSION: 5.0
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: 1,2
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_KEY_CFBundleDisplayName: $(APP_DISPLAY_NAME)
+        INFOPLIST_KEY_LSRequiresIPhoneOS: YES
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: $(ATS_ALLOW_INSECURE_LOCAL)
+        INFOPLIST_KEY_OPUSAPIBaseURL: $(API_BASE_URL)
+        INFOPLIST_KEY_OPUSATSAllowInsecureLocal: $(ATS_ALLOW_INSECURE_LOCAL)
+        INFOPLIST_KEY_OPUSAppEnv: $(APP_ENV)
+        INFOPLIST_KEY_OPUSDisplayNameSuffix: $(DISPLAY_NAME_SUFFIX)
+        INFOPLIST_KEY_OPUSEnableNetworkLogging: $(ENABLE_NETWORK_LOGGING)
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        IPHONEOS_DEPLOYMENT_TARGET: 18.0
+  OpusAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    hostApplication: OpusApp
+    sources:
+      - path: Tests
+    settings:
+      base:
+        PRODUCT_NAME: OpusAppTests
+        PRODUCT_MODULE_NAME: OpusAppTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.hugo.opus.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 5.0
+        IPHONEOS_DEPLOYMENT_TARGET: 18.0
+    dependencies:
+      - target: OpusApp
+
+schemes:
+  OpusApp-Local:
+    build:
+      targets:
+        OpusApp: [run, archive, profile, analyze]
+        OpusAppTests: [test]
+    run:
+      config: LocalDebug
+    test:
+      config: LocalDebug
+      targets:
+        - name: OpusAppTests
+  OpusApp-Staging:
+    build:
+      targets:
+        OpusApp: [run, archive, profile, analyze]
+        OpusAppTests: [test]
+    run:
+      config: StagingDebug
+    test:
+      config: StagingDebug
+      targets:
+        - name: OpusAppTests
+  OpusApp-Production:
+    build:
+      targets:
+        OpusApp: [run, archive, profile, analyze]
+    run:
+      config: ProductionRelease

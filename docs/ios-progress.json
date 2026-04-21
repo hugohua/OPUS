@@ -1,0 +1,327 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-04-21",
+  "source": "docs/IOS-MASTER-FEATURE-LIST.md",
+  "statusLegend": [
+    "todo",
+    "in_progress",
+    "blocked",
+    "done"
+  ],
+  "waves": [
+    {
+      "id": "wave-0",
+      "title": "Foundation",
+      "goal": "Auth, launch restore, mobile auth contracts, root shell guards, and shared loading/error/empty patterns.",
+      "status": "todo"
+    },
+    {
+      "id": "wave-1",
+      "title": "Top-Level Screens",
+      "goal": "Deliver the first runnable tab-level screens backed by mobile summary/list endpoints.",
+      "status": "todo"
+    },
+    {
+      "id": "wave-2",
+      "title": "Core Flows",
+      "goal": "Implement the primary interactive training and arena flows with end-to-end state handling.",
+      "status": "todo"
+    },
+    {
+      "id": "wave-3",
+      "title": "Content And Hardening",
+      "goal": "Finish briefing/history/detail flows, diagnostics hardening, telemetry, and cross-screen consistency.",
+      "status": "todo"
+    }
+  ],
+  "items": [
+    {
+      "id": "01-auth-and-launch",
+      "title": "Auth & Launch",
+      "wave": "wave-0",
+      "status": "todo",
+      "spec": "docs/ios-pages/01-auth-and-launch.md",
+      "dependencies": [],
+      "server_routes": [
+        "POST /api/mobile/v1/auth/login",
+        "POST /api/mobile/v1/auth/register",
+        "POST /api/mobile/v1/auth/refresh",
+        "POST /api/mobile/v1/auth/logout",
+        "GET /api/mobile/v1/auth/me"
+      ],
+      "ios_modules": [
+        "ios/Core/Auth/*",
+        "ios/Core/Configuration/RuntimeConfig.swift",
+        "ios/App/*"
+      ],
+      "verification": [
+        "登录成功后 token 写入 Keychain 且冷启动可恢复",
+        "token 失效时能回退到登录态并清理本地会话",
+        "未登录时无法进入受保护业务页"
+      ]
+    },
+    {
+      "id": "02-home",
+      "title": "Home",
+      "wave": "wave-1",
+      "status": "todo",
+      "spec": "docs/ios-pages/02-home.md",
+      "dependencies": [
+        "01-auth-and-launch"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/dashboard/summary"
+      ],
+      "ios_modules": [
+        "ios/Features/Dashboard/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "首页在登录态下可拉取 summary 并稳定渲染",
+        "加载态、空态、错误态都有明确展示",
+        "Diagnostics 入口保留且可达"
+      ]
+    },
+    {
+      "id": "03-training-hub",
+      "title": "Training Hub",
+      "wave": "wave-1",
+      "status": "todo",
+      "spec": "docs/ios-pages/03-training-hub.md",
+      "dependencies": [
+        "01-auth-and-launch",
+        "02-home"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/dashboard/summary",
+        "GET /api/mobile/v1/session/audio",
+        "GET /api/mobile/v1/session/review-cards"
+      ],
+      "ios_modules": [
+        "ios/Features/Dashboard/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "训练页展示所有模式入口且无重复职责",
+        "不可用模式有明确降级提示",
+        "从训练页进入后续会话时参数完整"
+      ]
+    },
+    {
+      "id": "04-session-runner",
+      "title": "Session Runner",
+      "wave": "wave-2",
+      "status": "todo",
+      "spec": "docs/ios-pages/04-session-runner.md",
+      "dependencies": [
+        "01-auth-and-launch",
+        "03-training-hub"
+      ],
+      "server_routes": [
+        "POST /api/mobile/v1/session/batch",
+        "POST /api/mobile/v1/session/outcome",
+        "GET /api/mobile/v1/session/audio",
+        "POST /api/mobile/v1/session/audio/grade",
+        "GET /api/mobile/v1/session/review-cards"
+      ],
+      "ios_modules": [
+        "ios/Features/Training/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "各 mode 能正确分发题型与完成页",
+        "空队列与错误态不会卡死在会话中",
+        "回流请求遵守纯语法题不写 FSRS 的现有规则"
+      ]
+    },
+    {
+      "id": "05-arena-dashboard",
+      "title": "Arena Dashboard",
+      "wave": "wave-1",
+      "status": "todo",
+      "spec": "docs/ios-pages/05-arena-dashboard.md",
+      "dependencies": [
+        "01-auth-and-launch"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/arena/overview",
+        "GET /api/mobile/v1/arena/matrix?domain=..."
+      ],
+      "ios_modules": [
+        "ios/Features/Arena/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "概览页支持雷达图、薄弱点与矩阵切换",
+        "空数据时有明确兜底展示",
+        "能稳定跳转到 Part 5 与 Mission"
+      ]
+    },
+    {
+      "id": "06-arena-part5",
+      "title": "Arena Part 5",
+      "wave": "wave-2",
+      "status": "todo",
+      "spec": "docs/ios-pages/06-arena-part5.md",
+      "dependencies": [
+        "05-arena-dashboard",
+        "04-session-runner"
+      ],
+      "server_routes": [
+        "POST /api/mobile/v1/session/batch",
+        "POST /api/mobile/v1/session/outcome",
+        "POST /api/mobile/v1/arena/attempt"
+      ],
+      "ios_modules": [
+        "ios/Features/Arena/*",
+        "ios/Features/Training/*"
+      ],
+      "verification": [
+        "作答反馈、解析与下一题链路连通",
+        "Arena telemetry 与 FSRS 回流都符合 Web 现状",
+        "纯语法题不会误写 FSRS"
+      ]
+    },
+    {
+      "id": "07-arena-mission",
+      "title": "Arena Mission",
+      "wave": "wave-2",
+      "status": "todo",
+      "spec": "docs/ios-pages/07-arena-mission.md",
+      "dependencies": [
+        "05-arena-dashboard"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/arena/mission",
+        "POST /api/mobile/v1/arena/attempt"
+      ],
+      "ios_modules": [
+        "ios/Features/Arena/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "长文、多空位和底部答题 dock 状态一致",
+        "cache miss 有可感知但可恢复的兜底行为",
+        "错题快照与 attempt 提交字段完整"
+      ]
+    },
+    {
+      "id": "08-vocabulary",
+      "title": "Vocabulary",
+      "wave": "wave-1",
+      "status": "todo",
+      "spec": "docs/ios-pages/08-vocabulary.md",
+      "dependencies": [
+        "01-auth-and-launch"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/vocab/list",
+        "GET /api/mobile/v1/vocab/:id",
+        "GET /api/mobile/v1/vocab/tags"
+      ],
+      "ios_modules": [
+        "ios/Features/Vocabulary/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "搜索、筛选、排序和分页参数映射正确",
+        "详情页字段补齐并能从列表进入",
+        "空结果和网络失败可区分"
+      ]
+    },
+    {
+      "id": "09-briefing-console",
+      "title": "Briefing Console",
+      "wave": "wave-1",
+      "status": "todo",
+      "spec": "docs/ios-pages/09-briefing-console.md",
+      "dependencies": [
+        "01-auth-and-launch"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/weaver/latest",
+        "POST /api/mobile/v1/weaver/generate"
+      ],
+      "ios_modules": [
+        "ios/Features/Briefing/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "生成参数校验在提交前完成",
+        "生成中的流式状态可取消或恢复",
+        "鉴权失败时能正确回退"
+      ]
+    },
+    {
+      "id": "10-briefing-reader",
+      "title": "Briefing Reader",
+      "wave": "wave-3",
+      "status": "todo",
+      "spec": "docs/ios-pages/10-briefing-reader.md",
+      "dependencies": [
+        "09-briefing-console"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/weaver/:id",
+        "GET /api/mobile/v1/weaver/wand/word",
+        "POST /api/mobile/v1/weaver/wand/analyze"
+      ],
+      "ios_modules": [
+        "ios/Features/Briefing/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "阅读器可稳定恢复正文与上下文",
+        "Wand 查词与分析流在成功和失败时都有明确反馈",
+        "阅读状态与返回路径不会丢失"
+      ]
+    },
+    {
+      "id": "11-briefing-history",
+      "title": "Briefing History",
+      "wave": "wave-3",
+      "status": "todo",
+      "spec": "docs/ios-pages/11-briefing-history.md",
+      "dependencies": [
+        "09-briefing-console"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/weaver/history",
+        "GET /api/mobile/v1/weaver/:id",
+        "DELETE /api/mobile/v1/weaver/:id"
+      ],
+      "ios_modules": [
+        "ios/Features/Briefing/*",
+        "ios/Core/Networking/*"
+      ],
+      "verification": [
+        "历史列表筛选、删除、进入详情行为一致",
+        "空态和删除确认行为明确",
+        "删除后本地列表与服务端状态同步"
+      ]
+    },
+    {
+      "id": "12-diagnostics",
+      "title": "Diagnostics",
+      "wave": "wave-3",
+      "status": "todo",
+      "spec": "docs/ios-pages/12-diagnostics.md",
+      "dependencies": [
+        "01-auth-and-launch"
+      ],
+      "server_routes": [
+        "GET /api/mobile/v1/health"
+      ],
+      "ios_modules": [
+        "ios/Features/Diagnostics/*",
+        "ios/Core/Configuration/*",
+        "ios/Core/Auth/*"
+      ],
+      "verification": [
+        "环境切换、健康检查、token 清理都可见且可操作",
+        "清 token 后会正确回到未登录路径",
+        "接口不可达时有明确错误信息"
+      ]
+    }
+  ]
+}

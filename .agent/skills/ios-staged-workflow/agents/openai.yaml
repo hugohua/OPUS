@@ -1,0 +1,4 @@
+interface:
+  display_name: "iOS Staged Workflow"
+  short_description: "Plan iOS work before coding."
+  default_prompt: "Use $ios-staged-workflow to clarify an iOS goal with Superpowers first, then implement and verify it with Build iOS Apps."

@@ -34,3 +34,4 @@ public/sw.js.map
 public/serwist-*.js
 public/serwist-*.js.map
 .ai_memory/
+ios/Config/Local.secrets.xcconfig
