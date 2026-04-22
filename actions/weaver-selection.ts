@@ -44,15 +44,17 @@ const WeaverSelectionSchema = z.object({
 export async function getWeaverIngredients(
     userId: string,
     scenario: string,
-    forceRefresh: boolean = false
+    forceRefresh: boolean = false,
+    userIdOverride?: string
 ): Promise<ActionState<{
     priorityWords: Array<{ id: number; word: string; meaning: string; source: string }>;
     fillerWords: Array<{ id: number; word: string; meaning: string }>;
 }>> {
     try {
         // ✅ 鉴权校验 (防止 IDOR 越权)
-        const session = await auth();
-        if (!session?.user?.id || session.user.id !== userId) {
+        const session = userIdOverride ? null : await auth();
+        const authenticatedUserId = userIdOverride ?? session?.user?.id;
+        if (!authenticatedUserId || authenticatedUserId !== userId) {
             return { status: 'error', message: 'Unauthorized: session mismatch' };
         }
 

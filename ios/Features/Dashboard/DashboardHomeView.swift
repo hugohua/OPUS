@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardHomeView: View {
     let homeState: DashboardHomeState
     let onOpenDiagnostics: () -> Void
+    let onOpenDestination: (DashboardDestination) -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -73,6 +74,7 @@ struct DashboardHomeView: View {
 
     private var primaryTaskSection: some View {
         Button {
+            onOpenDestination(homeState.primaryTask.destination)
         } label: {
             OpusCard(accent: homeState.primaryTask.accent, style: .standard) {
                 HStack(spacing: 16) {
@@ -123,7 +125,11 @@ struct DashboardHomeView: View {
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
                 ForEach(Array(homeState.trainingCards.enumerated()), id: \.element.id) { index, card in
-                    DashboardFeatureCardView(card: card, emphasis: index < 2 ? .large : .compact)
+                    DashboardFeatureCardView(
+                        card: card,
+                        emphasis: index < 2 ? .large : .compact,
+                        onTap: { onOpenDestination(card.destination) }
+                    )
                         .gridCellColumns(index == 2 ? 2 : 1)
                 }
             }
@@ -136,7 +142,11 @@ struct DashboardHomeView: View {
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
                 ForEach(homeState.skillCards) { card in
-                    DashboardFeatureCardView(card: card, emphasis: .mini)
+                    DashboardFeatureCardView(
+                        card: card,
+                        emphasis: .mini,
+                        onTap: { onOpenDestination(card.destination) }
+                    )
                 }
             }
         }
@@ -146,8 +156,20 @@ struct DashboardHomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             OpusSectionHeader(title: "简报中心 ✦", actionTitle: "View All")
 
-            ForEach(homeState.briefingCards) { card in
-                DashboardBriefingCardView(card: card)
+            if homeState.briefingCards.isEmpty {
+                OpusStateView(
+                    state: .empty(
+                        title: "还没有最新简报",
+                        message: "首页主内容已就绪，等你第一次生成后这里会展示最新一篇。"
+                    )
+                )
+            } else {
+                ForEach(homeState.briefingCards) { card in
+                    DashboardBriefingCardView(
+                        card: card,
+                        onTap: { onOpenDestination(card.destination) }
+                    )
+                }
             }
         }
     }
@@ -208,9 +230,11 @@ private enum DashboardFeatureEmphasis {
 private struct DashboardFeatureCardView: View {
     let card: DashboardFeatureCard
     let emphasis: DashboardFeatureEmphasis
+    let onTap: () -> Void
 
     var body: some View {
         Button {
+            onTap()
         } label: {
             OpusCard(accent: card.accent, style: emphasis == .mini ? .compact : .standard) {
                 VStack(alignment: .leading, spacing: emphasis == .mini ? 12 : 16) {
@@ -285,9 +309,11 @@ private struct DashboardFeatureCardView: View {
 
 private struct DashboardBriefingCardView: View {
     let card: DashboardBriefingCard
+    let onTap: () -> Void
 
     var body: some View {
         Button {
+            onTap()
         } label: {
             OpusCard(accent: card.accent, style: .featured) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -357,13 +383,15 @@ struct DashboardHomeView_Previews: PreviewProvider {
         Group {
             DashboardHomeView(
                 homeState: DashboardPreviewData.defaultHomeState,
-                onOpenDiagnostics: {}
+                onOpenDiagnostics: {},
+                onOpenDestination: { _ in }
             )
             .previewDisplayName("Light")
 
             DashboardHomeView(
                 homeState: DashboardPreviewData.longNameHomeState,
-                onOpenDiagnostics: {}
+                onOpenDiagnostics: {},
+                onOpenDestination: { _ in }
             )
             .preferredColorScheme(.dark)
             .previewDevice("iPhone SE (3rd generation)")

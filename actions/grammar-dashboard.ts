@@ -31,15 +31,16 @@ const L1_DOMAINS = [
  * 防护 2: N+1 查询规避 (一次查出所有 L1 后在内存中拼接)
  * 防护 3: 冷启动兜底 (没做过的领域默认 0分)
  */
-export async function getRadarData(): Promise<RadarDomain[]> {
-    const session = await auth();
-    if (!session?.user?.id) return getFallbackRadar();
+export async function getRadarData(userIdOverride?: string): Promise<RadarDomain[]> {
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) return getFallbackRadar();
 
     try {
         // [N+1 防御] 一次性捞出该用户在所有 level=1 节点上的熟练度
         const proficiencies = await prisma.userGrammarProficiency.findMany({
             where: {
-                userId: session.user.id,
+                userId,
                 grammarNode: { level: 1 }
             },
             include: { grammarNode: { select: { code: true } } }
@@ -90,14 +91,15 @@ export type ActionRequiredNode = {
  * 防护 1: 必须是有做题记录的 (masteryScore 不为 null)
  * 防护 2: 仅查找叶子节点 (level 3)
  */
-export async function getActionRequiredNodes(): Promise<ActionRequiredNode[]> {
-    const session = await auth();
-    if (!session?.user?.id) return [];
+export async function getActionRequiredNodes(userIdOverride?: string): Promise<ActionRequiredNode[]> {
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) return [];
 
     try {
         const weakNodes = await prisma.userGrammarProficiency.findMany({
             where: {
-                userId: session.user.id,
+                userId,
                 masteryScore: { not: undefined }, // Prisma uses undefined to omit, Prisma null filter is different
                 grammarNode: { level: 3 }
             },
@@ -166,9 +168,10 @@ function generateShortCode(nameEn?: string | null, name?: string): string {
 /**
  * 取回指定 L1 Domain 下的所有 L2 分类与 L3 叶子节点 (0 N+1 并集)
  */
-export async function getSyntaxMatrixData(domainCode?: string): Promise<SyntaxMatrixData | null> {
-    const session = await auth();
-    if (!session?.user?.id) return null;
+export async function getSyntaxMatrixData(domainCode?: string, userIdOverride?: string): Promise<SyntaxMatrixData | null> {
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) return null;
 
     const targetDomain = domainCode || 'L1_VERBS';
 
@@ -215,7 +218,7 @@ export async function getSyntaxMatrixData(domainCode?: string): Promise<SyntaxMa
         // 3. 一次性获取该用户在这些 L3 上的熟练度
         const proficiencies = await prisma.userGrammarProficiency.findMany({
             where: {
-                userId: session.user.id,
+                userId,
                 grammarNodeId: { in: l3Nodes.map(n => n.id) }
             },
             select: { grammarNodeId: true, masteryScore: true }

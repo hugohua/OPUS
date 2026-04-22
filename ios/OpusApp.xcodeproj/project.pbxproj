@@ -9,24 +9,37 @@
 /* Begin PBXBuildFile section */
 		0264F83855ED3AF5A68F55EA /* DashboardHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666EB4918792242D00EF7620 /* DashboardHomeView.swift */; };
 		1086ADC77E545E93B59242E4 /* RequestBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */; };
+		11C63DB16AFBB781FACDAFEA /* VocabularyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0705B2660A9469BE44C9804F /* VocabularyView.swift */; };
+		151737E617445E3E3D222698 /* MobileEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B651D48E1DBFB62E0F1BA3 /* MobileEnvelope.swift */; };
 		15624EBADC41BBCFFD0FD10C /* OpusStatusBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */; };
+		17CCBE1351D9B9645C69C819 /* TrainingHubModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8F0FAA3A1E14C909A0761F8 /* TrainingHubModels.swift */; };
 		1BF452030E9BD0871CAE5C83 /* RuntimeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A61B132CB9F941DAEB64F7D /* RuntimeConfig.swift */; };
+		29E80FD6486C3AD6E68D7F9D /* TrainingHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60DE83363596CB3C878A7422 /* TrainingHubViewModel.swift */; };
+		2AE575699205E780197F4A61 /* VocabularyViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD78E311FF81ABBBAA71E9E /* VocabularyViewModelTests.swift */; };
 		2F194059106FC330347CD2B1 /* URLSessionAPIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */; };
 		309EC6B6AA163D05F0BC1E16 /* DashboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */; };
 		311428A524323A67CB1804BC /* AuthEndpoints.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E42763DC5FE5A0E15E1582 /* AuthEndpoints.swift */; };
+		3BE3D7802670C71E2C4DAFA0 /* TrainingHubViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A171551EEEEEDF646B9354 /* TrainingHubViewModelTests.swift */; };
+		3CA450797A252989DDC6F8BC /* SSEClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7311CFBBE26760857BD5C207 /* SSEClientTests.swift */; };
 		42D0CF1375D45277B35EF744 /* NetworkLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23F8D99CEA6BAAB3E39FCA50 /* NetworkLogger.swift */; };
 		46825695E3735BB4F062B8F6 /* HealthCheckServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */; };
 		472901C28FD5A128BA2C0D07 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B56B9E2506F80911E2FE10CD /* BuildInfo.swift */; };
 		48F044967F3E551AB7BA27C6 /* OpusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC8E436FC740DD5DE58E544 /* OpusCard.swift */; };
+		4C13A122C91341A9226BAEB9 /* TrainingHubService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C214F20B43E56A3309E44B /* TrainingHubService.swift */; };
 		4CC58B2E749032AADDB54A39 /* DashboardPreviewData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */; };
 		4E167CD678F050101A3A9E6A /* OpusTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 182E1EB8CFF879C3B429D2D4 /* OpusTheme.swift */; };
+		5272D00CC0AEDA58273E6354 /* VocabularyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 396DC353F48E66232DD0D1D2 /* VocabularyViewModel.swift */; };
+		5292B29A6B0851F67B6DA176 /* SSEClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A763959BA41B375C9542AC /* SSEClient.swift */; };
 		5C910FAB77A7DB0D9E2354C3 /* OpusStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10EC5D4C59A07AE827F621A /* OpusStateView.swift */; };
 		5FEC5218E236A75BA6010C4C /* OpusSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23D401C8BE80EE8B20F2EE08 /* OpusSectionHeader.swift */; };
 		62339B810FCFEA01F8831812 /* HealthCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */; };
+		6263E04F2CE602A56751AAF5 /* BriefingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0635C7B462ADAB56C37BC9 /* BriefingModels.swift */; };
+		63A3BF133C73D78DF5C3DA27 /* ArenaDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30070A31C641A4B2541E0518 /* ArenaDashboardViewModel.swift */; };
 		68EA8FE71BA8FDD1DB180688 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263DC8E8F42D945D914B65F /* Endpoint.swift */; };
 		6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */; };
 		6C43F787FBE5DC35B48ADED6 /* DiagnosticsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */; };
 		6CC3B4BEACF432E257725173 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */; };
+		7397B447F9173945C8F576C7 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE17D944DF2523782C65BF8 /* BriefingView.swift */; };
 		7667EC5A508422FA0A2CD75B /* URLSessionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */; };
 		83A89981AF85F81A8C27CC2C /* AuthSessionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F5C2E93EDCCA885EC909BA /* AuthSessionServiceTests.swift */; };
 		85758D0F576D4BB0A657C6C7 /* DashboardTabContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */; };
@@ -34,26 +47,37 @@
 		8FCB7380ED1A20B171E1BC93 /* RuntimeConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */; };
 		9C5AE0AAD012232B46EF0246 /* AuthSessionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAEC6E066242B3A13A2A521 /* AuthSessionError.swift */; };
 		9D5009A72A82669F21F6FF9C /* RequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */; };
+		9EBB22C25427A66991BD2F51 /* ArenaDashboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF810845434BE3B8EFBAE3F3 /* ArenaDashboardService.swift */; };
+		A07A0456C463DE9EE17B998C /* VocabularyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE49307588A8C018046BE55A /* VocabularyModels.swift */; };
 		A0E81BF81F3EEFA1FDAC8C07 /* KeychainTokenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0A4B218DE4445A156E1A62 /* KeychainTokenStoreTests.swift */; };
 		A13A3CE7D842C348644C1BF0 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF33BE709520CCCF1C5BDE2 /* AppEnvironment.swift */; };
 		A774295448E663740E8F078D /* DashboardTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3315218A7CC6A03A5DA74314 /* DashboardTab.swift */; };
+		AA87DB3FF3146CF8EBB696A6 /* DashboardSummaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D61B49C572A5789795DD5BA3 /* DashboardSummaryService.swift */; };
 		AB606746F929ECF560904904 /* HTTPMethod.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8FD7937C99658BA846179D2 /* HTTPMethod.swift */; };
+		AC6DFBD01308D7DD29F28D92 /* BriefingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C377409F1E87F4087A95B4DB /* BriefingViewModelTests.swift */; };
 		B3E43984040228E91651D237 /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */; };
 		B42C81443E7B12BB01F6F977 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04669F51DC0F88996F304AA /* DashboardViewModel.swift */; };
+		B7E641E987AEDF3F970B1F7F /* VocabularyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB5F4659AFB1D532B81BE745 /* VocabularyService.swift */; };
+		C1A7F79480230958A3FF1540 /* ArenaDashboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F96B9A0AD476D7895305C2 /* ArenaDashboardViewModelTests.swift */; };
 		C1EB61E14AB4DFEA7BD13457 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA5DF5633D45A8FB6B78F63 /* AppRootView.swift */; };
 		C40A26794F4ADC97899C788F /* AuthTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A997D0D0AA2D3B2E423BF0 /* AuthTokenStore.swift */; };
 		C47B976A42B7713381A4475F /* DiagnosticsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084E27FBFFF18210F309D98C /* DiagnosticsViewModelTests.swift */; };
+		C76205E3B3456BA83A33B21E /* ArenaDashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F482023FD91EAD0556A7A11 /* ArenaDashboardModels.swift */; };
 		CB5A0E7BDAB17C1170ADFBAD /* AuthSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC668E43F3D46044001FE917 /* AuthSessionService.swift */; };
 		D57A09EEBF2E6DC48FCD4DC3 /* LaunchCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B1F308EA8E023E2D182D29 /* LaunchCoordinatorTests.swift */; };
 		D7A7085B4C71081CF8A0201E /* AuthEnvironmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F349C8B23749F6591C5DD1D2 /* AuthEnvironmentStore.swift */; };
 		DB13A0116C9FC0BAA2BBA3AB /* OpusPrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */; };
 		DE879FB445F035D08C98D802 /* LaunchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D39E85A07CF42760A4798F /* LaunchCoordinator.swift */; };
 		DFE9C4E8E4E8A00406DC88FA /* DiagnosticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66527F9F9DFC0DFF53D30E1F /* DiagnosticsViewModel.swift */; };
+		E145F6F58FF570E8C842E258 /* BriefingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFABDCA96B9FB35C3069E033 /* BriefingService.swift */; };
+		E7A2421F3FCA51710527D1DA /* TrainingHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF301570EA897A384AA3EDC /* TrainingHubView.swift */; };
 		E9FADA501A2D5739F234BC49 /* OpusApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD56555672778BDB5E31E64 /* OpusApp.swift */; };
 		F2EE0250E5DCF8CAD94DE89F /* MobileAuthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1520D32BACD8E1C65553E9BE /* MobileAuthModels.swift */; };
+		F71200D23BC91BEC028C56AC /* ArenaDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEAB3B29783E344DE7739148 /* ArenaDashboardView.swift */; };
 		FBF75B649BF7647482C195C2 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853FAD1C1A474733938BCAAE /* APIClient.swift */; };
 		FE4DD8F0C1B79CBE0D0B3B49 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287B8D458A9036BAA93962D3 /* KeychainTokenStore.swift */; };
 		FF3FF0B15D8B27597A13E9E5 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A177E421DB40E995947453E /* AppDependencies.swift */; };
+		FF84CD2485C9DD90193FA1F8 /* BriefingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72B6324897BE3082DB95D95 /* BriefingViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +91,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0705B2660A9469BE44C9804F /* VocabularyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyView.swift; sourceTree = "<group>"; };
 		084E27FBFFF18210F309D98C /* DiagnosticsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsViewModelTests.swift; sourceTree = "<group>"; };
 		1520D32BACD8E1C65553E9BE /* MobileAuthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileAuthModels.swift; sourceTree = "<group>"; };
 		182E1EB8CFF879C3B429D2D4 /* OpusTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusTheme.swift; sourceTree = "<group>"; };
@@ -78,50 +103,84 @@
 		24FD6577AE76630734894FB1 /* Local.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig; sourceTree = "<group>"; };
 		287B8D458A9036BAA93962D3 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
+		2CE17D944DF2523782C65BF8 /* BriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingView.swift; sourceTree = "<group>"; };
 		2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCheckService.swift; sourceTree = "<group>"; };
+		30070A31C641A4B2541E0518 /* ArenaDashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardViewModel.swift; sourceTree = "<group>"; };
 		3315218A7CC6A03A5DA74314 /* DashboardTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardTab.swift; sourceTree = "<group>"; };
+		38C214F20B43E56A3309E44B /* TrainingHubService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubService.swift; sourceTree = "<group>"; };
+		396DC353F48E66232DD0D1D2 /* VocabularyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyViewModel.swift; sourceTree = "<group>"; };
 		3A61B132CB9F941DAEB64F7D /* RuntimeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeConfig.swift; sourceTree = "<group>"; };
 		3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilder.swift; sourceTree = "<group>"; };
 		3AF4260ABAE6A9D0ACD5E84C /* AuthRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRootView.swift; sourceTree = "<group>"; };
 		419B1474D4A7E3A0A7BF3535 /* Production.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Production.xcconfig; sourceTree = "<group>"; };
+		42F96B9A0AD476D7895305C2 /* ArenaDashboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardViewModelTests.swift; sourceTree = "<group>"; };
 		43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsHomeView.swift; sourceTree = "<group>"; };
+		4EF301570EA897A384AA3EDC /* TrainingHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubView.swift; sourceTree = "<group>"; };
+		4F482023FD91EAD0556A7A11 /* ArenaDashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardModels.swift; sourceTree = "<group>"; };
 		5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardTabContainerView.swift; sourceTree = "<group>"; };
 		5BC8E436FC740DD5DE58E544 /* OpusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCard.swift; sourceTree = "<group>"; };
+		60DE83363596CB3C878A7422 /* TrainingHubViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubViewModel.swift; sourceTree = "<group>"; };
 		6263DC8E8F42D945D914B65F /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
+		62B651D48E1DBFB62E0F1BA3 /* MobileEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileEnvelope.swift; sourceTree = "<group>"; };
 		6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCheckServiceTests.swift; sourceTree = "<group>"; };
 		66527F9F9DFC0DFF53D30E1F /* DiagnosticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsViewModel.swift; sourceTree = "<group>"; };
 		666EB4918792242D00EF7620 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
 		70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPreviewData.swift; sourceTree = "<group>"; };
+		7311CFBBE26760857BD5C207 /* SSEClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClientTests.swift; sourceTree = "<group>"; };
 		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		853FAD1C1A474733938BCAAE /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		87F5C2E93EDCCA885EC909BA /* AuthSessionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionServiceTests.swift; sourceTree = "<group>"; };
 		8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModelTests.swift; sourceTree = "<group>"; };
 		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		92A763959BA41B375C9542AC /* SSEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClient.swift; sourceTree = "<group>"; };
 		9A177E421DB40E995947453E /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionAPIClientTests.swift; sourceTree = "<group>"; };
 		AAA5DF5633D45A8FB6B78F63 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		AB0635C7B462ADAB56C37BC9 /* BriefingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingModels.swift; sourceTree = "<group>"; };
+		ABD78E311FF81ABBBAA71E9E /* VocabularyViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyViewModelTests.swift; sourceTree = "<group>"; };
 		B56B9E2506F80911E2FE10CD /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
 		B6D39E85A07CF42760A4798F /* LaunchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinator.swift; sourceTree = "<group>"; };
 		BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusStatusBadge.swift; sourceTree = "<group>"; };
+		BFABDCA96B9FB35C3069E033 /* BriefingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingService.swift; sourceTree = "<group>"; };
 		C04669F51DC0F88996F304AA /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		C377409F1E87F4087A95B4DB /* BriefingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingViewModelTests.swift; sourceTree = "<group>"; };
 		C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilderTests.swift; sourceTree = "<group>"; };
 		C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionAPIClient.swift; sourceTree = "<group>"; };
 		C8FD7937C99658BA846179D2 /* HTTPMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPMethod.swift; sourceTree = "<group>"; };
 		CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusPrimaryButton.swift; sourceTree = "<group>"; };
 		D10EC5D4C59A07AE827F621A /* OpusStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusStateView.swift; sourceTree = "<group>"; };
+		D61B49C572A5789795DD5BA3 /* DashboardSummaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSummaryService.swift; sourceTree = "<group>"; };
+		D8F0FAA3A1E14C909A0761F8 /* TrainingHubModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubModels.swift; sourceTree = "<group>"; };
+		DE49307588A8C018046BE55A /* VocabularyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyModels.swift; sourceTree = "<group>"; };
 		E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeConfigTests.swift; sourceTree = "<group>"; };
 		E6E42763DC5FE5A0E15E1582 /* AuthEndpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthEndpoints.swift; sourceTree = "<group>"; };
+		E7A171551EEEEEDF646B9354 /* TrainingHubViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubViewModelTests.swift; sourceTree = "<group>"; };
+		EEAB3B29783E344DE7739148 /* ArenaDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardView.swift; sourceTree = "<group>"; };
 		EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusDashboardHeader.swift; sourceTree = "<group>"; };
 		EFD56555672778BDB5E31E64 /* OpusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusApp.swift; sourceTree = "<group>"; };
 		F1B1F308EA8E023E2D182D29 /* LaunchCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinatorTests.swift; sourceTree = "<group>"; };
 		F349C8B23749F6591C5DD1D2 /* AuthEnvironmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthEnvironmentStore.swift; sourceTree = "<group>"; };
 		F6EEEF400AA9747B89AB3A89 /* Staging.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Staging.xcconfig; sourceTree = "<group>"; };
+		F72B6324897BE3082DB95D95 /* BriefingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingViewModel.swift; sourceTree = "<group>"; };
+		FB5F4659AFB1D532B81BE745 /* VocabularyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyService.swift; sourceTree = "<group>"; };
 		FC668E43F3D46044001FE917 /* AuthSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionService.swift; sourceTree = "<group>"; };
 		FF0A4B218DE4445A156E1A62 /* KeychainTokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStoreTests.swift; sourceTree = "<group>"; };
+		FF810845434BE3B8EFBAE3F3 /* ArenaDashboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		111C60FF7D608CFB536E9DEC /* Vocabulary */ = {
+			isa = PBXGroup;
+			children = (
+				DE49307588A8C018046BE55A /* VocabularyModels.swift */,
+				FB5F4659AFB1D532B81BE745 /* VocabularyService.swift */,
+				0705B2660A9469BE44C9804F /* VocabularyView.swift */,
+				396DC353F48E66232DD0D1D2 /* VocabularyViewModel.swift */,
+			);
+			path = Vocabulary;
+			sourceTree = "<group>";
+		};
 		1B9D89470A5294A530E523CE /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -132,6 +191,17 @@
 				BAE3A0AE9E6437CB234E543A /* OpusStatusBadge.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		1F3E12926E5F75D419292035 /* Arena */ = {
+			isa = PBXGroup;
+			children = (
+				4F482023FD91EAD0556A7A11 /* ArenaDashboardModels.swift */,
+				FF810845434BE3B8EFBAE3F3 /* ArenaDashboardService.swift */,
+				EEAB3B29783E344DE7739148 /* ArenaDashboardView.swift */,
+				30070A31C641A4B2541E0518 /* ArenaDashboardViewModel.swift */,
+			);
+			path = Arena;
 			sourceTree = "<group>";
 		};
 		232853D9429C460F7C6FB42C /* Configuration */ = {
@@ -150,12 +220,25 @@
 				853FAD1C1A474733938BCAAE /* APIClient.swift */,
 				6263DC8E8F42D945D914B65F /* Endpoint.swift */,
 				C8FD7937C99658BA846179D2 /* HTTPMethod.swift */,
+				62B651D48E1DBFB62E0F1BA3 /* MobileEnvelope.swift */,
 				298A3E6E24DB8D81B3CAD614 /* NetworkError.swift */,
 				23F8D99CEA6BAAB3E39FCA50 /* NetworkLogger.swift */,
 				3AC2FA979D23770E4CD91A38 /* RequestBuilder.swift */,
+				92A763959BA41B375C9542AC /* SSEClient.swift */,
 				C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */,
 			);
 			path = Networking;
+			sourceTree = "<group>";
+		};
+		287DC5CB4C59C6A74C92CD30 /* Briefing */ = {
+			isa = PBXGroup;
+			children = (
+				AB0635C7B462ADAB56C37BC9 /* BriefingModels.swift */,
+				BFABDCA96B9FB35C3069E033 /* BriefingService.swift */,
+				2CE17D944DF2523782C65BF8 /* BriefingView.swift */,
+				F72B6324897BE3082DB95D95 /* BriefingViewModel.swift */,
+			);
+			path = Briefing;
 			sourceTree = "<group>";
 		};
 		50F47EFDF0261CD408F08E51 /* Config */ = {
@@ -181,9 +264,13 @@
 		666A4F6A290163E10AC202AD /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				1F3E12926E5F75D419292035 /* Arena */,
 				A000A098A33F07EBD51B56D5 /* Auth */,
+				287DC5CB4C59C6A74C92CD30 /* Briefing */,
 				B3837A74BCC2F7EE83E7C2A6 /* Dashboard */,
 				62E286861F5353553EF9E3C9 /* Diagnostics */,
+				798E31DF4212ACE66B70B279 /* Training */,
+				111C60FF7D608CFB536E9DEC /* Vocabulary */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -207,9 +294,21 @@
 			isa = PBXGroup;
 			children = (
 				C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */,
+				7311CFBBE26760857BD5C207 /* SSEClientTests.swift */,
 				A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */,
 			);
 			path = Networking;
+			sourceTree = "<group>";
+		};
+		798E31DF4212ACE66B70B279 /* Training */ = {
+			isa = PBXGroup;
+			children = (
+				D8F0FAA3A1E14C909A0761F8 /* TrainingHubModels.swift */,
+				38C214F20B43E56A3309E44B /* TrainingHubService.swift */,
+				4EF301570EA897A384AA3EDC /* TrainingHubView.swift */,
+				60DE83363596CB3C878A7422 /* TrainingHubViewModel.swift */,
+			);
+			path = Training;
 			sourceTree = "<group>";
 		};
 		7B00E826025E7B0981145842 /* Core */ = {
@@ -260,9 +359,13 @@
 		A3203D8AF2DF933208ABC1DE /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				42F96B9A0AD476D7895305C2 /* ArenaDashboardViewModelTests.swift */,
+				C377409F1E87F4087A95B4DB /* BriefingViewModelTests.swift */,
 				8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */,
 				084E27FBFFF18210F309D98C /* DiagnosticsViewModelTests.swift */,
 				6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */,
+				E7A171551EEEEEDF646B9354 /* TrainingHubViewModelTests.swift */,
+				ABD78E311FF81ABBBAA71E9E /* VocabularyViewModelTests.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -273,6 +376,7 @@
 				666EB4918792242D00EF7620 /* DashboardHomeView.swift */,
 				A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */,
 				70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */,
+				D61B49C572A5789795DD5BA3 /* DashboardSummaryService.swift */,
 				3315218A7CC6A03A5DA74314 /* DashboardTab.swift */,
 				5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */,
 				C04669F51DC0F88996F304AA /* DashboardViewModel.swift */,
@@ -406,7 +510,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A7F79480230958A3FF1540 /* ArenaDashboardViewModelTests.swift in Sources */,
 				83A89981AF85F81A8C27CC2C /* AuthSessionServiceTests.swift in Sources */,
+				AC6DFBD01308D7DD29F28D92 /* BriefingViewModelTests.swift in Sources */,
 				309EC6B6AA163D05F0BC1E16 /* DashboardViewModelTests.swift in Sources */,
 				C47B976A42B7713381A4475F /* DiagnosticsViewModelTests.swift in Sources */,
 				46825695E3735BB4F062B8F6 /* HealthCheckServiceTests.swift in Sources */,
@@ -414,7 +520,10 @@
 				D57A09EEBF2E6DC48FCD4DC3 /* LaunchCoordinatorTests.swift in Sources */,
 				9D5009A72A82669F21F6FF9C /* RequestBuilderTests.swift in Sources */,
 				8FCB7380ED1A20B171E1BC93 /* RuntimeConfigTests.swift in Sources */,
+				3CA450797A252989DDC6F8BC /* SSEClientTests.swift in Sources */,
+				3BE3D7802670C71E2C4DAFA0 /* TrainingHubViewModelTests.swift in Sources */,
 				2F194059106FC330347CD2B1 /* URLSessionAPIClientTests.swift in Sources */,
+				2AE575699205E780197F4A61 /* VocabularyViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -426,16 +535,25 @@
 				FF3FF0B15D8B27597A13E9E5 /* AppDependencies.swift in Sources */,
 				A13A3CE7D842C348644C1BF0 /* AppEnvironment.swift in Sources */,
 				C1EB61E14AB4DFEA7BD13457 /* AppRootView.swift in Sources */,
+				C76205E3B3456BA83A33B21E /* ArenaDashboardModels.swift in Sources */,
+				9EBB22C25427A66991BD2F51 /* ArenaDashboardService.swift in Sources */,
+				F71200D23BC91BEC028C56AC /* ArenaDashboardView.swift in Sources */,
+				63A3BF133C73D78DF5C3DA27 /* ArenaDashboardViewModel.swift in Sources */,
 				311428A524323A67CB1804BC /* AuthEndpoints.swift in Sources */,
 				D7A7085B4C71081CF8A0201E /* AuthEnvironmentStore.swift in Sources */,
 				8DA63246A0702327E55E1C98 /* AuthRootView.swift in Sources */,
 				9C5AE0AAD012232B46EF0246 /* AuthSessionError.swift in Sources */,
 				CB5A0E7BDAB17C1170ADFBAD /* AuthSessionService.swift in Sources */,
 				C40A26794F4ADC97899C788F /* AuthTokenStore.swift in Sources */,
+				6263E04F2CE602A56751AAF5 /* BriefingModels.swift in Sources */,
+				E145F6F58FF570E8C842E258 /* BriefingService.swift in Sources */,
+				7397B447F9173945C8F576C7 /* BriefingView.swift in Sources */,
+				FF84CD2485C9DD90193FA1F8 /* BriefingViewModel.swift in Sources */,
 				472901C28FD5A128BA2C0D07 /* BuildInfo.swift in Sources */,
 				0264F83855ED3AF5A68F55EA /* DashboardHomeView.swift in Sources */,
 				6CC3B4BEACF432E257725173 /* DashboardModels.swift in Sources */,
 				4CC58B2E749032AADDB54A39 /* DashboardPreviewData.swift in Sources */,
+				AA87DB3FF3146CF8EBB696A6 /* DashboardSummaryService.swift in Sources */,
 				A774295448E663740E8F078D /* DashboardTab.swift in Sources */,
 				85758D0F576D4BB0A657C6C7 /* DashboardTabContainerView.swift in Sources */,
 				B42C81443E7B12BB01F6F977 /* DashboardViewModel.swift in Sources */,
@@ -447,6 +565,7 @@
 				FE4DD8F0C1B79CBE0D0B3B49 /* KeychainTokenStore.swift in Sources */,
 				DE879FB445F035D08C98D802 /* LaunchCoordinator.swift in Sources */,
 				F2EE0250E5DCF8CAD94DE89F /* MobileAuthModels.swift in Sources */,
+				151737E617445E3E3D222698 /* MobileEnvelope.swift in Sources */,
 				B3E43984040228E91651D237 /* NetworkError.swift in Sources */,
 				42D0CF1375D45277B35EF744 /* NetworkLogger.swift in Sources */,
 				E9FADA501A2D5739F234BC49 /* OpusApp.swift in Sources */,
@@ -459,7 +578,16 @@
 				4E167CD678F050101A3A9E6A /* OpusTheme.swift in Sources */,
 				1086ADC77E545E93B59242E4 /* RequestBuilder.swift in Sources */,
 				1BF452030E9BD0871CAE5C83 /* RuntimeConfig.swift in Sources */,
+				5292B29A6B0851F67B6DA176 /* SSEClient.swift in Sources */,
+				17CCBE1351D9B9645C69C819 /* TrainingHubModels.swift in Sources */,
+				4C13A122C91341A9226BAEB9 /* TrainingHubService.swift in Sources */,
+				E7A2421F3FCA51710527D1DA /* TrainingHubView.swift in Sources */,
+				29E80FD6486C3AD6E68D7F9D /* TrainingHubViewModel.swift in Sources */,
 				7667EC5A508422FA0A2CD75B /* URLSessionAPIClient.swift in Sources */,
+				A07A0456C463DE9EE17B998C /* VocabularyModels.swift in Sources */,
+				B7E641E987AEDF3F970B1F7F /* VocabularyService.swift in Sources */,
+				11C63DB16AFBB781FACDAFEA /* VocabularyView.swift in Sources */,
+				5272D00CC0AEDA58273E6354 /* VocabularyViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

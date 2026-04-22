@@ -3,9 +3,10 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 
-export async function getVocabDetail(identifier: number | string) {
-    const session = await auth();
-    if (!session?.user?.id) {
+export async function getVocabDetail(identifier: number | string, userIdOverride?: string) {
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) {
         throw new Error("Unauthorized");
     }
 
@@ -29,7 +30,7 @@ export async function getVocabDetail(identifier: number | string) {
     // We fetch ALL tracks for this user + vocab combination
     const progressList = await prisma.userProgress.findMany({
         where: {
-            userId: session.user.id,
+            userId,
             vocabId: vocab.id,
         },
     });

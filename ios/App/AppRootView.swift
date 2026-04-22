@@ -4,6 +4,10 @@ struct AppRootView: View {
     @Bindable var launchCoordinator: LaunchCoordinator
     @Bindable var dashboardViewModel: DashboardViewModel
     @Bindable var diagnosticsViewModel: DiagnosticsViewModel
+    @Bindable var trainingHubViewModel: TrainingHubViewModel
+    @Bindable var arenaDashboardViewModel: ArenaDashboardViewModel
+    @Bindable var vocabularyViewModel: VocabularyViewModel
+    @Bindable var briefingViewModel: BriefingViewModel
 
     var body: some View {
         Group {
@@ -15,12 +19,25 @@ struct AppRootView: View {
             case .authenticated:
                 DashboardTabContainerView(
                     viewModel: dashboardViewModel,
-                    diagnosticsViewModel: diagnosticsViewModel
+                    diagnosticsViewModel: diagnosticsViewModel,
+                    trainingHubViewModel: trainingHubViewModel,
+                    arenaDashboardViewModel: arenaDashboardViewModel,
+                    vocabularyViewModel: vocabularyViewModel,
+                    briefingViewModel: briefingViewModel
                 )
             }
         }
         .task {
             await launchCoordinator.start()
+        }
+        .onChange(of: launchCoordinator.currentSession?.user.id) { oldValue, newValue in
+            if oldValue != newValue {
+                dashboardViewModel.resetForSessionChange()
+                trainingHubViewModel.resetForSessionChange()
+                arenaDashboardViewModel.resetForSessionChange()
+                vocabularyViewModel.resetForSessionChange()
+                briefingViewModel.resetForSessionChange()
+            }
         }
     }
 }

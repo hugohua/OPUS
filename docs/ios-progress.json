@@ -19,7 +19,7 @@
       "id": "wave-1",
       "title": "Top-Level Screens",
       "goal": "Deliver the first runnable tab-level screens backed by mobile summary/list endpoints.",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "wave-2",
@@ -94,7 +94,7 @@
       "id": "02-home",
       "title": "Home",
       "wave": "wave-1",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/02-home.md",
       "dependencies": [
         "01-auth-and-launch"
@@ -110,13 +110,22 @@
         "首页在登录态下可拉取 summary 并稳定渲染",
         "加载态、空态、错误态都有明确展示",
         "Diagnostics 入口保留且可达"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "mobile-dashboard-summary-and-ios-home",
+          "status": "done",
+          "summary": "Added shared mobile wave-1 route contracts, implemented a real dashboard summary service for iOS Home, replaced static preview-driven shell loading with authenticated summary fetch + loading/error/briefing-empty handling, aligned the hero CTA to DAILY_BLITZ, and converted the tab container to explicit tab slots so later wave-1 features can attach without sharing the old placeholder loop.",
+          "verification": "npx vitest run app/api/mobile/v1/routes.contract.test.ts app/api/mobile/v1/health/route.test.ts (5 tests passed) && npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/DashboardViewModelTests (** TEST SUCCEEDED **, 6 tests passed). Build logs confirmed authenticated launch now requests GET /api/mobile/v1/dashboard/summary during the Dashboard flow."
+        }
       ]
     },
     {
       "id": "03-training-hub",
       "title": "Training Hub",
       "wave": "wave-1",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/03-training-hub.md",
       "dependencies": [
         "01-auth-and-launch",
@@ -135,6 +144,15 @@
         "训练页展示所有模式入口且无重复职责",
         "不可用模式有明确降级提示",
         "从训练页进入后续会话时参数完整"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "ios-training-hub-shell-and-availability",
+          "status": "done",
+          "summary": "Added Training Hub service, models, view model, and native SwiftUI screen backed by dashboard summary plus audio/review-card mobile endpoints; kept DAILY_BLITZ on Home, exposed L0/L1/L2, review cards, audio, and arena jump-offs with explicit unavailable messaging instead of duplicating Home responsibilities.",
+          "verification": "npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/TrainingHubViewModelTests (** TEST SUCCEEDED **, 2 tests passed). Simulator smoke on iPhone 17 Pro verified the Training tab loads, shows core/specialized sections, and renders degraded copy for unavailable review-card/audio entries without breaking the page."
+        }
       ]
     },
     {
@@ -168,7 +186,7 @@
       "id": "05-arena-dashboard",
       "title": "Arena Dashboard",
       "wave": "wave-1",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/05-arena-dashboard.md",
       "dependencies": [
         "01-auth-and-launch"
@@ -185,6 +203,15 @@
         "概览页支持雷达图、薄弱点与矩阵切换",
         "空数据时有明确兜底展示",
         "能稳定跳转到 Part 5 与 Mission"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "ios-arena-dashboard-overview-and-matrix",
+          "status": "done",
+          "summary": "Added a dedicated Arena feature with overview + matrix services, independent view model state for domain switching and node selection, weak-point empty-state handling, and stable Part 5/Mission hand-off buttons without coupling arena state back into Dashboard models.",
+          "verification": "npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/ArenaDashboardViewModelTests (** TEST SUCCEEDED **, 2 tests passed). Simulator smoke on iPhone 17 Pro verified the Arena tab loads real overview data, shows the grammar radar + weak-point fallback, and exposes Part 5 / Mission entry buttons."
+        }
       ]
     },
     {
@@ -239,7 +266,7 @@
       "id": "08-vocabulary",
       "title": "Vocabulary",
       "wave": "wave-1",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/08-vocabulary.md",
       "dependencies": [
         "01-auth-and-launch"
@@ -257,13 +284,22 @@
         "搜索、筛选、排序和分页参数映射正确",
         "详情页字段补齐并能从列表进入",
         "空结果和网络失败可区分"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "mobile-vocabulary-routes-and-ios-list-shell",
+          "status": "done",
+          "summary": "Added the native Vocabulary feature (list, filter state, detail sheet, pagination), then fixed the mobile vocab server adapters so bearer-auth iOS requests no longer reuse cookie-only server actions; the mobile wrapper now forwards the authenticated user ID into shared vocab queries and uses a raw tag query compatible with the existing web implementation.",
+          "verification": "npx vitest run app/api/mobile/v1/routes.contract.test.ts lib/mobile/vocabulary.test.ts (7 tests passed) && npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/VocabularyViewModelTests (** TEST SUCCEEDED **, 2 tests passed). Authenticated simulator smoke on iPhone 17 Pro verified the Vocabulary tab loads in a restored logged-in session and renders live list data plus progress stats instead of the prior blocked/login fallback."
+        }
       ]
     },
     {
       "id": "09-briefing-console",
       "title": "Briefing Console",
       "wave": "wave-1",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/09-briefing-console.md",
       "dependencies": [
         "01-auth-and-launch"
@@ -280,6 +316,15 @@
         "生成参数校验在提交前完成",
         "生成中的流式状态可取消或恢复",
         "鉴权失败时能正确回退"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "ios-briefing-console-minimal-closed-loop",
+          "status": "done",
+          "summary": "Added the Briefing feature with latest briefing loading, ingredients/config console, SSE streaming generation, cancel/error handling, and a minimal reader phase shared with Home routing, then fixed the mobile ingredients DTO contract so iOS decodes scenario metadata correctly and the authenticated tab no longer falls into a false load-failure state.",
+          "verification": "npx vitest run lib/mobile/briefing.test.ts app/api/mobile/v1/routes.contract.test.ts (5 tests passed) && npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/BriefingViewModelTests -only-testing:OpusAppTests/SSEClientTests (** TEST SUCCEEDED **, 3 tests passed). Authenticated simulator smoke on iPhone 17 Pro verified the Briefing tab loads latest briefing + ingredients in the restored logged-in session, and a direct bearer-auth live call to POST /api/mobile/v1/weaver/generate returned text/event-stream with content chunks, X-Weaver-Cache=MISS, and a terminal done event for the current Hugo account."
+        }
       ]
     },
     {

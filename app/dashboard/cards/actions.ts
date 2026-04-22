@@ -47,16 +47,18 @@ function toWordAsset(c: OMPSCandidate): WordAsset {
  */
 export async function getReviewCards(
     limit: number = 20,
-    excludeIds: number[] = []
+    excludeIds: number[] = [],
+    userIdOverride?: string
 ): Promise<WordAsset[]> {
-    const session = await auth();
-    if (!session?.user?.id) return [];
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) return [];
 
     // Zod 校验输入
     const validated = GetReviewCardsSchema.parse({ limit, excludeIds });
 
     const candidates = await fetchOMPSCandidates(
-        session.user.id,
+        userId,
         validated.limit,
         {},
         validated.excludeIds

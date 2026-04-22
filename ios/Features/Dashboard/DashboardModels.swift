@@ -8,6 +8,14 @@ enum DashboardAccent: String {
     case slate
 }
 
+enum DashboardDestination: Equatable {
+    case training(mode: String)
+    case reviewCards
+    case audio
+    case arena(path: String, grammarNodeID: String? = nil)
+    case briefing(articleID: String?)
+}
+
 struct DashboardMetric: Equatable, Identifiable {
     let id: String
     let title: String
@@ -21,6 +29,7 @@ struct DashboardPrimaryTask: Equatable {
     let detail: String
     let ctaTitle: String
     let accent: DashboardAccent
+    let destination: DashboardDestination
 }
 
 struct DashboardFeatureCard: Equatable, Identifiable {
@@ -31,15 +40,18 @@ struct DashboardFeatureCard: Equatable, Identifiable {
     let systemImage: String
     let badgeText: String?
     let accent: DashboardAccent
+    let destination: DashboardDestination
 }
 
 struct DashboardBriefingCard: Equatable, Identifiable {
     let id: String
+    let articleID: String
     let title: String
     let subtitle: String
     let contextLabel: String
     let systemImage: String
     let accent: DashboardAccent
+    let destination: DashboardDestination
 }
 
 struct DashboardDiagnosticsSummary: Equatable {

@@ -21,7 +21,8 @@ enum DashboardPreviewData {
             subtitle: "20 词 · 混合模式",
             detail: "待复习",
             ctaTitle: "进入训练",
-            accent: .violet
+            accent: .violet,
+            destination: .training(mode: "DAILY_BLITZ")
         ),
         trainingCards: [
             DashboardFeatureCard(
@@ -31,7 +32,8 @@ enum DashboardPreviewData {
                 detail: "Part 5",
                 systemImage: "bolt",
                 badgeText: "Part 5",
-                accent: .violet
+                accent: .violet,
+                destination: .arena(path: "part5")
             ),
             DashboardFeatureCard(
                 id: "reading-sniper",
@@ -40,7 +42,8 @@ enum DashboardPreviewData {
                 detail: "Part 6/7",
                 systemImage: "book",
                 badgeText: "Part 6/7",
-                accent: .indigo
+                accent: .indigo,
+                destination: .arena(path: "mission")
             ),
             DashboardFeatureCard(
                 id: "review-stack",
@@ -49,7 +52,8 @@ enum DashboardPreviewData {
                 detail: "记忆",
                 systemImage: "checklist.checked",
                 badgeText: "记忆",
-                accent: .emerald
+                accent: .emerald,
+                destination: .reviewCards
             )
         ],
         skillCards: [
@@ -60,7 +64,8 @@ enum DashboardPreviewData {
                 detail: "L0",
                 systemImage: "bolt.badge.a",
                 badgeText: nil,
-                accent: .emerald
+                accent: .emerald,
+                destination: .training(mode: "L0_MIXED")
             ),
             DashboardFeatureCard(
                 id: "listening-drill",
@@ -69,7 +74,8 @@ enum DashboardPreviewData {
                 detail: "L1",
                 systemImage: "speaker.wave.2",
                 badgeText: nil,
-                accent: .indigo
+                accent: .indigo,
+                destination: .audio
             ),
             DashboardFeatureCard(
                 id: "context-lab",
@@ -78,25 +84,30 @@ enum DashboardPreviewData {
                 detail: "L2",
                 systemImage: "brain.head.profile",
                 badgeText: nil,
-                accent: .violet
+                accent: .violet,
+                destination: .training(mode: "L2_MIXED")
             )
         ],
         briefingCards: [
             DashboardBriefingCard(
                 id: "finance-briefing",
+                articleID: "finance-briefing",
                 title: "Q3 Compliance Audit...",
                 subtitle: "about 1 month ago",
                 contextLabel: "金融与法务",
                 systemImage: "briefcase",
-                accent: .violet
+                accent: .violet,
+                destination: .briefing(articleID: "finance-briefing")
             ),
             DashboardBriefingCard(
                 id: "ops-briefing",
+                articleID: "ops-briefing",
                 title: "Ops Handover Snapshot",
                 subtitle: "View All",
                 contextLabel: "运营交接",
                 systemImage: "shippingbox",
-                accent: .amber
+                accent: .amber,
+                destination: .briefing(articleID: "ops-briefing")
             )
         ]
     )
@@ -116,7 +127,8 @@ enum DashboardPreviewData {
             subtitle: "42 词 · 长文案模式",
             detail: "待复习",
             ctaTitle: "进入训练",
-            accent: .violet
+            accent: .violet,
+            destination: .training(mode: "DAILY_BLITZ")
         ),
         trainingCards: defaultHomeState.trainingCards,
         skillCards: defaultHomeState.skillCards,

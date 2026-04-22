@@ -4,29 +4,62 @@ import UIKit
 struct DashboardTabContainerView: View {
     @Bindable var viewModel: DashboardViewModel
     @Bindable var diagnosticsViewModel: DiagnosticsViewModel
+    @Bindable var trainingHubViewModel: TrainingHubViewModel
+    @Bindable var arenaDashboardViewModel: ArenaDashboardViewModel
+    @Bindable var vocabularyViewModel: VocabularyViewModel
+    @Bindable var briefingViewModel: BriefingViewModel
     @State private var isDiagnosticsPresented = false
 
     var body: some View {
         TabView(selection: bindingForSelection) {
-            DashboardHomeView(
-                homeState: viewModel.homeState,
-                onOpenDiagnostics: { isDiagnosticsPresented = true }
-            )
-            .tag(DashboardTab.home)
-            .tabItem {
-                Label(DashboardTab.home.title, systemImage: DashboardTab.home.systemImage)
-            }
+            homeTab
+                .tag(DashboardTab.home)
+                .tabItem {
+                    Label(DashboardTab.home.title, systemImage: DashboardTab.home.systemImage)
+                }
 
-            ForEach(viewModel.tabs.filter { $0 != .home }) { tab in
-                DashboardPlaceholderView(tab: tab)
-                    .tag(tab)
-                    .tabItem {
-                        Label(tab.title, systemImage: tab.systemImage)
-                    }
-            }
+            TrainingHubView(
+                viewModel: trainingHubViewModel,
+                pendingDestination: trainingPendingDestination
+            )
+                .tag(DashboardTab.training)
+                .tabItem {
+                    Label(DashboardTab.training.title, systemImage: DashboardTab.training.systemImage)
+                }
+
+            ArenaDashboardView(viewModel: arenaDashboardViewModel)
+                .tag(DashboardTab.arena)
+                .tabItem {
+                    Label(DashboardTab.arena.title, systemImage: DashboardTab.arena.systemImage)
+                }
+
+            VocabularyView(viewModel: vocabularyViewModel)
+                .tag(DashboardTab.vocabulary)
+                .tabItem {
+                    Label(DashboardTab.vocabulary.title, systemImage: DashboardTab.vocabulary.systemImage)
+                }
+
+            BriefingView(
+                viewModel: briefingViewModel,
+                pendingDestination: briefingPendingDestination
+            )
+                .tag(DashboardTab.briefing)
+                .tabItem {
+                    Label(DashboardTab.briefing.title, systemImage: DashboardTab.briefing.systemImage)
+                }
         }
         .tint(OpusColorPalette.brand)
         .onAppear(perform: applyTabBarAppearance)
+        .task {
+            await viewModel.loadHome()
+        }
+        .onChange(of: viewModel.selectedTab) { _, newValue in
+            if newValue == .home {
+                Task {
+                    await viewModel.loadHome()
+                }
+            }
+        }
         .sheet(isPresented: $isDiagnosticsPresented) {
             NavigationStack {
                 DiagnosticsHomeView(viewModel: diagnosticsViewModel)
@@ -47,6 +80,79 @@ struct DashboardTabContainerView: View {
             get: { viewModel.selectedTab },
             set: { viewModel.selectTab($0) }
         )
+    }
+
+    private var trainingPendingDestination: DashboardDestination? {
+        guard let pendingDestination = viewModel.pendingDestination else { return nil }
+        switch pendingDestination {
+        case .training, .reviewCards, .audio:
+            return pendingDestination
+        default:
+            return nil
+        }
+    }
+
+    private var briefingPendingDestination: DashboardDestination? {
+        guard let pendingDestination = viewModel.pendingDestination else { return nil }
+        if case .briefing = pendingDestination {
+            return pendingDestination
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private var homeTab: some View {
+        NavigationStack {
+            ZStack {
+                LinearGradient.opusBackground
+                    .ignoresSafeArea()
+
+                switch viewModel.homeContentState {
+                case .loading:
+                    OpusStateView(
+                        state: .loading,
+                        loadingTitle: "正在加载首页",
+                        loadingMessage: "正在拉取移动端 summary。"
+                    )
+                    .padding(OpusSpacing.screenPadding)
+                case .error:
+                    OpusStateView(
+                        state: viewModel.homeContentState,
+                        action: {
+                            Task {
+                                await viewModel.loadHome(force: true)
+                            }
+                        }
+                    )
+                    .padding(OpusSpacing.screenPadding)
+                case .empty:
+                    if let homeState = viewModel.homeState {
+                        DashboardHomeView(
+                            homeState: homeState,
+                            onOpenDiagnostics: { isDiagnosticsPresented = true },
+                            onOpenDestination: { destination in
+                                viewModel.open(destination)
+                            }
+                        )
+                    } else {
+                        OpusStateView(
+                            state: .empty(
+                                title: "首页暂无内容",
+                                message: "summary 还没有可展示的数据，请稍后重试。",
+                                actionTitle: "刷新"
+                            ),
+                            action: {
+                                Task {
+                                    await viewModel.loadHome(force: true)
+                                }
+                            }
+                        )
+                        .padding(OpusSpacing.screenPadding)
+                    }
+                }
+            }
+            .navigationTitle(DashboardTab.home.title)
+        }
     }
 
     private func applyTabBarAppearance() {
@@ -70,6 +176,7 @@ struct DashboardTabContainerView: View {
 
 private struct DashboardPlaceholderView: View {
     let tab: DashboardTab
+    let pendingDestination: DashboardDestination?
 
     var body: some View {
         NavigationStack {
@@ -89,6 +196,20 @@ private struct DashboardPlaceholderView: View {
                             message: description
                         )
                     )
+
+                    if let pendingDestination, tabMatchesPendingDestination {
+                        OpusCard(accent: .violet, style: .compact) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("已接收首页跳转")
+                                    .font(OpusTypography.sectionTitle)
+                                    .foregroundStyle(OpusColorPalette.primaryText)
+
+                                Text(pendingDescription(for: pendingDestination))
+                                    .font(OpusTypography.body)
+                                    .foregroundStyle(OpusColorPalette.secondaryText)
+                            }
+                        }
+                    }
                 }
                 .padding(OpusSpacing.screenPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -112,18 +233,39 @@ private struct DashboardPlaceholderView: View {
         }
     }
 
-    private var accent: DashboardAccent {
-        switch tab {
-        case .home:
-            return .violet
-        case .training:
-            return .violet
-        case .arena:
-            return .emerald
-        case .vocabulary:
-            return .amber
-        case .briefing:
-            return .indigo
+    private var tabMatchesPendingDestination: Bool {
+        guard let pendingDestination else { return false }
+
+        switch (tab, pendingDestination) {
+        case (.training, .training), (.training, .reviewCards), (.training, .audio):
+            return true
+        case (.arena, .arena):
+            return true
+        case (.briefing, .briefing):
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func pendingDescription(for destination: DashboardDestination) -> String {
+        switch destination {
+        case .training(let mode):
+            return "后续会话将承接模式 `\(mode)`。"
+        case .reviewCards:
+            return "后续会话将承接复习卡组入口。"
+        case .audio:
+            return "后续会话将承接听力训练入口。"
+        case .arena(let path, let grammarNodeID):
+            if let grammarNodeID {
+                return "后续会话将承接 Arena `\(path)`，并带入 grammarNodeId=`\(grammarNodeID)`。"
+            }
+            return "后续会话将承接 Arena `\(path)` 入口。"
+        case .briefing(let articleID):
+            if let articleID {
+                return "后续会话将承接 articleId=`\(articleID)` 的简报阅读。"
+            }
+            return "后续会话将承接简报入口。"
         }
     }
 }

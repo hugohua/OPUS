@@ -7,11 +7,16 @@ struct AppDependencies {
     let authEnvironmentStore: AuthEnvironmentStore
     let authSessionService: AuthSessionService
     let healthService: HealthCheckService
+    let dashboardSummaryService: DashboardSummaryService
+    let trainingHubService: TrainingHubService
+    let arenaDashboardService: ArenaDashboardService
+    let vocabularyService: VocabularyService
+    let briefingService: BriefingService
 
     @MainActor
     func makeDashboardViewModel() -> DashboardViewModel {
         DashboardViewModel(
-            homeState: DashboardPreviewData.defaultHomeState,
+            summaryService: dashboardSummaryService,
             diagnosticsSummary: DashboardPreviewData.defaultDiagnosticsSummary
         )
     }
@@ -38,6 +43,26 @@ struct AppDependencies {
         )
     }
 
+    @MainActor
+    func makeTrainingHubViewModel() -> TrainingHubViewModel {
+        TrainingHubViewModel(service: trainingHubService)
+    }
+
+    @MainActor
+    func makeArenaDashboardViewModel() -> ArenaDashboardViewModel {
+        ArenaDashboardViewModel(service: arenaDashboardService)
+    }
+
+    @MainActor
+    func makeVocabularyViewModel() -> VocabularyViewModel {
+        VocabularyViewModel(service: vocabularyService)
+    }
+
+    @MainActor
+    func makeBriefingViewModel() -> BriefingViewModel {
+        BriefingViewModel(service: briefingService)
+    }
+
     static func live() -> AppDependencies {
         let runtimeConfigLoader: () -> RuntimeConfig = {
             RuntimeConfig.resolved()
@@ -54,6 +79,10 @@ struct AppDependencies {
             tokenStore: tokenStore,
             logger: NetworkLogger(enabled: initialConfig.networkLoggingEnabled)
         )
+        let sseClient = SSEClient(
+            requestBuilder: requestBuilder,
+            tokenStore: tokenStore
+        )
         let authSessionService = AuthSessionService(
             apiClient: apiClient,
             tokenStore: tokenStore,
@@ -67,7 +96,12 @@ struct AppDependencies {
             tokenStore: tokenStore,
             authEnvironmentStore: authEnvironmentStore,
             authSessionService: authSessionService,
-            healthService: HealthCheckService(apiClient: apiClient)
+            healthService: HealthCheckService(apiClient: apiClient),
+            dashboardSummaryService: DashboardSummaryService(apiClient: apiClient),
+            trainingHubService: TrainingHubService(apiClient: apiClient),
+            arenaDashboardService: ArenaDashboardService(apiClient: apiClient),
+            vocabularyService: VocabularyService(apiClient: apiClient),
+            briefingService: BriefingService(apiClient: apiClient, sseClient: sseClient)
         )
     }
 }

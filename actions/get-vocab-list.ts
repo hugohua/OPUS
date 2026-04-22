@@ -15,6 +15,7 @@ interface GetVocabListParams {
     status?: VocabFilterStatus;
     sort?: VocabSortOption;
     tagFilter?: string; // New tag parameter
+    userIdOverride?: string;
 }
 
 export interface VocabListItem {
@@ -61,13 +62,14 @@ export async function getVocabList({
     search = '',
     status = 'ALL',
     sort = 'RANK',
-    tagFilter
+    tagFilter,
+    userIdOverride
 }: GetVocabListParams): Promise<GetVocabListResponse> {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const session = userIdOverride ? null : await auth();
+    const userId = userIdOverride ?? session?.user?.id;
+    if (!userId) {
         throw new Error('Unauthorized');
     }
-    const userId = session.user.id;
 
     // 1. Build Where Clause
     const where: Prisma.VocabWhereInput = {

@@ -42,14 +42,13 @@ export type AudioSessionData = z.infer<typeof AudioSessionDataSchema>;
 /**
  * 获取 Audio 训练队列
  */
-export async function getAudioSession(): Promise<ActionState<AudioSessionData>> {
+export async function getAudioSession(userIdOverride?: string): Promise<ActionState<AudioSessionData>> {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const session = userIdOverride ? null : await auth();
+        const userId = userIdOverride ?? session?.user?.id;
+        if (!userId) {
             redirect('/login');
         }
-
-        const userId = session.user.id;
         const now = new Date();
 
         // 1. Fetch Candidates (Track = AUDIO)
