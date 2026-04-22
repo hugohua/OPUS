@@ -29,22 +29,19 @@ targets:
         PRODUCT_NAME: OpusApp
         PRODUCT_MODULE_NAME: OpusApp
         SWIFT_VERSION: 5.0
-        GENERATE_INFOPLIST_FILE: YES
+        GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: 1,2
         MARKETING_VERSION: 1.0.0
         CURRENT_PROJECT_VERSION: 1
-        INFOPLIST_KEY_CFBundleDisplayName: $(APP_DISPLAY_NAME)
-        INFOPLIST_KEY_LSRequiresIPhoneOS: YES
-        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: $(ATS_ALLOW_INSECURE_LOCAL)
-        INFOPLIST_KEY_OPUSAPIBaseURL: $(API_BASE_URL)
-        INFOPLIST_KEY_OPUSATSAllowInsecureLocal: $(ATS_ALLOW_INSECURE_LOCAL)
-        INFOPLIST_KEY_OPUSAppEnv: $(APP_ENV)
-        INFOPLIST_KEY_OPUSDisplayNameSuffix: $(DISPLAY_NAME_SUFFIX)
-        INFOPLIST_KEY_OPUSEnableNetworkLogging: $(ENABLE_NETWORK_LOGGING)
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         IPHONEOS_DEPLOYMENT_TARGET: 18.0
+      configs:
+        LocalDebug:
+          INFOPLIST_FILE: Config/OpusApp-Local-Info.plist
+        StagingDebug:
+          INFOPLIST_FILE: Config/OpusApp-Info.plist
+        ProductionRelease:
+          INFOPLIST_FILE: Config/OpusApp-Info.plist
   OpusAppTests:
     type: bundle.unit-test
     platform: iOS

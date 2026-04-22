@@ -74,11 +74,18 @@ struct RuntimeConfig: Equatable {
         try RuntimeConfig(infoDictionary: bundle.infoDictionary ?? [:])
     }
 
+    static func resolved(
+        bundle: Bundle = .main,
+        fallback: RuntimeConfig = .fallbackLocal
+    ) -> RuntimeConfig {
+        (try? load(bundle: bundle)) ?? fallback
+    }
+
     static let fallbackLocal = RuntimeConfig(
         appEnvironment: .local,
         apiBaseURL: URL(string: "http://localhost:3000")!,
         networkLoggingEnabled: true,
-        displayNameSuffix: " Local",
+        displayNameSuffix: "Local",
         allowsInsecureLocalLoads: true
     )
 

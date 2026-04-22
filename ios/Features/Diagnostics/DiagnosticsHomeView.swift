@@ -30,17 +30,21 @@ struct DiagnosticsHomeView: View {
                 }
 
                 Section("Health Check") {
-                    LabeledContent("Status", value: viewModel.healthStatusTitle)
-
-                    if let payload = viewModel.latestHealthPayload {
+                    if let healthState {
+                        OpusStateView(
+                            state: healthState,
+                            loadingTitle: "正在检查服务状态",
+                            loadingMessage: "这会请求移动端 health endpoint。"
+                        ) {
+                            Task {
+                                await viewModel.runHealthCheck()
+                            }
+                        }
+                    } else if let payload = viewModel.latestHealthPayload {
+                        LabeledContent("Status", value: viewModel.healthStatusTitle)
                         LabeledContent("Server Env", value: payload.env)
                         LabeledContent("Server Version", value: payload.version)
                         LabeledContent("Timestamp", value: payload.timestamp)
-                    }
-
-                    if let lastError = viewModel.lastError {
-                        Text(lastError)
-                            .foregroundStyle(.red)
                     }
                 }
 
@@ -58,10 +62,40 @@ struct DiagnosticsHomeView: View {
                     Button("Clear Stored Token", role: .destructive) {
                         viewModel.clearStoredToken()
                     }
+
+                    if let actionError = viewModel.lastActionError {
+                        Text(actionError)
+                            .font(OpusTypography.caption)
+                            .foregroundStyle(OpusColorPalette.rose)
+                    }
                 }
             }
             .navigationTitle("OPUS Diagnostics")
         }
+    }
+
+    private var healthState: OpusContentState? {
+        if viewModel.isRunningHealthCheck {
+            return .loading
+        }
+
+        if let lastError = viewModel.lastHealthCheckError {
+            return .error(
+                title: "健康检查失败",
+                message: lastError,
+                actionTitle: "重试"
+            )
+        }
+
+        guard viewModel.latestHealthPayload == nil else {
+            return nil
+        }
+
+        return .empty(
+            title: "尚未执行健康检查",
+            message: "点击下方按钮或当前卡片操作，验证移动端 API 是否可用。",
+            actionTitle: "立即检查"
+        )
     }
 }
 
@@ -71,9 +105,23 @@ struct DiagnosticsHomeView: View {
             runtimeConfigLoader: { .fallbackLocal },
             buildInfoProvider: { BuildInfo.current() },
             tokenStore: KeychainTokenStore(service: "preview", account: "preview"),
-            healthService: HealthCheckService(apiClient: PreviewAPIClient())
+            healthService: HealthCheckService(apiClient: PreviewAPIClient()),
+            clearStoredTokenAction: nil
         )
     )
+}
+
+#Preview("Diagnostics Error") {
+    let viewModel = DiagnosticsViewModel(
+        runtimeConfigLoader: { .fallbackLocal },
+        buildInfoProvider: { BuildInfo.current() },
+        tokenStore: KeychainTokenStore(service: "preview", account: "preview"),
+        healthService: HealthCheckService(apiClient: PreviewAPIClient()),
+        clearStoredTokenAction: nil
+    )
+    viewModel.lastHealthCheckError = "无法连接到 http://localhost:3000。"
+
+    return DiagnosticsHomeView(viewModel: viewModel)
 }
 
 private struct PreviewAPIClient: APIClient {

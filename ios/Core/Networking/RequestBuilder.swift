@@ -32,7 +32,7 @@ struct RequestBuilder {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
-        if let token, !token.isEmpty {
+        if endpoint.requiresAuthorization, let token, !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 

@@ -5,11 +5,15 @@
  */
 
 import { z } from "zod";
-import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
-import { RegisterSchema, LoginSchema } from "@/lib/validations/auth";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
+import {
+    validateLoginInput,
+    validateRegisterInput,
+    registerUserWithInviteCode,
+    AUTH_ERROR_CODES,
+} from "@/lib/auth/shared";
+import { LoginSchema, RegisterSchema } from "@/lib/validations/auth";
 
 export type ActionState<T = any> = {
     status: "success" | "error";
@@ -21,59 +25,25 @@ export type ActionState<T = any> = {
 export const registerAction = async (
     values: z.infer<typeof RegisterSchema>
 ): Promise<ActionState> => {
-    // 1. 验证字段
-    const validatedFields = RegisterSchema.safeParse(values);
-    if (!validatedFields.success) {
+    const validatedFields = validateRegisterInput(values);
+    if (!validatedFields.ok) {
         return {
             status: "error",
             message: "输入验证失败",
-            fieldErrors: Object.fromEntries(
-                Object.entries(validatedFields.error.flatten().fieldErrors).map(([k, v]) => [k, v?.[0] || ""])
-            ),
+            fieldErrors: validatedFields.error.fieldErrors,
         };
     }
 
-    const { email, password, name, inviteCode } = validatedFields.data;
-
-    // 2. 校验邀请码
-    const validCode = await db.invitationCode.findUnique({
-        where: { code: inviteCode },
-    });
-
-    if (!validCode || !validCode.isActive || validCode.usedCount >= validCode.maxUses) {
-        return { status: "error", message: "无效或已过期的邀请码" };
-    }
-
-    // 3. 校验邮箱唯一性
-    const existingUser = await db.user.findUnique({
-        where: { email },
-    });
-
-    if (existingUser) {
-        return { status: "error", message: "该邮箱已被注册" };
-    }
-
-    // 4. 创建用户并扣减邀请码
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    try {
-        await db.$transaction([
-            db.user.create({
-                data: {
-                    name,
-                    email,
-                    password: hashedPassword,
-                    invitedByCode: inviteCode,
-                },
-            }),
-            db.invitationCode.update({
-                where: { id: validCode.id },
-                data: { usedCount: { increment: 1 } },
-            }),
-        ]);
-    } catch (error) {
-        console.error("Registration error:", error);
-        return { status: "error", message: "注册失败，请稍后重试" };
+    const result = await registerUserWithInviteCode(validatedFields.data);
+    if (!result.ok) {
+        switch (result.error.code) {
+            case AUTH_ERROR_CODES.INVALID_INVITE_CODE:
+                return { status: "error", message: "无效或已过期的邀请码" };
+            case AUTH_ERROR_CODES.EMAIL_ALREADY_REGISTERED:
+                return { status: "error", message: "该邮箱已被注册" };
+            default:
+                return { status: "error", message: "注册失败，请稍后重试" };
+        }
     }
 
     return { status: "success", message: "注册成功！正在初始化工作台..." };
@@ -82,18 +52,15 @@ export const registerAction = async (
 export const loginAction = async (
     values: z.infer<typeof LoginSchema>
 ): Promise<ActionState> => {
-    const validatedFields = LoginSchema.safeParse(values);
-
-    if (!validatedFields.success) {
+    const validatedFields = validateLoginInput(values);
+    if (!validatedFields.ok) {
         return { status: "error", message: "输入验证失败" };
     }
 
-    const { email, password } = validatedFields.data;
-
     try {
         await signIn("credentials", {
-            email,
-            password,
+            email: validatedFields.data.email,
+            password: validatedFields.data.password,
             redirect: false, // Handle redirect in client
         });
 

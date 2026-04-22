@@ -8,23 +8,27 @@ final class DiagnosticsViewModel {
     var buildInfo: BuildInfo
     var latestHealthPayload: HealthCheckPayload?
     var isRunningHealthCheck = false
-    var lastError: String?
+    var lastHealthCheckError: String?
+    var lastActionError: String?
 
     private let runtimeConfigLoader: () throws -> RuntimeConfig
     private let buildInfoProvider: () -> BuildInfo
     private let tokenStore: AuthTokenStore
     private let healthService: HealthCheckService
+    private let clearStoredTokenAction: (@MainActor () async throws -> Void)?
 
     init(
         runtimeConfigLoader: @escaping () throws -> RuntimeConfig,
         buildInfoProvider: @escaping () -> BuildInfo,
         tokenStore: AuthTokenStore,
-        healthService: HealthCheckService
+        healthService: HealthCheckService,
+        clearStoredTokenAction: (@MainActor () async throws -> Void)? = nil
     ) {
         self.runtimeConfigLoader = runtimeConfigLoader
         self.buildInfoProvider = buildInfoProvider
         self.tokenStore = tokenStore
         self.healthService = healthService
+        self.clearStoredTokenAction = clearStoredTokenAction
         self.runtimeConfig = (try? runtimeConfigLoader()) ?? .fallbackLocal
         self.buildInfo = buildInfoProvider()
     }
@@ -48,13 +52,15 @@ final class DiagnosticsViewModel {
 
     func runHealthCheck() async {
         isRunningHealthCheck = true
+        lastHealthCheckError = nil
+        latestHealthPayload = nil
         defer { isRunningHealthCheck = false }
 
         do {
             latestHealthPayload = try await healthService.checkHealth()
-            lastError = nil
+            lastHealthCheckError = nil
         } catch {
-            lastError = error.localizedDescription
+            lastHealthCheckError = error.localizedDescription
         }
     }
 
@@ -62,18 +68,30 @@ final class DiagnosticsViewModel {
         do {
             runtimeConfig = try runtimeConfigLoader()
             buildInfo = buildInfoProvider()
-            lastError = nil
+            lastActionError = nil
         } catch {
-            lastError = error.localizedDescription
+            lastActionError = error.localizedDescription
         }
     }
 
     func clearStoredToken() {
+        if let clearStoredTokenAction {
+            Task {
+                do {
+                    try await clearStoredTokenAction()
+                    lastActionError = nil
+                } catch {
+                    lastActionError = error.localizedDescription
+                }
+            }
+            return
+        }
+
         do {
             try tokenStore.clearToken()
-            lastError = nil
+            lastActionError = nil
         } catch {
-            lastError = error.localizedDescription
+            lastActionError = error.localizedDescription
         }
     }
 }

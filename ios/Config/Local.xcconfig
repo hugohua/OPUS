@@ -5,6 +5,6 @@ PRODUCT_BUNDLE_IDENTIFIER = com.hugo.opus.ios.local
 APP_DISPLAY_NAME = Opus Local
 DISPLAY_NAME_SUFFIX = Local
 APP_ENV = local
-API_BASE_URL = http://localhost:3000
+API_BASE_URL = http:/$()/localhost:3000
 ENABLE_NETWORK_LOGGING = YES
 ATS_ALLOW_INSECURE_LOCAL = YES

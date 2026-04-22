@@ -89,6 +89,40 @@ final class URLSessionAPIClientTests: XCTestCase {
         }
     }
 
+    func testPreservesUnauthorizedResponseBody() async {
+        URLProtocolStub.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 401,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            let data = """
+            {"status":"error","code":"UNAUTHORIZED","message":"Unauthorized"}
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let client = URLSessionAPIClient(
+            session: makeSession(),
+            requestBuilder: RequestBuilder(baseURL: URL(string: "http://localhost:3000")!),
+            tokenStore: StubTokenStore(token: "stale-token"),
+            logger: NetworkLogger(enabled: false)
+        )
+
+        await XCTAssertThrowsErrorAsync(
+            try await client.send(HealthCheckEndpoint(), as: HealthCheckPayload.self)
+        ) { error in
+            guard case .httpStatus(let code, let data) = error as? NetworkError else {
+                XCTFail("Expected httpStatus error, got \(error)")
+                return
+            }
+
+            XCTAssertEqual(code, 401)
+            XCTAssertEqual(String(data: data ?? Data(), encoding: .utf8), #"{"status":"error","code":"UNAUTHORIZED","message":"Unauthorized"}"#)
+        }
+    }
+
     private func makeSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

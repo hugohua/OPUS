@@ -40,7 +40,7 @@ final class KeychainTokenStore: AuthTokenStore {
         let data = Data(token.utf8)
         var query = baseQuery
         query[kSecValueData as String] = data
-        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {

@@ -33,4 +33,15 @@ final class RuntimeConfigTests: XCTestCase {
             )
         )
     }
+
+    func testLiveDependenciesLoadRuntimeConfigFromAppBundle() throws {
+        let dependencies = AppDependencies.live()
+        let config = try dependencies.runtimeConfigLoader()
+
+        XCTAssertEqual(config.appEnvironment, .local)
+        XCTAssertEqual(config.apiBaseURL.absoluteString, "http://localhost:3000")
+        XCTAssertTrue(config.networkLoggingEnabled)
+        XCTAssertEqual(config.displayNameSuffix, "Local")
+        XCTAssertTrue(config.allowsInsecureLocalLoads)
+    }
 }

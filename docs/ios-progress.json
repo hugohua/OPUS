@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-04-21",
+  "lastUpdated": "2026-04-22",
   "source": "docs/IOS-MASTER-FEATURE-LIST.md",
   "statusLegend": [
     "todo",
@@ -13,7 +13,7 @@
       "id": "wave-0",
       "title": "Foundation",
       "goal": "Auth, launch restore, mobile auth contracts, root shell guards, and shared loading/error/empty patterns.",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "wave-1",
@@ -39,7 +39,7 @@
       "id": "01-auth-and-launch",
       "title": "Auth & Launch",
       "wave": "wave-0",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/01-auth-and-launch.md",
       "dependencies": [],
       "server_routes": [
@@ -58,6 +58,36 @@
         "登录成功后 token 写入 Keychain 且冷启动可恢复",
         "token 失效时能回退到登录态并清理本地会话",
         "未登录时无法进入受保护业务页"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-22",
+          "step": "mobile-auth-routes",
+          "status": "done",
+          "summary": "Implemented mobile auth route contracts, shared server auth helpers, and bearer token issue/verify for login/register/me/refresh/logout.",
+          "verification": "npx vitest run app/api/mobile/v1/auth/route.test.ts lib/auth/__tests__/shared.test.ts lib/auth/__tests__/mobile.test.ts actions/__tests__/auth.test.ts (4 files, 21 tests passed)"
+        },
+        {
+          "date": "2026-04-22",
+          "step": "ios-auth-session-service-and-launch-restore",
+          "status": "done",
+          "summary": "Added iOS mobile auth models/endpoints, auth session service, persisted auth environment tracking, launch restore coordination, and supporting networking tests.",
+          "verification": "OpusApp-Local targeted tests passed on iPhone 17 Pro simulator: AuthSessionServiceTests, LaunchCoordinatorTests, KeychainTokenStoreTests, URLSessionAPIClientTests, RequestBuilderTests (16 tests passed)"
+        },
+        {
+          "date": "2026-04-22",
+          "step": "root-shell-auth-guard",
+          "status": "done",
+          "summary": "Moved auth gating to the app root, added native login/register flows, wired diagnostics token clearing through coordinator logout, and fixed live runtime config fallback so cold launch restore reaches the authenticated shell.",
+          "verification": "OpusApp-Local targeted tests passed on iPhone 17 Pro simulator: AuthSessionServiceTests, LaunchCoordinatorTests, KeychainTokenStoreTests, RequestBuilderTests, URLSessionAPIClientTests, RuntimeConfigTests (21 tests passed). Simulator smoke verified unauthenticated launch -> login screen, successful login -> dashboard shell, and cold relaunch -> restored dashboard; unauthorized invalidation remains covered by AuthSessionServiceTests and LaunchCoordinatorTests."
+        },
+        {
+          "date": "2026-04-22",
+          "step": "shared-loading-error-empty-primitives",
+          "status": "done",
+          "summary": "Added shared Opus content-state primitives and applied them to app launch loading, auth guidance/error banners, diagnostics health states, and dashboard placeholder tabs, with preview coverage for loading, empty, and error variants.",
+          "verification": "npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination id=B807C4C7-1556-4C58-9AD1-3342CA4BC243 test (** TEST SUCCEEDED **, 27 tests passed). Simulator smoke verified diagnostics empty-state card + CTA and training-tab empty placeholder; cold relaunch still restored directly into the authenticated shell after the shared-state integration."
+        }
       ]
     },
     {

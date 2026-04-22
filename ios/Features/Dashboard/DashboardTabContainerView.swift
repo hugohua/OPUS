@@ -83,17 +83,12 @@ private struct DashboardPlaceholderView: View {
                         subtitle: "这一层先保留原生骨架，为后续接入真实页面做准备。"
                     )
 
-                    OpusCard(accent: accent, style: .standard) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label(tab.title, systemImage: tab.systemImage)
-                                .font(OpusTypography.cardTitle)
-                                .foregroundStyle(OpusColorPalette.primaryText)
-
-                            Text(description)
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
-                        }
-                    }
+                    OpusStateView(
+                        state: .empty(
+                            title: tab.title,
+                            message: description
+                        )
+                    )
                 }
                 .padding(OpusSpacing.screenPadding)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
