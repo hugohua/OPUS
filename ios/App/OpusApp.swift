@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct OpusApp: App {
+    private let dependencies: AppDependencies
     @State private var launchCoordinator: LaunchCoordinator
     @State private var dashboardViewModel: DashboardViewModel
     @State private var diagnosticsViewModel: DiagnosticsViewModel
@@ -12,6 +13,7 @@ struct OpusApp: App {
 
     init() {
         let dependencies = AppDependencies.live()
+        self.dependencies = dependencies
         let launchCoordinator = dependencies.makeLaunchCoordinator()
         _launchCoordinator = State(initialValue: launchCoordinator)
         _dashboardViewModel = State(initialValue: dependencies.makeDashboardViewModel())
@@ -37,7 +39,9 @@ struct OpusApp: App {
                 trainingHubViewModel: trainingHubViewModel,
                 arenaDashboardViewModel: arenaDashboardViewModel,
                 vocabularyViewModel: vocabularyViewModel,
-                briefingViewModel: briefingViewModel
+                briefingViewModel: briefingViewModel,
+                makeArenaPart5ViewModel: dependencies.makeArenaPart5ViewModel,
+                makeArenaMissionViewModel: dependencies.makeArenaMissionViewModel
             )
         }
     }

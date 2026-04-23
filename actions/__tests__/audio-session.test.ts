@@ -24,6 +24,13 @@ describe('Audio Session Actions', () => {
         // 清理测试数据
         await prisma.userProgress.deleteMany({ where: { userId: TEST_USER_ID } });
         await prisma.user.deleteMany({ where: { email: 'test_audio@opus.com' } });
+        const existingTestVocabs = await prisma.vocab.findMany({
+            where: { word: { in: ['abroad', 'accept', 'affect'] } },
+            select: { id: true }
+        });
+        await prisma.userProgress.deleteMany({
+            where: { vocabId: { in: existingTestVocabs.map((v) => v.id) } }
+        });
         await prisma.vocab.deleteMany({ where: { word: { in: ['abroad', 'accept', 'affect'] } } });
 
         // 创建测试用户
@@ -285,7 +292,7 @@ describe('Audio Session Actions', () => {
 
     describe('Data Structure Validation', () => {
         it('AudioSessionItem Schema 应包含必需字段', async () => {
-            const { AudioSessionItemSchema } = await import('@/actions/audio-session');
+            const { AudioSessionItemSchema } = await import('@/lib/session/audio');
 
             const validItem = {
                 id: 'clxxxxxxxxxxxxxxxxxxxxx',

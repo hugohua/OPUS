@@ -1,4 +1,11 @@
+import { existsSync } from "node:fs";
+import { z } from "zod";
 import { vi } from "vitest";
+
+const hasArenaMissionRoute = existsSync(new URL("./arena/mission/route.ts", import.meta.url));
+const hasArenaAttemptRoute = existsSync(new URL("./arena/attempt/route.ts", import.meta.url));
+
+vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/mobile/contracts", async () => {
     return {
@@ -27,11 +34,21 @@ vi.mock("@/lib/mobile/dashboard", () => ({
 vi.mock("@/lib/mobile/session", () => ({
     getMobileAudioAvailability: vi.fn(async () => ({ key: "audio", available: true, count: 2, items: [] })),
     getMobileReviewCards: vi.fn(async () => ([{ id: 1, word: "audit" }])),
+    getMobileSessionBatch: vi.fn(async () => ([{ meta: { vocabId: 1, mode: "SYNTAX" }, segments: [] }])),
+    submitMobileSessionOutcome: vi.fn(async () => ({ status: "success", message: "Outcome recorded", data: { id: "progress-1" } })),
+    submitMobileAudioGrade: vi.fn(async () => ({ status: "success", message: "Outcome recorded", data: { id: "progress-2" } })),
+    MobileAudioGradeSchema: z.object({
+        vocabId: z.number().int().positive(),
+        grade: z.number().int().min(1).max(4),
+        duration: z.number().int().nonnegative().optional(),
+    }),
 }));
 
 vi.mock("@/lib/mobile/arena", () => ({
     getMobileArenaOverview: vi.fn(async () => ({ radar: [], weakNodes: [] })),
     getMobileArenaMatrix: vi.fn(async () => ({ l1Node: { code: "L1_VERBS", name: "Verbs" }, categories: [] })),
+    getMobileArenaMission: vi.fn(async () => ({ meta: { format: "part6", part: 6 }, segments: [] })),
+    recordMobileArenaAttempt: vi.fn(async () => ({ success: true, attemptId: "attempt-1" })),
 }));
 
 vi.mock("@/lib/mobile/vocabulary", () => ({
@@ -57,11 +74,38 @@ describe("mobile route contracts", () => {
 
     it("returns session success payloads", async () => {
         const audioRoute = await import("./session/audio/route");
+        const batchRoute = await import("./session/batch/route");
+        const outcomeRoute = await import("./session/outcome/route");
+        const audioGradeRoute = await import("./session/audio/grade/route");
         const cardsRoute = await import("./session/review-cards/route");
 
         expect(await (await audioRoute.GET(new Request("http://localhost/api/mobile/v1/session/audio"))).json()).toMatchObject({
             status: "success",
             data: { key: "audio", available: true, count: 2 },
+        });
+        expect(await (await batchRoute.POST(new Request("http://localhost/api/mobile/v1/session/batch", {
+            method: "POST",
+            body: JSON.stringify({ mode: "SYNTAX", limit: 1 }),
+        }))).json()).toMatchObject({
+            status: "success",
+            data: {
+                count: 1,
+                items: [{ meta: { vocabId: 1, mode: "SYNTAX" } }],
+            },
+        });
+        expect(await (await outcomeRoute.POST(new Request("http://localhost/api/mobile/v1/session/outcome", {
+            method: "POST",
+            body: JSON.stringify({ vocabId: 1, grade: 3, mode: "SYNTAX" }),
+        }))).json()).toMatchObject({
+            status: "success",
+            data: { id: "progress-1" },
+        });
+        expect(await (await audioGradeRoute.POST(new Request("http://localhost/api/mobile/v1/session/audio/grade", {
+            method: "POST",
+            body: JSON.stringify({ vocabId: 1, grade: 4 }),
+        }))).json()).toMatchObject({
+            status: "success",
+            data: { id: "progress-2" },
         });
         expect(await (await cardsRoute.GET(new Request("http://localhost/api/mobile/v1/session/review-cards"))).json()).toMatchObject({
             status: "success",
@@ -93,6 +137,49 @@ describe("mobile route contracts", () => {
         expect(await (await vocabTagsRoute.GET(new Request("http://localhost/api/mobile/v1/vocab/tags"))).json()).toEqual({
             status: "success",
             data: { tags: ["finance", "office"] },
+        });
+    });
+
+    (hasArenaMissionRoute ? it : it.skip)("returns arena mission envelopes when the route is present", async () => {
+        const arenaMissionRoute = await import("./arena/mission/route");
+
+        expect(await (await arenaMissionRoute.GET(new Request("http://localhost/api/mobile/v1/arena/mission"))).json()).toMatchObject({
+            status: "success",
+            data: { meta: { format: "part6", part: 6 } },
+        });
+    });
+
+    (hasArenaAttemptRoute ? it : it.skip)("returns arena attempt envelopes and validates malformed json", async () => {
+        const arenaAttemptRoute = await import("./arena/attempt/route");
+
+        expect(await (await arenaAttemptRoute.POST(new Request("http://localhost/api/mobile/v1/arena/attempt", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                questionSeedId: "seed-1",
+                anchorVocabId: 42,
+                isCorrect: true,
+                responseTimeMs: 800,
+                selectedOption: "because",
+                questionType: "GRAMMAR",
+                part: 6,
+            }),
+        }))).json()).toEqual({
+            status: "success",
+            data: { success: true, attemptId: "attempt-1" },
+        });
+
+        const invalidJsonResponse = await arenaAttemptRoute.POST(new Request("http://localhost/api/mobile/v1/arena/attempt", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{",
+        }));
+
+        expect(invalidJsonResponse.status).toBe(400);
+        expect(await invalidJsonResponse.json()).toEqual({
+            status: "error",
+            code: "VALIDATION_ERROR",
+            message: "Invalid JSON body",
         });
     });
 

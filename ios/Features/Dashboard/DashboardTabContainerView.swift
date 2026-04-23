@@ -8,6 +8,8 @@ struct DashboardTabContainerView: View {
     @Bindable var arenaDashboardViewModel: ArenaDashboardViewModel
     @Bindable var vocabularyViewModel: VocabularyViewModel
     @Bindable var briefingViewModel: BriefingViewModel
+    let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
+    let makeArenaMissionViewModel: () -> ArenaMissionViewModel
     @State private var isDiagnosticsPresented = false
 
     var body: some View {
@@ -20,14 +22,21 @@ struct DashboardTabContainerView: View {
 
             TrainingHubView(
                 viewModel: trainingHubViewModel,
-                pendingDestination: trainingPendingDestination
+                pendingDestination: trainingPendingDestination,
+                makeArenaPart5ViewModel: makeArenaPart5ViewModel,
+                makeArenaMissionViewModel: makeArenaMissionViewModel
             )
                 .tag(DashboardTab.training)
                 .tabItem {
                     Label(DashboardTab.training.title, systemImage: DashboardTab.training.systemImage)
                 }
 
-            ArenaDashboardView(viewModel: arenaDashboardViewModel)
+            ArenaDashboardView(
+                viewModel: arenaDashboardViewModel,
+                pendingDestination: arenaPendingDestination,
+                makeArenaPart5ViewModel: makeArenaPart5ViewModel,
+                makeArenaMissionViewModel: makeArenaMissionViewModel
+            )
                 .tag(DashboardTab.arena)
                 .tabItem {
                     Label(DashboardTab.arena.title, systemImage: DashboardTab.arena.systemImage)
@@ -95,6 +104,14 @@ struct DashboardTabContainerView: View {
     private var briefingPendingDestination: DashboardDestination? {
         guard let pendingDestination = viewModel.pendingDestination else { return nil }
         if case .briefing = pendingDestination {
+            return pendingDestination
+        }
+        return nil
+    }
+
+    private var arenaPendingDestination: DashboardDestination? {
+        guard let pendingDestination = viewModel.pendingDestination else { return nil }
+        if case .arena = pendingDestination {
             return pendingDestination
         }
         return nil

@@ -34,8 +34,11 @@ export async function recordArenaOutcome(payload: AttemptRecordPayload) {
         throw new Error("Unauthorized");
     }
 
+    return recordArenaOutcomeForUser(session.user.id, payload);
+}
+
+export async function recordArenaOutcomeForUser(userId: string, payload: AttemptRecordPayload) {
     const data = attemptSchema.parse(payload);
-    const userId = session.user.id;
 
     // 0. 查询 QuestionSeed 获取 grammarNodeId + difficulty + targetAnswer
     let seed = null;
@@ -310,4 +313,3 @@ async function checkAndTriggerIntervention(userId: string, vocabId: number, trig
         log.info({ userId, vocabId }, '[Diagnostic Engine] Forced step-down');
     }
 }
-

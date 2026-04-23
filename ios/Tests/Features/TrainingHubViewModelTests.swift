@@ -23,7 +23,10 @@ final class TrainingHubViewModelTests: XCTestCase {
                         )
                     ]
                 )
-            ]))
+            ])),
+            makeSessionRunnerViewModel: { destination in
+                SessionRunnerViewModel(destination: destination, service: SessionRunnerUnavailableService())
+            }
         )
 
         await viewModel.load(force: true)
@@ -35,7 +38,10 @@ final class TrainingHubViewModelTests: XCTestCase {
     @MainActor
     func testFallsBackToErrorState() async {
         let viewModel = TrainingHubViewModel(
-            service: StubTrainingHubService(result: .failure(StubTrainingHubError.offline))
+            service: StubTrainingHubService(result: .failure(StubTrainingHubError.offline)),
+            makeSessionRunnerViewModel: { destination in
+                SessionRunnerViewModel(destination: destination, service: SessionRunnerUnavailableService())
+            }
         )
 
         await viewModel.load(force: true)
@@ -45,6 +51,25 @@ final class TrainingHubViewModelTests: XCTestCase {
         } else {
             XCTFail("Expected error state")
         }
+    }
+
+    @MainActor
+    func testBuildsArenaRoutesFromDashboardDestinations() {
+        let viewModel = TrainingHubViewModel(
+            service: StubTrainingHubService(result: .success([])),
+            makeSessionRunnerViewModel: { destination in
+                SessionRunnerViewModel(destination: destination, service: SessionRunnerUnavailableService())
+            }
+        )
+
+        XCTAssertEqual(
+            viewModel.route(for: .arena(path: "part5", grammarNodeID: "GRAMMAR_NODE_42")),
+            .arenaPart5(grammarNodeID: "GRAMMAR_NODE_42")
+        )
+        XCTAssertEqual(
+            viewModel.route(for: .arena(path: "mission")),
+            .arenaMission
+        )
     }
 }
 

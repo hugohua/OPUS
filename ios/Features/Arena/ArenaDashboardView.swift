@@ -2,6 +2,9 @@ import SwiftUI
 
 struct ArenaDashboardView: View {
     @Bindable var viewModel: ArenaDashboardViewModel
+    let pendingDestination: DashboardDestination?
+    let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
+    let makeArenaMissionViewModel: () -> ArenaMissionViewModel
 
     var body: some View {
         NavigationStack {
@@ -32,9 +35,14 @@ struct ArenaDashboardView: View {
                 }
             }
             .navigationTitle("竞技")
+            .background(arenaNavigationLink)
         }
         .task {
             await viewModel.loadOverview()
+            routePendingDestinationIfNeeded()
+        }
+        .onChange(of: pendingDestination) { _, _ in
+            routePendingDestinationIfNeeded()
         }
         .sheet(item: $viewModel.selectedKnot) { knot in
             NavigationStack {
@@ -48,7 +56,7 @@ struct ArenaDashboardView: View {
                         .font(OpusTypography.caption)
                         .foregroundStyle(OpusColorPalette.tertiaryText)
 
-                    OpusPrimaryButton(title: "预留 Part 5 定向入口") {
+                    OpusPrimaryButton(title: "开始 Part 5 定向训练") {
                         viewModel.open(.arena(path: "part5", grammarNodeID: knot.id))
                     }
 
@@ -243,11 +251,48 @@ struct ArenaDashboardView: View {
         switch destination {
         case .arena(let path, let grammarNodeID):
             if let grammarNodeID {
-                return "预留 Arena `\(path)` 定向入口，grammarNodeId=`\(grammarNodeID)`。"
+                return "即将进入 Arena `\(path)` 定向训练，grammarNodeId=`\(grammarNodeID)`。"
             }
-            return "预留 Arena `\(path)` 入口。"
+            return "即将进入 Arena `\(path)`。"
         default:
             return "已记录竞技场后续入口。"
+        }
+    }
+
+    private var arenaNavigationLink: some View {
+        NavigationLink(
+            isActive: Binding(
+                get: { viewModel.activeDestination != nil },
+                set: { isActive in
+                    if !isActive {
+                        viewModel.activeDestination = nil
+                    }
+                }
+            )
+        ) {
+            if let destination = viewModel.activeDestination {
+                switch destination {
+                case .arena(let path, let grammarNodeID):
+                    if path == "mission" {
+                        ArenaMissionView(viewModel: makeArenaMissionViewModel())
+                    } else {
+                        ArenaPart5View(viewModel: makeArenaPart5ViewModel(grammarNodeID))
+                    }
+                default:
+                    EmptyView()
+                }
+            } else {
+                EmptyView()
+            }
+        } label: {
+            EmptyView()
+        }
+    }
+
+    private func routePendingDestinationIfNeeded() {
+        guard let pendingDestination else { return }
+        if viewModel.activeDestination != pendingDestination {
+            viewModel.open(pendingDestination)
         }
     }
 }

@@ -8,7 +8,7 @@ enum DashboardAccent: String {
     case slate
 }
 
-enum DashboardDestination: Equatable {
+enum DashboardDestination: Equatable, Hashable {
     case training(mode: String)
     case reviewCards
     case audio

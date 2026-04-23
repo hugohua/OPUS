@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-04-22",
+  "lastUpdated": "2026-04-23",
   "source": "docs/IOS-MASTER-FEATURE-LIST.md",
   "statusLegend": [
     "todo",
@@ -25,7 +25,7 @@
       "id": "wave-2",
       "title": "Core Flows",
       "goal": "Implement the primary interactive training and arena flows with end-to-end state handling.",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "wave-3",
@@ -159,7 +159,7 @@
       "id": "04-session-runner",
       "title": "Session Runner",
       "wave": "wave-2",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/04-session-runner.md",
       "dependencies": [
         "01-auth-and-launch",
@@ -180,6 +180,22 @@
         "各 mode 能正确分发题型与完成页",
         "空队列与错误态不会卡死在会话中",
         "回流请求遵守纯语法题不写 FSRS 的现有规则"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "wave-2-started",
+          "status": "in_progress",
+          "summary": "Started wave-2 execution. Session Runner is the first implementation milestone, while 08-vocabulary and 09-briefing-console remain outside this run and do not block wave-2 because the repo already tracks them as completed.",
+          "verification": "Progress log updated before implementation. 06-arena-part5 remains gated on 04-session-runner verification."
+        },
+        {
+          "date": "2026-04-23",
+          "step": "mobile-session-runner-closed-loop",
+          "status": "done",
+          "summary": "Added mobile session batch/outcome/audio-grade routes, extracted shared audio queue helpers so API routes no longer import non-async exports from a use-server file, wired iOS Session Runner navigation from Training Hub, and verified the shared state machine covers mixed-mode choices, grading, recovery, and completion. 06-arena-part5 is now runnable.",
+          "verification": "npx vitest run lib/mobile/session.test.ts app/api/mobile/v1/routes.contract.test.ts actions/__tests__/audio-session.test.ts (18 tests passed). A real bearer POST /api/mobile/v1/session/batch for L0_MIXED returned 200 with live cards. Simulator smoke on iPhone 17 Pro verified Training Hub -> L0 Session Runner -> answer/feedback/next-question loop -> 10/10 completion page."
+        }
       ]
     },
     {
@@ -218,7 +234,7 @@
       "id": "06-arena-part5",
       "title": "Arena Part 5",
       "wave": "wave-2",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/06-arena-part5.md",
       "dependencies": [
         "05-arena-dashboard",
@@ -237,13 +253,22 @@
         "作答反馈、解析与下一题链路连通",
         "Arena telemetry 与 FSRS 回流都符合 Web 现状",
         "纯语法题不会误写 FSRS"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "ios-arena-part5-closed-loop",
+          "status": "done",
+          "summary": "Added the native Arena Part 5 loop with batch fetch, answer feedback, explanation sheet, next-question/completion transitions, grammar-node targeting from Arena, and separated FSRS outcome submission from Arena telemetry so the existing pure-grammar skip rule remains intact.",
+          "verification": "npx vitest run lib/mobile/arena.test.ts app/api/mobile/v1/routes.contract.test.ts (10 tests passed) && npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination id=B807C4C7-1556-4C58-9AD1-3342CA4BC243 test -only-testing:OpusAppTests/ArenaPart5ViewModelTests (** TEST SUCCEEDED **, 6 tests passed). ArenaDashboardView now routes both overview weak nodes and the Part 5 CTA into the native Part 5 runner."
+        }
       ]
     },
     {
       "id": "07-arena-mission",
       "title": "Arena Mission",
       "wave": "wave-2",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/07-arena-mission.md",
       "dependencies": [
         "05-arena-dashboard"
@@ -260,6 +285,15 @@
         "长文、多空位和底部答题 dock 状态一致",
         "cache miss 有可感知但可恢复的兜底行为",
         "错题快照与 attempt 提交字段完整"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "ios-arena-mission-closed-loop",
+          "status": "done",
+          "summary": "Added the mobile Arena Mission route + adapter on top of the existing Part 6 generator, then implemented the native Mission flow with long-passage blank navigation, bottom answer dock, retryable load failure handling, completion summary, and wrong-answer snapshot telemetry submission through the shared arena attempt endpoint.",
+          "verification": "npx vitest run lib/mobile/arena.test.ts app/api/mobile/v1/routes.contract.test.ts (10 tests passed) && npm run ios:generate && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination id=B807C4C7-1556-4C58-9AD1-3342CA4BC243 test -only-testing:OpusAppTests/ArenaMissionViewModelTests (** TEST SUCCEEDED **, 4 tests passed). The mobile arena mission contract now returns part6 envelopes and validates arena attempt submissions end-to-end."
+        }
       ]
     },
     {

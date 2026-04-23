@@ -4,15 +4,26 @@ import Observation
 @MainActor
 @Observable
 final class TrainingHubViewModel {
+    enum Route: Equatable {
+        case session(DashboardDestination)
+        case arenaPart5(grammarNodeID: String?)
+        case arenaMission
+    }
+
     var contentState: OpusContentState = .loading
     var sections: [TrainingHubSection] = []
     var activeDestination: DashboardDestination?
 
     @ObservationIgnored private let service: TrainingHubServing
+    @ObservationIgnored private let makeSessionRunnerViewModel: (DashboardDestination) -> SessionRunnerViewModel
     @ObservationIgnored private var hasLoaded = false
 
-    init(service: TrainingHubServing) {
+    init(
+        service: TrainingHubServing,
+        makeSessionRunnerViewModel: @escaping (DashboardDestination) -> SessionRunnerViewModel
+    ) {
         self.service = service
+        self.makeSessionRunnerViewModel = makeSessionRunnerViewModel
     }
 
     func load(force: Bool = false) async {
@@ -39,6 +50,24 @@ final class TrainingHubViewModel {
 
     func open(_ destination: DashboardDestination) {
         activeDestination = destination
+    }
+
+    func route(for destination: DashboardDestination) -> Route? {
+        switch destination {
+        case .training, .reviewCards, .audio:
+            return .session(destination)
+        case .arena(let path, let grammarNodeID):
+            if path == "mission" {
+                return .arenaMission
+            }
+            return .arenaPart5(grammarNodeID: grammarNodeID)
+        default:
+            return nil
+        }
+    }
+
+    func buildSessionRunnerViewModel(for destination: DashboardDestination) -> SessionRunnerViewModel {
+        makeSessionRunnerViewModel(destination)
     }
 
     func resetForSessionChange() {

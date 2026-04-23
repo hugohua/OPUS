@@ -22,7 +22,10 @@ export async function generatePart6Session(): Promise<BriefingPayload> {
         log.warn("Unauthenticated attempt to generate Part 6 session");
         return buildArenaPart6FallbackDrill("authentication_failed");
     }
-    const userId = session.user.id;
+    return generatePart6SessionForUser(session.user.id);
+}
+
+export async function generatePart6SessionForUser(userId: string): Promise<BriefingPayload> {
     const mode = 'ARENA_PART6';
 
     try {

@@ -9,7 +9,10 @@ struct AppDependencies {
     let healthService: HealthCheckService
     let dashboardSummaryService: DashboardSummaryService
     let trainingHubService: TrainingHubService
+    let sessionRunnerService: SessionRunnerService
     let arenaDashboardService: ArenaDashboardService
+    let arenaPart5Service: ArenaPart5Service
+    let arenaMissionService: ArenaMissionService
     let vocabularyService: VocabularyService
     let briefingService: BriefingService
 
@@ -45,12 +48,32 @@ struct AppDependencies {
 
     @MainActor
     func makeTrainingHubViewModel() -> TrainingHubViewModel {
-        TrainingHubViewModel(service: trainingHubService)
+        TrainingHubViewModel(
+            service: trainingHubService,
+            makeSessionRunnerViewModel: { destination in
+                makeSessionRunnerViewModel(destination: destination)
+            }
+        )
+    }
+
+    @MainActor
+    func makeSessionRunnerViewModel(destination: DashboardDestination) -> SessionRunnerViewModel {
+        SessionRunnerViewModel(destination: destination, service: sessionRunnerService)
     }
 
     @MainActor
     func makeArenaDashboardViewModel() -> ArenaDashboardViewModel {
         ArenaDashboardViewModel(service: arenaDashboardService)
+    }
+
+    @MainActor
+    func makeArenaMissionViewModel() -> ArenaMissionViewModel {
+        ArenaMissionViewModel(service: arenaMissionService)
+    }
+
+    @MainActor
+    func makeArenaPart5ViewModel(grammarNodeID: String?) -> ArenaPart5ViewModel {
+        ArenaPart5ViewModel(grammarNodeID: grammarNodeID, service: arenaPart5Service)
     }
 
     @MainActor
@@ -99,7 +122,10 @@ struct AppDependencies {
             healthService: HealthCheckService(apiClient: apiClient),
             dashboardSummaryService: DashboardSummaryService(apiClient: apiClient),
             trainingHubService: TrainingHubService(apiClient: apiClient),
+            sessionRunnerService: SessionRunnerService(apiClient: apiClient),
             arenaDashboardService: ArenaDashboardService(apiClient: apiClient),
+            arenaPart5Service: ArenaPart5Service(apiClient: apiClient),
+            arenaMissionService: ArenaMissionService(apiClient: apiClient),
             vocabularyService: VocabularyService(apiClient: apiClient),
             briefingService: BriefingService(apiClient: apiClient, sseClient: sseClient)
         )

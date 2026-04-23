@@ -3,6 +3,8 @@ import SwiftUI
 struct TrainingHubView: View {
     @Bindable var viewModel: TrainingHubViewModel
     let pendingDestination: DashboardDestination?
+    let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
+    let makeArenaMissionViewModel: () -> ArenaMissionViewModel
 
     var body: some View {
         NavigationStack {
@@ -38,36 +40,29 @@ struct TrainingHubView: View {
                 }
             }
             .navigationTitle("训练")
+            .background(sessionNavigationLink)
         }
         .task {
             await viewModel.load()
+            routePendingDestinationIfNeeded()
+        }
+        .onChange(of: pendingDestination) { _, _ in
+            routePendingDestinationIfNeeded()
         }
     }
 
     private var content: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                if let pendingDestination {
-                    OpusCard(accent: .violet, style: .compact) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("首页已交接到训练页")
-                                .font(OpusTypography.sectionTitle)
-                                .foregroundStyle(OpusColorPalette.primaryText)
-
-                            Text(destinationDescription(pendingDestination))
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
-                        }
-                    }
-                }
-
                 ForEach(viewModel.sections) { section in
                     VStack(alignment: .leading, spacing: 12) {
                         OpusSectionHeader(title: section.title, subtitle: section.subtitle)
 
                         ForEach(section.entries) { entry in
                             Button {
-                                viewModel.open(entry.destination)
+                                if viewModel.route(for: entry.destination) != nil {
+                                    viewModel.open(entry.destination)
+                                }
                             } label: {
                                 OpusCard(accent: entry.accent, style: .standard) {
                                     VStack(alignment: .leading, spacing: 12) {
@@ -102,20 +97,7 @@ struct TrainingHubView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                if let activeDestination = viewModel.activeDestination {
-                    OpusCard(accent: .amber, style: .compact) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("后续会话接口已预留")
-                                .font(OpusTypography.sectionTitle)
-                                .foregroundStyle(OpusColorPalette.primaryText)
-
-                            Text(destinationDescription(activeDestination))
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
+                            .disabled(viewModel.route(for: entry.destination) == nil)
                         }
                     }
                 }
@@ -153,21 +135,44 @@ struct TrainingHubView: View {
         }
     }
 
-    private func destinationDescription(_ destination: DashboardDestination) -> String {
-        switch destination {
-        case .training(let mode):
-            return "Session Runner 将接收模式 `\(mode)`。"
-        case .reviewCards:
-            return "后续将接入 Review Cards 独立会话。"
-        case .audio:
-            return "后续将接入 Audio 训练独立会话。"
-        case .arena(let path, _):
-            return "后续将跳转到 Arena `\(path)` 入口。"
-        case .briefing(let articleID):
-            if let articleID {
-                return "后续将打开 articleId=`\(articleID)` 的简报阅读。"
+    private var sessionNavigationLink: some View {
+        NavigationLink(
+            isActive: Binding(
+                get: { viewModel.activeDestination != nil },
+                set: { isActive in
+                    if !isActive {
+                        viewModel.activeDestination = nil
+                    }
+                }
+            )
+        ) {
+            if let destination = viewModel.activeDestination {
+                switch viewModel.route(for: destination) {
+                case .session(let sessionDestination):
+                    SessionRunnerView(
+                        viewModel: viewModel.buildSessionRunnerViewModel(for: sessionDestination)
+                    )
+                case .arenaPart5(let grammarNodeID):
+                    ArenaPart5View(viewModel: makeArenaPart5ViewModel(grammarNodeID))
+                case .arenaMission:
+                    ArenaMissionView(viewModel: makeArenaMissionViewModel())
+                case nil:
+                    EmptyView()
+                }
+            } else {
+                EmptyView()
             }
-            return "后续将打开简报入口。"
+        } label: {
+            EmptyView()
+        }
+    }
+
+    private func routePendingDestinationIfNeeded() {
+        guard let pendingDestination else { return }
+
+        if viewModel.route(for: pendingDestination) != nil,
+           viewModel.activeDestination != pendingDestination {
+            viewModel.open(pendingDestination)
         }
     }
 }
