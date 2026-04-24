@@ -131,6 +131,7 @@ extension ButtonStyle where Self == OpusPressButtonStyle {
     }
 }
 
+@MainActor
 enum OpusHaptics {
     static func light() {
         impact(.light)
@@ -188,18 +189,28 @@ enum OpusSensoryFeedbackEvent: Equatable {
     }
 }
 
-private struct OpusSensoryFeedbackModifier: ViewModifier {
+private struct OpusSensoryFeedbackModifier<Trigger: Equatable>: ViewModifier {
     let event: OpusSensoryFeedbackEvent?
+    let trigger: Trigger
 
     func body(content: Content) -> some View {
         content
-            .sensoryFeedback(event?.feedback ?? .selection, trigger: event)
+            .sensoryFeedback(trigger: trigger) { _, _ in
+                event?.feedback
+            }
     }
 }
 
 extension View {
     func opusSensoryFeedback(_ event: OpusSensoryFeedbackEvent?) -> some View {
-        modifier(OpusSensoryFeedbackModifier(event: event))
+        modifier(OpusSensoryFeedbackModifier(event: event, trigger: event))
+    }
+
+    func opusSensoryFeedback<Trigger: Equatable>(
+        _ event: OpusSensoryFeedbackEvent?,
+        trigger: Trigger
+    ) -> some View {
+        modifier(OpusSensoryFeedbackModifier(event: event, trigger: trigger))
     }
 }
 
