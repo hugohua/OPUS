@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VocabularyView: View {
     @Bindable var viewModel: VocabularyViewModel
+    @State private var searchDraftText = ""
 
     var body: some View {
         NavigationStack {
@@ -33,17 +34,32 @@ struct VocabularyView: View {
             }
             .navigationTitle("词库")
             .searchable(
-                text: $viewModel.searchText,
+                text: $searchDraftText,
                 placement: .navigationBarDrawer(displayMode: .always),
                 prompt: "搜索单词或释义"
             )
             .onSubmit(of: .search) {
                 Task {
-                    await viewModel.reloadFilters()
+                    await submitSearch()
                 }
+            }
+            .onChange(of: searchDraftText) { _, newValue in
+                guard newValue.isEmpty, !viewModel.searchText.isEmpty else { return }
+
+                Task {
+                    await clearSearch()
+                }
+            }
+            .onChange(of: viewModel.searchText) { _, newValue in
+                syncSearchDraft(to: newValue)
+            }
+            .onChange(of: viewModel.contentState) { _, newValue in
+                guard newValue == .loading, viewModel.items.isEmpty, viewModel.stats == nil else { return }
+                syncSearchDraft(to: viewModel.searchText)
             }
         }
         .task {
+            syncSearchDraft(to: viewModel.searchText)
             await viewModel.load()
         }
         .sheet(item: Binding(
@@ -107,6 +123,8 @@ struct VocabularyView: View {
                             accent: statusAccent(for: status),
                             isActive: viewModel.selectedStatus == status,
                             action: {
+                                guard viewModel.selectedStatus != status else { return }
+
                                 Task {
                                     viewModel.selectedStatus = status
                                     await viewModel.reloadFilters()
@@ -126,6 +144,8 @@ struct VocabularyView: View {
                             isActive: viewModel.selectedTag == nil,
                             systemImage: "tag",
                             action: {
+                                guard viewModel.selectedTag != nil else { return }
+
                                 Task {
                                     viewModel.selectedTag = nil
                                     await viewModel.reloadFilters()
@@ -139,6 +159,8 @@ struct VocabularyView: View {
                                 accent: .blue,
                                 isActive: viewModel.selectedTag == tag,
                                 action: {
+                                    guard viewModel.selectedTag != tag else { return }
+
                                     Task {
                                         viewModel.selectedTag = tag
                                         await viewModel.reloadFilters()
@@ -150,6 +172,25 @@ struct VocabularyView: View {
                 }
             }
         }
+    }
+
+    private func submitSearch() async {
+        guard searchDraftText != viewModel.searchText else { return }
+
+        viewModel.searchText = searchDraftText
+        await viewModel.reloadFilters()
+    }
+
+    private func clearSearch() async {
+        guard searchDraftText.isEmpty, viewModel.searchText != "" else { return }
+
+        viewModel.searchText = ""
+        await viewModel.reloadFilters()
+    }
+
+    private func syncSearchDraft(to searchText: String) {
+        guard searchDraftText != searchText else { return }
+        searchDraftText = searchText
     }
 
     private func statsCard(_ stats: VocabularyStats) -> some View {
