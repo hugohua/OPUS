@@ -1,5 +1,6 @@
 import SwiftUI
 
+#if DEBUG
 struct OpusDesignSystemGallery: View {
     var body: some View {
         ScrollView {
@@ -558,3 +559,4 @@ private struct TypeSample: Identifiable {
     OpusDesignSystemGallery()
         .environment(\.dynamicTypeSize, .accessibility3)
 }
+#endif
