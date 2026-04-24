@@ -36,6 +36,7 @@ struct AppRootView: View {
         }
         .onChange(of: launchCoordinator.currentSession?.user.id) { oldValue, newValue in
             if oldValue != newValue {
+                diagnosticsViewModel.resetTransientState()
                 dashboardViewModel.resetForSessionChange()
                 trainingHubViewModel.resetForSessionChange()
                 arenaDashboardViewModel.resetForSessionChange()

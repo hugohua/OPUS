@@ -31,7 +31,7 @@
       "id": "wave-3",
       "title": "Content And Hardening",
       "goal": "Finish briefing/history/detail flows, diagnostics hardening, telemetry, and cross-screen consistency.",
-      "status": "todo"
+      "status": "done"
     }
   ],
   "items": [
@@ -365,7 +365,7 @@
       "id": "10-briefing-reader",
       "title": "Briefing Reader",
       "wave": "wave-3",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/10-briefing-reader.md",
       "dependencies": [
         "09-briefing-console"
@@ -383,13 +383,22 @@
         "阅读器可稳定恢复正文与上下文",
         "Wand 查词与分析流在成功和失败时都有明确反馈",
         "阅读状态与返回路径不会丢失"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "ios-briefing-reader-wand-closed-loop",
+          "status": "done",
+          "summary": "Added the mobile briefing detail route plus Wand word and Wand analyze SSE routes, then completed iOS reader recovery with selectable body text, long-press 查词/分析 actions, and a minimal streaming Wand sheet while keeping the return path inside the Briefing module.",
+          "verification": "npx vitest run lib/mobile/briefing.test.ts app/api/mobile/v1/routes.contract.test.ts app/api/mobile/v1/health/route.test.ts (3 files, 12 tests passed) && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/BriefingViewModelTests -only-testing:OpusAppTests/DiagnosticsViewModelTests -only-testing:OpusAppTests/HealthCheckServiceTests -only-testing:OpusAppTests/LaunchCoordinatorTests -only-testing:OpusAppTests/SSEClientTests (** TEST SUCCEEDED **, 21 tests passed, 0 failures). Simulator smoke on iPhone 17 Pro verified Briefing Console -> Briefing Reader -> long-press body text -> 查词 opens the Wand sheet -> 分析 shows minimal streaming output. Local manual review of the wave-3 diff found no new blocking issues; residual risk: the external usage limit prevented rerunning the code-review subagent."
+        }
       ]
     },
     {
       "id": "11-briefing-history",
       "title": "Briefing History",
       "wave": "wave-3",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/11-briefing-history.md",
       "dependencies": [
         "09-briefing-console"
@@ -407,13 +416,22 @@
         "历史列表筛选、删除、进入详情行为一致",
         "空态和删除确认行为明确",
         "删除后本地列表与服务端状态同步"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "ios-briefing-history-filter-detail-delete",
+          "status": "done",
+          "summary": "Added the mobile briefing history and delete routes, reused the detail route for history drill-in, and completed iOS history scenario/status filtering, detail navigation, and confirm-then-refresh deletion while preserving the Web-compatible legacy title.startsWith(scenario) fallback.",
+          "verification": "npx vitest run lib/mobile/briefing.test.ts app/api/mobile/v1/routes.contract.test.ts app/api/mobile/v1/health/route.test.ts (3 files, 12 tests passed) && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/BriefingViewModelTests -only-testing:OpusAppTests/DiagnosticsViewModelTests -only-testing:OpusAppTests/HealthCheckServiceTests -only-testing:OpusAppTests/LaunchCoordinatorTests -only-testing:OpusAppTests/SSEClientTests (** TEST SUCCEEDED **, 21 tests passed, 0 failures). Simulator smoke on iPhone 17 Pro verified History 筛选到 HR -> 进入详情 opens the reader -> 删除弹出确认 -> 确认后列表刷新且首项移除. Local manual review of the wave-3 diff found no new blocking issues; residual risk: the external usage limit prevented rerunning the code-review subagent."
+        }
       ]
     },
     {
       "id": "12-diagnostics",
       "title": "Diagnostics",
       "wave": "wave-3",
-      "status": "todo",
+      "status": "done",
       "spec": "docs/ios-pages/12-diagnostics.md",
       "dependencies": [
         "01-auth-and-launch"
@@ -430,6 +448,15 @@
         "环境切换、健康检查、token 清理都可见且可操作",
         "清 token 后会正确回到未登录路径",
         "接口不可达时有明确错误信息"
+      ],
+      "executionLog": [
+        {
+          "date": "2026-04-23",
+          "step": "ios-diagnostics-hardening-and-auth-reset",
+          "status": "done",
+          "summary": "Hardened Diagnostics so stale health results can be cleared and rerun, Reload Config now resets health state and publishes explicit feedback, and Clear Stored Token continues to route through the root auth coordinator back to the unauthenticated shell.",
+          "verification": "npx vitest run lib/mobile/briefing.test.ts app/api/mobile/v1/routes.contract.test.ts app/api/mobile/v1/health/route.test.ts (3 files, 12 tests passed) && xcodebuild -project ios/OpusApp.xcodeproj -scheme OpusApp-Local -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:OpusAppTests/BriefingViewModelTests -only-testing:OpusAppTests/DiagnosticsViewModelTests -only-testing:OpusAppTests/HealthCheckServiceTests -only-testing:OpusAppTests/LaunchCoordinatorTests -only-testing:OpusAppTests/SSEClientTests (** TEST SUCCEEDED **, 21 tests passed, 0 failures). Simulator smoke on iPhone 17 Pro verified Diagnostics -> Run Health Check -> Reload Config clears prior health results -> Clear Stored Token -> unauthenticated login screen. Local manual review of the wave-3 diff found no new blocking issues; residual risk: the external usage limit prevented rerunning the code-review subagent."
+        }
       ]
     }
   ]

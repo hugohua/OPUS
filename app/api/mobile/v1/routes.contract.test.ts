@@ -60,6 +60,40 @@ vi.mock("@/lib/mobile/vocabulary", () => ({
 vi.mock("@/lib/mobile/briefing", () => ({
     getMobileLatestBriefing: vi.fn(async () => ({ id: "article-1", title: "Latest", content: "Body" })),
     getMobileBriefingIngredients: vi.fn(async () => ({ scenario: "finance_group", priorityWords: [], fillerWords: [] })),
+    getMobileBriefingDetail: vi.fn(async () => ({
+        id: "article-1",
+        title: "Latest",
+        scenario: "finance_group",
+        density: "balanced",
+        content: "Body",
+        targetWords: [],
+    })),
+    getMobileBriefingHistory: vi.fn(async () => ({
+        items: [
+            {
+                id: "article-1",
+                title: "Latest",
+                createdAt: "2026-04-23T00:00:00.000Z",
+                scenario: "finance_group",
+                status: "new",
+                vocabPreview: "audit",
+            },
+        ],
+        availableScenarios: ["finance_group"],
+    })),
+    deleteMobileBriefingArticle: vi.fn(async () => ({ success: true })),
+    getMobileBriefingWandWord: vi.fn(async () => ({
+        vocab: { phonetic: "/ˈɔːdɪt/", meaning: "审计" },
+        etymology: null,
+        ai_insight: null,
+    })),
+    createMobileBriefingWandAnalyzeStream: vi.fn(() => new ReadableStream({
+        start(controller) {
+            controller.enqueue(new TextEncoder().encode('data: {"type":"content","data":"chunk"}\n\n'));
+            controller.enqueue(new TextEncoder().encode('data: {"type":"done"}\n\n'));
+            controller.close();
+        },
+    })),
 }));
 
 describe("mobile route contracts", () => {
@@ -183,9 +217,13 @@ describe("mobile route contracts", () => {
         });
     });
 
-    it("returns briefing metadata envelope", async () => {
+    it("returns briefing reader and history envelopes", async () => {
         const latestRoute = await import("./weaver/latest/route");
         const ingredientsRoute = await import("./weaver/ingredients/route");
+        const detailRoute = await import("./weaver/[id]/route");
+        const historyRoute = await import("./weaver/history/route");
+        const wandWordRoute = await import("./weaver/wand/word/route");
+        const wandAnalyzeRoute = await import("./weaver/wand/analyze/route");
 
         expect(await (await latestRoute.GET(new Request("http://localhost/api/mobile/v1/weaver/latest"))).json()).toEqual({
             status: "success",
@@ -195,5 +233,38 @@ describe("mobile route contracts", () => {
             status: "success",
             data: { scenario: "finance_group" },
         });
+        expect(await (await detailRoute.GET(
+            new Request("http://localhost/api/mobile/v1/weaver/article-1"),
+            { params: Promise.resolve({ id: "article-1" }) }
+        )).json()).toMatchObject({
+            status: "success",
+            data: { id: "article-1", scenario: "finance_group" },
+        });
+        expect(await (await historyRoute.GET(new Request("http://localhost/api/mobile/v1/weaver/history?status=new"))).json()).toMatchObject({
+            status: "success",
+            data: {
+                items: [{ id: "article-1", status: "new" }],
+                availableScenarios: ["finance_group"],
+            },
+        });
+        expect(await (await wandWordRoute.GET(new Request("http://localhost/api/mobile/v1/weaver/wand/word?word=audit"))).json()).toMatchObject({
+            status: "success",
+            data: { vocab: { meaning: "审计" } },
+        });
+        expect(await (await detailRoute.DELETE(
+            new Request("http://localhost/api/mobile/v1/weaver/article-1", { method: "DELETE" }),
+            { params: Promise.resolve({ id: "article-1" }) }
+        )).json()).toEqual({
+            status: "success",
+            data: { success: true },
+        });
+
+        const analyzeResponse = await wandAnalyzeRoute.POST(new Request("http://localhost/api/mobile/v1/weaver/wand/analyze", {
+            method: "POST",
+            body: JSON.stringify({ text: "audit", type: "word", context: "The audit starts today." }),
+        }));
+
+        expect(analyzeResponse.headers.get("Content-Type")).toContain("text/event-stream");
+        await expect(analyzeResponse.text()).resolves.toContain('"type":"content"');
     });
 });

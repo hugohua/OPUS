@@ -60,13 +60,16 @@ struct DiagnosticsHomeView: View {
                     }
 
                     Button("Clear Stored Token", role: .destructive) {
-                        viewModel.clearStoredToken()
+                        Task {
+                            await viewModel.clearStoredToken()
+                        }
                     }
+                    .disabled(viewModel.isPerformingAction)
 
-                    if let actionError = viewModel.lastActionError {
-                        Text(actionError)
+                    if let actionFeedback = viewModel.actionFeedback {
+                        Text(actionFeedback.message)
                             .font(OpusTypography.caption)
-                            .foregroundStyle(OpusColorPalette.rose)
+                            .foregroundStyle(actionFeedbackColor(for: actionFeedback))
                     }
                 }
             }
@@ -96,6 +99,17 @@ struct DiagnosticsHomeView: View {
             message: "点击下方按钮或当前卡片操作，验证移动端 API 是否可用。",
             actionTitle: "立即检查"
         )
+    }
+
+    private func actionFeedbackColor(for feedback: DiagnosticsActionFeedback) -> Color {
+        switch feedback {
+        case .inProgress:
+            return OpusColorPalette.secondaryText
+        case .success:
+            return OpusColorPalette.brand
+        case .failure:
+            return OpusColorPalette.rose
+        }
     }
 }
 

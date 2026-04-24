@@ -1,6 +1,19 @@
 import Foundation
 import Observation
 
+enum DiagnosticsActionFeedback: Equatable {
+    case inProgress(String)
+    case success(String)
+    case failure(String)
+
+    var message: String {
+        switch self {
+        case .inProgress(let message), .success(let message), .failure(let message):
+            return message
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class DiagnosticsViewModel {
@@ -9,7 +22,7 @@ final class DiagnosticsViewModel {
     var latestHealthPayload: HealthCheckPayload?
     var isRunningHealthCheck = false
     var lastHealthCheckError: String?
-    var lastActionError: String?
+    var actionFeedback: DiagnosticsActionFeedback?
 
     private let runtimeConfigLoader: () throws -> RuntimeConfig
     private let buildInfoProvider: () -> BuildInfo
@@ -36,6 +49,14 @@ final class DiagnosticsViewModel {
     var tokenStatusText: String {
         let hasToken = (try? tokenStore.fetchToken()) ?? nil
         return hasToken == nil ? "No stored token" : "Stored token available"
+    }
+
+    var isPerformingAction: Bool {
+        if case .inProgress = actionFeedback {
+            return true
+        }
+
+        return false
     }
 
     var healthStatusTitle: String {
@@ -68,30 +89,34 @@ final class DiagnosticsViewModel {
         do {
             runtimeConfig = try runtimeConfigLoader()
             buildInfo = buildInfoProvider()
-            lastActionError = nil
+            clearHealthState()
+            actionFeedback = .success("配置已刷新，请重新执行健康检查。")
         } catch {
-            lastActionError = error.localizedDescription
+            actionFeedback = .failure(error.localizedDescription)
         }
     }
 
-    func clearStoredToken() {
-        if let clearStoredTokenAction {
-            Task {
-                do {
-                    try await clearStoredTokenAction()
-                    lastActionError = nil
-                } catch {
-                    lastActionError = error.localizedDescription
-                }
-            }
-            return
-        }
-
+    func clearStoredToken() async {
+        actionFeedback = .inProgress("正在清除 token 并返回登录态…")
         do {
-            try tokenStore.clearToken()
-            lastActionError = nil
+            if let clearStoredTokenAction {
+                try await clearStoredTokenAction()
+            } else {
+                try tokenStore.clearToken()
+            }
+            resetTransientState()
         } catch {
-            lastActionError = error.localizedDescription
+            actionFeedback = .failure(error.localizedDescription)
         }
+    }
+
+    func resetTransientState() {
+        clearHealthState()
+        actionFeedback = nil
+    }
+
+    private func clearHealthState() {
+        latestHealthPayload = nil
+        lastHealthCheckError = nil
     }
 }
