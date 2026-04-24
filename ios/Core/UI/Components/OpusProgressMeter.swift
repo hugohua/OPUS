@@ -15,6 +15,7 @@ struct OpusProgressSegment {
     }
 }
 
+/// Segmented distribution meter; segment values are normalized against each other.
 struct OpusProgressMeter: View {
     let segments: [OpusProgressSegment]
     let height: CGFloat
