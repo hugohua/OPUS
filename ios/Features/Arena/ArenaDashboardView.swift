@@ -47,14 +47,19 @@ struct ArenaDashboardView: View {
         .sheet(item: $viewModel.selectedKnot) { knot in
             NavigationStack {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(knot.name)
-                        .font(OpusTypography.pageTitle)
-                    Text(knot.nameEn ?? "No English name")
-                        .font(OpusTypography.body)
-                        .foregroundStyle(OpusColorPalette.secondaryText)
-                    Text("掌握度 \(knot.masteryScore)% · 题量 \(knot.availableQs)")
-                        .font(OpusTypography.caption)
-                        .foregroundStyle(OpusColorPalette.tertiaryText)
+                    OpusSheetHeader(
+                        title: knot.name,
+                        subtitle: knot.nameEn ?? "No English name"
+                    )
+
+                    HStack(spacing: 10) {
+                        OpusBadge(
+                            title: "掌握度 \(knot.masteryScore)%",
+                            accent: masteryAccent(knot.masteryScore),
+                            variant: .dot
+                        )
+                        OpusBadge(title: "题量 \(knot.availableQs)", accent: .blue, variant: .soft)
+                    }
 
                     OpusPrimaryButton(title: "开始 Part 5 定向训练") {
                         viewModel.open(.arena(path: "part5", grammarNodeID: knot.id))
@@ -90,9 +95,12 @@ struct ArenaDashboardView: View {
 
                 if let activeDestination = viewModel.activeDestination {
                     OpusCard(accent: .amber, style: .compact) {
-                        Text(destinationDescription(activeDestination))
-                            .font(OpusTypography.body)
-                            .foregroundStyle(OpusColorPalette.secondaryText)
+                        VStack(alignment: .leading, spacing: 10) {
+                            OpusStatusBadge(title: "ROUTING", accent: .amber)
+                            Text(destinationDescription(activeDestination))
+                                .font(OpusTypography.body)
+                                .foregroundStyle(OpusColorPalette.secondaryText)
+                        }
                     }
                 }
             }
@@ -108,20 +116,29 @@ struct ArenaDashboardView: View {
 
                 ForEach(overview.radar) { domain in
                     OpusCard(accent: .violet, style: .compact) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(domain.label)
-                                    .font(OpusTypography.sectionTitle)
-                                Text(domain.code)
-                                    .font(OpusTypography.caption)
-                                    .foregroundStyle(OpusColorPalette.secondaryText)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .firstTextBaseline) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(domain.label)
+                                        .font(OpusTypography.sectionTitle)
+                                    Text(domain.code)
+                                        .font(OpusTypography.caption)
+                                        .foregroundStyle(OpusColorPalette.secondaryText)
+                                }
+
+                                Spacer()
+
+                                OpusStatusBadge(
+                                    title: "\(domain.score)%",
+                                    accent: masteryAccent(domain.score)
+                                )
                             }
 
-                            Spacer()
-
-                            Text("\(domain.score)%")
-                                .font(OpusTypography.metric)
-                                .foregroundStyle(domain.score < 40 ? OpusColorPalette.rose : OpusColorPalette.primaryText)
+                            OpusProgressMeter(
+                                segments: radarSegments(for: domain.score),
+                                height: 10,
+                                spacing: 0
+                            )
                         }
                     }
                 }
@@ -140,20 +157,23 @@ struct ArenaDashboardView: View {
                         Button {
                             viewModel.open(.arena(path: "part5", grammarNodeID: node.id))
                         } label: {
-                            OpusCard(accent: .emerald, style: .standard) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(node.name)
-                                        .font(OpusTypography.cardTitle)
-                                    Text(node.description)
-                                        .font(OpusTypography.body)
-                                        .foregroundStyle(OpusColorPalette.secondaryText)
-                                    Text("掌握度 \(node.score)%")
-                                        .font(OpusTypography.caption)
-                                        .foregroundStyle(OpusColorPalette.warning)
+                            OpusCard(accent: masteryAccent(node.score), style: .standard, isInteractive: true) {
+                                OpusListRow(
+                                    systemImage: "exclamationmark.triangle.fill",
+                                    title: node.name,
+                                    subtitle: node.description,
+                                    caption: "点击进入 Part 5 定向训练",
+                                    accent: masteryAccent(node.score)
+                                ) {
+                                    OpusBadge(
+                                        title: "\(node.score)%",
+                                        accent: masteryAccent(node.score),
+                                        variant: .soft
+                                    )
                                 }
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
                     }
                 }
 
@@ -162,22 +182,40 @@ struct ArenaDashboardView: View {
                 Button {
                     viewModel.open(.arena(path: "part5"))
                 } label: {
-                    OpusCard(accent: .violet, style: .standard) {
-                        Text("单句闪电战 (Part 5)")
-                            .font(OpusTypography.cardTitle)
+                    OpusCard(accent: .violet, style: .standard, isInteractive: true) {
+                        OpusListRow(
+                            systemImage: "bolt.fill",
+                            title: "单句闪电战",
+                            subtitle: "Part 5 定向训练",
+                            caption: "进入语法单句练习",
+                            accent: .violet
+                        ) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(OpusColorPalette.tertiaryText)
+                        }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
 
                 Button {
                     viewModel.open(.arena(path: "mission"))
                 } label: {
-                    OpusCard(accent: .indigo, style: .standard) {
-                        Text("阅读狙击战 (Mission)")
-                            .font(OpusTypography.cardTitle)
+                    OpusCard(accent: .indigo, style: .standard, isInteractive: true) {
+                        OpusListRow(
+                            systemImage: "scope",
+                            title: "阅读狙击战",
+                            subtitle: "Mission",
+                            caption: "进入阅读任务练习",
+                            accent: .indigo
+                        ) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(OpusColorPalette.tertiaryText)
+                        }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
             }
         }
     }
@@ -210,24 +248,32 @@ struct ArenaDashboardView: View {
                                     Button {
                                         viewModel.selectedKnot = knot
                                     } label: {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text(knot.shortCode)
-                                                .font(OpusTypography.mono)
-                                            Text(knot.name)
-                                                .font(OpusTypography.caption)
-                                                .lineLimit(2)
-                                            Text("\(knot.masteryScore)%")
-                                                .font(OpusTypography.caption)
-                                                .foregroundStyle(knot.masteryScore < 40 ? OpusColorPalette.rose : OpusColorPalette.secondaryText)
+                                        OpusCard(accent: masteryAccent(knot.masteryScore), style: .compact, isInteractive: true) {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                HStack(alignment: .firstTextBaseline) {
+                                                    Text(knot.shortCode)
+                                                        .font(OpusTypography.mono)
+                                                        .foregroundStyle(OpusColorPalette.secondaryText)
+
+                                                    Spacer(minLength: 8)
+
+                                                    OpusBadge(
+                                                        title: "\(knot.masteryScore)%",
+                                                        accent: masteryAccent(knot.masteryScore),
+                                                        variant: .soft
+                                                    )
+                                                }
+
+                                                Text(knot.name)
+                                                    .font(OpusTypography.caption)
+                                                    .foregroundStyle(OpusColorPalette.primaryText)
+                                                    .lineLimit(2)
+
+                                                OpusBadge(title: "\(knot.availableQs) 题", accent: .blue, variant: .outline)
+                                            }
                                         }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(12)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .fill(Color.white.opacity(0.7))
-                                        )
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
                                 }
                             }
                         }
@@ -257,6 +303,19 @@ struct ArenaDashboardView: View {
         default:
             return "已记录竞技场后续入口。"
         }
+    }
+
+    private func masteryAccent(_ score: Int) -> OpusAccent {
+        if score < 40 { return .rose }
+        if score < 70 { return .amber }
+        return .emerald
+    }
+
+    private func radarSegments(for score: Int) -> [OpusProgressSegment] {
+        [
+            OpusProgressSegment(value: Double(score), accent: masteryAccent(score)),
+            OpusProgressSegment(value: Double(max(0, 100 - score)), color: OpusColorPalette.progressTrack)
+        ]
     }
 
     private var arenaNavigationLink: some View {

@@ -108,29 +108,40 @@ struct BriefingView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if let pendingDestination {
                     OpusCard(accent: .violet, style: .compact) {
-                        Text("首页交接：\(pendingDescription(pendingDestination))")
-                            .font(OpusTypography.body)
-                            .foregroundStyle(OpusColorPalette.secondaryText)
+                        VStack(alignment: .leading, spacing: 10) {
+                            OpusStatusBadge(title: "HANDOFF", accent: .violet)
+                            Text(pendingDescription(pendingDestination))
+                                .font(OpusTypography.body)
+                                .foregroundStyle(OpusColorPalette.secondaryText)
+                        }
                     }
                 }
 
                 if let latest = viewModel.latest {
                     OpusCard(accent: .indigo, style: .standard) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("最新简报")
-                                .font(OpusTypography.sectionTitle)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("最新简报")
+                                    .font(OpusTypography.sectionTitle)
+
+                                Spacer()
+
+                                OpusBadge(title: "New", accent: .indigo, variant: .dot)
+                            }
+
                             Text(latest.title)
                                 .font(OpusTypography.cardTitle)
-                            Text("scenario: \(scenarioLabel(latest.scenario)) · density: \(latest.density)")
-                                .font(OpusTypography.caption)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
 
-                            Button("继续阅读") {
+                            HStack(spacing: 10) {
+                                OpusBadge(title: scenarioLabel(latest.scenario), accent: .blue, variant: .soft)
+                                OpusBadge(title: latest.density, accent: .slate, variant: .outline)
+                            }
+
+                            OpusPrimaryButton(title: "继续阅读") {
                                 Task {
                                     await viewModel.openLatestBriefing(articleID: latest.id)
                                 }
                             }
-                            .font(OpusTypography.caption)
                         }
                     }
                 }
@@ -162,9 +173,12 @@ struct BriefingView: View {
 
                 if let generationError = viewModel.generationError {
                     OpusCard(accent: .amber, style: .compact) {
-                        Text(generationError)
-                            .font(OpusTypography.body)
-                            .foregroundStyle(OpusColorPalette.warning)
+                        VStack(alignment: .leading, spacing: 10) {
+                            OpusStatusBadge(title: "GENERATION ERROR", accent: .amber)
+                            Text(generationError)
+                                .font(OpusTypography.body)
+                                .foregroundStyle(OpusColorPalette.warning)
+                        }
                     }
                 }
 
@@ -197,7 +211,7 @@ struct BriefingView: View {
             Button("取消并返回控制台") {
                 viewModel.resetToConsole()
             }
-            .font(OpusTypography.caption)
+            .buttonStyle(.opusPress(variant: .destructive, size: .regular, feel: .tactile))
         }
         .padding(OpusSpacing.screenPadding)
     }
@@ -230,9 +244,11 @@ struct BriefingView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(article.parsedContent.title)
                                 .font(OpusTypography.serifTitle)
-                            Text("场景 \(scenarioLabel(article.scenario)) · 密度 \(article.density) · \(relativeDate(article.createdAt))")
-                                .font(OpusTypography.caption)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
+                            HStack(spacing: 10) {
+                                OpusBadge(title: scenarioLabel(article.scenario), accent: .blue, variant: .soft)
+                                OpusBadge(title: article.density, accent: .slate, variant: .outline)
+                                OpusBadge(title: relativeDate(article.createdAt), accent: .violet, variant: .soft)
+                            }
                             Text("长按正文即可触发 Wand 查词或分析。")
                                 .font(OpusTypography.caption)
                                 .foregroundStyle(OpusColorPalette.secondaryText)
@@ -343,9 +359,12 @@ struct BriefingView: View {
 
             if let historyErrorMessage = viewModel.historyErrorMessage {
                 OpusCard(accent: .amber, style: .compact) {
-                    Text(historyErrorMessage)
-                        .font(OpusTypography.body)
-                        .foregroundStyle(OpusColorPalette.warning)
+                    VStack(alignment: .leading, spacing: 10) {
+                        OpusStatusBadge(title: "HISTORY ERROR", accent: .amber)
+                        Text(historyErrorMessage)
+                            .font(OpusTypography.body)
+                            .foregroundStyle(OpusColorPalette.warning)
+                    }
                 }
             }
         }
@@ -365,12 +384,13 @@ struct BriefingView: View {
             } else {
                 ForEach(words) { word in
                     OpusCard(accent: .violet, style: .compact) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(word.word)
-                                .font(OpusTypography.sectionTitle)
-                            Text(word.meaning)
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.secondaryText)
+                        OpusListRow(
+                            systemImage: "textformat",
+                            title: word.word,
+                            subtitle: word.meaning,
+                            accent: .violet
+                        ) {
+                            OpusBadge(title: "Word", accent: .violet, variant: .soft)
                         }
                     }
                 }
@@ -381,16 +401,20 @@ struct BriefingView: View {
     private func historyRow(_ item: BriefingHistoryItem) -> some View {
         OpusCard(accent: item.isNew ? .violet : .slate, style: .compact) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(item.title)
-                            .font(OpusTypography.sectionTitle)
-                        Text("\(scenarioLabel(item.scenario)) · \(item.isNew ? "未读" : "归档") · \(relativeDate(item.createdAt))")
-                            .font(OpusTypography.caption)
-                            .foregroundStyle(OpusColorPalette.secondaryText)
+                OpusListRow(
+                    systemImage: item.isNew ? "sparkles" : "archivebox",
+                    title: item.title,
+                    caption: relativeDate(item.createdAt),
+                    accent: item.isNew ? .violet : .slate
+                ) {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        OpusBadge(
+                            title: item.isNew ? "未读" : "归档",
+                            accent: item.isNew ? .violet : .slate,
+                            variant: item.isNew ? .dot : .soft
+                        )
+                        OpusBadge(title: scenarioLabel(item.scenario), accent: .blue, variant: .outline)
                     }
-
-                    Spacer(minLength: 0)
                 }
 
                 if !item.vocabPreview.isEmpty {
@@ -405,13 +429,12 @@ struct BriefingView: View {
                             await viewModel.openHistoryArticle(id: item.id)
                         }
                     }
-                    .font(OpusTypography.caption)
+                    .buttonStyle(.opusPress(variant: .secondary, size: .small, feel: .quiet))
 
                     Button("删除") {
                         pendingDeleteItem = item
                     }
-                    .font(OpusTypography.caption)
-                    .foregroundStyle(OpusColorPalette.warning)
+                    .buttonStyle(.opusPress(variant: .destructive, size: .small, feel: .quiet))
                 }
             }
         }
@@ -421,16 +444,26 @@ struct BriefingView: View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(viewModel.wandSelection)
-                        .font(OpusTypography.pageTitle)
+                    OpusSheetHeader(
+                        title: viewModel.wandSelection,
+                        subtitle: "Wand 查词与选中文本分析",
+                        closeAction: {
+                            viewModel.dismissWand()
+                        }
+                    )
 
                     if viewModel.isWandLoading {
-                        ProgressView("正在调用 Wand")
+                        OpusStateView(
+                            state: .loading,
+                            loadingTitle: "正在调用 Wand",
+                            loadingMessage: "正在检索词义、词源与语境信息。"
+                        )
                     }
 
                     if let lookup = viewModel.wandLookup {
                         OpusCard(accent: .indigo, style: .standard) {
                             VStack(alignment: .leading, spacing: 8) {
+                                OpusStatusBadge(title: "LOOKUP", accent: .indigo)
                                 Text(lookup.vocab.phonetic.isEmpty ? "无音标" : lookup.vocab.phonetic)
                                     .font(OpusTypography.caption)
                                     .foregroundStyle(OpusColorPalette.secondaryText)
@@ -454,7 +487,7 @@ struct BriefingView: View {
                         OpusCard(accent: .violet, style: .standard) {
                             VStack(alignment: .leading, spacing: 10) {
                                 if viewModel.isWandAnalyzing {
-                                    ProgressView("分析进行中")
+                                    OpusStatusBadge(title: "ANALYZING", accent: .violet)
                                 }
                                 Text(viewModel.wandAnalysisText.isEmpty ? "等待首段分析..." : viewModel.wandAnalysisText)
                                     .font(OpusTypography.body)
@@ -465,21 +498,16 @@ struct BriefingView: View {
 
                     if let wandError = viewModel.wandError {
                         OpusCard(accent: .amber, style: .compact) {
-                            Text(wandError)
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.warning)
+                            VStack(alignment: .leading, spacing: 10) {
+                                OpusStatusBadge(title: "WAND ERROR", accent: .amber)
+                                Text(wandError)
+                                    .font(OpusTypography.body)
+                                    .foregroundStyle(OpusColorPalette.warning)
+                            }
                         }
                     }
                 }
                 .padding(OpusSpacing.screenPadding)
-            }
-            .navigationTitle("Wand")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("关闭") {
-                        viewModel.dismissWand()
-                    }
-                }
             }
         }
         .presentationDetents([.medium, .large])
