@@ -86,6 +86,7 @@ struct OpusStatusBadge: View {
     let title: String
     let accent: OpusAccent
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
     init(title: String, accent: OpusAccent) {
@@ -99,7 +100,7 @@ struct OpusStatusBadge: View {
                 Circle()
                     .fill(accent.primaryColor.opacity(0.12))
                     .frame(width: 16, height: 16)
-                    .scaleEffect(isAnimating ? 1.08 : 0.92)
+                    .scaleEffect(reduceMotion ? 1 : (isAnimating ? 1.08 : 0.92))
                 Circle()
                     .fill(accent.primaryColor)
                     .frame(width: 7, height: 7)
@@ -120,8 +121,18 @@ struct OpusStatusBadge: View {
                 )
         )
         .onAppear {
+            guard !reduceMotion else {
+                isAnimating = false
+                return
+            }
+
             withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
                 isAnimating = true
+            }
+        }
+        .onChange(of: reduceMotion) { _, newValue in
+            if newValue {
+                isAnimating = false
             }
         }
     }

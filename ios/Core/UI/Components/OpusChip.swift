@@ -28,6 +28,9 @@ struct OpusChip: View {
                     label
                 }
                 .buttonStyle(.plain)
+                .frame(minHeight: 44)
+                .accessibilityAddTraits(isActive ? .isSelected : [])
+                .accessibilityValue(isActive ? "Selected" : "Not selected")
             } else {
                 label
             }

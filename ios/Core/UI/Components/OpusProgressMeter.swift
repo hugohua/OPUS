@@ -43,7 +43,7 @@ struct OpusProgressMeter: View {
                         .frame(width: availableWidth * segment.fraction)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .leading)
             .background(
                 Capsule(style: .continuous)
                     .fill(OpusColorPalette.progressTrack)

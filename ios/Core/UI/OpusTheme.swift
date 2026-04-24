@@ -109,7 +109,7 @@ enum OpusColorToken: CaseIterable {
     }
 }
 
-enum OpusAccent: CaseIterable {
+enum OpusAccent: String, CaseIterable {
     case violet
     case emerald
     case amber
