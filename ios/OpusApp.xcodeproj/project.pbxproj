@@ -43,6 +43,7 @@
 		6180FF6CFFBBAEF57B3F0174 /* ArenaPart5ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02EE10FFEA22BF3DCFAACE0E /* ArenaPart5ViewModel.swift */; };
 		62339B810FCFEA01F8831812 /* HealthCheckService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC466F6C9FFD2C9DA802A58 /* HealthCheckService.swift */; };
 		6263E04F2CE602A56751AAF5 /* BriefingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0635C7B462ADAB56C37BC9 /* BriefingModels.swift */; };
+		627B53046FBFF28AC0A1D89E /* BriefingSelectableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEF8424614B728627E96831 /* BriefingSelectableTextView.swift */; };
 		63A3BF133C73D78DF5C3DA27 /* ArenaDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30070A31C641A4B2541E0518 /* ArenaDashboardViewModel.swift */; };
 		68EA8FE71BA8FDD1DB180688 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263DC8E8F42D945D914B65F /* Endpoint.swift */; };
 		6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */; };
@@ -58,7 +59,6 @@
 		8FCB7380ED1A20B171E1BC93 /* RuntimeConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */; };
 		96AE54ED566B7313951C6ACF /* SessionRunnerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607B47BEE4F6DAFC5DDDB5D6 /* SessionRunnerService.swift */; };
 		97316488910B974EC2D5F8D6 /* SessionRunnerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1AE2ADC200D8056BEDF8A7 /* SessionRunnerViewModelTests.swift */; };
-		9BD2D85C78465A34E6282808 /* BriefingSelectableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8B093A9DABB398F2B3CD5E9 /* BriefingSelectableTextView.swift */; };
 		9C5AE0AAD012232B46EF0246 /* AuthSessionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAEC6E066242B3A13A2A521 /* AuthSessionError.swift */; };
 		9D5009A72A82669F21F6FF9C /* RequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68299CF2D0DD51A412DC667 /* RequestBuilderTests.swift */; };
 		9EBB22C25427A66991BD2F51 /* ArenaDashboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF810845434BE3B8EFBAE3F3 /* ArenaDashboardService.swift */; };
@@ -156,15 +156,16 @@
 		6F28B7BA8B2CC74AD0A98D17 /* SessionRunnerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRunnerServiceTests.swift; sourceTree = "<group>"; };
 		70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPreviewData.swift; sourceTree = "<group>"; };
 		7311CFBBE26760857BD5C207 /* SSEClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClientTests.swift; sourceTree = "<group>"; };
-		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		84F1D57DB8AEB94410E18FB4 /* ArenaMissionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaMissionModels.swift; sourceTree = "<group>"; };
 		853FAD1C1A474733938BCAAE /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		87F5C2E93EDCCA885EC909BA /* AuthSessionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionServiceTests.swift; sourceTree = "<group>"; };
 		8A3D6A0BC902A5610957C472 /* ArenaPart5ServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaPart5ServiceTests.swift; sourceTree = "<group>"; };
 		8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModelTests.swift; sourceTree = "<group>"; };
-		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		92A763959BA41B375C9542AC /* SSEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClient.swift; sourceTree = "<group>"; };
 		9A177E421DB40E995947453E /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		9BEF8424614B728627E96831 /* BriefingSelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingSelectableTextView.swift; sourceTree = "<group>"; };
 		A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		A7C57ED7F593175991FE641D /* URLSessionAPIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLSessionAPIClientTests.swift; sourceTree = "<group>"; };
 		A9C829AA25CBC7DDA01B7551 /* ArenaMissionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaMissionViewModel.swift; sourceTree = "<group>"; };
@@ -186,7 +187,6 @@
 		CBCEFE8BDAE3483877F7F816 /* OpusPrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusPrimaryButton.swift; sourceTree = "<group>"; };
 		D10EC5D4C59A07AE827F621A /* OpusStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusStateView.swift; sourceTree = "<group>"; };
 		D61B49C572A5789795DD5BA3 /* DashboardSummaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSummaryService.swift; sourceTree = "<group>"; };
-		D8B093A9DABB398F2B3CD5E9 /* BriefingSelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingSelectableTextView.swift; sourceTree = "<group>"; };
 		D8F0FAA3A1E14C909A0761F8 /* TrainingHubModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubModels.swift; sourceTree = "<group>"; };
 		DE49307588A8C018046BE55A /* VocabularyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyModels.swift; sourceTree = "<group>"; };
 		E5A0D8F9E44B90E0EAD91015 /* RuntimeConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeConfigTests.swift; sourceTree = "<group>"; };
@@ -280,8 +280,8 @@
 			isa = PBXGroup;
 			children = (
 				AB0635C7B462ADAB56C37BC9 /* BriefingModels.swift */,
-				D8B093A9DABB398F2B3CD5E9 /* BriefingSelectableTextView.swift */,
 				BFABDCA96B9FB35C3069E033 /* BriefingService.swift */,
+				9BEF8424614B728627E96831 /* BriefingSelectableTextView.swift */,
 				2CE17D944DF2523782C65BF8 /* BriefingView.swift */,
 				F72B6324897BE3082DB95D95 /* BriefingViewModel.swift */,
 			);
@@ -533,7 +533,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BA3547E36E116487AD8BD65A = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					C8BF1250E10DC226B94B9AB2 = {
@@ -616,7 +615,7 @@
 				CB5A0E7BDAB17C1170ADFBAD /* AuthSessionService.swift in Sources */,
 				C40A26794F4ADC97899C788F /* AuthTokenStore.swift in Sources */,
 				6263E04F2CE602A56751AAF5 /* BriefingModels.swift in Sources */,
-				9BD2D85C78465A34E6282808 /* BriefingSelectableTextView.swift in Sources */,
+				627B53046FBFF28AC0A1D89E /* BriefingSelectableTextView.swift in Sources */,
 				E145F6F58FF570E8C842E258 /* BriefingService.swift in Sources */,
 				7397B447F9173945C8F576C7 /* BriefingView.swift in Sources */,
 				FF84CD2485C9DD90193FA1F8 /* BriefingViewModel.swift in Sources */,
@@ -728,6 +727,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D46GBTB442;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/OpusApp-Local-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
