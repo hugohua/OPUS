@@ -290,6 +290,10 @@ struct ArenaMissionView: View {
             return OpusColorPalette.warning.opacity(0.18)
         case .indigo:
             return OpusColorPalette.info.opacity(0.18)
+        case .rose:
+            return OpusColorPalette.rose.opacity(0.18)
+        case .blue:
+            return OpusColorPalette.info.opacity(0.18)
         case .violet, .slate:
             return OpusColorPalette.surface
         }
@@ -302,6 +306,10 @@ struct ArenaMissionView: View {
         case .amber:
             return OpusColorPalette.warning
         case .indigo:
+            return OpusColorPalette.info
+        case .rose:
+            return OpusColorPalette.rose
+        case .blue:
             return OpusColorPalette.info
         case .violet, .slate:
             return OpusColorPalette.primaryText

@@ -1,12 +1,6 @@
 import Foundation
 
-enum DashboardAccent: String {
-    case violet
-    case emerald
-    case amber
-    case indigo
-    case slate
-}
+typealias DashboardAccent = OpusAccent
 
 enum DashboardDestination: Equatable, Hashable {
     case training(mode: String)
