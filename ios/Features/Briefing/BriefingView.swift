@@ -244,10 +244,14 @@ struct BriefingView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(article.parsedContent.title)
                                 .font(OpusTypography.serifTitle)
-                            HStack(spacing: 10) {
-                                OpusBadge(title: scenarioLabel(article.scenario), accent: .blue, variant: .soft)
-                                OpusBadge(title: article.density, accent: .slate, variant: .outline)
-                                OpusBadge(title: relativeDate(article.createdAt), accent: .violet, variant: .soft)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 10) {
+                                    articleMetadataBadges(article)
+                                }
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    articleMetadataBadges(article)
+                                }
                             }
                             Text("长按正文即可触发 Wand 查词或分析。")
                                 .font(OpusTypography.caption)
@@ -442,75 +446,88 @@ struct BriefingView: View {
 
     private var wandSheet: some View {
         NavigationStack {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    OpusSheetHeader(
-                        title: viewModel.wandSelection,
-                        subtitle: "Wand 查词与选中文本分析",
-                        closeAction: {
-                            viewModel.dismissWand()
-                        }
-                    )
-
-                    if viewModel.isWandLoading {
-                        OpusStateView(
-                            state: .loading,
-                            loadingTitle: "正在调用 Wand",
-                            loadingMessage: "正在检索词义、词源与语境信息。"
-                        )
+            VStack(alignment: .leading, spacing: 0) {
+                OpusSheetHeader(
+                    title: viewModel.wandSelection,
+                    subtitle: "Wand 查词与选中文本分析",
+                    closeAction: {
+                        viewModel.dismissWand()
                     }
+                )
+                .padding(.horizontal, OpusSpacing.screenPadding)
+                .padding(.top, OpusSpacing.screenPadding)
 
-                    if let lookup = viewModel.wandLookup {
-                        OpusCard(accent: .indigo, style: .standard) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                OpusStatusBadge(title: "LOOKUP", accent: .indigo)
-                                Text(lookup.vocab.phonetic.isEmpty ? "无音标" : lookup.vocab.phonetic)
-                                    .font(OpusTypography.caption)
-                                    .foregroundStyle(OpusColorPalette.secondaryText)
-                                Text(lookup.vocab.meaning)
-                                    .font(OpusTypography.body)
-                                if let etymology = lookup.etymology {
-                                    Text("词源模式：\(etymology.mode)")
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if viewModel.isWandLoading {
+                            OpusStateView(
+                                state: .loading,
+                                loadingTitle: "正在调用 Wand",
+                                loadingMessage: "正在检索词义、词源与语境信息。"
+                            )
+                        }
+
+                        if let lookup = viewModel.wandLookup {
+                            OpusCard(accent: .indigo, style: .standard) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    OpusStatusBadge(title: "LOOKUP", accent: .indigo)
+                                    Text(lookup.vocab.phonetic.isEmpty ? "无音标" : lookup.vocab.phonetic)
                                         .font(OpusTypography.caption)
                                         .foregroundStyle(OpusColorPalette.secondaryText)
-                                    if let memoryHook = etymology.memoryHook, !memoryHook.isEmpty {
-                                        Text(memoryHook)
-                                            .font(OpusTypography.body)
+                                    Text(lookup.vocab.meaning)
+                                        .font(OpusTypography.body)
+                                    if let etymology = lookup.etymology {
+                                        Text("词源模式：\(etymology.mode)")
+                                            .font(OpusTypography.caption)
                                             .foregroundStyle(OpusColorPalette.secondaryText)
+                                        if let memoryHook = etymology.memoryHook, !memoryHook.isEmpty {
+                                            Text(memoryHook)
+                                                .font(OpusTypography.body)
+                                                .foregroundStyle(OpusColorPalette.secondaryText)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if !viewModel.wandAnalysisText.isEmpty || viewModel.isWandAnalyzing {
-                        OpusCard(accent: .violet, style: .standard) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                if viewModel.isWandAnalyzing {
-                                    OpusStatusBadge(title: "ANALYZING", accent: .violet)
+                        if !viewModel.wandAnalysisText.isEmpty || viewModel.isWandAnalyzing {
+                            OpusCard(accent: .violet, style: .standard) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    if viewModel.isWandAnalyzing {
+                                        OpusStatusBadge(title: "ANALYZING", accent: .violet)
+                                    }
+                                    Text(viewModel.wandAnalysisText.isEmpty ? "等待首段分析..." : viewModel.wandAnalysisText)
+                                        .font(OpusTypography.body)
+                                        .foregroundStyle(OpusColorPalette.primaryText)
                                 }
-                                Text(viewModel.wandAnalysisText.isEmpty ? "等待首段分析..." : viewModel.wandAnalysisText)
-                                    .font(OpusTypography.body)
-                                    .foregroundStyle(OpusColorPalette.primaryText)
                             }
                         }
-                    }
 
-                    if let wandError = viewModel.wandError {
-                        OpusCard(accent: .amber, style: .compact) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                OpusStatusBadge(title: "WAND ERROR", accent: .amber)
-                                Text(wandError)
-                                    .font(OpusTypography.body)
-                                    .foregroundStyle(OpusColorPalette.warning)
+                        if let wandError = viewModel.wandError {
+                            OpusCard(accent: .amber, style: .compact) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    OpusStatusBadge(title: "WAND ERROR", accent: .amber)
+                                    Text(wandError)
+                                        .font(OpusTypography.body)
+                                        .foregroundStyle(OpusColorPalette.warning)
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, OpusSpacing.screenPadding)
+                    .padding(.bottom, OpusSpacing.screenPadding)
                 }
-                .padding(OpusSpacing.screenPadding)
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func articleMetadataBadges(_ article: BriefingArticlePayload) -> some View {
+        Group {
+            OpusBadge(title: scenarioLabel(article.scenario), accent: .blue, variant: .soft)
+            OpusBadge(title: article.density, accent: .slate, variant: .outline)
+            OpusBadge(title: relativeDate(article.createdAt), accent: .violet, variant: .soft)
+        }
     }
 
     private func pendingDescription(_ destination: DashboardDestination) -> String {

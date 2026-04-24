@@ -128,9 +128,10 @@ struct ArenaDashboardView: View {
 
                                 Spacer()
 
-                                OpusStatusBadge(
+                                OpusBadge(
                                     title: "\(domain.score)%",
-                                    accent: masteryAccent(domain.score)
+                                    accent: masteryAccent(domain.score),
+                                    variant: .soft
                                 )
                             }
 
