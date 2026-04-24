@@ -1,49 +1,278 @@
 import SwiftUI
+import UIKit
 
-enum OpusColorPalette {
-    static let background = Color(red: 0.978, green: 0.975, blue: 0.965)
-    static let backgroundSecondary = Color(red: 0.992, green: 0.989, blue: 0.982)
-    static let surface = Color.white.opacity(0.9)
-    static let elevatedSurface = Color.white
-    static let border = Color.black.opacity(0.065)
-    static let primaryText = Color(red: 0.13, green: 0.13, blue: 0.16)
-    static let secondaryText = Color(red: 0.44, green: 0.45, blue: 0.50)
-    static let tertiaryText = Color(red: 0.66, green: 0.67, blue: 0.72)
-    static let brand = Color(red: 0.41, green: 0.31, blue: 0.91)
-    static let brandSoft = Color(red: 0.95, green: 0.93, blue: 1.0)
-    static let success = Color(red: 0.13, green: 0.68, blue: 0.43)
-    static let warning = Color(red: 0.93, green: 0.63, blue: 0.2)
-    static let info = Color(red: 0.24, green: 0.48, blue: 0.95)
-    static let rose = Color(red: 0.97, green: 0.31, blue: 0.47)
-    static let tabBarBackground = Color.white.opacity(0.94)
-    static let shadow = Color.black.opacity(0.055)
-    static let shadowStrong = Color.black.opacity(0.1)
-    static let progressTrack = Color(red: 0.96, green: 0.95, blue: 0.92)
+enum OpusColorToken: CaseIterable {
+    case background
+    case foreground
+    case card
+    case cardForeground
+    case popover
+    case popoverForeground
+    case primary
+    case primaryForeground
+    case secondary
+    case secondaryForeground
+    case muted
+    case mutedForeground
+    case accent
+    case accentForeground
+    case destructive
+    case destructiveForeground
+    case border
+    case input
+    case ring
+    case brandCore
+    case statusReady
+    case statusWarn
+    case statusLock
+    case syntaxSubject
+    case syntaxVerb
+    case syntaxObject
+    case syntaxOther
+    case chart1
+    case chart2
+    case chart3
+    case chart4
+    case chart5
+
+    var color: Color {
+        Color(uiColor)
+    }
+
+    var uiColor: UIColor {
+        switch self {
+        case .background:
+            return .opusDynamic(light: .hsl(0, 0, 98), dark: .hsl(240, 10, 3.9))
+        case .foreground:
+            return .opusDynamic(light: .hsl(240, 10, 3.9), dark: .hsl(0, 0, 98))
+        case .card:
+            return .opusDynamic(light: .hsl(0, 0, 100), dark: .hsl(240, 10, 3.9))
+        case .cardForeground:
+            return .opusDynamic(light: .hsl(240, 10, 3.9), dark: .hsl(0, 0, 98))
+        case .popover:
+            return .opusDynamic(light: .hsl(0, 0, 100), dark: .hsl(240, 10, 3.9))
+        case .popoverForeground:
+            return .opusDynamic(light: .hsl(240, 10, 3.9), dark: .hsl(0, 0, 98))
+        case .primary:
+            return .opusDynamic(light: .hsl(262.1, 83.3, 57.8), dark: .hsl(263.4, 70, 50.4))
+        case .primaryForeground:
+            return .opusStatic(.hsl(0, 0, 100))
+        case .secondary:
+            return .opusDynamic(light: .hsl(240, 4.8, 95.9), dark: .hsl(240, 3.7, 15.9))
+        case .secondaryForeground:
+            return .opusDynamic(light: .hsl(240, 3.8, 46.1), dark: .hsl(240, 5, 64.9))
+        case .muted:
+            return .opusDynamic(light: .hsl(240, 4.8, 95.9), dark: .hsl(240, 3.7, 15.9))
+        case .mutedForeground:
+            return .opusDynamic(light: .hsl(240, 3.8, 46.1), dark: .hsl(240, 5, 64.9))
+        case .accent:
+            return .opusDynamic(light: .hsl(240, 4.8, 95.9), dark: .hsl(240, 3.7, 15.9))
+        case .accentForeground:
+            return .opusDynamic(light: .hsl(240, 5.9, 10), dark: .hsl(0, 0, 98))
+        case .destructive:
+            return .opusDynamic(light: .hsl(0, 84.2, 60.2), dark: .hsl(0, 62.8, 30.6))
+        case .destructiveForeground:
+            return .opusStatic(.hsl(0, 0, 98))
+        case .border:
+            return .opusDynamic(light: .hsl(240, 5.9, 90), dark: .hsl(240, 3.7, 15.9))
+        case .input:
+            return .opusDynamic(light: .hsl(240, 5.9, 90), dark: .hsl(240, 3.7, 15.9))
+        case .ring:
+            return .opusDynamic(light: .hsl(262.1, 83.3, 57.8), dark: .hsl(263.4, 70, 50.4))
+        case .brandCore:
+            return .opusDynamic(light: .hsl(262.1, 83.3, 57.8), dark: .hsl(263.4, 70, 50.4))
+        case .statusReady:
+            return .opusDynamic(light: .hsl(158, 64, 52), dark: .hsl(158.1, 64.4, 51.6))
+        case .statusWarn:
+            return .opusStatic(.hsl(37.7, 92.1, 50.2))
+        case .statusLock:
+            return .opusDynamic(light: .hsl(240, 5, 65), dark: .hsl(240, 5.2, 33.9))
+        case .syntaxSubject:
+            return .opusDynamic(light: .hsl(159, 64, 45), dark: .hsl(154.9, 74.3, 66.9))
+        case .syntaxVerb:
+            return .opusDynamic(light: .hsl(343, 88, 54), dark: .hsl(343, 96, 76))
+        case .syntaxObject:
+            return .opusDynamic(light: .hsl(204, 94, 48), dark: .hsl(204.2, 92, 75))
+        case .syntaxOther:
+            return .opusDynamic(light: .hsl(240, 5, 65), dark: .hsl(240, 5, 64.9))
+        case .chart1:
+            return .opusDynamic(light: .hsl(12, 76, 61), dark: .hsl(220, 70, 50))
+        case .chart2:
+            return .opusDynamic(light: .hsl(173, 58, 39), dark: .hsl(160, 60, 45))
+        case .chart3:
+            return .opusDynamic(light: .hsl(197, 37, 24), dark: .hsl(30, 80, 55))
+        case .chart4:
+            return .opusDynamic(light: .hsl(43, 74, 66), dark: .hsl(280, 65, 60))
+        case .chart5:
+            return .opusDynamic(light: .hsl(27, 87, 67), dark: .hsl(340, 75, 55))
+        }
+    }
 }
 
-enum OpusSpacing {
-    static let screenPadding: CGFloat = 20
-    static let sectionSpacing: CGFloat = 28
-    static let cardPadding: CGFloat = 20
-    static let cardInnerSpacing: CGFloat = 14
-    static let chipPadding: CGFloat = 10
+enum OpusAccent: CaseIterable {
+    case violet
+    case emerald
+    case amber
+    case indigo
+    case slate
+    case rose
+    case blue
+
+    var primaryColor: Color {
+        primaryToken.color
+    }
+
+    var softColor: Color {
+        switch self {
+        case .violet:
+            return OpusSemanticColors.violetSoft
+        case .emerald:
+            return OpusSemanticColors.emeraldSoft
+        case .amber:
+            return OpusSemanticColors.amberSoft
+        case .indigo:
+            return OpusSemanticColors.indigoSoft
+        case .slate:
+            return OpusSemanticColors.slateSoft
+        case .rose:
+            return OpusSemanticColors.roseSoft
+        case .blue:
+            return OpusSemanticColors.blueSoft
+        }
+    }
+
+    var strongColor: Color {
+        switch self {
+        case .violet:
+            return OpusSemanticColors.violetStrong
+        case .emerald:
+            return OpusSemanticColors.emeraldStrong
+        case .amber:
+            return OpusSemanticColors.amberStrong
+        case .indigo:
+            return OpusSemanticColors.indigoStrong
+        case .slate:
+            return OpusSemanticColors.slateStrong
+        case .rose:
+            return OpusSemanticColors.roseStrong
+        case .blue:
+            return OpusSemanticColors.blueStrong
+        }
+    }
+
+    private var primaryToken: OpusColorToken {
+        switch self {
+        case .violet:
+            return .brandCore
+        case .emerald:
+            return .statusReady
+        case .amber:
+            return .statusWarn
+        case .indigo, .blue:
+            return .syntaxObject
+        case .slate:
+            return .mutedForeground
+        case .rose:
+            return .syntaxVerb
+        }
+    }
 }
 
-enum OpusCornerRadius {
-    static let card: CGFloat = 24
+enum OpusSpacingToken {
+    static let xxs: CGFloat = 4
+    static let xs: CGFloat = 8
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 20
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 28
+    static let xxxl: CGFloat = 32
+}
+
+enum OpusRadiusToken {
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 10
+    static let lg: CGFloat = 12
+    static let xl: CGFloat = 20
+    static let xxl: CGFloat = 24
     static let pill: CGFloat = 999
 }
 
-enum OpusTypography {
-    static let pageEyebrow = Font.system(size: 12, weight: .semibold, design: .rounded)
-    static let pageTitle = Font.system(size: 27, weight: .bold, design: .rounded)
-    static let sectionTitle = Font.system(size: 15, weight: .semibold, design: .rounded)
-    static let cardTitle = Font.system(size: 18, weight: .bold, design: .rounded)
+enum OpusTypographyToken {
+    static let eyebrow = Font.system(size: 12, weight: .semibold, design: .rounded)
+    static let title = Font.system(size: 27, weight: .bold, design: .rounded)
+    static let heading = Font.system(size: 18, weight: .bold, design: .rounded)
+    static let subheading = Font.system(size: 15, weight: .semibold, design: .rounded)
     static let body = Font.system(size: 15, weight: .regular, design: .rounded)
     static let caption = Font.system(size: 12, weight: .medium, design: .rounded)
     static let metric = Font.system(size: 28, weight: .bold, design: .rounded)
     static let mono = Font.system(size: 12, weight: .medium, design: .monospaced)
-    static let serifTitle = Font.system(size: 21, weight: .bold, design: .serif)
+    static let editorialTitle = Font.system(size: 21, weight: .bold, design: .serif)
+}
+
+enum OpusElevationToken {
+    static let shadow = OpusShadow(color: OpusColorPalette.shadow, radius: 16, x: 0, y: 8)
+    static let shadowStrong = OpusShadow(color: OpusColorPalette.shadowStrong, radius: 24, x: 0, y: 14)
+}
+
+struct OpusShadow {
+    let color: Color
+    let radius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+}
+
+enum OpusMotionToken {
+    static let quick: TimeInterval = 0.18
+    static let standard: TimeInterval = 0.28
+    static let emphasized: TimeInterval = 0.42
+}
+
+// Compatibility facade for existing SwiftUI screens.
+enum OpusColorPalette {
+    static let background = OpusColorToken.background.color
+    static let backgroundSecondary = OpusColorToken.secondary.color
+    static let surface = OpusSemanticColors.surface
+    static let elevatedSurface = OpusColorToken.card.color
+    static let border = OpusColorToken.border.color
+    static let primaryText = OpusColorToken.foreground.color
+    static let secondaryText = OpusColorToken.mutedForeground.color
+    static let tertiaryText = OpusColorToken.statusLock.color
+    static let brand = OpusColorToken.brandCore.color
+    static let brandSoft = OpusSemanticColors.violetSoft
+    static let success = OpusColorToken.statusReady.color
+    static let warning = OpusColorToken.statusWarn.color
+    static let info = OpusColorToken.syntaxObject.color
+    static let rose = OpusColorToken.syntaxVerb.color
+    static let tabBarBackground = OpusSemanticColors.tabBarBackground
+    static let shadow = OpusSemanticColors.shadow
+    static let shadowStrong = OpusSemanticColors.shadowStrong
+    static let progressTrack = OpusColorToken.muted.color
+}
+
+enum OpusSpacing {
+    static let screenPadding = OpusSpacingToken.lg
+    static let sectionSpacing = OpusSpacingToken.xxl
+    static let cardPadding = OpusSpacingToken.lg
+    static let cardInnerSpacing: CGFloat = 14
+    static let chipPadding = OpusSpacingToken.md - OpusSpacingToken.xs + 2
+}
+
+enum OpusCornerRadius {
+    static let card = OpusRadiusToken.xxl
+    static let pill = OpusRadiusToken.pill
+}
+
+enum OpusTypography {
+    static let pageEyebrow = OpusTypographyToken.eyebrow
+    static let pageTitle = OpusTypographyToken.title
+    static let sectionTitle = OpusTypographyToken.subheading
+    static let cardTitle = OpusTypographyToken.heading
+    static let body = OpusTypographyToken.body
+    static let caption = OpusTypographyToken.caption
+    static let metric = OpusTypographyToken.metric
+    static let mono = OpusTypographyToken.mono
+    static let serifTitle = OpusTypographyToken.editorialTitle
 }
 
 extension LinearGradient {
@@ -58,10 +287,75 @@ extension LinearGradient {
 
     static let opusBrand = LinearGradient(
         colors: [
-            OpusColorPalette.brand,
-            Color(red: 0.29, green: 0.41, blue: 0.95)
+            OpusAccent.violet.primaryColor,
+            OpusAccent.blue.primaryColor
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+}
+
+private enum OpusSemanticColors {
+    static let surface = Color(.opusDynamic(light: .hsl(0, 0, 100, alpha: 0.9), dark: .hsl(240, 3.7, 15.9, alpha: 0.86)))
+    static let tabBarBackground = Color(.opusDynamic(light: .hsl(0, 0, 100, alpha: 0.94), dark: .hsl(240, 10, 3.9, alpha: 0.92)))
+    static let shadow = Color(.opusDynamic(light: .hsl(0, 0, 0, alpha: 0.055), dark: .hsl(0, 0, 0, alpha: 0.35)))
+    static let shadowStrong = Color(.opusDynamic(light: .hsl(0, 0, 0, alpha: 0.1), dark: .hsl(0, 0, 0, alpha: 0.55)))
+
+    static let violetSoft = Color(.opusDynamic(light: .hsl(262.1, 83.3, 96), dark: .hsl(263.4, 70, 18)))
+    static let emeraldSoft = Color(.opusDynamic(light: .hsl(158, 64, 94), dark: .hsl(158.1, 64.4, 16)))
+    static let amberSoft = Color(.opusDynamic(light: .hsl(37.7, 92.1, 94), dark: .hsl(37.7, 92.1, 16)))
+    static let indigoSoft = Color(.opusDynamic(light: .hsl(204, 94, 95), dark: .hsl(204.2, 92, 18)))
+    static let slateSoft = Color(.opusDynamic(light: .hsl(240, 4.8, 95.9), dark: .hsl(240, 3.7, 15.9)))
+    static let roseSoft = Color(.opusDynamic(light: .hsl(343, 88, 95), dark: .hsl(343, 88, 18)))
+    static let blueSoft = Color(.opusDynamic(light: .hsl(204, 94, 95), dark: .hsl(204.2, 92, 18)))
+
+    static let violetStrong = Color(.opusDynamic(light: .hsl(262.1, 83.3, 45), dark: .hsl(263.4, 70, 62)))
+    static let emeraldStrong = Color(.opusDynamic(light: .hsl(159, 64, 36), dark: .hsl(154.9, 74.3, 66.9)))
+    static let amberStrong = Color(.opusDynamic(light: .hsl(37.7, 92.1, 42), dark: .hsl(37.7, 92.1, 62)))
+    static let indigoStrong = Color(.opusDynamic(light: .hsl(204, 94, 40), dark: .hsl(204.2, 92, 75)))
+    static let slateStrong = Color(.opusDynamic(light: .hsl(240, 5.9, 10), dark: .hsl(0, 0, 98)))
+    static let roseStrong = Color(.opusDynamic(light: .hsl(343, 88, 44), dark: .hsl(343, 96, 76)))
+    static let blueStrong = Color(.opusDynamic(light: .hsl(204, 94, 40), dark: .hsl(204.2, 92, 75)))
+}
+
+private extension UIColor {
+    static func opusDynamic(light: UIColor, dark: UIColor) -> UIColor {
+        UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? dark : light
+        }
+    }
+
+    static func opusStatic(_ color: UIColor) -> UIColor {
+        color
+    }
+
+    static func hsl(_ hue: CGFloat, _ saturation: CGFloat, _ lightness: CGFloat, alpha: CGFloat = 1) -> UIColor {
+        let h = hue / 360
+        let s = saturation / 100
+        let l = lightness / 100
+
+        guard s > 0 else {
+            return UIColor(red: l, green: l, blue: l, alpha: alpha)
+        }
+
+        let q = l < 0.5 ? l * (1 + s) : l + s - l * s
+        let p = 2 * l - q
+
+        return UIColor(
+            red: hueToRGB(p: p, q: q, t: h + 1 / 3),
+            green: hueToRGB(p: p, q: q, t: h),
+            blue: hueToRGB(p: p, q: q, t: h - 1 / 3),
+            alpha: alpha
+        )
+    }
+
+    private static func hueToRGB(p: CGFloat, q: CGFloat, t: CGFloat) -> CGFloat {
+        var t = t
+        if t < 0 { t += 1 }
+        if t > 1 { t -= 1 }
+        if t < 1 / 6 { return p + (q - p) * 6 * t }
+        if t < 1 / 2 { return q }
+        if t < 2 / 3 { return p + (q - p) * (2 / 3 - t) * 6 }
+        return p
+    }
 }
