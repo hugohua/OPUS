@@ -32,6 +32,16 @@ struct VocabularyView: View {
                 }
             }
             .navigationTitle("词库")
+            .searchable(
+                text: $viewModel.searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "搜索单词或释义"
+            )
+            .onSubmit(of: .search) {
+                Task {
+                    await viewModel.reloadFilters()
+                }
+            }
         }
         .task {
             await viewModel.load()
@@ -47,14 +57,10 @@ struct VocabularyView: View {
     private var content: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
-                searchAndFilters
+                filterRails
 
                 if let stats = viewModel.stats {
-                    OpusCard(accent: .amber, style: .compact) {
-                        Text("已掌握 \(stats.mastered) · 学习中 \(stats.learning) · 待复习 \(stats.due)")
-                            .font(OpusTypography.body)
-                            .foregroundStyle(OpusColorPalette.secondaryText)
-                    }
+                    statsCard(stats)
                 }
 
                 if viewModel.items.isEmpty {
@@ -66,25 +72,20 @@ struct VocabularyView: View {
                                 await viewModel.loadDetail(id: item.id)
                             }
                         } label: {
-                            OpusCard(accent: .amber, style: .standard) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(item.word)
-                                        .font(OpusTypography.cardTitle)
-                                    if let phonetic = item.phonetic {
-                                        Text(phonetic)
-                                            .font(OpusTypography.caption)
-                                            .foregroundStyle(OpusColorPalette.secondaryText)
-                                    }
-                                    Text(item.definition ?? "暂无释义")
-                                        .font(OpusTypography.body)
-                                        .foregroundStyle(OpusColorPalette.secondaryText)
-                                    Text(item.fsrs.status)
-                                        .font(OpusTypography.caption)
-                                        .foregroundStyle(OpusColorPalette.tertiaryText)
+                            OpusCard(accent: fsrsAccent(for: item.fsrs), style: .standard, isInteractive: true) {
+                                OpusListRow(
+                                    systemImage: rowIcon(for: item.fsrs),
+                                    title: item.word,
+                                    subtitle: item.definition ?? "暂无释义",
+                                    detail: item.phonetic,
+                                    caption: fsrsCaption(for: item.fsrs),
+                                    accent: fsrsAccent(for: item.fsrs)
+                                ) {
+                                    fsrsMetadata(for: item.fsrs)
                                 }
                             }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
                         .task {
                             await viewModel.loadNextPageIfNeeded(currentItem: item)
                         }
@@ -96,47 +97,176 @@ struct VocabularyView: View {
         }
     }
 
-    private var searchAndFilters: some View {
+    private var filterRails: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("搜索单词或释义", text: $viewModel.searchText)
-                .textFieldStyle(.roundedBorder)
-
-            Picker("状态", selection: $viewModel.selectedStatus) {
-                ForEach(VocabularyStatus.allCases) { status in
-                    Text(status.title).tag(status)
-                }
-            }
-            .pickerStyle(.menu)
-            .onChange(of: viewModel.selectedStatus) { _, _ in
-                Task {
-                    await viewModel.reloadFilters()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(VocabularyStatus.allCases) { status in
+                        OpusChip(
+                            title: status.title,
+                            accent: statusAccent(for: status),
+                            isActive: viewModel.selectedStatus == status,
+                            action: {
+                                Task {
+                                    viewModel.selectedStatus = status
+                                    await viewModel.reloadFilters()
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
             if !viewModel.tags.isEmpty {
-                Picker("标签", selection: Binding(
-                    get: { viewModel.selectedTag ?? "" },
-                    set: { newValue in
-                        viewModel.selectedTag = newValue.isEmpty ? nil : newValue
-                        Task {
-                            await viewModel.reloadFilters()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        OpusChip(
+                            title: "全部标签",
+                            accent: .blue,
+                            isActive: viewModel.selectedTag == nil,
+                            systemImage: "tag",
+                            action: {
+                                Task {
+                                    viewModel.selectedTag = nil
+                                    await viewModel.reloadFilters()
+                                }
+                            }
+                        )
+
+                        ForEach(viewModel.tags, id: \.self) { tag in
+                            OpusChip(
+                                title: tag,
+                                accent: .blue,
+                                isActive: viewModel.selectedTag == tag,
+                                action: {
+                                    Task {
+                                        viewModel.selectedTag = tag
+                                        await viewModel.reloadFilters()
+                                    }
+                                }
+                            )
                         }
                     }
-                )) {
-                    Text("全部标签").tag("")
-                    ForEach(viewModel.tags, id: \.self) { tag in
-                        Text(tag).tag(tag)
+                }
+            }
+        }
+    }
+
+    private func statsCard(_ stats: VocabularyStats) -> some View {
+        OpusCard(accent: .amber, style: .compact) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("记忆进度")
+                        .font(OpusTypography.cardTitle)
+                        .foregroundStyle(OpusColorPalette.primaryText)
+
+                    Spacer()
+
+                    Text("共 \(stats.totalVocab) 词")
+                        .font(OpusTypography.caption)
+                        .foregroundStyle(OpusColorPalette.tertiaryText)
+                }
+
+                OpusProgressMeter(
+                    segments: [
+                        OpusProgressSegment(value: Double(stats.mastered), color: OpusColorPalette.success),
+                        OpusProgressSegment(value: Double(stats.learning), color: OpusColorPalette.warning),
+                        OpusProgressSegment(value: Double(stats.due), color: OpusColorPalette.rose)
+                    ],
+                    height: 12,
+                    spacing: 2
+                )
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        statsBadges(stats)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        statsBadges(stats)
                     }
                 }
-                .pickerStyle(.menu)
             }
+        }
+    }
 
-            Button("应用搜索") {
-                Task {
-                    await viewModel.reloadFilters()
-                }
+    private func statsBadges(_ stats: VocabularyStats) -> some View {
+        Group {
+            OpusBadge(title: "已掌握 \(stats.mastered)", accent: .emerald, variant: .dot)
+            OpusBadge(title: "学习中 \(stats.learning)", accent: .amber, variant: .dot)
+            OpusBadge(title: "待复习 \(stats.due)", accent: .rose, variant: .dot)
+        }
+    }
+
+    private func fsrsMetadata(for fsrs: VocabularyFSRS) -> some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            OpusBadge(title: fsrs.status, accent: fsrsAccent(for: fsrs), variant: .soft)
+
+            if let nextReview = fsrs.nextReview {
+                Text(nextReview)
+                    .font(OpusTypography.caption)
+                    .foregroundStyle(OpusColorPalette.tertiaryText)
+                    .multilineTextAlignment(.trailing)
             }
-            .font(OpusTypography.caption)
+        }
+    }
+
+    private func fsrsCaption(for fsrs: VocabularyFSRS) -> String? {
+        var parts: [String] = []
+
+        if fsrs.isLeech {
+            parts.append("难点词")
+        }
+
+        if fsrs.hasContext {
+            parts.append("AI 情境")
+        }
+
+        if fsrs.lapses > 0 {
+            parts.append("遗忘 \(fsrs.lapses) 次")
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func rowIcon(for fsrs: VocabularyFSRS) -> String {
+        if fsrs.isLeech { return "exclamationmark.triangle.fill" }
+        if fsrs.hasContext { return "sparkles" }
+        return "textformat"
+    }
+
+    private func fsrsAccent(for fsrs: VocabularyFSRS) -> OpusAccent {
+        if fsrs.isLeech { return .rose }
+        if fsrs.hasContext { return .blue }
+
+        switch fsrs.status.uppercased() {
+        case "MASTERED":
+            return .emerald
+        case "REVIEW", "DUE":
+            return .rose
+        case "LEARNING":
+            return .amber
+        default:
+            return .violet
+        }
+    }
+
+    private func statusAccent(for status: VocabularyStatus) -> OpusAccent {
+        switch status {
+        case .all:
+            return .violet
+        case .new:
+            return .blue
+        case .learning:
+            return .amber
+        case .review:
+            return .rose
+        case .mastered:
+            return .emerald
+        case .leech:
+            return .rose
+        case .context:
+            return .blue
         }
     }
 }
@@ -152,27 +282,51 @@ private struct VocabularyDetailSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(detail.vocab.word)
-                    .font(OpusTypography.pageTitle)
-                Text(detail.vocab.phoneticUs ?? detail.vocab.phoneticUk ?? "无音标")
-                    .font(OpusTypography.body)
-                    .foregroundStyle(OpusColorPalette.secondaryText)
-                Text(detail.vocab.definition_cn ?? detail.vocab.definition_jp ?? "暂无释义")
-                    .font(OpusTypography.body)
-                if !detail.userTags.isEmpty {
-                    Text("标签：\(detail.userTags.joined(separator: ", "))")
-                        .font(OpusTypography.caption)
-                        .foregroundStyle(OpusColorPalette.secondaryText)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    OpusSheetHeader(
+                        title: detail.vocab.word,
+                        subtitle: detail.vocab.phoneticUs ?? detail.vocab.phoneticUk ?? "无音标"
+                    )
+
+                    if !detail.userTags.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(detail.userTags, id: \.self) { tag in
+                                    OpusChip(title: tag, accent: .blue, isActive: true, systemImage: "tag")
+                                }
+                            }
+                        }
+                    }
+
+                    OpusCard(accent: .amber, style: .compact) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(detail.vocab.partOfSpeech ?? "释义")
+                                .font(OpusTypography.caption)
+                                .foregroundStyle(OpusColorPalette.tertiaryText)
+
+                            Text(detail.vocab.definition_cn ?? detail.vocab.definition_jp ?? "暂无释义")
+                                .font(OpusTypography.body)
+                                .foregroundStyle(OpusColorPalette.primaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    if !detail.userNote.isEmpty {
+                        OpusCard(accent: .violet, style: .compact) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                OpusBadge(title: "笔记", accent: .violet, variant: .soft)
+
+                                Text(detail.userNote)
+                                    .font(OpusTypography.body)
+                                    .foregroundStyle(OpusColorPalette.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
                 }
-                if !detail.userNote.isEmpty {
-                    Text(detail.userNote)
-                        .font(OpusTypography.body)
-                        .foregroundStyle(OpusColorPalette.secondaryText)
-                }
-                Spacer()
+                .padding(OpusSpacing.screenPadding)
             }
-            .padding(OpusSpacing.screenPadding)
         }
         .presentationDetents([.medium, .large])
     }
