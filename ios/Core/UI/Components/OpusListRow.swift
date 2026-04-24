@@ -5,6 +5,7 @@ struct OpusListRow<Trailing: View>: View {
     let title: String
     let subtitle: String?
     let detail: String?
+    let caption: String?
     let accent: OpusAccent
     let isDisabled: Bool
     let trailing: Trailing
@@ -14,6 +15,7 @@ struct OpusListRow<Trailing: View>: View {
         title: String,
         subtitle: String? = nil,
         detail: String? = nil,
+        caption: String? = nil,
         accent: OpusAccent = .violet,
         isDisabled: Bool = false,
         @ViewBuilder trailing: () -> Trailing
@@ -22,6 +24,7 @@ struct OpusListRow<Trailing: View>: View {
         self.title = title
         self.subtitle = subtitle
         self.detail = detail
+        self.caption = caption
         self.accent = accent
         self.isDisabled = isDisabled
         self.trailing = trailing()
@@ -59,7 +62,15 @@ struct OpusListRow<Trailing: View>: View {
                         .foregroundStyle(OpusColorPalette.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                if let caption {
+                    Text(caption)
+                        .font(OpusTypography.caption)
+                        .foregroundStyle(OpusColorPalette.tertiaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 12)
 
@@ -76,6 +87,7 @@ extension OpusListRow where Trailing == EmptyView {
         title: String,
         subtitle: String? = nil,
         detail: String? = nil,
+        caption: String? = nil,
         accent: OpusAccent = .violet,
         isDisabled: Bool = false
     ) {
@@ -84,6 +96,7 @@ extension OpusListRow where Trailing == EmptyView {
             title: title,
             subtitle: subtitle,
             detail: detail,
+            caption: caption,
             accent: accent,
             isDisabled: isDisabled
         ) {

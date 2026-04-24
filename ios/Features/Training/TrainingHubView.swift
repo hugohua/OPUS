@@ -71,7 +71,7 @@ struct TrainingHubView: View {
                                         systemImage: entry.systemImage,
                                         title: entry.title,
                                         subtitle: entry.subtitle,
-                                        detail: entry.detail,
+                                        caption: entry.detail,
                                         accent: entry.accent,
                                         isDisabled: !isAvailable
                                     ) {
