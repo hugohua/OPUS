@@ -49,7 +49,11 @@ struct DashboardHomeView: View {
                     OpusStatusBadge(title: homeState.telemetryScoreText, accent: .emerald)
                 }
 
-                progressBar
+                OpusProgressMeter(
+                    segments: fsrsProgressSegments,
+                    height: 14,
+                    spacing: 2
+                )
 
                 HStack(spacing: 16) {
                     ForEach(Array(homeState.metrics.enumerated()), id: \.element.id) { index, metric in
@@ -76,7 +80,7 @@ struct DashboardHomeView: View {
         Button {
             onOpenDestination(homeState.primaryTask.destination)
         } label: {
-            OpusCard(accent: homeState.primaryTask.accent, style: .standard) {
+            OpusCard(accent: homeState.primaryTask.accent, style: .standard, isInteractive: true) {
                 HStack(spacing: 16) {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(homeState.primaryTask.accent.softColor)
@@ -97,15 +101,7 @@ struct DashboardHomeView: View {
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(OpusColorPalette.secondaryText)
 
-                        Text(homeState.primaryTask.detail)
-                            .font(OpusTypography.caption)
-                            .foregroundStyle(OpusColorPalette.warning)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(OpusColorPalette.warning.opacity(0.14))
-                            )
+                        OpusBadge(title: homeState.primaryTask.detail, accent: .amber, variant: .soft)
                     }
 
                     Spacer()
@@ -116,7 +112,7 @@ struct DashboardHomeView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
     }
 
     private var trainingSection: some View {
@@ -174,39 +170,17 @@ struct DashboardHomeView: View {
         }
     }
 
-    private var progressBar: some View {
-        let total = max(homeState.metrics.compactMap { Double($0.value) }.reduce(0, +), 1)
-
-        return GeometryReader { proxy in
-            let width = proxy.size.width
-            let masteredWidth = width * (Double(metricValue(at: 0)) / total)
-            let learningWidth = width * (Double(metricValue(at: 1)) / total)
-            let reviewWidth = width * (Double(metricValue(at: 2)) / total)
-
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill(OpusColorPalette.progressTrack)
-
-                HStack(spacing: 2) {
-                    Capsule(style: .continuous)
-                        .fill(OpusColorPalette.success)
-                        .frame(width: max(masteredWidth, 10))
-                    Rectangle()
-                        .fill(OpusColorPalette.warning)
-                        .frame(width: max(learningWidth, 12))
-                    Rectangle()
-                        .fill(OpusColorPalette.rose)
-                        .frame(width: max(reviewWidth, 12))
-                }
-                .clipShape(Capsule(style: .continuous))
-            }
-        }
-        .frame(height: 14)
+    private var fsrsProgressSegments: [OpusProgressSegment] {
+        [
+            OpusProgressSegment(value: metricValue(at: 0), color: OpusColorPalette.success),
+            OpusProgressSegment(value: metricValue(at: 1), color: OpusColorPalette.warning),
+            OpusProgressSegment(value: metricValue(at: 2), color: OpusColorPalette.rose)
+        ]
     }
 
-    private func metricValue(at index: Int) -> Int {
+    private func metricValue(at index: Int) -> Double {
         guard homeState.metrics.indices.contains(index) else { return 0 }
-        return Int(homeState.metrics[index].value) ?? 0
+        return Double(homeState.metrics[index].value) ?? 0
     }
 
     private func metricColor(for index: Int) -> Color {
@@ -236,22 +210,14 @@ private struct DashboardFeatureCardView: View {
         Button {
             onTap()
         } label: {
-            OpusCard(accent: card.accent, style: emphasis == .mini ? .compact : .standard) {
+            OpusCard(accent: card.accent, style: emphasis == .mini ? .compact : .standard, isInteractive: true) {
                 VStack(alignment: .leading, spacing: emphasis == .mini ? 12 : 16) {
                     HStack(alignment: .top) {
                         iconTile
                         Spacer()
 
                         if let badgeText = card.badgeText {
-                            Text(badgeText)
-                                .font(OpusTypography.caption)
-                                .foregroundStyle(card.accent.primaryColor.opacity(0.7))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(card.accent.softColor.opacity(0.72))
-                                )
+                            OpusBadge(title: badgeText, accent: card.accent, variant: .soft)
                         }
                     }
 
@@ -274,8 +240,7 @@ private struct DashboardFeatureCardView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
-        .buttonStyle(DashboardPressButtonStyle())
+        .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
     }
 
     private var iconTile: some View {
@@ -315,7 +280,7 @@ private struct DashboardBriefingCardView: View {
         Button {
             onTap()
         } label: {
-            OpusCard(accent: card.accent, style: .featured) {
+            OpusCard(accent: card.accent, style: .featured, isInteractive: true) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         HStack(spacing: 10) {
@@ -334,15 +299,7 @@ private struct DashboardBriefingCardView: View {
 
                         Spacer()
 
-                        Text(card.subtitle)
-                            .font(OpusTypography.mono)
-                            .foregroundStyle(OpusColorPalette.tertiaryText)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color.white.opacity(0.66))
-                            )
+                        OpusBadge(title: card.subtitle, accent: .slate, variant: .soft)
                     }
 
                     Text(card.title)
@@ -350,31 +307,11 @@ private struct DashboardBriefingCardView: View {
                         .foregroundStyle(OpusColorPalette.primaryText)
                         .lineLimit(1)
 
-                    Text(card.contextLabel)
-                        .font(OpusTypography.caption)
-                        .foregroundStyle(OpusColorPalette.secondaryText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.74))
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(OpusColorPalette.border, lineWidth: 1)
-                                )
-                        )
+                    OpusBadge(title: card.contextLabel, accent: card.accent, variant: .outline)
                 }
             }
         }
-        .buttonStyle(.plain)
-        .buttonStyle(DashboardPressButtonStyle())
-    }
-}
-
-private struct DashboardPressButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .opacity(configuration.isPressed ? 0.94 : 1)
+        .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
     }
 }
 

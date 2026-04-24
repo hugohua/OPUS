@@ -59,45 +59,28 @@ struct TrainingHubView: View {
                         OpusSectionHeader(title: section.title, subtitle: section.subtitle)
 
                         ForEach(section.entries) { entry in
+                            let isAvailable = viewModel.route(for: entry.destination) != nil
+
                             Button {
-                                if viewModel.route(for: entry.destination) != nil {
+                                if isAvailable {
                                     viewModel.open(entry.destination)
                                 }
                             } label: {
-                                OpusCard(accent: entry.accent, style: .standard) {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        HStack(alignment: .top, spacing: 12) {
-                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                                .fill(entry.accent.softColor)
-                                                .frame(width: 52, height: 52)
-                                                .overlay {
-                                                    Image(systemName: entry.systemImage)
-                                                        .foregroundStyle(entry.accent.primaryColor)
-                                                }
-
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(entry.title)
-                                                    .font(OpusTypography.cardTitle)
-                                                    .foregroundStyle(OpusColorPalette.primaryText)
-
-                                                Text(entry.subtitle)
-                                                    .font(OpusTypography.body)
-                                                    .foregroundStyle(OpusColorPalette.secondaryText)
-
-                                                Text(entry.detail)
-                                                    .font(OpusTypography.caption)
-                                                    .foregroundStyle(OpusColorPalette.tertiaryText)
-                                            }
-
-                                            Spacer()
-                                        }
-
+                                OpusCard(accent: entry.accent, style: .standard, isInteractive: isAvailable) {
+                                    OpusListRow(
+                                        systemImage: entry.systemImage,
+                                        title: entry.title,
+                                        subtitle: entry.subtitle,
+                                        detail: entry.detail,
+                                        accent: entry.accent,
+                                        isDisabled: !isAvailable
+                                    ) {
                                         availabilityView(entry.availability)
                                     }
                                 }
                             }
-                            .buttonStyle(.plain)
-                            .disabled(viewModel.route(for: entry.destination) == nil)
+                            .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
+                            .disabled(!isAvailable)
                         }
                     }
                 }
@@ -112,26 +95,10 @@ struct TrainingHubView: View {
         switch availability {
         case .available(let label):
             if let label {
-                Text(label)
-                    .font(OpusTypography.caption)
-                    .foregroundStyle(OpusColorPalette.success)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(OpusColorPalette.success.opacity(0.12))
-                    )
+                OpusBadge(title: label, accent: .emerald, variant: .soft)
             }
         case .unavailable(let reason):
-            Text(reason)
-                .font(OpusTypography.caption)
-                .foregroundStyle(OpusColorPalette.warning)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(OpusColorPalette.warning.opacity(0.12))
-                )
+            OpusBadge(title: reason, accent: .amber, variant: .soft)
         }
     }
 
