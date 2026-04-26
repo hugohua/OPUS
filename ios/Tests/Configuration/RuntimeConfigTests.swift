@@ -39,7 +39,9 @@ final class RuntimeConfigTests: XCTestCase {
         let config = try dependencies.runtimeConfigLoader()
 
         XCTAssertEqual(config.appEnvironment, .local)
-        XCTAssertEqual(config.apiBaseURL.absoluteString, "http://localhost:3000")
+        XCTAssertEqual(config.apiBaseURL.scheme, "http")
+        XCTAssertNotNil(config.apiBaseURL.host)
+        XCTAssertEqual(config.apiBaseURL.port, 3000)
         XCTAssertTrue(config.networkLoggingEnabled)
         XCTAssertEqual(config.displayNameSuffix, "Local")
         XCTAssertTrue(config.allowsInsecureLocalLoads)

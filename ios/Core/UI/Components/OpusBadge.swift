@@ -39,7 +39,7 @@ struct OpusBadge: View {
             }
 
             Text(title)
-                .font(size == .mini ? .system(size: 10, weight: .bold, design: .monospaced) : OpusTypography.caption)
+                .font(size == .mini ? .caption2.monospaced().weight(.semibold) : OpusTypography.caption)
                 .foregroundStyle(foregroundColor)
                 .lineLimit(1)
         }

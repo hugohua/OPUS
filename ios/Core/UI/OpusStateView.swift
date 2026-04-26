@@ -84,7 +84,7 @@ struct OpusStateView: View {
                     .progressViewStyle(.circular)
                     .tint(OpusColorPalette.brand)
 
-                Text("Loading")
+                Text("加载中")
                     .font(OpusTypography.pageEyebrow)
                     .foregroundStyle(OpusColorPalette.secondaryText)
             }
@@ -134,7 +134,7 @@ private struct StateGlyph: View {
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .font(.title3.weight(.semibold))
             .foregroundStyle(foregroundColor)
             .frame(width: 44, height: 44)
             .background(

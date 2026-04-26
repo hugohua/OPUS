@@ -1,0 +1,4 @@
+interface:
+  display_name: "OPUS iOS Design"
+  short_description: "应用 OPUS 原生 iOS 设计规则"
+  default_prompt: "使用 OPUS iOS 设计规范审查或规划这个 SwiftUI/UIKit 任务。"

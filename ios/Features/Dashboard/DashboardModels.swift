@@ -64,3 +64,32 @@ struct DashboardHomeState: Equatable {
     let skillCards: [DashboardFeatureCard]
     let briefingCards: [DashboardBriefingCard]
 }
+
+struct DashboardMemorySummary: Equatable {
+    let statusTitle: String
+    let title: String
+    let message: String
+    let systemImage: String
+    let accent: DashboardAccent
+}
+
+enum DashboardHomeCopy {
+    static let moduleEyebrow = "今日概览"
+    static let memoryStatusReady = "复习已安排"
+    static let memoryTitleReady = "今天只做下一步"
+    static let memoryMessageReady = "系统会自动安排复习节奏，完成下方训练即可。"
+    static let latestBriefingLabel = "最新简报"
+    static let viewAllBriefingsTitle = "查看全部"
+}
+
+extension DashboardHomeState {
+    var memorySummary: DashboardMemorySummary {
+        DashboardMemorySummary(
+            statusTitle: DashboardHomeCopy.memoryStatusReady,
+            title: DashboardHomeCopy.memoryTitleReady,
+            message: DashboardHomeCopy.memoryMessageReady,
+            systemImage: "checkmark.seal",
+            accent: .violet
+        )
+    }
+}

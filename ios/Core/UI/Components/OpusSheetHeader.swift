@@ -42,11 +42,11 @@ struct OpusSheetHeader: View {
                 }
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.caption.weight(.bold))
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.opusPress(variant: .secondary, size: .iconSmall, feel: .quiet))
-            .accessibilityLabel("Close")
+            .accessibilityLabel("关闭")
         }
         .padding(.bottom, 6)
     }

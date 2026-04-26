@@ -30,7 +30,7 @@ struct OpusChip: View {
                 .buttonStyle(.plain)
                 .frame(minHeight: 44)
                 .accessibilityAddTraits(isActive ? .isSelected : [])
-                .accessibilityValue(isActive ? "Selected" : "Not selected")
+                .accessibilityValue(isActive ? "已选中" : "未选中")
             } else {
                 label
             }
@@ -42,7 +42,7 @@ struct OpusChip: View {
         HStack(spacing: 7) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.caption.weight(.semibold))
             }
 
             Text(title)

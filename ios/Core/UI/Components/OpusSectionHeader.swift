@@ -4,11 +4,18 @@ struct OpusSectionHeader: View {
     let title: String
     let subtitle: String?
     let actionTitle: String?
+    let action: (() -> Void)?
 
-    init(title: String, subtitle: String? = nil, actionTitle: String? = nil) {
+    init(
+        title: String,
+        subtitle: String? = nil,
+        actionTitle: String? = nil,
+        action: (() -> Void)? = nil
+    ) {
         self.title = title
         self.subtitle = subtitle
         self.actionTitle = actionTitle
+        self.action = action
     }
 
     var body: some View {
@@ -28,9 +35,16 @@ struct OpusSectionHeader: View {
             Spacer()
 
             if let actionTitle {
-                Text(actionTitle)
-                    .font(OpusTypography.caption)
-                    .foregroundStyle(OpusColorPalette.tertiaryText)
+                if let action {
+                    Button(actionTitle, action: action)
+                        .font(OpusTypography.caption)
+                        .foregroundStyle(OpusColorPalette.brand)
+                        .buttonStyle(.borderless)
+                } else {
+                    Text(actionTitle)
+                        .font(OpusTypography.caption)
+                        .foregroundStyle(OpusColorPalette.tertiaryText)
+                }
             }
         }
     }

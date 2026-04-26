@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct DashboardHomeView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let homeState: DashboardHomeState
-    let onOpenDiagnostics: () -> Void
     let onOpenDestination: (DashboardDestination) -> Void
 
     var body: some View {
@@ -12,8 +13,7 @@ struct DashboardHomeView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(alignment: .leading, spacing: OpusSpacing.sectionSpacing) {
                     OpusDashboardHeader(
-                        homeState: homeState,
-                        onOpenDiagnostics: onOpenDiagnostics
+                        homeState: homeState
                     )
 
                     telemetrySection
@@ -32,45 +32,35 @@ struct DashboardHomeView: View {
     }
 
     private var backgroundLayer: some View {
-        LinearGradient.opusBackground
+        Color(.systemGroupedBackground)
             .ignoresSafeArea()
     }
 
     private var telemetrySection: some View {
-        return OpusCard(accent: .violet, style: .featured) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Label("记忆遥测", systemImage: "chart.bar.xaxis")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+        let summary = homeState.memorySummary
+
+        return OpusCard(accent: summary.accent, style: .standard) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: summary.systemImage)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(summary.accent.primaryColor)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(summary.accent.softColor)
+                    )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    OpusBadge(title: summary.statusTitle, accent: summary.accent, variant: .soft)
+
+                    Text(summary.title)
+                        .font(OpusTypography.cardTitle)
+                        .foregroundStyle(OpusColorPalette.primaryText)
+
+                    Text(summary.message)
+                        .font(OpusTypography.body)
                         .foregroundStyle(OpusColorPalette.secondaryText)
-
-                    Spacer()
-
-                    OpusStatusBadge(title: homeState.telemetryScoreText, accent: .emerald)
-                }
-
-                OpusProgressMeter(
-                    segments: fsrsProgressSegments,
-                    height: 14,
-                    spacing: 2
-                )
-
-                HStack(spacing: 16) {
-                    ForEach(Array(homeState.metrics.enumerated()), id: \.element.id) { index, metric in
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(metricColor(for: index))
-                                .frame(width: 9, height: 9)
-
-                            Text(metric.title)
-                                .font(OpusTypography.caption)
-                                .foregroundStyle(OpusColorPalette.tertiaryText)
-
-                            Text(metric.value)
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(index == 2 ? OpusColorPalette.rose : OpusColorPalette.primaryText)
-                        }
-                    }
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -87,18 +77,18 @@ struct DashboardHomeView: View {
                         .frame(width: 64, height: 64)
                         .overlay {
                             Image(systemName: "play.fill")
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.title2.weight(.semibold))
                                 .foregroundStyle(homeState.primaryTask.accent.primaryColor)
                                 .offset(x: 2)
                         }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(homeState.primaryTask.title)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(OpusTypography.cardTitle)
                             .foregroundStyle(OpusColorPalette.primaryText)
 
                         Text(homeState.primaryTask.subtitle)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .font(.subheadline)
                             .foregroundStyle(OpusColorPalette.secondaryText)
 
                         OpusBadge(title: homeState.primaryTask.detail, accent: .amber, variant: .soft)
@@ -107,7 +97,7 @@ struct DashboardHomeView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.headline)
                         .foregroundStyle(OpusColorPalette.tertiaryText)
                 }
             }
@@ -119,7 +109,7 @@ struct DashboardHomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             OpusSectionHeader(title: "核心训练舱")
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+            LazyVGrid(columns: DashboardHomeLayout.trainingColumns(for: dynamicTypeSize), spacing: 14) {
                 ForEach(Array(homeState.trainingCards.enumerated()), id: \.element.id) { index, card in
                     DashboardFeatureCardView(
                         card: card,
@@ -135,7 +125,7 @@ struct DashboardHomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             OpusSectionHeader(title: "技能训练")
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+            LazyVGrid(columns: DashboardHomeLayout.skillColumns(for: dynamicTypeSize), spacing: 14) {
                 ForEach(homeState.skillCards) { card in
                     DashboardFeatureCardView(
                         card: card,
@@ -149,7 +139,11 @@ struct DashboardHomeView: View {
 
     private var briefingSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            OpusSectionHeader(title: "简报中心 ✦", actionTitle: "View All")
+            OpusSectionHeader(
+                title: "简报中心",
+                actionTitle: DashboardHomeCopy.viewAllBriefingsTitle,
+                action: { onOpenDestination(.briefing(articleID: nil)) }
+            )
 
             if homeState.briefingCards.isEmpty {
                 OpusStateView(
@@ -168,29 +162,27 @@ struct DashboardHomeView: View {
             }
         }
     }
+}
 
-    private var fsrsProgressSegments: [OpusProgressSegment] {
-        [
-            OpusProgressSegment(value: metricValue(at: 0), color: OpusColorPalette.success),
-            OpusProgressSegment(value: metricValue(at: 1), color: OpusColorPalette.warning),
-            OpusProgressSegment(value: metricValue(at: 2), color: OpusColorPalette.rose)
-        ]
+enum DashboardHomeLayout {
+    static func trainingColumnCount(for dynamicTypeSize: DynamicTypeSize) -> Int {
+        dynamicTypeSize.isAccessibilitySize ? 1 : 2
     }
 
-    private func metricValue(at index: Int) -> Double {
-        guard homeState.metrics.indices.contains(index) else { return 0 }
-        return Double(homeState.metrics[index].value) ?? 0
+    static func skillColumnCount(for dynamicTypeSize: DynamicTypeSize) -> Int {
+        dynamicTypeSize.isAccessibilitySize ? 1 : 3
     }
 
-    private func metricColor(for index: Int) -> Color {
-        switch index {
-        case 0:
-            return OpusColorPalette.success
-        case 1:
-            return OpusColorPalette.warning
-        default:
-            return OpusColorPalette.rose
-        }
+    static func trainingColumns(for dynamicTypeSize: DynamicTypeSize) -> [GridItem] {
+        columns(count: trainingColumnCount(for: dynamicTypeSize))
+    }
+
+    static func skillColumns(for dynamicTypeSize: DynamicTypeSize) -> [GridItem] {
+        columns(count: skillColumnCount(for: dynamicTypeSize))
+    }
+
+    private static func columns(count: Int) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 14), count: count)
     }
 }
 
@@ -222,8 +214,6 @@ private struct DashboardFeatureCardView: View {
                                 variant: .soft,
                                 size: emphasis == .mini ? .mini : .standard
                             )
-                            // Optionally add fixedSize if you absolutely do not want it to wrap/squish
-                            .fixedSize(horizontal: true, vertical: false)
                         }
                     }
 
@@ -235,7 +225,7 @@ private struct DashboardFeatureCardView: View {
                         Text(card.subtitle)
                             .font(subtitleFont)
                             .foregroundStyle(OpusColorPalette.secondaryText)
-                            .lineLimit(emphasis == .mini ? 2 : 1)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         if emphasis != .mini {
                             Text(card.detail)
@@ -256,7 +246,7 @@ private struct DashboardFeatureCardView: View {
             .frame(width: emphasis == .mini ? 36 : 56, height: emphasis == .mini ? 36 : 56)
             .overlay {
                 Image(systemName: card.systemImage)
-                    .font(.system(size: emphasis == .mini ? 16 : 24, weight: .medium))
+                    .font(emphasis == .mini ? .callout.weight(.semibold) : .title2.weight(.medium))
                     .foregroundStyle(card.accent.primaryColor)
             }
     }
@@ -264,18 +254,18 @@ private struct DashboardFeatureCardView: View {
     private var titleFont: Font {
         switch emphasis {
         case .large:
-            return .system(size: 17, weight: .bold, design: .rounded)
+            return .headline
         case .compact:
-            return .system(size: 18, weight: .bold, design: .rounded)
+            return .headline
         case .mini:
-            return .system(size: 15, weight: .bold, design: .rounded)
+            return .subheadline.weight(.semibold)
         }
     }
 
     private var subtitleFont: Font {
         emphasis == .mini
-            ? .system(size: 12, weight: .medium, design: .rounded)
-            : .system(size: 14, weight: .medium, design: .rounded)
+            ? .caption
+            : .subheadline
     }
 }
 
@@ -299,7 +289,7 @@ private struct DashboardBriefingCardView: View {
                                         .foregroundStyle(card.accent.primaryColor)
                                 }
 
-                            Text("LATEST BRIEFING")
+                            Text(DashboardHomeCopy.latestBriefingLabel)
                                 .font(OpusTypography.mono)
                                 .foregroundStyle(OpusColorPalette.tertiaryText)
                         }
@@ -312,7 +302,7 @@ private struct DashboardBriefingCardView: View {
                     Text(card.title)
                         .font(OpusTypography.serifTitle)
                         .foregroundStyle(OpusColorPalette.primaryText)
-                        .lineLimit(1)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     OpusBadge(title: card.contextLabel, accent: card.accent, variant: .outline)
                 }
@@ -327,14 +317,12 @@ struct DashboardHomeView_Previews: PreviewProvider {
         Group {
             DashboardHomeView(
                 homeState: DashboardPreviewData.defaultHomeState,
-                onOpenDiagnostics: {},
                 onOpenDestination: { _ in }
             )
             .previewDisplayName("Light")
 
             DashboardHomeView(
                 homeState: DashboardPreviewData.longNameHomeState,
-                onOpenDiagnostics: {},
                 onOpenDestination: { _ in }
             )
             .preferredColorScheme(.dark)

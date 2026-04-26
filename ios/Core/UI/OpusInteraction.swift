@@ -290,11 +290,11 @@ private extension OpusButtonSize {
     var font: Font {
         switch self {
         case .small, .iconSmall:
-            return .system(size: 13, weight: .semibold, design: .rounded)
+            return .caption.weight(.semibold)
         case .regular, .icon:
-            return .system(size: 15, weight: .semibold, design: .rounded)
+            return .callout.weight(.semibold)
         case .large:
-            return .system(size: 17, weight: .semibold, design: .rounded)
+            return .headline
         }
     }
 
@@ -312,9 +312,9 @@ private extension OpusButtonSize {
     var minHeight: CGFloat {
         switch self {
         case .small:
-            return 34
+            return 44
         case .regular:
-            return 42
+            return 44
         case .large:
             return 50
         case .icon:

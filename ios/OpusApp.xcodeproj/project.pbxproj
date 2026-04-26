@@ -165,14 +165,14 @@
 		6F28B7BA8B2CC74AD0A98D17 /* SessionRunnerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRunnerServiceTests.swift; sourceTree = "<group>"; };
 		70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPreviewData.swift; sourceTree = "<group>"; };
 		7311CFBBE26760857BD5C207 /* SSEClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClientTests.swift; sourceTree = "<group>"; };
-		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		754D5475C6328990D0CA4FB7 /* OpusAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpusAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		84F1D57DB8AEB94410E18FB4 /* ArenaMissionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaMissionModels.swift; sourceTree = "<group>"; };
 		853FAD1C1A474733938BCAAE /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		87F5C2E93EDCCA885EC909BA /* AuthSessionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionServiceTests.swift; sourceTree = "<group>"; };
 		8A3D6A0BC902A5610957C472 /* ArenaPart5ServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaPart5ServiceTests.swift; sourceTree = "<group>"; };
 		8B23EF5A48FE82FB6418F66D /* DashboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModelTests.swift; sourceTree = "<group>"; };
 		8DF5C8F45D5473701D870BD8 /* OpusSkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusSkeletonView.swift; sourceTree = "<group>"; };
-		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8EFD253EBEB957E91A67F690 /* OpusApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpusApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		92A763959BA41B375C9542AC /* SSEClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEClient.swift; sourceTree = "<group>"; };
 		9A177E421DB40E995947453E /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
@@ -559,7 +559,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BA3547E36E116487AD8BD65A = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					C8BF1250E10DC226B94B9AB2 = {
@@ -760,6 +759,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D46GBTB442;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/OpusApp-Local-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import OpusApp
 
@@ -35,11 +36,48 @@ final class DashboardViewModelTests: XCTestCase {
         await viewModel.loadHome(force: true)
 
         XCTAssertEqual(viewModel.homeState?.greetingName, "Hugo")
-        XCTAssertEqual(viewModel.homeState?.trainingCards.count, 3)
+        XCTAssertEqual(viewModel.homeState?.trainingCards.count, 5)
         XCTAssertEqual(viewModel.homeState?.skillCards.count, 3)
         XCTAssertEqual(viewModel.homeState?.briefingCards.count, 2)
         XCTAssertEqual(viewModel.homeState?.telemetryScoreText, "94% R")
         XCTAssertEqual(viewModel.homeState?.primaryTask.title, "每日闪电战")
+    }
+
+    @MainActor
+    func testHomeMemorySummaryKeepsBacklogCountsOutOfVisibleCopy() {
+        let summary = DashboardPreviewData.longNameHomeState.memorySummary
+        let visibleCopy = [
+            summary.statusTitle,
+            summary.title,
+            summary.message
+        ].joined(separator: " ")
+
+        XCTAssertFalse(visibleCopy.contains("142"))
+        XCTAssertFalse(visibleCopy.contains("39"))
+        XCTAssertFalse(visibleCopy.localizedCaseInsensitiveContains("review"))
+        XCTAssertNotEqual(summary.accent, DashboardAccent.rose)
+    }
+
+    func testDashboardHomeCopyUsesSimplifiedChineseLabels() {
+        let labels = [
+            DashboardHomeCopy.moduleEyebrow,
+            DashboardHomeCopy.latestBriefingLabel,
+            DashboardHomeCopy.viewAllBriefingsTitle
+        ]
+
+        XCTAssertEqual(DashboardHomeCopy.moduleEyebrow, "今日概览")
+        XCTAssertEqual(DashboardHomeCopy.latestBriefingLabel, "最新简报")
+        XCTAssertEqual(DashboardHomeCopy.viewAllBriefingsTitle, "查看全部")
+        XCTAssertFalse(labels.contains { label in
+            label.range(of: #"[A-Za-z]"#, options: String.CompareOptions.regularExpression) != nil
+        })
+    }
+
+    func testDashboardHomeLayoutCollapsesGridsForAccessibilityDynamicType() {
+        XCTAssertEqual(DashboardHomeLayout.trainingColumnCount(for: .large), 2)
+        XCTAssertEqual(DashboardHomeLayout.skillColumnCount(for: .large), 3)
+        XCTAssertEqual(DashboardHomeLayout.trainingColumnCount(for: .accessibility3), 1)
+        XCTAssertEqual(DashboardHomeLayout.skillColumnCount(for: .accessibility3), 1)
     }
 
     @MainActor

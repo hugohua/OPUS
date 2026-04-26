@@ -34,7 +34,7 @@ struct OpusListRow<Trailing: View>: View {
         HStack(spacing: 12) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.callout.weight(.semibold))
                     .foregroundStyle(accent.primaryColor)
                     .frame(width: 36, height: 36)
                     .background(

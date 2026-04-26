@@ -9,7 +9,7 @@ enum DashboardPreviewData {
     static let defaultHomeState = DashboardHomeState(
         greetingName: "Hugo",
         greetingLine: "继续保持进步。",
-        moduleTitle: "Dashboard",
+        moduleTitle: "首页",
         telemetryScoreText: "94% R",
         metrics: [
             DashboardMetric(id: "mastered", title: "已掌握", value: "0", footnote: "掌握稳定"),
@@ -113,7 +113,7 @@ enum DashboardPreviewData {
                 id: "finance-briefing",
                 articleID: "finance-briefing",
                 title: "Q3 Compliance Audit...",
-                subtitle: "about 1 month ago",
+                subtitle: "约 1 个月前",
                 contextLabel: "金融与法务",
                 systemImage: "briefcase",
                 accent: .violet,
@@ -123,7 +123,7 @@ enum DashboardPreviewData {
                 id: "ops-briefing",
                 articleID: "ops-briefing",
                 title: "Ops Handover Snapshot",
-                subtitle: "View All",
+                subtitle: "查看全部",
                 contextLabel: "运营交接",
                 systemImage: "shippingbox",
                 accent: .amber,
@@ -135,7 +135,7 @@ enum DashboardPreviewData {
     static let longNameHomeState = DashboardHomeState(
         greetingName: "Hugo With A Remarkably Long Display Name",
         greetingLine: "这一版 Preview 用来验证长用户名和小屏排版仍然像成品，而不是拉扯变形。",
-        moduleTitle: "Dashboard",
+        moduleTitle: "首页",
         telemetryScoreText: "91% R",
         metrics: [
             DashboardMetric(id: "mastered", title: "已掌握", value: "18", footnote: "掌握稳定"),

@@ -199,15 +199,15 @@ enum OpusRadiusToken {
 }
 
 enum OpusTypographyToken {
-    static let eyebrow = Font.system(size: 12, weight: .semibold, design: .rounded)
-    static let title = Font.system(size: 27, weight: .bold, design: .rounded)
-    static let heading = Font.system(size: 18, weight: .bold, design: .rounded)
-    static let subheading = Font.system(size: 15, weight: .semibold, design: .rounded)
-    static let body = Font.system(size: 15, weight: .regular, design: .rounded)
-    static let caption = Font.system(size: 12, weight: .medium, design: .rounded)
-    static let metric = Font.system(size: 28, weight: .bold, design: .rounded)
-    static let mono = Font.system(size: 12, weight: .medium, design: .monospaced)
-    static let editorialTitle = Font.system(size: 21, weight: .bold, design: .serif)
+    static let eyebrow = Font.caption.weight(.semibold)
+    static let title = Font.title2.weight(.bold)
+    static let heading = Font.headline
+    static let subheading = Font.subheadline.weight(.semibold)
+    static let body = Font.body
+    static let caption = Font.caption
+    static let metric = Font.title2.monospacedDigit().weight(.bold)
+    static let mono = Font.caption.monospaced().weight(.medium)
+    static let editorialTitle = Font.system(.title3, design: .serif, weight: .semibold)
 }
 
 enum OpusElevationToken {

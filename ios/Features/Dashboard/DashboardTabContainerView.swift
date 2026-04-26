@@ -121,7 +121,7 @@ struct DashboardTabContainerView: View {
     private var homeTab: some View {
         NavigationStack {
             ZStack {
-                LinearGradient.opusBackground
+                Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
                 switch viewModel.homeContentState {
@@ -146,7 +146,6 @@ struct DashboardTabContainerView: View {
                     if let homeState = viewModel.homeState {
                         DashboardHomeView(
                             homeState: homeState,
-                            onOpenDiagnostics: { isDiagnosticsPresented = true },
                             onOpenDestination: { destination in
                                 viewModel.open(destination)
                             }
@@ -169,7 +168,16 @@ struct DashboardTabContainerView: View {
                 }
             }
             .navigationTitle(DashboardTab.home.title)
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isDiagnosticsPresented = true
+                    } label: {
+                        Label("诊断", systemImage: "stethoscope")
+                    }
+                }
+            }
         }
     }
 
