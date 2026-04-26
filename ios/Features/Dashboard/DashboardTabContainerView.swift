@@ -169,6 +169,7 @@ struct DashboardTabContainerView: View {
                 }
             }
             .navigationTitle(DashboardTab.home.title)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 

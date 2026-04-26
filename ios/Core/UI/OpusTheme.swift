@@ -259,7 +259,7 @@ enum OpusSpacing {
 }
 
 enum OpusCornerRadius {
-    static let card = OpusRadiusToken.xxl
+    static let card = OpusRadiusToken.lg
     static let pill = OpusRadiusToken.pill
 }
 

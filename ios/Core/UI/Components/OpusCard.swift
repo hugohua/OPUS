@@ -26,16 +26,10 @@ struct OpusCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(OpusSpacing.cardPadding)
+            .padding(style == .compact ? 14 : OpusSpacing.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBackground)
             .overlay(cardBorder)
-            .shadow(
-                color: isInteractive ? OpusColorPalette.shadow : .clear,
-                radius: isInteractive ? 14 : 0,
-                x: 0,
-                y: isInteractive ? 8 : 0
-            )
             .contentShape(RoundedRectangle(cornerRadius: OpusCornerRadius.card, style: .continuous))
     }
 

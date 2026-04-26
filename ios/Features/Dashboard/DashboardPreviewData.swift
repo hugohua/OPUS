@@ -39,11 +39,31 @@ enum DashboardPreviewData {
                 id: "reading-sniper",
                 title: "阅读狙击战",
                 subtitle: "沉浸商务实战",
-                detail: "Part 6/7",
+                detail: "Part 6",
                 systemImage: "book",
-                badgeText: "Part 6/7",
+                badgeText: "Part 6",
                 accent: .indigo,
                 destination: .arena(path: "mission")
+            ),
+            DashboardFeatureCard(
+                id: "phrase-deck",
+                title: "短语卡组",
+                subtitle: "商务搭配",
+                detail: "视觉",
+                systemImage: "square.stack.3d.up",
+                badgeText: "视觉",
+                accent: .indigo,
+                destination: .training(mode: "PHRASE")
+            ),
+            DashboardFeatureCard(
+                id: "drive-mode",
+                title: "听力驾驶",
+                subtitle: "被动听力",
+                detail: "听力",
+                systemImage: "car",
+                badgeText: "听力",
+                accent: .amber,
+                destination: .audio
             ),
             DashboardFeatureCard(
                 id: "review-stack",

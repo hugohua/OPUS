@@ -7,35 +7,44 @@ enum OpusBadgeVariant {
     case dot
 }
 
+enum OpusBadgeSize {
+    case standard
+    case mini
+}
+
 struct OpusBadge: View {
     let title: String
     let accent: OpusAccent
     let variant: OpusBadgeVariant
+    let size: OpusBadgeSize
 
     init(
         title: String,
         accent: OpusAccent = .violet,
-        variant: OpusBadgeVariant = .soft
+        variant: OpusBadgeVariant = .soft,
+        size: OpusBadgeSize = .standard
     ) {
         self.title = title
         self.accent = accent
         self.variant = variant
+        self.size = size
     }
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: size == .mini ? 4 : 7) {
             if variant == .dot {
                 Circle()
                     .fill(accent.primaryColor)
-                    .frame(width: 7, height: 7)
+                    .frame(width: size == .mini ? 5 : 7, height: size == .mini ? 5 : 7)
             }
 
             Text(title)
-                .font(OpusTypography.caption)
+                .font(size == .mini ? .system(size: 10, weight: .bold, design: .monospaced) : OpusTypography.caption)
                 .foregroundStyle(foregroundColor)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 7)
+        .padding(.horizontal, size == .mini ? 6 : 11)
+        .padding(.vertical, size == .mini ? 4 : 7)
         .background(background)
         .overlay(border)
     }

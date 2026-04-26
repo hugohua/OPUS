@@ -126,7 +126,6 @@ struct DashboardHomeView: View {
                         emphasis: index < 2 ? .large : .compact,
                         onTap: { onOpenDestination(card.destination) }
                     )
-                        .gridCellColumns(index == 2 ? 2 : 1)
                 }
             }
         }
@@ -211,17 +210,24 @@ private struct DashboardFeatureCardView: View {
             onTap()
         } label: {
             OpusCard(accent: card.accent, style: emphasis == .mini ? .compact : .standard, isInteractive: true) {
-                VStack(alignment: .leading, spacing: emphasis == .mini ? 12 : 16) {
+                VStack(alignment: .leading, spacing: emphasis == .mini ? 10 : 16) {
                     HStack(alignment: .top) {
                         iconTile
-                        Spacer()
+                        Spacer(minLength: 4)
 
                         if let badgeText = card.badgeText {
-                            OpusBadge(title: badgeText, accent: card.accent, variant: .soft)
+                            OpusBadge(
+                                title: badgeText,
+                                accent: card.accent,
+                                variant: .soft,
+                                size: emphasis == .mini ? .mini : .standard
+                            )
+                            // Optionally add fixedSize if you absolutely do not want it to wrap/squish
+                            .fixedSize(horizontal: true, vertical: false)
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(card.title)
                             .font(titleFont)
                             .foregroundStyle(OpusColorPalette.primaryText)
@@ -238,18 +244,19 @@ private struct DashboardFeatureCardView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
     }
 
     private var iconTile: some View {
-        RoundedRectangle(cornerRadius: emphasis == .mini ? 18 : 20, style: .continuous)
+        RoundedRectangle(cornerRadius: emphasis == .mini ? 12 : 20, style: .continuous)
             .fill(card.accent.softColor)
-            .frame(width: emphasis == .mini ? 50 : 56, height: emphasis == .mini ? 50 : 56)
+            .frame(width: emphasis == .mini ? 36 : 56, height: emphasis == .mini ? 36 : 56)
             .overlay {
                 Image(systemName: card.systemImage)
-                    .font(.system(size: emphasis == .mini ? 21 : 24, weight: .medium))
+                    .font(.system(size: emphasis == .mini ? 16 : 24, weight: .medium))
                     .foregroundStyle(card.accent.primaryColor)
             }
     }
