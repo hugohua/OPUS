@@ -12,12 +12,6 @@ struct DashboardHomeView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(alignment: .leading, spacing: OpusSpacing.sectionSpacing) {
-                    OpusDashboardHeader(
-                        homeState: homeState
-                    )
-
-                    telemetrySection
-
                     primaryTaskSection
 
                     trainingSection
@@ -34,36 +28,6 @@ struct DashboardHomeView: View {
     private var backgroundLayer: some View {
         Color(.systemGroupedBackground)
             .ignoresSafeArea()
-    }
-
-    private var telemetrySection: some View {
-        let summary = homeState.memorySummary
-
-        return OpusCard(accent: summary.accent, style: .standard) {
-            HStack(alignment: .top, spacing: 14) {
-                Image(systemName: summary.systemImage)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(summary.accent.primaryColor)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(summary.accent.softColor)
-                    )
-
-                VStack(alignment: .leading, spacing: 8) {
-                    OpusBadge(title: summary.statusTitle, accent: summary.accent, variant: .soft)
-
-                    Text(summary.title)
-                        .font(OpusTypography.cardTitle)
-                        .foregroundStyle(OpusColorPalette.primaryText)
-
-                    Text(summary.message)
-                        .font(OpusTypography.body)
-                        .foregroundStyle(OpusColorPalette.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
     }
 
     private var primaryTaskSection: some View {
@@ -164,7 +128,23 @@ struct DashboardHomeView: View {
     }
 }
 
+enum DashboardHomeSection: Equatable {
+    case greeting
+    case memorySummary
+    case primaryTask
+    case training
+    case skills
+    case briefing
+}
+
 enum DashboardHomeLayout {
+    static let visibleSections: [DashboardHomeSection] = [
+        .primaryTask,
+        .training,
+        .skills,
+        .briefing
+    ]
+
     static func trainingColumnCount(for dynamicTypeSize: DynamicTypeSize) -> Int {
         dynamicTypeSize.isAccessibilitySize ? 1 : 2
     }

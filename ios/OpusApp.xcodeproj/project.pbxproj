@@ -48,7 +48,6 @@
 		63A81AB96B0FBCCBE977AF95 /* OpusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6AECBAE0AF887BCE8E7FD7 /* OpusChip.swift */; };
 		68EA8FE71BA8FDD1DB180688 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263DC8E8F42D945D914B65F /* Endpoint.swift */; };
 		69748E2BD95E03AD0F8DFD2C /* OpusSheetHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAA7E2AFFF9C5F0F1996D825 /* OpusSheetHeader.swift */; };
-		6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */; };
 		6C43F787FBE5DC35B48ADED6 /* DiagnosticsHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B8667C8CC8A000F0D285F4 /* DiagnosticsHomeView.swift */; };
 		6CC3B4BEACF432E257725173 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ADC4B898F94E9ADB36FC67 /* DashboardModels.swift */; };
 		6DA2EA8A808C1B2E3DAE82AF /* ArenaMissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD627F63B11F132BF5BFAFF /* ArenaMissionService.swift */; };
@@ -204,7 +203,6 @@
 		E7A171551EEEEEDF646B9354 /* TrainingHubViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubViewModelTests.swift; sourceTree = "<group>"; };
 		EAA7E2AFFF9C5F0F1996D825 /* OpusSheetHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusSheetHeader.swift; sourceTree = "<group>"; };
 		EEAB3B29783E344DE7739148 /* ArenaDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaDashboardView.swift; sourceTree = "<group>"; };
-		EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusDashboardHeader.swift; sourceTree = "<group>"; };
 		EFD56555672778BDB5E31E64 /* OpusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusApp.swift; sourceTree = "<group>"; };
 		F1B1F308EA8E023E2D182D29 /* LaunchCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinatorTests.swift; sourceTree = "<group>"; };
 		F349C8B23749F6591C5DD1D2 /* AuthEnvironmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthEnvironmentStore.swift; sourceTree = "<group>"; };
@@ -234,7 +232,6 @@
 		1B9D89470A5294A530E523CE /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				EF2137313B91DF83B867CF3E /* OpusDashboardHeader.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -668,7 +665,6 @@
 				CA336569F97AF8FD53A4C2D9 /* OpusBadge.swift in Sources */,
 				4DE06AD46F218D688139E949 /* OpusCard.swift in Sources */,
 				63A81AB96B0FBCCBE977AF95 /* OpusChip.swift in Sources */,
-				6B26D739D0F3FC8226ABB352 /* OpusDashboardHeader.swift in Sources */,
 				DE4046302B79D865ABFDC3D0 /* OpusDesignSystemGallery.swift in Sources */,
 				066FB32E8D7F26CAD56035DD /* OpusInteraction.swift in Sources */,
 				9DA4303C1924F4654E03EB80 /* OpusListRow.swift in Sources */,

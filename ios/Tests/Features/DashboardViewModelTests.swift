@@ -43,29 +43,21 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.homeState?.primaryTask.title, "每日闪电战")
     }
 
-    @MainActor
-    func testHomeMemorySummaryKeepsBacklogCountsOutOfVisibleCopy() {
-        let summary = DashboardPreviewData.longNameHomeState.memorySummary
-        let visibleCopy = [
-            summary.statusTitle,
-            summary.title,
-            summary.message
-        ].joined(separator: " ")
-
-        XCTAssertFalse(visibleCopy.contains("142"))
-        XCTAssertFalse(visibleCopy.contains("39"))
-        XCTAssertFalse(visibleCopy.localizedCaseInsensitiveContains("review"))
-        XCTAssertNotEqual(summary.accent, DashboardAccent.rose)
+    func testDashboardHomeStartsFromPrimaryTaskWithoutIntroSections() {
+        XCTAssertEqual(
+            DashboardHomeLayout.visibleSections,
+            [.primaryTask, .training, .skills, .briefing]
+        )
+        XCTAssertFalse(DashboardHomeLayout.visibleSections.contains(.greeting))
+        XCTAssertFalse(DashboardHomeLayout.visibleSections.contains(.memorySummary))
     }
 
     func testDashboardHomeCopyUsesSimplifiedChineseLabels() {
         let labels = [
-            DashboardHomeCopy.moduleEyebrow,
             DashboardHomeCopy.latestBriefingLabel,
             DashboardHomeCopy.viewAllBriefingsTitle
         ]
 
-        XCTAssertEqual(DashboardHomeCopy.moduleEyebrow, "今日概览")
         XCTAssertEqual(DashboardHomeCopy.latestBriefingLabel, "最新简报")
         XCTAssertEqual(DashboardHomeCopy.viewAllBriefingsTitle, "查看全部")
         XCTAssertFalse(labels.contains { label in
