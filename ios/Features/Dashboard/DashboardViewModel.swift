@@ -65,7 +65,7 @@ final class DashboardViewModel {
         pendingDestination = destination
 
         switch destination {
-        case .training, .reviewCards, .audio:
+        case .training, .reviewCards, .audio, .drive:
             selectedTab = .training
         case .arena:
             selectedTab = .arena

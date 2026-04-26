@@ -6,6 +6,7 @@ enum DashboardDestination: Equatable, Hashable {
     case training(mode: String)
     case reviewCards
     case audio
+    case drive(mode: String)
     case arena(path: String, grammarNodeID: String? = nil)
     case briefing(articleID: String?)
 }

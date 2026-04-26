@@ -10,6 +10,7 @@ struct AppRootView: View {
     @Bindable var briefingViewModel: BriefingViewModel
     let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
     let makeArenaMissionViewModel: () -> ArenaMissionViewModel
+    let makeDrivePlayerViewModel: (String) -> DrivePlayerViewModel
 
     var body: some View {
         Group {
@@ -27,7 +28,8 @@ struct AppRootView: View {
                     vocabularyViewModel: vocabularyViewModel,
                     briefingViewModel: briefingViewModel,
                     makeArenaPart5ViewModel: makeArenaPart5ViewModel,
-                    makeArenaMissionViewModel: makeArenaMissionViewModel
+                    makeArenaMissionViewModel: makeArenaMissionViewModel,
+                    makeDrivePlayerViewModel: makeDrivePlayerViewModel
                 )
             }
         }

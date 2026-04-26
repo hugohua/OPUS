@@ -13,6 +13,7 @@ struct AppDependencies {
     let arenaDashboardService: ArenaDashboardService
     let arenaPart5Service: ArenaPart5Service
     let arenaMissionService: ArenaMissionService
+    let driveService: DriveService
     let vocabularyService: VocabularyService
     let briefingService: BriefingService
 
@@ -77,6 +78,16 @@ struct AppDependencies {
     }
 
     @MainActor
+    func makeDrivePlayerViewModel(mode: String) -> DrivePlayerViewModel {
+        DrivePlayerViewModel(
+            mode: mode,
+            playlistService: driveService,
+            ttsService: driveService,
+            audioPlayer: DriveAudioPlayer()
+        )
+    }
+
+    @MainActor
     func makeVocabularyViewModel() -> VocabularyViewModel {
         VocabularyViewModel(service: vocabularyService)
     }
@@ -126,6 +137,7 @@ struct AppDependencies {
             arenaDashboardService: ArenaDashboardService(apiClient: apiClient),
             arenaPart5Service: ArenaPart5Service(apiClient: apiClient),
             arenaMissionService: ArenaMissionService(apiClient: apiClient),
+            driveService: DriveService(apiClient: apiClient),
             vocabularyService: VocabularyService(apiClient: apiClient),
             briefingService: BriefingService(apiClient: apiClient, sseClient: sseClient)
         )

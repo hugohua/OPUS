@@ -5,6 +5,7 @@ struct TrainingHubView: View {
     let pendingDestination: DashboardDestination?
     let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
     let makeArenaMissionViewModel: () -> ArenaMissionViewModel
+    let makeDrivePlayerViewModel: (String) -> DrivePlayerViewModel
 
     var body: some View {
         NavigationStack {
@@ -123,6 +124,8 @@ struct TrainingHubView: View {
                     ArenaPart5View(viewModel: makeArenaPart5ViewModel(grammarNodeID))
                 case .arenaMission:
                     ArenaMissionView(viewModel: makeArenaMissionViewModel())
+                case .drive(let mode):
+                    DrivePlayerView(viewModel: makeDrivePlayerViewModel(mode))
                 case nil:
                     EmptyView()
                 }

@@ -24,7 +24,7 @@ export type MobileDashboardSummary = {
         systemImage: string;
         badgeText?: string;
         destination: {
-            kind: "training" | "arena";
+            kind: "training" | "arena" | "drive";
             value: string;
         };
     }>;
@@ -146,6 +146,24 @@ export async function getMobileDashboardSummary(userId: string, userName?: strin
                 systemImage: "book",
                 badgeText: "Part 6/7",
                 destination: { kind: "arena", value: "mission" },
+            },
+            {
+                id: "phrase-deck",
+                title: "短语卡组",
+                subtitle: "商务搭配",
+                detail: "视觉",
+                systemImage: "square.stack.3d.up",
+                badgeText: "视觉",
+                destination: { kind: "training", value: "PHRASE" },
+            },
+            {
+                id: "drive-mode",
+                title: "听力驾驶",
+                subtitle: "被动听力",
+                detail: "听力",
+                systemImage: "car",
+                badgeText: "听力",
+                destination: { kind: "drive", value: "SANDWICH" },
             },
             {
                 id: "review-cards",

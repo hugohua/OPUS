@@ -10,6 +10,7 @@ struct DashboardTabContainerView: View {
     @Bindable var briefingViewModel: BriefingViewModel
     let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
     let makeArenaMissionViewModel: () -> ArenaMissionViewModel
+    let makeDrivePlayerViewModel: (String) -> DrivePlayerViewModel
     @State private var isDiagnosticsPresented = false
 
     var body: some View {
@@ -24,7 +25,8 @@ struct DashboardTabContainerView: View {
                 viewModel: trainingHubViewModel,
                 pendingDestination: trainingPendingDestination,
                 makeArenaPart5ViewModel: makeArenaPart5ViewModel,
-                makeArenaMissionViewModel: makeArenaMissionViewModel
+                makeArenaMissionViewModel: makeArenaMissionViewModel,
+                makeDrivePlayerViewModel: makeDrivePlayerViewModel
             )
                 .tag(DashboardTab.training)
                 .tabItem {
@@ -94,7 +96,7 @@ struct DashboardTabContainerView: View {
     private var trainingPendingDestination: DashboardDestination? {
         guard let pendingDestination = viewModel.pendingDestination else { return nil }
         switch pendingDestination {
-        case .training, .reviewCards, .audio:
+        case .training, .reviewCards, .audio, .drive:
             return pendingDestination
         default:
             return nil
@@ -263,7 +265,7 @@ private struct DashboardPlaceholderView: View {
         guard let pendingDestination else { return false }
 
         switch (tab, pendingDestination) {
-        case (.training, .training), (.training, .reviewCards), (.training, .audio):
+        case (.training, .training), (.training, .reviewCards), (.training, .audio), (.training, .drive):
             return true
         case (.arena, .arena):
             return true
@@ -282,6 +284,8 @@ private struct DashboardPlaceholderView: View {
             return "后续会话将承接复习卡组入口。"
         case .audio:
             return "后续会话将承接听力训练入口。"
+        case .drive(let mode):
+            return "后续会话将承接听力驾驶模式 `\(mode)`。"
         case .arena(let path, let grammarNodeID):
             if let grammarNodeID {
                 return "后续会话将承接 Arena `\(path)`，并带入 grammarNodeId=`\(grammarNodeID)`。"

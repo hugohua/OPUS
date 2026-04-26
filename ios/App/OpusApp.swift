@@ -41,7 +41,8 @@ struct OpusApp: App {
                 vocabularyViewModel: vocabularyViewModel,
                 briefingViewModel: briefingViewModel,
                 makeArenaPart5ViewModel: dependencies.makeArenaPart5ViewModel,
-                makeArenaMissionViewModel: dependencies.makeArenaMissionViewModel
+                makeArenaMissionViewModel: dependencies.makeArenaMissionViewModel,
+                makeDrivePlayerViewModel: dependencies.makeDrivePlayerViewModel
             )
         }
     }

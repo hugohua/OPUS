@@ -8,6 +8,7 @@ final class TrainingHubViewModel {
         case session(DashboardDestination)
         case arenaPart5(grammarNodeID: String?)
         case arenaMission
+        case drive(mode: String)
     }
 
     var contentState: OpusContentState = .loading
@@ -56,6 +57,8 @@ final class TrainingHubViewModel {
         switch destination {
         case .training, .reviewCards, .audio:
             return .session(destination)
+        case .drive(let mode):
+            return .drive(mode: mode)
         case .arena(let path, let grammarNodeID):
             if path == "mission" {
                 return .arenaMission

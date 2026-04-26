@@ -133,6 +133,8 @@ enum DashboardSummaryMapper {
             return .reviewCards
         case ("training", "audio"):
             return .audio
+        case ("drive", let mode):
+            return .drive(mode: mode)
         case ("training", let mode):
             return .training(mode: mode)
         default:
@@ -144,8 +146,10 @@ enum DashboardSummaryMapper {
         switch id {
         case "arena-blitz", "l2-mixed":
             return .violet
-        case "arena-mission", "audio":
+        case "arena-mission", "phrase-deck":
             return .indigo
+        case "drive-mode", "audio":
+            return .amber
         case "review-cards", "l0-mixed":
             return .emerald
         default:

@@ -99,6 +99,57 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.consumePendingDestination(), .arena(path: "part5"))
     }
 
+    func testDashboardSummaryMapperSupportsPhraseAndDriveDestinations() {
+        let payload = DashboardSummaryPayload(
+            userName: "Hugo",
+            fsrs: DashboardSummaryFSRSPayload(
+                mastered: 1,
+                learning: 2,
+                due: 3,
+                telemetryScoreText: "60% R"
+            ),
+            primaryTask: DashboardSummaryPrimaryTaskPayload(
+                title: "每日闪电战",
+                subtitle: "20 词",
+                detail: "3 个待复习",
+                ctaTitle: "进入训练",
+                mode: "DAILY_BLITZ"
+            ),
+            trainingEntries: [
+                DashboardSummaryEntryPayload(
+                    id: "phrase-deck",
+                    title: "短语卡组",
+                    subtitle: "商务搭配",
+                    detail: "视觉",
+                    systemImage: "square.stack.3d.up",
+                    badgeText: "视觉",
+                    destination: DashboardSummaryDestinationPayload(kind: "training", value: "PHRASE")
+                ),
+                DashboardSummaryEntryPayload(
+                    id: "drive-mode",
+                    title: "听力驾驶",
+                    subtitle: "被动听力",
+                    detail: "听力",
+                    systemImage: "car",
+                    badgeText: "听力",
+                    destination: DashboardSummaryDestinationPayload(kind: "drive", value: "SANDWICH")
+                )
+            ],
+            skillEntries: [],
+            latestBriefing: nil,
+            diagnostics: DashboardSummaryDiagnosticsPayload(
+                statusTitle: "就绪",
+                detail: "OK"
+            )
+        )
+
+        let state = DashboardSummaryMapper.map(payload: payload)
+
+        XCTAssertEqual(state.trainingCards.map(\.id), ["phrase-deck", "drive-mode"])
+        XCTAssertEqual(state.trainingCards[0].destination, .training(mode: "PHRASE"))
+        XCTAssertEqual(state.trainingCards[1].destination, .drive(mode: "SANDWICH"))
+    }
+
     @MainActor
     func testSetsErrorStateWhenSummaryLoadFails() async {
         let viewModel = DashboardViewModel(

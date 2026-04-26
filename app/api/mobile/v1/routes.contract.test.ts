@@ -44,6 +44,30 @@ vi.mock("@/lib/mobile/session", () => ({
     }),
 }));
 
+vi.mock("@/lib/mobile/drive", () => ({
+    getMobileDrivePlaylist: vi.fn(async (query: { mode?: string; track?: string; batch?: string }) => {
+        if (query.mode === "UNKNOWN" || query.track === "UNKNOWN" || query.batch === "99") {
+            throw new Error("Invalid drive playlist options");
+        }
+
+        return {
+            items: [{ id: "drive-1", text: "audit", mode: "QUIZ" }],
+            track: "VISUAL",
+            mode: "SANDWICH",
+            batchSize: 30,
+        };
+    }),
+}));
+
+vi.mock("@/lib/mobile/tts", () => ({
+    generateMobileTTS: vi.fn(async () => ({
+        url: "/audio/audit.wav",
+        audioUrl: "http://localhost/audio/audit.wav",
+        cached: true,
+        hash: "audio-hash",
+    })),
+}));
+
 vi.mock("@/lib/mobile/arena", () => ({
     getMobileArenaOverview: vi.fn(async () => ({ radar: [], weakNodes: [] })),
     getMobileArenaMatrix: vi.fn(async () => ({ l1Node: { code: "L1_VERBS", name: "Verbs" }, categories: [] })),
@@ -144,6 +168,49 @@ describe("mobile route contracts", () => {
         expect(await (await cardsRoute.GET(new Request("http://localhost/api/mobile/v1/session/review-cards"))).json()).toMatchObject({
             status: "success",
             data: { count: 1 },
+        });
+    });
+
+    it("returns drive playlist and mobile TTS envelopes", async () => {
+        const driveRoute = await import("./drive/playlist/route");
+        const ttsRoute = await import("./tts/generate/route");
+
+        expect(await (await driveRoute.GET(new Request("http://localhost/api/mobile/v1/drive/playlist?mode=SANDWICH&track=VISUAL&batch=30"))).json()).toMatchObject({
+            status: "success",
+            data: {
+                mode: "SANDWICH",
+                track: "VISUAL",
+                batchSize: 30,
+                items: [{ id: "drive-1" }],
+            },
+        });
+        expect(await (await ttsRoute.POST(new Request("http://localhost/api/mobile/v1/tts/generate", {
+            method: "POST",
+            body: JSON.stringify({ text: "audit", voice: "Kai", language: "en-US", speed: 0.9 }),
+        }))).json()).toMatchObject({
+            status: "success",
+            data: {
+                audioUrl: "http://localhost/audio/audit.wav",
+                cached: true,
+                hash: "audio-hash",
+            },
+        });
+    });
+
+    it.each([
+        "mode=UNKNOWN&track=VISUAL&batch=30",
+        "mode=SANDWICH&track=UNKNOWN&batch=30",
+        "mode=SANDWICH&track=VISUAL&batch=99",
+    ])("returns drive playlist validation errors for invalid query: %s", async (query) => {
+        const driveRoute = await import("./drive/playlist/route");
+
+        const response = await driveRoute.GET(new Request(`http://localhost/api/mobile/v1/drive/playlist?${query}`));
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({
+            status: "error",
+            code: "VALIDATION_ERROR",
+            message: "Invalid drive playlist options",
         });
     });
 
