@@ -1,6 +1,6 @@
 ---
-description: The Master Directory for Opus features, rules, and documentation. Consult this first when starting a new task to find the correct specifications.
-name: Project Guide
+name: opus-guide
+description: OPUS project documentation index and task routing guide. Use before starting OPUS work to find the correct product docs, architecture rules, testing rules, UI specs, deployment notes, and source-of-truth references.
 ---
 # Project Documentation Guide
 
@@ -31,7 +31,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Weaver & Wand UI**: `docs/dev-notes/weaver-wand-ui-spec.md` (**v2.0**: 组件架构重构、Zinc Glassmorphism、Config-Driven)
 - **Weaver Config**: `config/weaver-scenarios.ts` (场景 UI 配置) + `lib/constants/weaver-scenario-map.ts` (6→21 DB 标签映射) + `lib/constants/weaver-density.ts` (Density 枚举)
 - **中文化术语规范**: `docs/dev-notes/ui-localization-terminology.md` (**NEW**: 全站翻译一致性标准)
-- **Slash Command**: Use `/ui-opus` to access UI guidelines quickly.
+- **Workflow / Skill**: Use `/ui-opus` in Antigravity or `$opus-ui` in Codex to access UI guidelines quickly.
 
 ### 2. Drill Engine (Core Mechanic)
 - **Implementation**: `docs/dev-notes/drill-engine-implementation.md` (The "Briefing" generation logic)
@@ -120,7 +120,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **OCR Script**: `scripts/ocr_pdf_to_text.py` (PyMuPDF + Vision API + 并发 + 断点续传)
 - **Seeding Script**: `scripts/seed-from-pdf.ts` (Gemini ETL + Zod 校验 + 原生 Worker Pool 并发)
 - **ETL Prompt**: `lib/generators/etl/part5-seed-prompt.ts` (XML-Mode + 6-Enum 决策树 + 自检步骤)
-- **Schema**: `QuestionSeed` in `prisma/schema.prisma` (含 `originalNumber`, `passageContext`, `QuestionType` 枚举)
+- **Schema**: `QuestionSeed` in `prisma/schema.prisma` (含 `originalNumber`, `passageContext`, `QuestionType` 枚举完整定义)
 
 
 - **If implementing Mixed Mode / L0_MIXED / L1_MIXED / DAILY_BLITZ** -> Read `mixed-mode-architecture.md` (**Stability 阈值、Track 隔离、批量操作**).
@@ -148,4 +148,3 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **If 修改选词/评分/生成逻辑** -> **必须使用** `audit-service.ts` 中的埋点方法，而非直接操作 `DrillAudit` 表.
 - **If 部署到 NAS / 修改 Docker 配置 / 排查部署问题** -> Read `nas-deployment-guide.md` (**完整踩坑记录**).
 - **If 修改 PWA 配置 / Service Worker / Manifest / 图标** -> Read `pwa-configuration.md` (**Serwist 缓存策略、构建注意事项**).
-

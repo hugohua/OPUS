@@ -1,6 +1,7 @@
 # Opus Phase 2 架构技术总结 (Architecture Postmortem)
 
 **Date**: 2026-01-29
+**Last Updated**: 2026-05-05
 **Status**: Implemented & Verified
 **Focus**: Multi-Track System, Zero-Wait Protocol, Worker Isolation
 
@@ -17,6 +18,25 @@ Phase 2 将系统从 "单一模式 + 同步生成" 升级为 "**多轨道 (Multi
 **DB 变更**:
 *   `UserProgress` 表新增复合主键: `@@unique([userId, vocabId, track])`。
 *   这就允许同一个词在不同维度独立计算遗忘曲线 (FSRS)。
+
+### A.1 词汇级用户状态 (UserVocabState)
+三轨 `UserProgress` 只表达真实训练轨道上的 FSRS 参数，不再承载“整个词已掌握”的产品语义。
+
+**语义边界**:
+*   `UserProgress`: `VISUAL` / `AUDIO` / `CONTEXT` 三轨 FSRS 数据，包括 `status`、`state`、`stability`、`difficulty`、`next_review_at`。
+*   `UserVocabState`: 用户-词汇级状态，包括 `status = ACTIVE | MASTERED`、`masteredAt`、`isFavorite`、`favoritedAt`。
+*   `MASTERED`: 用户主动确认“这个词已熟”，不是由未训练轨道伪造出来的 FSRS 参数。
+*   收藏 (`isFavorite`) 是独立布尔状态，不影响训练调度。
+
+**DB 约束**:
+*   `UserVocabState` 使用 `@@unique([userId, vocabId])` 保证每个用户每个词只有一份词汇级状态。
+*   查询索引覆盖 `@@index([userId, status])` 和 `@@index([userId, isFavorite])`，分别服务已掌握统计/筛选和默认收藏筛选。
+
+**写入规则**:
+*   `markVocabMastered(vocabId)` 只 upsert `UserVocabState.status = MASTERED` 与 `masteredAt`。
+*   `toggleVocabFavorite(vocabId, isFavorite)` 只更新收藏字段，不改写 `status`。
+*   `recordOutcome` 与移动端 session 写入 FSRS 前必须检查 `UserVocabState.status = MASTERED`；命中时 no-op，防止旧队列异步回写。
+*   `resetVocabProgress` 必须同时清除词汇级 `MASTERED`，保留收藏状态，作为误点“熟”的撤销路径。
 
 ### B. 生存优先架构 (Zero-Wait Protocol)
 为了消除 LLM 生成带来的 10s+ 等待时间，我们实施了严格的**生产-消费分离**：

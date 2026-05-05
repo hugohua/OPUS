@@ -23,6 +23,7 @@ import { auth } from '@/auth';
 import { ActionState } from '@/types/action';
 import { auditWeaverSelection } from '@/lib/services/audit-service';
 import { getDbScenariosForWeaver, WEAVER_SCENARIOS } from '@/lib/constants/weaver-scenario-map';
+import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
 
 // 选词目标数量
 const TARGET_PRIORITY = 10;
@@ -103,7 +104,10 @@ export async function getWeaverIngredients(
                     status: { in: ['LEARNING', 'REVIEW'] },
                     next_review_at: { lte: new Date() },
                     track: 'CONTEXT',
-                    vocab: { scenarios: { hasSome: dbScenarios } }
+                    vocab: {
+                        ...buildNotMasteredVocabWhere(validated.userId),
+                        scenarios: { hasSome: dbScenarios }
+                    }
                 },
                 take: 50, // Fetch larger pool
                 orderBy: { next_review_at: 'asc' },
@@ -134,6 +138,7 @@ export async function getWeaverIngredients(
             const newMatchedPool = await prisma.vocab.findMany({
                 where: {
                     scenarios: { hasSome: dbScenarios },
+                    ...buildNotMasteredVocabWhere(validated.userId),
                     progress: { none: { userId: validated.userId } },
                     id: { notIn: [...collectedIds] }
                 },
@@ -166,7 +171,8 @@ export async function getWeaverIngredients(
                     status: { in: ['LEARNING', 'REVIEW'] },
                     next_review_at: { lte: new Date() },
                     track: 'CONTEXT',
-                    vocabId: { notIn: [...collectedIds] }
+                    vocabId: { notIn: [...collectedIds] },
+                    vocab: buildNotMasteredVocabWhere(validated.userId)
                 },
                 take: 50,
                 orderBy: { next_review_at: 'asc' },

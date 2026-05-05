@@ -54,13 +54,29 @@ export async function recordOutcome(
         }
 
         // [Arena Part 5] 拦截无锚纯语法题
-        // 如果 vocabId < 0 (由 drill-processor 补充的虚拟ID)，说明这是纯语法随机题，不计入 FSRS 回流
-        if (vocabId < 0) {
-            log.info({ userId, vocabId, mode }, 'Skipping FSRS update for Pure Grammar Item (Negative Vocab ID)');
+        // 如果 vocabId <= 0，说明这是纯语法随机题，不计入 FSRS 回流
+        if (vocabId <= 0) {
+            log.info({ userId, vocabId, mode }, 'Skipping FSRS update for Pure Grammar Item');
             return {
                 status: 'success',
                 message: 'Outcome recorded (Skip FSRS for Pure Grammar)',
                 data: null
+            };
+        }
+
+        const wordState = await prisma.userVocabState.findUnique({
+            where: {
+                userId_vocabId: { userId, vocabId },
+            },
+            select: { status: true },
+        });
+
+        if (wordState?.status === 'MASTERED') {
+            log.info({ userId, vocabId, mode }, 'Skipping FSRS update for word-level MASTERED vocab');
+            return {
+                status: 'success',
+                message: 'Outcome ignored for mastered vocab',
+                data: null,
             };
         }
 
@@ -205,6 +221,17 @@ export async function recordOutcome(
 
         // 7. DB Upsert (Track Specific) with Transaction
         const updated = await prisma.$transaction(async (tx) => {
+            const txWordState = await tx.userVocabState.findUnique({
+                where: {
+                    userId_vocabId: { userId, vocabId },
+                },
+                select: { status: true },
+            });
+
+            if (txWordState?.status === 'MASTERED') {
+                return null;
+            }
+
             const _updated = await tx.userProgress.upsert({
                 where: {
                     userId_vocabId_track: { userId, vocabId, track }
@@ -269,7 +296,7 @@ export async function recordOutcome(
 
         return {
             status: 'success',
-            message: 'Outcome recorded',
+            message: updated ? 'Outcome recorded' : 'Outcome ignored for mastered vocab',
             data: updated
         };
 

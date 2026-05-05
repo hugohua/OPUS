@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMock = {
+    userVocabState: {
+        count: vi.fn(),
+    },
     userProgress: {
         count: vi.fn(),
     },
@@ -16,8 +19,8 @@ vi.mock("@/lib/db", () => ({
 describe("mobile dashboard summary", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        dbMock.userVocabState.count.mockResolvedValueOnce(12);
         dbMock.userProgress.count
-            .mockResolvedValueOnce(12)
             .mockResolvedValueOnce(34)
             .mockResolvedValueOnce(5);
         dbMock.article.findFirst.mockResolvedValueOnce(null);

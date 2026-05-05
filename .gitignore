@@ -20,7 +20,9 @@ tts_venv/
 tts_venv
 reports/
 .DS_Store
-prisma/migrations
+prisma/migrations/*
+!prisma/migrations/20260505030500_add_user_vocab_state/
+!prisma/migrations/20260505030500_add_user_vocab_state/migration.sql
 dockers
 other-project-demo
 build-and-export.sh

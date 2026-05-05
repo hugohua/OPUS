@@ -89,6 +89,16 @@ export function VocabFilters({
                     dotColor="bg-emerald-500"
                 />
                 <FilterChip
+                    label="已掌握"
+                    active={status === 'MASTERED'}
+                    onClick={() => {
+                        onStatusChange('MASTERED');
+                        if (onTagFilterChange) onTagFilterChange("");
+                    }}
+                    variant="emerald"
+                    icon={<CheckCircle2 className="w-2.5 h-2.5" />}
+                />
+                <FilterChip
                     label="难点词"
                     active={status === 'LEECH'}
                     onClick={() => {
@@ -149,7 +159,7 @@ interface FilterChipProps {
     label: string;
     active: boolean;
     onClick: () => void;
-    variant?: 'default' | 'rose' | 'violet' | 'amber';
+    variant?: 'default' | 'rose' | 'violet' | 'amber' | 'emerald';
     dotColor?: string;
     icon?: React.ReactNode;
 }
@@ -193,6 +203,10 @@ function FilterChip({ label, active, onClick, variant = 'default', dotColor, ico
         variantClass = active
             ? "bg-amber-500/20 text-amber-500 border-amber-500/50"
             : "text-amber-500/80 hover:text-amber-400 bg-amber-500/5 border border-amber-500/20 hover:border-amber-500/50";
+    } else if (variant === 'emerald') {
+        variantClass = active
+            ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/50"
+            : "text-emerald-500/80 hover:text-emerald-500 bg-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/50";
     }
 
     return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, MoreHorizontal, Play, RotateCcw, EyeOff, FileJson, Copy, Tag, Edit, Share2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Play, RotateCcw, FileJson, Copy, Tag, Edit, Share2, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
@@ -103,9 +103,9 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
         startTransition(async () => {
             try {
                 await suspendVocab(vocabId);
-                toast.success("已暂停复习", { description: "该词将不再出现在复习队列中。" });
+                toast.success("已标为已掌握", { description: "该词将不再作为目标词进入训练队列。" });
             } catch (error) {
-                toast.error("暂停失败");
+                toast.error("设置失败");
             }
         });
     };
@@ -221,9 +221,9 @@ export function StickyHeader({ stability, isReviewPhase = true, rank, className,
                             <DropdownMenuLabel className="text-[10px] uppercase text-zinc-400 tracking-wider font-bold">FSRS 操作</DropdownMenuLabel>
                             <DropdownMenuGroup>
                                 <DropdownMenuItem onClick={handleSuspend} className="text-amber-500 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-900/10">
-                                    <EyeOff className="w-4 h-4 mr-2" />
-                                    <span>暂停复习</span>
-                                    <span className="ml-auto text-[9px] opacity-50 font-mono">搁置</span>
+                                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                                    <span>标为已掌握</span>
+                                    <span className="ml-auto text-[9px] opacity-50 font-mono">熟</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setShowResetAlert(true)} className="text-rose-500 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-900/10">
                                     <RotateCcw className="w-4 h-4 mr-2" />

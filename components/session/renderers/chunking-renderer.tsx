@@ -18,9 +18,10 @@ export interface ChunkingRendererProps {
     index: number;
     total?: number;
     onComplete: (success: boolean) => void;
+    rightAction?: React.ReactNode;
 }
 
-export function ChunkingRenderer({ drill, index, total = 20, onComplete }: ChunkingRendererProps) {
+export function ChunkingRenderer({ drill, index, total = 20, onComplete, rightAction }: ChunkingRendererProps) {
     // Extract chunking_drill segment or use entire drill
     const chunkingDrill = drill.segments.find((s: any) => s.type === 'chunking_drill') || drill;
 
@@ -40,6 +41,7 @@ export function ChunkingRenderer({ drill, index, total = 20, onComplete }: Chunk
                         index={index}
                         total={total}
                         onComplete={onComplete}
+                        rightAction={rightAction}
                     />
                 </motion.div>
             </AnimatePresence>

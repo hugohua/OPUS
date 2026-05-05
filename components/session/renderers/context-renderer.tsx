@@ -17,9 +17,10 @@ export interface ContextRendererProps {
     drill: BriefingPayload;
     progress: number;
     onGrade: (grade: boolean | number) => void;
+    rightAction?: React.ReactNode;
 }
 
-export function ContextRenderer({ drill, progress, onGrade }: ContextRendererProps) {
+export function ContextRenderer({ drill, progress, onGrade, rightAction }: ContextRendererProps) {
     const router = useRouter();
 
     return (
@@ -29,6 +30,7 @@ export function ContextRenderer({ drill, progress, onGrade }: ContextRendererPro
                 progress={progress}
                 onGrade={onGrade}
                 onExit={() => router.push('/dashboard')}
+                rightAction={rightAction}
             />
         </div>
     );

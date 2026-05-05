@@ -1,5 +1,6 @@
 import { createMobileErrorEnvelope, createMobileSuccessEnvelope, mobileInternalErrorResponse, mobileUnauthorizedResponse, requireMobileSession } from "@/lib/mobile/contracts";
 import { recordMobileArenaAttempt } from "@/lib/mobile/arena";
+import { QuestionType } from "@prisma/client";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ const ArenaAttemptSchema = z.object({
     isCorrect: z.boolean(),
     responseTimeMs: z.number().int(),
     selectedOption: z.string(),
-    questionType: z.string(),
+    questionType: z.nativeEnum(QuestionType),
     part: z.number().int(),
     snapshotPayload: z.object({
         meta: z.object({
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     try {
         const result = await recordMobileArenaAttempt(session.user, {
             ...validated.data,
+            anchorVocabId: validated.data.anchorVocabId ?? null,
             snapshotPayload: validated.data.snapshotPayload
                 ? {
                     ...validated.data.snapshotPayload,

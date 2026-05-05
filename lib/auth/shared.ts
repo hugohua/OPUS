@@ -45,8 +45,10 @@ class InviteQuotaExceededError extends Error {
 }
 
 function mapFieldErrors(error: z.ZodError): Record<string, string> {
+    const fieldErrors = error.flatten().fieldErrors as Record<string, string[] | undefined>;
+
     return Object.fromEntries(
-        Object.entries(error.flatten().fieldErrors).map(([key, value]) => [key, value?.[0] ?? ""])
+        Object.entries(fieldErrors).map(([key, value]) => [key, value?.[0] ?? ""])
     );
 }
 

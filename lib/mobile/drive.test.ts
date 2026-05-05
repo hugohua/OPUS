@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MobileDrivePlaylistQuery } from "./drive";
 
 const generateDrivePlaylistForUserMock = vi.fn();
 
@@ -44,24 +45,25 @@ describe("mobile drive adapter", () => {
 
     it("rejects invalid query options before querying the playlist helper", async () => {
         const { getMobileDrivePlaylist } = await import("./drive");
+        const invalidQuery = (query: Record<string, string>) => query as MobileDrivePlaylistQuery;
 
         expect(() =>
             getMobileDrivePlaylist(
-                {
+                invalidQuery({
                     mode: "UNKNOWN",
                     track: "VISUAL",
                     batch: "30",
-                },
+                }),
                 "user-123"
             )
         ).toThrow("Invalid drive playlist options");
         expect(() =>
             getMobileDrivePlaylist(
-                {
+                invalidQuery({
                     mode: "SANDWICH",
                     track: "UNKNOWN",
                     batch: "30",
-                },
+                }),
                 "user-123"
             )
         ).toThrow("Invalid drive playlist options");

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
 
 export type MobileDashboardSummary = {
     userName: string;
@@ -83,18 +84,24 @@ export async function getMobileDashboardSummary(userId: string, userName?: strin
     const now = new Date();
 
     const [mastered, learning, due, latestBriefing] = await Promise.all([
-        db.userProgress.count({
-            where: { userId, track: "VISUAL", status: "MASTERED" },
+        db.userVocabState.count({
+            where: { userId, status: "MASTERED" },
         }),
         db.userProgress.count({
-            where: { userId, track: "VISUAL", status: { in: ["LEARNING", "REVIEW"] } },
+            where: {
+                userId,
+                track: "VISUAL",
+                status: { in: ["LEARNING", "REVIEW"] },
+                vocab: buildNotMasteredVocabWhere(userId),
+            },
         }),
         db.userProgress.count({
             where: {
                 userId,
                 track: "VISUAL",
                 next_review_at: { lte: now },
-                status: { in: ["LEARNING", "REVIEW", "MASTERED"] },
+                status: { in: ["LEARNING", "REVIEW"] },
+                vocab: buildNotMasteredVocabWhere(userId),
             },
         }),
         db.article.findFirst({

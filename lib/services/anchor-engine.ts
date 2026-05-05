@@ -1,6 +1,5 @@
 
 import { prisma } from "@/lib/db";
-import { UserProgress, Vocab } from "@prisma/client";
 
 interface AnchorResult {
     word: string;
@@ -12,7 +11,7 @@ interface AnchorResult {
  * 寻找 "Goldilocks Anchor" (黄金锚点)
  * 策略:
  * 1. 场景共现 (Scenario Binding)
- * 2. 也是熟词 (Status: MASTERED/REVIEW)
+ * 2. 也是熟词 (词汇级 MASTERED 或轨道 REVIEW)
  * 3. 向量距离适中 (Top 3-10 to avoid too similar synonyms)
  */
 export async function getVectorOptimizedAnchor(
@@ -48,9 +47,11 @@ export async function getVectorOptimizedAnchor(
         v.scenarios, -- Raw array
         (v.embedding <=> (SELECT embedding FROM target_vec)) as distance
       FROM "Vocab" v
-      JOIN "UserProgress" u ON u."vocabId" = v.id
-      WHERE u."userId" = ${userId}
-        AND u.status IN ('MASTERED', 'REVIEW') -- 必须是熟词
+      LEFT JOIN "UserProgress" u
+        ON u."vocabId" = v.id AND u."userId" = ${userId}
+      LEFT JOIN "UserVocabState" uvs
+        ON uvs."vocabId" = v.id AND uvs."userId" = ${userId}
+      WHERE (u.status = 'REVIEW' OR uvs.status = 'MASTERED')
         AND v.id != ${targetVocabId}
         -- Scenario Overlap Check (Postgres Array Overlap)
         AND v.scenarios && (SELECT scenarios FROM target_vec)
@@ -87,25 +88,23 @@ export async function getVectorOptimizedAnchor(
     }
 
     // 4. Fallback: 简单的随机熟词 (High Value)
-    const fallback = await prisma.userProgress.findFirst({
+    const fallback = await prisma.vocab.findFirst({
         where: {
-            userId,
-            status: { in: ['MASTERED', 'REVIEW'] },
-            vocab: {
-                id: { not: targetVocabId },
-                learningPriority: { gt: 50 }, // Core words
-            }
+            id: { not: targetVocabId },
+            learningPriority: { gt: 50 }, // Core words
+            OR: [
+                { userVocabStates: { some: { userId, status: 'MASTERED' } } },
+                { progress: { some: { userId, status: 'REVIEW' } } }
+            ]
         },
-        include: { vocab: { select: { word: true, scenarios: true } } },
-        // Prisma lacks 'orderBy: random', need to pick by offset or just take latest
-        orderBy: { last_review_at: 'desc' },
-        take: 1
+        select: { word: true, scenarios: true },
+        orderBy: { frequency_score: 'desc' },
     });
 
     if (fallback) {
         return {
-            word: fallback.vocab.word,
-            scenario: fallback.vocab.scenarios[0] || "General",
+            word: fallback.word,
+            scenario: fallback.scenarios[0] || "General",
             reason: "fallback"
         };
     }

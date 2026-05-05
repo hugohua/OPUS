@@ -13,7 +13,7 @@ Gate iOS work behind an explicit planning phase. Use Superpowers to understand t
 
 Before touching iOS code or XcodeBuildMCP:
 
-- Explore the repo and any project guide first. If `.agent/skills/guide/SKILL.md` exists, read it for product and architecture context.
+- Explore the repo and any project guide first. If `.agent/skills/opus-guide/SKILL.md` exists, read it for product and architecture context.
 - Use `superpowers:brainstorming` to clarify the product goal, user value, constraints, non-goals, and success criteria.
 - Keep the spec short and concrete. It should usually cover:
   - goal

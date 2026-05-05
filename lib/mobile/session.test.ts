@@ -7,6 +7,9 @@ const getNextDrillBatchMock = vi.fn();
 const auditFSRSTransitionMock = vi.fn();
 
 const prismaMock = {
+    userVocabState: {
+        findUnique: vi.fn(),
+    },
     userProgress: {
         findUnique: vi.fn(),
         upsert: vi.fn(),
@@ -38,6 +41,7 @@ vi.mock("@/lib/services/audit-service", () => ({
 describe("mobile session adapters", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        prismaMock.userVocabState.findUnique.mockResolvedValue(null);
         prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
     });
 
@@ -156,6 +160,30 @@ describe("mobile session adapters", () => {
         expect(negativeResult).toMatchObject({
             status: "success",
             message: "Outcome recorded (Skip FSRS for Pure Grammar)",
+            data: null,
+        });
+        expect(prismaMock.userProgress.findUnique).not.toHaveBeenCalled();
+        expect(prismaMock.userProgress.upsert).not.toHaveBeenCalled();
+    });
+
+    it("skips mobile FSRS persistence for word-level MASTERED vocab", async () => {
+        const { submitMobileSessionOutcome } = await import("./session");
+
+        prismaMock.userVocabState.findUnique.mockResolvedValueOnce({
+            status: "MASTERED",
+        });
+
+        const result = await submitMobileSessionOutcome(
+            {
+                vocabId: 42,
+                grade: 3,
+                mode: "SYNTAX",
+            },
+            "user-123"
+        );
+
+        expect(result).toMatchObject({
+            status: "success",
             data: null,
         });
         expect(prismaMock.userProgress.findUnique).not.toHaveBeenCalled();

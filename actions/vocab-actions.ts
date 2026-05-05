@@ -3,29 +3,142 @@
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { ActionState } from '@/types/action';
+import { MarkVocabMasteredSchema, ToggleVocabFavoriteSchema } from '@/lib/validations/vocab-state';
+
+const GENERIC_VOCAB_STATE_ERROR = '设置失败，请稍后再试';
+const GENERIC_FAVORITE_ERROR = '收藏失败，请稍后再试';
 
 /**
- * Suspend a vocab (mark as Mastered/Ignored)
- * Temporarily maps to MASTERED status until we have a proper SUSPENDED state.
+ * Mark a vocab as user-confirmed MASTERED at word level.
+ * This does not mutate any track-level FSRS rows in UserProgress.
+ */
+export async function markVocabMastered(vocabId: number): Promise<ActionState<void>> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { status: 'error', message: 'Unauthorized' };
+    }
+
+    const parsed = MarkVocabMasteredSchema.safeParse({ vocabId });
+    if (!parsed.success) {
+        return {
+            status: 'error',
+            message: 'Invalid vocab id',
+            fieldErrors: { vocabId: parsed.error.issues[0]?.message ?? 'Invalid vocab id' },
+        };
+    }
+
+    const userId = session.user.id;
+    const now = new Date();
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            await tx.userVocabState.upsert({
+                where: {
+                    userId_vocabId: {
+                        userId,
+                        vocabId: parsed.data.vocabId,
+                    },
+                },
+                update: {
+                    status: 'MASTERED',
+                    masteredAt: now,
+                },
+                create: {
+                    userId,
+                    vocabId: parsed.data.vocabId,
+                    status: 'MASTERED',
+                    masteredAt: now,
+                },
+            });
+        });
+
+        revalidatePath('/dashboard');
+        revalidatePath('/dashboard/profile');
+        revalidatePath('/vocabulary');
+        revalidatePath('/dashboard/vocab');
+
+        return { status: 'success', message: 'Vocab marked as mastered' };
+    } catch (error) {
+        console.error('[VOCAB_ACTION] markVocabMastered failed:', error);
+        return {
+            status: 'error',
+            message: GENERIC_VOCAB_STATE_ERROR,
+        };
+    }
+}
+
+/**
+ * Toggle the default favorite flag for a vocab.
+ * Favorite is independent of MASTERED and never affects training selection.
+ */
+export async function toggleVocabFavorite(
+    vocabId: number,
+    isFavorite: boolean
+): Promise<ActionState<{ isFavorite: boolean }>> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return { status: 'error', message: 'Unauthorized' };
+    }
+
+    const parsed = ToggleVocabFavoriteSchema.safeParse({ vocabId, isFavorite });
+    if (!parsed.success) {
+        return {
+            status: 'error',
+            message: 'Invalid favorite payload',
+            fieldErrors: { vocabId: parsed.error.issues[0]?.message ?? 'Invalid favorite payload' },
+        };
+    }
+
+    const userId = session.user.id;
+    const favoritedAt = parsed.data.isFavorite ? new Date() : null;
+
+    try {
+        await prisma.userVocabState.upsert({
+            where: {
+                userId_vocabId: {
+                    userId,
+                    vocabId: parsed.data.vocabId,
+                },
+            },
+            update: {
+                isFavorite: parsed.data.isFavorite,
+                favoritedAt,
+            },
+            create: {
+                userId,
+                vocabId: parsed.data.vocabId,
+                status: 'ACTIVE',
+                isFavorite: parsed.data.isFavorite,
+                favoritedAt,
+            },
+        });
+
+        revalidatePath('/vocabulary');
+        revalidatePath('/dashboard/vocab');
+
+        return {
+            status: 'success',
+            message: parsed.data.isFavorite ? 'Vocab favorited' : 'Vocab unfavorited',
+            data: { isFavorite: parsed.data.isFavorite },
+        };
+    } catch (error) {
+        console.error('[VOCAB_ACTION] toggleVocabFavorite failed:', error);
+        return {
+            status: 'error',
+            message: GENERIC_FAVORITE_ERROR,
+        };
+    }
+}
+
+/**
+ * @deprecated Use markVocabMastered. Kept for existing UI call sites.
  */
 export async function suspendVocab(vocabId: number) {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
-    const userId = session.user.id;
-
-    // Reset all tracks to NEW
-    await prisma.userProgress.updateMany({
-        where: {
-            userId,
-            vocabId,
-        },
-        data: {
-            status: 'MASTERED', // Semantically "Finalized" for now
-            next_review_at: null, // Remove from schedule
-        }
-    });
-
-    revalidatePath('/dashboard');
+    const result = await markVocabMastered(vocabId);
+    if (result.status === 'error') {
+        throw new Error(result.message);
+    }
 }
 
 /**
@@ -36,26 +149,42 @@ export async function resetVocabProgress(vocabId: number) {
     if (!session?.user?.id) throw new Error("Unauthorized");
     const userId = session.user.id;
 
-    await prisma.userProgress.updateMany({
-        where: {
-            userId,
-            vocabId,
-        },
-        data: {
-            status: 'NEW',
-            stability: 0,
-            difficulty: 0,
-            reps: 0,
-            lapses: 0,
-            state: 0, // State.New
-            last_review_at: null,
-            next_review_at: new Date(), // Due immediately
-            interval: 0
-        }
+    await prisma.$transaction(async (tx) => {
+        await tx.userProgress.updateMany({
+            where: {
+                userId,
+                vocabId,
+            },
+            data: {
+                status: 'NEW',
+                stability: 0,
+                difficulty: 0,
+                reps: 0,
+                lapses: 0,
+                state: 0, // State.New
+                last_review_at: null,
+                next_review_at: new Date(), // Due immediately
+                interval: 0
+            }
+        });
+
+        await tx.userVocabState.updateMany({
+            where: {
+                userId,
+                vocabId,
+            },
+            data: {
+                status: 'ACTIVE',
+                masteredAt: null,
+            },
+        });
     });
 
     console.log(`[VOCAB_ACTION] User ${userId} reset progress for Vocab ${vocabId}`);
     revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile');
+    revalidatePath('/vocabulary');
+    revalidatePath('/dashboard/vocab');
 }
 
 /**

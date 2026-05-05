@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
+import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
 
 // ────────────────────────────────────────
 // ProfileStats 接口
@@ -128,6 +129,8 @@ export async function getProfileStats(): Promise<ProfileStats> {
             radarResult,
             // 2. FSRS 状态分布 (单条 GROUP BY 替代 4 次 count)
             statusDistribution,
+            // 2.1 词汇级 MASTERED 数
+            masteredStateCount,
             // 3. 过去 90 天活跃日期 (热力图)
             activeDaysResult,
             // 4. 未来 5 天负载
@@ -153,7 +156,15 @@ export async function getProfileStats(): Promise<ProfileStats> {
                     COALESCE(AVG(dim_c_score), 0)::int as avg_c,
                     COALESCE(AVG(dim_x_score), 0)::int as avg_x
                 FROM "UserProgress"
-                WHERE "userId" = ${userId} AND status != 'NEW'::"LearningStatus"
+                WHERE "userId" = ${userId}
+                    AND status != 'NEW'::"LearningStatus"
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM "UserVocabState" uvs
+                        WHERE uvs."userId" = ${userId}
+                            AND uvs."vocabId" = "UserProgress"."vocabId"
+                            AND uvs.status = 'MASTERED'::"UserVocabStatus"
+                    )
             `,
 
             // ② 状态分布 (1 条 SQL 替代 4 次 count)
@@ -161,8 +172,19 @@ export async function getProfileStats(): Promise<ProfileStats> {
                 SELECT status::text, COUNT(*)::bigint AS cnt
                 FROM "UserProgress"
                 WHERE "userId" = ${userId}
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM "UserVocabState" uvs
+                        WHERE uvs."userId" = ${userId}
+                            AND uvs."vocabId" = "UserProgress"."vocabId"
+                            AND uvs.status = 'MASTERED'::"UserVocabStatus"
+                    )
                 GROUP BY status
             `,
+
+            db.userVocabState.count({
+                where: { userId, status: 'MASTERED' },
+            }),
 
             // ③ 过去 90 天活跃日期 (distinct dates)
             db.$queryRaw<Array<{ active_date: Date }>>`
@@ -182,6 +204,13 @@ export async function getProfileStats(): Promise<ProfileStats> {
                     AND next_review_at >= ${now}
                     AND next_review_at <= ${fiveDaysLater}
                     AND next_review_at IS NOT NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM "UserVocabState" uvs
+                        WHERE uvs."userId" = ${userId}
+                            AND uvs."vocabId" = "UserProgress"."vocabId"
+                            AND uvs.status = 'MASTERED'::"UserVocabStatus"
+                    )
                 GROUP BY DATE(next_review_at)
                 ORDER BY review_date
             `,
@@ -195,6 +224,7 @@ export async function getProfileStats(): Promise<ProfileStats> {
                         { masteryScore: { lt: 30 } },
                         { lapses: { gt: 3 } },
                     ],
+                    vocab: buildNotMasteredVocabWhere(userId),
                 },
             }),
 
@@ -210,6 +240,13 @@ export async function getProfileStats(): Promise<ProfileStats> {
                 SELECT track, status::text, COUNT(*)::bigint AS cnt
                 FROM "UserProgress"
                 WHERE "userId" = ${userId}
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM "UserVocabState" uvs
+                        WHERE uvs."userId" = ${userId}
+                            AND uvs."vocabId" = "UserProgress"."vocabId"
+                            AND uvs.status = 'MASTERED'::"UserVocabStatus"
+                    )
                 GROUP BY track, status
             `,
 
@@ -233,7 +270,7 @@ export async function getProfileStats(): Promise<ProfileStats> {
         const newCount = statusMap['NEW'] ?? 0;
         const learningCount = statusMap['LEARNING'] ?? 0;
         const reviewCount = statusMap['REVIEW'] ?? 0;
-        const masteredCount = statusMap['MASTERED'] ?? 0;
+        const masteredCount = masteredStateCount;
 
         const total = newCount + learningCount + reviewCount + masteredCount;
         const retentionRate = total > 0

@@ -55,7 +55,7 @@ export const RatingSchema = z.union([
 
 export const RecordOutcomeSchema = z.object({
     userId: z.string().cuid(),
-    vocabId: z.number().int().positive(),
+    vocabId: z.number().int(),
     grade: RatingSchema,
     mode: SessionModeSchema,
     track: z.enum(['VISUAL', 'AUDIO', 'CONTEXT']).optional(), // [NEW] Explicit track for cross-track reviews

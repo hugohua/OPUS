@@ -66,12 +66,13 @@ model Vocab {
   embedding Unsupported("vector(1536)")?
 
   // 关联
-  progress       UserProgress[]
-  articles       ArticleVocab[]
-  smartContent   SmartContent[]
-  etymology      Etymology?
-  questionSeeds  QuestionSeed[]
-  attemptRecords AttemptRecord[]
+  progress         UserProgress[]
+  userVocabStates  UserVocabState[]
+  articles         ArticleVocab[]
+  smartContent     SmartContent[]
+  etymology        Etymology?
+  questionSeeds    QuestionSeed[]
+  attemptRecords   AttemptRecord[]
 
   @@index([learningPriority])
   @@index([scenarios])
@@ -160,6 +161,28 @@ model UserProgress {
   @@index([userId, track, next_review_at])
 }
 
+model UserVocabState {
+  id     String @id @default(cuid())
+  userId String
+  vocabId Int
+
+  status     UserVocabStatus @default(ACTIVE)
+  masteredAt DateTime?
+
+  isFavorite Boolean   @default(false)
+  favoritedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  vocab Vocab @relation(fields: [vocabId], references: [id])
+
+  @@unique([userId, vocabId], name: "userId_vocabId")
+  @@index([userId, status])
+  @@index([userId, isFavorite])
+}
+
 // === [USER_DATA] 用户业务数据 ===
 model Article {
   id        String   @id @default(cuid())
@@ -219,6 +242,7 @@ model User {
 
   // 核心资产
   progress             UserProgress[]
+  vocabStates          UserVocabState[]
   articles             Article[]
   drillCaches          DrillCache[]
   attemptRecords       AttemptRecord[]
@@ -233,6 +257,11 @@ enum LearningStatus {
   NEW
   LEARNING
   REVIEW
+  MASTERED
+}
+
+enum UserVocabStatus {
+  ACTIVE
   MASTERED
 }
 

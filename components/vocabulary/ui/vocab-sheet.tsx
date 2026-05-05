@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
     Drawer,
     DrawerContent,
@@ -10,10 +10,13 @@ import {
 } from "@/components/ui/drawer";
 import { VocabListItem } from "@/actions/get-vocab-list";
 import { getVocabDetail } from "@/actions/get-vocab-detail";
-import { X, ArrowUpRight } from "lucide-react";
+import { X, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { toast } from "sonner";
+import { markVocabMastered } from "@/actions/vocab-actions";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 复用详情页组件
 import { VocabHero } from "@/components/vocabulary/detail/VocabHero";
@@ -45,6 +48,8 @@ interface VocabDetailData {
 export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
     const [detailData, setDetailData] = useState<VocabDetailData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
+    const queryClient = useQueryClient();
 
     // 当抽屉打开时获取完整数据
     useEffect(() => {
@@ -70,6 +75,18 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
     if (!item) return null;
 
     const vocab = detailData?.vocab;
+    const handleMarkMastered = () => {
+        startTransition(async () => {
+            const result = await markVocabMastered(item.id);
+            if (result.status === 'success') {
+                await queryClient.invalidateQueries({ queryKey: ['vocab-list'] });
+                toast.success("已标为已掌握", { description: "该词将不再作为目标词进入训练队列。" });
+                onOpenChange(false);
+            } else {
+                toast.error(result.message || "设置失败");
+            }
+        });
+    };
 
     return (
         <Drawer open={open} onOpenChange={onOpenChange}>
@@ -187,9 +204,12 @@ export function VocabSheet({ open, onOpenChange, item }: VocabSheetProps) {
                         <div className="flex gap-3">
                             <Button
                                 variant="outline"
+                                onClick={handleMarkMastered}
+                                disabled={isPending}
                                 className="flex-1 bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-900"
                             >
-                                暂停复习
+                                <CheckCircle2 data-icon="inline-start" />
+                                标为已掌握
                             </Button>
                             <Button
                                 variant="ghost"

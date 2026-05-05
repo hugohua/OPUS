@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AttemptRecordPayload } from "@/actions/arena-telemetry";
 
 const getRadarDataMock = vi.fn();
 const getActionRequiredNodesMock = vi.fn();
@@ -77,7 +78,7 @@ describe("mobile arena adapters", () => {
             attemptId: "attempt-1",
         });
 
-        const payload = {
+        const payload: AttemptRecordPayload = {
             questionSeedId: "seed-1",
             anchorVocabId: 42,
             isCorrect: false,

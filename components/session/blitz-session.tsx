@@ -10,12 +10,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BlitzCard, type BlitzCardState } from '@/components/blitz/blitz-card';
 import { getBlitzSession } from '@/actions/get-blitz-session';
 import { recordOutcome } from '@/actions/record-outcome';
+import { markVocabMastered } from '@/actions/vocab-actions';
 import { BlitzItem } from '@/lib/validations/blitz';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FocusShell } from '@/components/drill/focus-shell';
 import { ControlDeck, ControlDeckMode } from '@/components/drill/control-deck';
+import { CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface BlitzSessionProps {
     userId: string;
@@ -28,6 +31,7 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     const [cardState, setCardState] = useState<BlitzCardState>('LOCKED');
     const [loading, setLoading] = useState(true);
     const [finished, setFinished] = useState(false);
+    const [isMarkingMastered, setIsMarkingMastered] = useState(false);
     const [stats, setStats] = useState({ pass: 0, fail: 0 });
 
     useEffect(() => {
@@ -86,6 +90,44 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
             // Binary Grade: 1=Fail, 2=Pass
             if (action === '1') handleGrade('fail');
             if (action === '2') handleGrade('pass');
+        }
+    };
+
+    const handleMarkMastered = async () => {
+        const currentItem = queue[currentIndex];
+        if (!currentItem || currentItem.vocabId <= 0 || isMarkingMastered) return;
+
+        const vocabId = currentItem.vocabId;
+        setIsMarkingMastered(true);
+        setCardState('LOCKED');
+        setQueue(prev => {
+            const keptBeforeCurrent = prev
+                .slice(0, currentIndex)
+                .filter(item => item.vocabId !== vocabId)
+                .length;
+            const next = prev.filter(item => item.vocabId !== vocabId);
+
+            if (next.length === 0) {
+                setCurrentIndex(0);
+                setFinished(true);
+                return [];
+            }
+
+            setCurrentIndex(Math.min(keptBeforeCurrent, next.length - 1));
+            return next;
+        });
+
+        try {
+            const result = await markVocabMastered(vocabId);
+            if (result.status === 'error') {
+                throw new Error(result.message);
+            }
+            toast.success('已标为已掌握');
+        } catch (error) {
+            console.error('Failed to mark mastered:', error);
+            toast.error('同步失败，稍后仍可能再次出现');
+        } finally {
+            setIsMarkingMastered(false);
         }
     };
 
@@ -155,6 +197,20 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
     const deckMode: ControlDeckMode = cardState === 'LOCKED' ? 'reveal' : 'binary';
     // Progress loop
     const progress = ((currentIndex) / queue.length) * 100;
+    const markMasteredAction = currentItem?.vocabId > 0 ? (
+        <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label="标为已掌握"
+            title="标为已掌握"
+            disabled={isMarkingMastered}
+            onClick={handleMarkMastered}
+        >
+            <CheckCircle2 data-icon="inline-start" />
+            熟
+        </Button>
+    ) : undefined;
 
     return (
         <FocusShell
@@ -162,6 +218,7 @@ export function BlitzSession({ userId }: BlitzSessionProps) {
             label="每日闪电战"
             progress={progress}
             onExit={() => router.push('/dashboard')}
+            rightAction={markMasteredAction}
             footer={
                 <ControlDeck
                     mode={deckMode}

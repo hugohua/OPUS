@@ -54,6 +54,25 @@ import { POST as refreshPOST } from "./refresh/route";
 import { POST as logoutPOST } from "./logout/route";
 import { GET as meGET } from "./me/route";
 
+type TestJsonResponse = Response & {
+    body?: unknown;
+    init?: ResponseInit;
+};
+
+async function readJson(response: Response) {
+    const testResponse = response as TestJsonResponse;
+    if (typeof testResponse.json === "function") {
+        return testResponse.json();
+    }
+
+    return testResponse.body;
+}
+
+function readStatus(response: Response, defaultStatus = 200) {
+    const testResponse = response as TestJsonResponse;
+    return testResponse.status ?? testResponse.init?.status ?? defaultStatus;
+}
+
 describe("mobile auth routes", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -86,8 +105,8 @@ describe("mobile auth routes", () => {
             body: JSON.stringify({ email: "test@opus.dev", password: "secret" }),
         }));
 
-        expect(response.init?.status).toBeUndefined();
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(200);
+        expect(await readJson(response)).toMatchObject({
             status: "success",
             data: {
                 tokenType: "Bearer",
@@ -116,8 +135,8 @@ describe("mobile auth routes", () => {
             body: JSON.stringify({ email: "bad", password: "secret" }),
         }));
 
-        expect(response.init?.status).toBe(400);
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(400);
+        expect(await readJson(response)).toMatchObject({
             status: "error",
             code: "VALIDATION_ERROR",
             fieldErrors: { email: "Invalid email" },
@@ -133,8 +152,8 @@ describe("mobile auth routes", () => {
             },
         }));
 
-        expect(response.init?.status).toBe(400);
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(400);
+        expect(await readJson(response)).toMatchObject({
             status: "error",
             code: "VALIDATION_ERROR",
             message: "Validation failed",
@@ -153,13 +172,14 @@ describe("mobile auth routes", () => {
             body: JSON.stringify({ email: "test@opus.dev", password: "secret" }),
         }));
 
-        expect(response.init?.status).toBe(500);
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(500);
+        const body = await readJson(response);
+        expect(body).toMatchObject({
             status: "error",
             code: "INTERNAL_ERROR",
             message: "Internal server error",
         });
-        expect(JSON.stringify(response.body)).not.toContain("database exploded");
+        expect(JSON.stringify(body)).not.toContain("database exploded");
     });
 
     it("registers a user and auto-authenticates", async () => {
@@ -201,8 +221,8 @@ describe("mobile auth routes", () => {
             }),
         }));
 
-        expect(response.init?.status).toBe(201);
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(201);
+        expect(await readJson(response)).toMatchObject({
             status: "success",
             data: {
                 tokenType: "Bearer",
@@ -223,8 +243,8 @@ describe("mobile auth routes", () => {
             method: "POST",
         }));
 
-        expect(response.init?.status).toBe(401);
-        expect(response.body).toMatchObject({
+        expect(readStatus(response)).toBe(401);
+        expect(await readJson(response)).toMatchObject({
             status: "error",
             code: "UNAUTHORIZED",
         });
@@ -259,7 +279,7 @@ describe("mobile auth routes", () => {
             },
         }));
 
-        expect(response.body).toMatchObject({
+        expect(await readJson(response)).toMatchObject({
             status: "success",
             data: {
                 tokenType: "Bearer",
@@ -292,7 +312,7 @@ describe("mobile auth routes", () => {
             },
         }));
 
-        expect(response.body).toMatchObject({
+        expect(await readJson(response)).toMatchObject({
             status: "success",
             data: {
                 tokenType: "Bearer",
@@ -309,6 +329,6 @@ describe("mobile auth routes", () => {
     it("logout is idempotent", async () => {
         const response = await logoutPOST();
 
-        expect(response.body).toEqual({ status: "success" });
+        expect(await readJson(response)).toEqual({ status: "success" });
     });
 });

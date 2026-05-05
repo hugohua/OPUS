@@ -37,6 +37,7 @@ interface ChunkingDrillProps {
     onComplete: (success: boolean) => void;
     index: number;
     total: number;
+    rightAction?: React.ReactNode;
 }
 
 // --- Sortable Chunk Component (Reused Logic) ---
@@ -102,7 +103,7 @@ function SortableChunk({ chunk, isXRayMode, isOverlay = false }: { chunk: any, i
     );
 }
 
-export function ChunkingDrill({ drill, onComplete, index, total }: ChunkingDrillProps) {
+export function ChunkingDrill({ drill, onComplete, index, total, rightAction }: ChunkingDrillProps) {
     const router = useRouter();
     const [items, setItems] = useState(drill.chunks || []);
     const [status, setStatus] = useState<"idle" | "success" | "error" | "gave_up">("idle");
@@ -180,6 +181,7 @@ export function ChunkingDrill({ drill, onComplete, index, total }: ChunkingDrill
             label="L1 • CHUNKING"
             progress={progress}
             onExit={() => router.push('/dashboard')}
+            rightAction={rightAction}
             footer={
                 <ControlDeck
                     mode={deckMode}

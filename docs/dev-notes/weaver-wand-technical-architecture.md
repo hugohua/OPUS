@@ -69,6 +69,7 @@ Weaver Lab 与 Magic Wand 是 Opus L2 Track 的核心功能模块，实现了基
 │                Data Layer (PostgreSQL + Redis)                        │
 │  • Vocab (词汇库 + scenarios 标签)                                    │
 │  • UserProgress (FSRS 状态)                                          │
+│  • UserVocabState (词汇级 MASTERED / 默认收藏)                         │
 │  • DrillAudit (审计日志)                                              │
 │  • Redis Cache (Weaver Ingredients, 30s TTL)                         │
 └──────────────────────────────────────────────────────────────────────┘
@@ -91,6 +92,8 @@ Weaver Lab 与 Magic Wand 是 Opus L2 Track 的核心功能模块，实现了基
 #### 1.2 4 层瀑布选词策略
 
 > **v2.0 → v2.1 变更**: 弃用 `fetchOMPSCandidates` 通用选词，改为 Prisma 直查 + 场景过滤
+
+> **MASTERED 口径**: Priority Words 是目标训练词，必须排除 `UserVocabState.status = MASTERED`。Filler Words 是文章语境支撑词，可以继续从高稳定性的熟词中选择，不触发训练评分。
 
 | 层 | 策略 | Source 标记 | 目标数 |
 |----|------|-------------|:------:|

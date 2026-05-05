@@ -17,6 +17,7 @@ import {
     REVIEW_MODES,
     type ReviewModeId,
 } from '@/lib/constants/review-modes';
+import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
 
 const log = createLogger('drive:playlist');
 
@@ -64,7 +65,7 @@ export async function generateDrivePlaylistForUser(
         }
 
         if (phraseCount > 0) {
-            results.push(...await fetchBreakChunks(phraseCount, tx));
+            results.push(...await fetchBreakChunks(userId, phraseCount, tx, seenVocabIds));
         }
 
         return results;
@@ -98,6 +99,7 @@ async function fetchWarmupItems(
             userId,
             track,
             stability: { gt: 1 },
+            vocab: buildNotMasteredVocabWhere(userId),
         },
         include: { vocab: true },
         orderBy: { stability: 'desc' },
@@ -111,6 +113,7 @@ async function fetchWarmupItems(
                 userId,
                 track,
                 status: { not: 'NEW' },
+                vocab: buildNotMasteredVocabWhere(userId),
             },
             include: { vocab: true },
             orderBy: { last_review_at: 'desc' },
@@ -144,6 +147,7 @@ async function fetchReviewItems(
             track,
             next_review_at: { lte: new Date() },
             ...(excludeArray.length > 0 ? { vocabId: { notIn: excludeArray } } : {}),
+            vocab: buildNotMasteredVocabWhere(userId),
         },
         include: { vocab: true },
         orderBy: { next_review_at: 'asc' },
@@ -157,8 +161,9 @@ async function fetchReviewItems(
             where: {
                 userId,
                 track,
-                status: { in: ['REVIEW', 'MASTERED'] },
+                status: 'REVIEW',
                 vocabId: { notIn: existingIds },
+                vocab: buildNotMasteredVocabWhere(userId),
             },
         });
         const maxSkip = Math.max(0, pool - needed);
@@ -168,8 +173,9 @@ async function fetchReviewItems(
             where: {
                 userId,
                 track,
-                status: { in: ['REVIEW', 'MASTERED'] },
+                status: 'REVIEW',
                 vocabId: { notIn: existingIds },
+                vocab: buildNotMasteredVocabWhere(userId),
             },
             include: { vocab: true },
             orderBy: { next_review_at: 'asc' },
@@ -200,6 +206,7 @@ async function fetchWeakItems(
             track,
             status: { not: 'NEW' },
             ...(excludeArray.length > 0 ? { vocabId: { notIn: excludeArray } } : {}),
+            vocab: buildNotMasteredVocabWhere(userId),
         },
         include: { vocab: true },
         orderBy: { stability: 'asc' },
@@ -239,11 +246,17 @@ async function fetchNewWords(
 }
 
 async function fetchBreakChunks(
+    userId: string,
     limit: number,
-    client: Prisma.TransactionClient | typeof db = db
+    client: Prisma.TransactionClient | typeof db = db,
+    excludeIds: Set<number> = new Set()
 ): Promise<DriveItem[]> {
     const totalWithCollocations = await client.vocab.count({
-        where: { collocations: { not: Prisma.DbNull } },
+        where: {
+            ...buildNotMasteredVocabWhere(userId),
+            collocations: { not: Prisma.DbNull },
+            ...(excludeIds.size > 0 ? { id: { notIn: Array.from(excludeIds) } } : {}),
+        },
     });
     const sampleSize = Math.min(20, totalWithCollocations);
     const maxSkip = Math.max(0, totalWithCollocations - sampleSize);
@@ -251,7 +264,9 @@ async function fetchBreakChunks(
 
     const vocabs = await client.vocab.findMany({
         where: {
+            ...buildNotMasteredVocabWhere(userId),
             collocations: { not: Prisma.DbNull },
+            ...(excludeIds.size > 0 ? { id: { notIn: Array.from(excludeIds) } } : {}),
         },
         select: {
             id: true,

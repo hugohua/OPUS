@@ -8,6 +8,7 @@
 import { db } from '@/lib/db';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { buildPhraseFallbackDrill } from './phrase-fallback';
+import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
 
 /**
  * 构建降级 Drill
@@ -26,7 +27,10 @@ export async function buildDeterministicDrill(
     if (words.length === 0) {
         // 兜底：随机获取一些词汇
         const fallbackWords = await db.vocab.findMany({
-            where: { is_toeic_core: true },
+            where: {
+                ...buildNotMasteredVocabWhere(userId),
+                is_toeic_core: true
+            },
             take: limit,
             orderBy: { frequency_score: 'desc' },
         });
@@ -50,6 +54,7 @@ async function fetchWordsForDrill(
             userId,
             status: { in: ['LEARNING', 'REVIEW'] },
             next_review_at: { lte: new Date() },
+            vocab: buildNotMasteredVocabWhere(userId),
         },
         take: limit,
         orderBy: { next_review_at: 'asc' },
@@ -65,6 +70,7 @@ async function fetchWordsForDrill(
     const newWords = await db.vocab.findMany({
         where: {
             id: { notIn: existingIds },
+            ...buildNotMasteredVocabWhere(userId),
             progress: { none: { userId } },
             OR: [{ is_toeic_core: true }, { abceed_level: { lte: 2 } }],
         },
@@ -144,4 +150,3 @@ export function buildChunkingDrillFallback(vocab: VocabDrillInput): BriefingPayl
         segments: [] // Dummy to satisfy type, usually ignored by ChunkingDrill
     } as unknown as BriefingPayload;
 }
-

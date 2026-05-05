@@ -12,6 +12,7 @@ interface VocabListItemProps {
 
 export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
     const s = item.fsrs;
+    const isMastered = s.status === 'MASTERED';
 
     // Default styles for 'NEW' (uninitiated)
     let leftAccentColor = "bg-slate-200 dark:bg-zinc-800 group-hover:bg-indigo-300 dark:group-hover:bg-indigo-500 transition-colors";
@@ -21,10 +22,15 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
     // Status Tag (Only shown for New, Due, Leech)
     let tagElement = null;
 
-    if (s.status === 'MASTERED') {
+    if (isMastered) {
         leftAccentColor = "bg-emerald-500 opacity-50 group-hover:opacity-100 transition-opacity";
         titleColor = "text-slate-900 dark:text-zinc-100";
         showTelemetry = true;
+        tagElement = (
+            <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-[9px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest shrink-0">
+                熟
+            </span>
+        );
     } else if (s.status === 'LEARNING' || s.status === 'REVIEW') {
         titleColor = "text-slate-900 dark:text-zinc-100";
         showTelemetry = true;
@@ -35,14 +41,14 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
             leftAccentColor = "bg-rose-500";
             tagElement = (
                 <span className="px-1 py-0.5 rounded bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-[9px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest shrink-0">
-                    Leech
+                    难
                 </span>
             );
         } else if (isDue) {
             leftAccentColor = "bg-amber-500";
             tagElement = (
                 <span className="px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900/50 text-[9px] font-mono font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest shrink-0">
-                    Due
+                    复
                 </span>
             );
         } else {
@@ -53,7 +59,7 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
         // NEW
         tagElement = (
             <span className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700/50 text-[9px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">
-                New
+                新
             </span>
         );
     }
@@ -136,7 +142,11 @@ export function VocabListItemRow({ item, style, onClick }: VocabListItemProps) {
             </div>
 
             <div className="flex flex-col items-end shrink-0 ml-4 justify-center gap-1.5 h-full">
-                {showTelemetry ? (
+                {isMastered ? (
+                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                        已退出训练
+                    </span>
+                ) : showTelemetry ? (
                     <>
                         <div className="text-[10px] font-mono text-slate-500 dark:text-zinc-500">
                             Next: <span className={nextValueClass}>{nextValueText}</span>

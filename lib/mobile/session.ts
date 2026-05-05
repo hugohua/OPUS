@@ -129,6 +129,21 @@ async function recordOutcomeForUser(
     input: MobileSessionOutcomeInput
 ): Promise<ActionState<any>> {
     const { vocabId, grade, mode, track: explicitTrack } = input;
+    const wordState = await prisma.userVocabState.findUnique({
+        where: {
+            userId_vocabId: { userId, vocabId },
+        },
+        select: { status: true },
+    });
+
+    if (wordState?.status === "MASTERED") {
+        return {
+            status: "success",
+            message: "Outcome ignored for mastered vocab",
+            data: null,
+        };
+    }
+
     const track = explicitTrack ?? mapModeToTrack(mode);
     const progress = await prisma.userProgress.findUnique({
         where: {
@@ -167,7 +182,7 @@ async function recordOutcomeForUser(
         };
     }
 
-    const schedulingCards = scheduler.repeat(card, now) as Record<Rating, { card: Card }>;
+    const schedulingCards = scheduler.repeat(card, now) as unknown as Record<Rating, { card: Card }>;
     const inferredTrack = mapModeToTrack(mode);
 
     let finalGrade = grade as Rating;
@@ -192,7 +207,9 @@ async function recordOutcomeForUser(
         dim_x_score: progress?.dim_x_score || 0,
     };
 
-    let scoreChange = ({ 1: -10, 2: -3, 3: 3, 4: 8 } satisfies Record<number, number>)[finalGrade] ?? -5;
+    const scoreDeltas: Record<number, number> = { 1: -10, 2: -3, 3: 3, 4: 8 };
+    let scoreChange = scoreDeltas[finalGrade] ?? -5;
+    const gradeLabels: Record<number, string> = { 1: "Again", 2: "Hard", 3: "Good", 4: "Easy" };
     if (!progress && finalGrade <= 2) {
         scoreChange = 0;
     }
@@ -219,6 +236,17 @@ async function recordOutcomeForUser(
     const masteryScore = calculateMasteryScore(currentScores);
     const newCard = result.card;
     const updated = await prisma.$transaction(async (tx) => {
+        const txWordState = await tx.userVocabState.findUnique({
+            where: {
+                userId_vocabId: { userId, vocabId },
+            },
+            select: { status: true },
+        });
+
+        if (txWordState?.status === "MASTERED") {
+            return null;
+        }
+
         const nextProgress = await tx.userProgress.upsert({
             where: {
                 userId_vocabId_track: { userId, vocabId, track },
@@ -263,7 +291,7 @@ async function recordOutcomeForUser(
             prevState: progress?.state ?? 0,
             prevStability: progress?.stability ?? 0,
             grade: finalGrade,
-            gradeLabel: ({ 1: "Again", 2: "Hard", 3: "Good", 4: "Easy" } as const)[finalGrade],
+            gradeLabel: gradeLabels[finalGrade],
             reps: progress?.reps ?? 0,
         }, {
             newState: newCard.state,
@@ -279,7 +307,7 @@ async function recordOutcomeForUser(
 
     return {
         status: "success",
-        message: "Outcome recorded",
+        message: updated ? "Outcome recorded" : "Outcome ignored for mastered vocab",
         data: updated,
     };
 }

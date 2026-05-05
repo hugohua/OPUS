@@ -34,6 +34,10 @@ describe('recordOutcome', () => {
         mockReset(mockPrisma);
         vi.clearAllMocks();
         vi.useFakeTimers();
+        (mockPrisma as any).userVocabState = {
+            findUnique: vi.fn().mockResolvedValue(null),
+        };
+        (mockPrisma.$transaction as any).mockImplementation(async (callback: any) => callback(mockPrisma));
 
         // Default: Auth Success with matching ID
         mockAuth.mockResolvedValue({
@@ -83,10 +87,47 @@ describe('recordOutcome', () => {
         // Verify new V-Score
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             create: expect.objectContaining({
-                dim_v_score: 5,
+                dim_v_score: 3,
                 state: State.Learning,
             })
         }));
+    });
+
+    it('should skip FSRS writes when the vocab is word-level MASTERED', async () => {
+        (mockPrisma as any).userVocabState.findUnique.mockResolvedValue({
+            status: 'MASTERED',
+        });
+
+        const result = await recordOutcome({
+            userId: 'cl00000000000000000000000',
+            vocabId: 100,
+            grade: 3,
+            mode: 'SYNTAX'
+        });
+
+        expect(result).toMatchObject({
+            status: 'success',
+            data: null,
+        });
+        expect(mockPrisma.userProgress.findUnique).not.toHaveBeenCalled();
+        expect(mockPrisma.userProgress.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should no-op for pure grammar drills with non-positive vocab ids', async () => {
+        const result = await recordOutcome({
+            userId: 'cl00000000000000000000000',
+            vocabId: 0,
+            grade: 3,
+            mode: 'SYNTAX'
+        } as any);
+
+        expect(result).toMatchObject({
+            status: 'success',
+            data: null,
+        });
+        expect((mockPrisma as any).userVocabState.findUnique).not.toHaveBeenCalled();
+        expect(mockPrisma.userProgress.findUnique).not.toHaveBeenCalled();
+        expect(mockPrisma.userProgress.upsert).not.toHaveBeenCalled();
     });
 
     it('should update existing progress (Review)', async () => {
@@ -121,7 +162,7 @@ describe('recordOutcome', () => {
         // Verify V-Score Increase (+5)
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             update: expect.objectContaining({
-                dim_v_score: 55, // 50 + 5
+                dim_v_score: 58, // 50 + 8
             })
         }));
     });
@@ -136,7 +177,7 @@ describe('recordOutcome', () => {
 
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             update: expect.objectContaining({
-                dim_v_score: 45 // 50 - 5
+                dim_v_score: 40 // 50 - 10
             })
         }));
     });
@@ -225,7 +266,7 @@ describe('recordOutcome', () => {
 
         expect(mockPrisma.userProgress.upsert).toHaveBeenCalledWith(expect.objectContaining({
             update: expect.objectContaining({
-                dim_c_score: 55
+                dim_c_score: 53
             })
         }));
     });

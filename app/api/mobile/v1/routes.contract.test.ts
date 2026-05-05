@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { z } from "zod";
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const hasArenaMissionRoute = existsSync(new URL("./arena/mission/route.ts", import.meta.url));
 const hasArenaAttemptRoute = existsSync(new URL("./arena/attempt/route.ts", import.meta.url));
@@ -201,7 +201,7 @@ describe("mobile route contracts", () => {
         "mode=UNKNOWN&track=VISUAL&batch=30",
         "mode=SANDWICH&track=UNKNOWN&batch=30",
         "mode=SANDWICH&track=VISUAL&batch=99",
-    ])("returns drive playlist validation errors for invalid query: %s", async (query) => {
+    ])("returns drive playlist validation errors for invalid query: %s", async (query: string) => {
         const driveRoute = await import("./drive/playlist/route");
 
         const response = await driveRoute.GET(new Request(`http://localhost/api/mobile/v1/drive/playlist?${query}`));

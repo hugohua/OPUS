@@ -1,5 +1,6 @@
 import { DEFAULT_TTS_VOICE } from "@/config/audio";
 import { prisma } from "@/lib/db";
+import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
 import { z } from "zod";
 
 export const AudioSessionItemSchema = z.object({
@@ -38,6 +39,7 @@ export async function getAudioSessionForUser(userId: string): Promise<AudioSessi
                 in: ["LEARNING", "REVIEW", "NEW"],
             },
             next_review_at: { lte: now },
+            vocab: buildNotMasteredVocabWhere(userId),
         },
         include: {
             vocab: {

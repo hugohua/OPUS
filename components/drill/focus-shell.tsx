@@ -7,11 +7,12 @@ import { ImmersiveHeader } from "@/components/ui/immersive-header";
 
 export type FocusShellVariant = "L0" | "L1" | "L2" | "default"; // L0=Amber, L1=Cyan, L2=Violet
 
-interface FocusShellProps {
+export interface FocusShellProps {
     variant?: FocusShellVariant;
     progress?: number;
     children: React.ReactNode;
     footer?: React.ReactNode;
+    rightAction?: React.ReactNode;
     onExit?: () => void;
     // Optional: Label for the header badge (e.g., "L1 • LISTENING")
     label?: string;
@@ -23,6 +24,7 @@ export function FocusShell({
     progress = 0,
     children,
     footer,
+    rightAction,
     onExit,
     label = "训练",
     className
@@ -119,6 +121,7 @@ export function FocusShell({
                         </span>
                     </div>
                 }
+                rightAction={rightAction}
             />
 
             {/* 2. Progress Line (Below Header) */}

@@ -82,7 +82,7 @@ graph TD
 | 分类 | 标记 | 说明 |
 |------|------|------|
 | 静态题库 | `[STATIC_DATA]` | `Vocab`, `QuestionSeed`, `GrammarNode`, `Etymology`, `SmartContent`, `TTSCache` 等 |
-| 用户数据 | `[USER_DATA]` | `User`, `UserProgress`, `AttemptRecord`, `DrillCache`, `DrillAudit` 等 |
+| 用户数据 | `[USER_DATA]` | `User`, `UserProgress`, `UserVocabState`, `AttemptRecord`, `DrillCache`, `DrillAudit` 等 |
 
 ### 方案 A：整库全量覆盖 (适合全新部署)
 

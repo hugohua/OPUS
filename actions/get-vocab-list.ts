@@ -4,8 +4,9 @@ import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { Prisma } from '@prisma/client';
 import { LEECH_THRESHOLD } from '@/config/vocab';
+import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
 
-export type VocabFilterStatus = 'ALL' | 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' | 'LEECH' | 'CONTEXT' | 'TAGGED';
+export type VocabFilterStatus = 'ALL' | 'NEW' | 'LEARNING' | 'REVIEW' | 'MASTERED' | 'LEECH' | 'CONTEXT' | 'TAGGED' | 'FAVORITE';
 export type VocabSortOption = 'RANK' | 'DUE' | 'DIFFICULTY';
 
 interface GetVocabListParams {
@@ -34,6 +35,7 @@ export interface VocabListItem {
         isLeech: boolean;
         hasContext: boolean;
         contextSentence: string | null;
+        isFavorite: boolean;
     };
 }
 
@@ -105,6 +107,15 @@ export async function getVocabList({
             track: 'VISUAL', // Stick to VISUAL track for main inventory? PRD "Mastered Items" implies main track.
         }
     };
+    const appendWhereAnd = (condition: Prisma.VocabWhereInput) => {
+        const current = where.AND;
+        const currentArray = Array.isArray(current) ? current : current ? [current] : [];
+        where.AND = [...currentArray, condition];
+    };
+
+    if (!['ALL', 'MASTERED', 'FAVORITE'].includes(status)) {
+        appendWhereAnd(buildNotMasteredVocabWhere(userId));
+    }
 
     if (status === 'NEW') {
         // Has NO progress OR status is NEW
@@ -115,14 +126,12 @@ export async function getVocabList({
         // FIX: Let's assume for "Inventory", we mostly care about words that exist.
         // If status is NEW, we include words where progress is missing OR status is NEW.
         // Prisma `none` relation filter works for missing.
-        where.AND = [
-            {
-                OR: [
-                    { progress: { none: { userId: userId, track: 'VISUAL' } } },
-                    { progress: { some: { userId: userId, track: 'VISUAL', status: 'NEW' } } }
-                ]
-            }
-        ];
+        appendWhereAnd({
+            OR: [
+                { progress: { none: { userId: userId, track: 'VISUAL' } } },
+                { progress: { some: { userId: userId, track: 'VISUAL', status: 'NEW' } } }
+            ]
+        });
     } else if (status === 'LEARNING') {
         where.progress = {
             some: { userId: userId, track: 'VISUAL', status: 'LEARNING' }
@@ -139,10 +148,12 @@ export async function getVocabList({
             }
         };
     } else if (status === 'MASTERED') {
-        // Status MASTERED or Stability > 21? PRD says "Status Mastered" in Demo, but logic might vary.
-        // Let's rely on the ENUM 'MASTERED' for now as per schema.
-        where.progress = {
-            some: { userId: userId, track: 'VISUAL', status: 'MASTERED' }
+        where.userVocabStates = {
+            some: { userId, status: 'MASTERED' }
+        };
+    } else if (status === 'FAVORITE') {
+        where.userVocabStates = {
+            some: { userId, isFavorite: true }
         };
     } else if (status === 'LEECH') {
         // Leech: lapses >= LEECH_THRESHOLD
@@ -221,6 +232,10 @@ export async function getVocabList({
                 progress: {
                     where: { userId: userId, track: 'VISUAL' },
                     take: 1
+                },
+                userVocabStates: {
+                    where: { userId },
+                    take: 1
                 }
             }
         }),
@@ -232,6 +247,8 @@ export async function getVocabList({
     // 4. Transform
     const items: VocabListItem[] = vocabs.map(v => {
         const p = v.progress[0]; // Can be undefined if NEW
+        const userState = v.userVocabStates[0];
+        const isWordMastered = userState?.status === 'MASTERED';
 
         // Calculate Retention R = e^(ln(0.9) * (elapsed / stability))
         // This is a rough approx for display.
@@ -267,7 +284,7 @@ export async function getVocabList({
             definition: v.definition_cn || '暂无释义',
             abceedRank: v.abceed_rank,
             fsrs: {
-                status: p ? p.status : 'NEW',
+                status: isWordMastered ? 'MASTERED' : p ? p.status : 'NEW',
                 stability: p?.stability ?? 0,
                 difficulty: p?.difficulty ?? 0,
                 retention: Math.max(0, Math.min(100, retention)),
@@ -275,7 +292,8 @@ export async function getVocabList({
                 lapses: p?.lapses ?? 0,
                 isLeech: isLeech,
                 hasContext: !!p?.lastContextSentence,
-                contextSentence: p?.lastContextSentence ?? null
+                contextSentence: p?.lastContextSentence ?? null,
+                isFavorite: userState?.isFavorite ?? false
             }
         };
     });
@@ -294,18 +312,24 @@ export async function getVocabList({
 
 async function getHudStats(userId: string) {
     const [mastered, learning, due, totalVocab] = await Promise.all([
-        db.userProgress.count({
-            where: { userId, track: 'VISUAL', status: 'MASTERED' }
+        db.userVocabState.count({
+            where: { userId, status: 'MASTERED' }
         }),
         db.userProgress.count({
-            where: { userId, track: 'VISUAL', status: { in: ['LEARNING', 'REVIEW'] } }
+            where: {
+                userId,
+                track: 'VISUAL',
+                status: { in: ['LEARNING', 'REVIEW'] },
+                vocab: buildNotMasteredVocabWhere(userId),
+            }
         }),
         db.userProgress.count({
             where: {
                 userId,
                 track: 'VISUAL',
                 next_review_at: { lte: new Date() },
-                status: { in: ['LEARNING', 'REVIEW', 'MASTERED'] }
+                status: { in: ['LEARNING', 'REVIEW'] },
+                vocab: buildNotMasteredVocabWhere(userId),
             }
         }),
         // 总词库数（进度条分母）

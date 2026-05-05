@@ -4,6 +4,7 @@ import { getWeaverIngredients } from '../weaver-selection';
 import { redis } from '@/lib/queue/connection';
 import { prisma } from '@/lib/db';
 import { auditWeaverSelection } from '@/lib/services/audit-service';
+import { auth } from '@/auth';
 
 // Mocks
 vi.mock('@/lib/queue/connection', () => ({
@@ -17,26 +18,30 @@ vi.mock('@/lib/db', () => ({
     prisma: {
         userProgress: {
             findMany: vi.fn()
+        },
+        vocab: {
+            findMany: vi.fn()
         }
     }
-}));
-
-vi.mock('@/lib/services/omps-core', () => ({
-    fetchOMPSCandidates: vi.fn()
 }));
 
 vi.mock('@/lib/services/audit-service', () => ({
     auditWeaverSelection: vi.fn()
 }));
 
-import { fetchOMPSCandidates } from '@/lib/services/omps-core';
+vi.mock('@/auth', () => ({
+    auth: vi.fn()
+}));
+
+vi.mock('server-only', () => ({}));
 
 describe('Weaver Selection Action', () => {
     const userId = "user-123";
-    const scenario = "finance";
+    const scenario = "finance_group";
 
     beforeEach(() => {
         vi.clearAllMocks();
+        (auth as any).mockResolvedValue({ user: { id: userId } });
     });
 
     it('should return cached data if available', async () => {
@@ -46,55 +51,55 @@ describe('Weaver Selection Action', () => {
         };
         (redis.get as any).mockResolvedValue(JSON.stringify(cachedData));
 
-        const result = await getWeaverIngredients(userId, scenario);
+        const result = await getWeaverIngredients(userId, scenario, false, userId);
 
-        expect(redis.get).toHaveBeenCalledWith(`weaver:ingredients:${userId}:${scenario}`);
+        expect(redis.get).toHaveBeenCalledWith(expect.stringContaining(`weaver:ingredients:${userId}:${scenario}:`));
         expect(result.status).toBe('success');
         expect(result.data).toEqual(cachedData);
-        // Should NOT call OMPS or Audit if cached (assuming logic doesn't audit on cache hit?)
-        // The implementation ONLY calls audit after fetching new ingredients before saving to cache.
-        // So audit should NOT be called.
         expect(auditWeaverSelection).not.toHaveBeenCalled();
     });
 
     it('should fetch ingredients, cache them, and audit if cache miss', async () => {
         (redis.get as any).mockResolvedValue(null);
 
-        // Mock PO/OMPS
-        (fetchOMPSCandidates as any).mockResolvedValue([
-            { vocabId: 10, word: "equity", definition_cn: "权益" }
+        (prisma.userProgress.findMany as any)
+            .mockResolvedValueOnce([
+                { vocab: { id: 10, word: "equity", definition_cn: "权益" } }
+            ])
+            .mockResolvedValueOnce([
+                { vocab: { id: 30, word: "invoice", definition_cn: "发票" } }
+            ])
+            .mockResolvedValueOnce([
+                { vocab: { id: 20, word: "the", definition_cn: "这" } }
+            ]);
+
+        (prisma.vocab.findMany as any).mockResolvedValue([
+            { id: 11, word: "asset", definition_cn: "资产" }
         ]);
 
-        // Mock Filler (Prisma)
-        (prisma.userProgress.findMany as any).mockResolvedValue([
-            { vocab: { id: 20, word: "the", definition_cn: "这" } }
-        ]);
+        const result = await getWeaverIngredients(userId, scenario, false, userId);
 
-        const result = await getWeaverIngredients(userId, scenario);
-
-        // Assertions
-        expect(fetchOMPSCandidates).toHaveBeenCalledWith(userId, 10, expect.any(Object), [], "CONTEXT");
         expect(prisma.userProgress.findMany).toHaveBeenCalled();
+        expect(prisma.vocab.findMany).toHaveBeenCalled();
         expect(redis.setex).toHaveBeenCalledWith(
-            `weaver:ingredients:${userId}:${scenario}`,
-            600,
+            expect.stringContaining(`weaver:ingredients:${userId}:${scenario}:`),
+            30,
             expect.any(String)
         );
 
-        // Audit check
         expect(auditWeaverSelection).toHaveBeenCalledWith(userId, scenario, {
-            priorityCount: 1,
+            priorityCount: 3,
             fillerCount: 1,
-            priorityIds: [10],
+            priorityIds: [10, 11, 30],
             fillerIds: [20]
         });
 
         expect(result.status).toBe('success');
-        expect(result.data?.priorityWords).toHaveLength(1);
+        expect(result.data?.priorityWords).toHaveLength(3);
     });
 
     it('should handle Zod validation errors', async () => {
-        const result = await getWeaverIngredients("", "invalid-scenario" as any);
+        const result = await getWeaverIngredients(userId, "invalid-scenario" as any, false, userId);
         expect(result.status).toBe('error');
         // Need to check message or fieldErrors
         expect(result.message).toBe('Invalid parameters');

@@ -176,10 +176,9 @@ export async function simulateContent(
 
         // 5. Calculate Stats
         const { db } = await import('@/lib/db');
-        const masteredCount = await db.userProgress.count({
+        const masteredCount = await db.userVocabState.count({
             where: {
                 userId: targetUserId,
-                track: 'VISUAL', // Using VISUAL as the primary track for vocabulary size
                 status: 'MASTERED'
             }
         });

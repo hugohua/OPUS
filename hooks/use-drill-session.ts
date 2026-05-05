@@ -14,6 +14,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { BriefingPayload, SessionMode } from '@/types/briefing';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { recordOutcome } from '@/actions/record-outcome';
+import { markVocabMastered } from '@/actions/vocab-actions';
 import { recordArenaOutcome } from '@/actions/arena-telemetry';
 import { saveSession, loadSession, clearSession } from '@/lib/client/session-store';
 import { toast } from 'sonner';
@@ -21,6 +22,11 @@ import { toast } from 'sonner';
 // --- Constants ---
 const LOAD_THRESHOLD = 10;
 const BATCH_LIMIT = 10;
+
+function getDrillVocabId(drill: BriefingPayload | null | undefined): number {
+    const raw = drill?.meta?.vocabId;
+    return typeof raw === 'number' ? raw : Number(raw || 0);
+}
 
 // --- Types ---
 export interface UseDrillSessionOptions {
@@ -38,6 +44,7 @@ export interface DrillSessionState {
     completed: boolean;
     isInitialLoading: boolean;
     isLoadingMore: boolean;
+    isMarkingMastered: boolean;
     hasMore: boolean;
     selectedOption: string | null;
     currentDrill: BriefingPayload | null;
@@ -46,6 +53,7 @@ export interface DrillSessionState {
     // Actions
     handleOptionSelect: (option: string) => void;
     handleComplete: (result: boolean | number) => Promise<void>;
+    handleMarkMastered: () => Promise<void>;
     handleNext: () => void;
     setStatus: (status: 'idle' | 'correct' | 'wrong') => void;
     reset: () => void;
@@ -60,6 +68,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
     const [index, setIndex] = useState(0);
     const [completed, setCompleted] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isMarkingMastered, setIsMarkingMastered] = useState(false);
     const [status, setStatus] = useState<'idle' | 'correct' | 'wrong'>('idle');
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
@@ -80,8 +89,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
     // --- Helper: Initialize vocab ID set ---
     const initVocabSet = useCallback((items: BriefingPayload[]) => {
         for (const p of items) {
-            const vid = p.meta?.vocabId;
-            if (vid && typeof vid === 'number') {
+            const vid = getDrillVocabId(p);
+            if (vid > 0) {
                 loadedVocabIds.current.add(vid);
             }
         }
@@ -211,7 +220,7 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
     const handleComplete = useCallback(async (result: boolean | number) => {
         if (!currentDrill) return;
 
-        const vocabId = (currentDrill.meta as any)?.vocabId || 0;
+        const vocabId = getDrillVocabId(currentDrill);
 
         let grade = 1;
         let isCorrect = false;
@@ -307,10 +316,51 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
             setSelectedOption(null);
             setIndex(i => i + 1);
         } else {
-            clearSession(userId, mode);
+            clearSession(userId, mode, grammarNodeId);
             setCompleted(true);
         }
-    }, [index, queue.length, userId, mode]);
+    }, [index, queue.length, userId, mode, grammarNodeId]);
+
+    const handleMarkMastered = useCallback(async () => {
+        const vocabId = getDrillVocabId(currentDrill);
+        if (vocabId <= 0 || isMarkingMastered) return;
+
+        loadedVocabIds.current.add(vocabId);
+        setIsMarkingMastered(true);
+        setStatus('idle');
+        setSelectedOption(null);
+
+        setQueue(prev => {
+            const keptBeforeCurrent = prev
+                .slice(0, index)
+                .filter(item => getDrillVocabId(item) !== vocabId)
+                .length;
+            const next = prev.filter(item => getDrillVocabId(item) !== vocabId);
+
+            if (next.length === 0) {
+                clearSession(userId, mode, grammarNodeId);
+                setIndex(0);
+                setCompleted(true);
+                return [];
+            }
+
+            setIndex(Math.min(keptBeforeCurrent, next.length - 1));
+            return next;
+        });
+
+        try {
+            const result = await markVocabMastered(vocabId);
+            if (result.status === 'error') {
+                throw new Error(result.message);
+            }
+            toast.success('已标为已掌握');
+        } catch (error) {
+            console.error('[Mastered] markVocabMastered failed:', error);
+            toast.error('同步失败，稍后仍可能再次出现');
+        } finally {
+            setIsMarkingMastered(false);
+        }
+    }, [currentDrill, grammarNodeId, index, isMarkingMastered, mode, userId]);
 
     // --- Action: Reset ---
     const reset = useCallback(() => {
@@ -321,8 +371,8 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         setSelectedOption(null);
         setHasMore(true);
         loadedVocabIds.current.clear();
-        clearSession(userId, mode);
-    }, [userId, mode]);
+        clearSession(userId, mode, grammarNodeId);
+    }, [userId, mode, grammarNodeId]);
 
     return {
         queue,
@@ -331,12 +381,14 @@ export function useDrillSession(options: UseDrillSessionOptions): DrillSessionSt
         completed,
         isInitialLoading,
         isLoadingMore,
+        isMarkingMastered,
         hasMore,
         selectedOption,
         currentDrill,
         progress,
         handleOptionSelect,
         handleComplete,
+        handleMarkMastered,
         handleNext,
         setStatus,
         reset,

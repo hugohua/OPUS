@@ -20,6 +20,7 @@ export interface AudioRendererProps {
     isPlaying: boolean;
     onTogglePlay: () => void;
     onGrade: (grade: number) => void;
+    rightAction?: React.ReactNode;
 }
 
 export function AudioRenderer({
@@ -29,6 +30,7 @@ export function AudioRenderer({
     isPlaying,
     onTogglePlay,
     onGrade,
+    rightAction,
 }: AudioRendererProps) {
     return (
         <AudioScriptDrill
@@ -38,6 +40,7 @@ export function AudioRenderer({
             onGrade={onGrade}
             index={index + 1}
             total={total}
+            rightAction={rightAction}
         />
     );
 }

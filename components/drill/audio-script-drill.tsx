@@ -27,6 +27,7 @@ interface AudioScriptDrillProps {
     onNext?: () => void;
     index?: number;
     total?: number;
+    rightAction?: React.ReactNode;
 }
 
 // Type Guard
@@ -40,7 +41,8 @@ export function AudioScriptDrill({
     onTogglePlay,
     onGrade,
     index = 1,
-    total = 20
+    total = 20,
+    rightAction
 }: AudioScriptDrillProps) {
     const router = useRouter();
     const [status, setStatus] = useState<"listening" | "revealed">("listening");
@@ -123,6 +125,7 @@ export function AudioScriptDrill({
             label="L1 • LISTENING"
             progress={progress}
             onExit={() => router.push('/dashboard')}
+            rightAction={rightAction}
             footer={
                 <ControlDeck
                     mode={deckMode}

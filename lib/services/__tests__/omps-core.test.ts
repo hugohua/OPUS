@@ -714,3 +714,44 @@ describe('Suite G: Protocol Presets', () => {
         expect(rescueRatio + reviewRatio + newRatio).toBeCloseTo(1.0, 2);
     });
 });
+
+// ============================================
+// Suite H: Word-level MASTERED exclusion
+// ============================================
+
+describe('Suite H: Word-level MASTERED exclusion', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        (redis.keys as any).mockResolvedValue([]);
+    });
+
+    it('H1: review, rescue, and new target queries exclude word-level MASTERED vocabs', async () => {
+        const progressCalls: any[] = [];
+        const vocabCalls: any[] = [];
+
+        (prisma.userProgress.findMany as any).mockImplementation((args: any) => {
+            progressCalls.push(args);
+            return Promise.resolve([]);
+        });
+        (prisma.vocab.findMany as any).mockImplementation((args: any) => {
+            vocabCalls.push(args);
+            return Promise.resolve([]);
+        });
+
+        await fetchOMPSCandidates(MOCK_USER_ID, 10, {
+            rescueRatio: 0.3,
+            reviewRatio: 0.5,
+        });
+
+        expect(progressCalls.length).toBeGreaterThanOrEqual(2);
+        expect(progressCalls.every((call) =>
+            call.where?.vocab?.userVocabStates?.none?.userId === MOCK_USER_ID &&
+            call.where?.vocab?.userVocabStates?.none?.status === 'MASTERED'
+        )).toBe(true);
+        expect(vocabCalls.length).toBeGreaterThan(0);
+        expect(vocabCalls.every((call) =>
+            call.where?.userVocabStates?.none?.userId === MOCK_USER_ID &&
+            call.where?.userVocabStates?.none?.status === 'MASTERED'
+        )).toBe(true);
+    });
+});

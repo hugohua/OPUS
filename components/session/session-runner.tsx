@@ -29,6 +29,7 @@ import React from 'react';
 import { useSharedUserSettings } from '@/components/providers/user-settings-provider';
 import { useAudioPreload } from '@/hooks/use-audio-preload';
 import { DEFAULT_TTS_VOICE, DEFAULT_TTS_SPEED } from '@/config/audio';
+import { CheckCircle2 } from 'lucide-react';
 
 interface SessionRunnerProps {
     initialPayload?: BriefingPayload[];
@@ -155,6 +156,21 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
 
     const variant = variantMap[mode] || 'L2'; // Default safe fallback
     const total = session.queue.length;
+    const activeVocabId = Number(session.currentDrill.meta?.vocabId || 0);
+    const markMasteredAction = activeVocabId > 0 ? (
+        <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label="标为已掌握"
+            title="标为已掌握"
+            disabled={session.isMarkingMastered}
+            onClick={session.handleMarkMastered}
+        >
+            <CheckCircle2 data-icon="inline-start" />
+            熟
+        </Button>
+    ) : undefined;
 
     // --- RENDERERS (Direct Return - FocusShell handles layout) ---
 
@@ -174,6 +190,7 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
                     drill={drill}
                     progress={session.progress}
                     onGrade={(g) => session.handleComplete(g)}
+                    rightAction={markMasteredAction}
                 />
             );
         }
@@ -190,6 +207,7 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
                 isPlaying={audio.isPlaying}
                 onTogglePlay={audio.togglePlay}
                 onGrade={(g) => session.handleComplete(g)}
+                rightAction={markMasteredAction}
             />
         );
     }
@@ -202,6 +220,7 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
                 index={session.index}
                 total={total}
                 onComplete={session.handleNext}
+                rightAction={markMasteredAction}
             />
         );
     }
@@ -219,6 +238,7 @@ export function SessionRunner({ initialPayload, userId, mode, grammarNodeId }: S
             onComplete={session.handleComplete}
             setStatus={session.setStatus}
             variant={variant}
+            rightAction={markMasteredAction}
         />
     );
 }

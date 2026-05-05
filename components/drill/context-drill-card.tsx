@@ -19,6 +19,7 @@ interface ContextDrillCardProps {
     progress: number;
     onGrade: (grade: boolean | number) => void;
     onExit: () => void;
+    rightAction?: React.ReactNode;
 }
 
 type ContextState = "reading" | "answered" | "socratic";
@@ -27,7 +28,8 @@ export function ContextDrillCard({
     drill,
     progress,
     onGrade,
-    onExit
+    onExit,
+    rightAction
 }: ContextDrillCardProps) {
     const [state, setState] = useState<ContextState>("reading");
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function ContextDrillCard({
 
     if (options.length === 0) {
         return (
-            <FocusShell variant="L2" progress={optimisticProgress} onExit={onExit} footer={<div />}>
+            <FocusShell variant="L2" progress={optimisticProgress} onExit={onExit} rightAction={rightAction} footer={<div />}>
                 <div className="text-center text-zinc-500 py-8">
                     <p>No options available. Please try again.</p>
                 </div>
@@ -126,6 +128,7 @@ export function ContextDrillCard({
             label="L2 • CONTEXT"
             progress={optimisticProgress}
             onExit={onExit}
+            rightAction={rightAction}
             footer={
                 <ControlDeck
                     mode={deckMode}

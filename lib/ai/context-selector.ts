@@ -163,7 +163,7 @@ export class ContextSelector {
             }
 
             if (newItems.length > 0) {
-                log.info({ strategy, count: newItems.length, words: newItems.map(w => w.word) }, 'Context words found via strategy');
+                // log.info({ strategy, count: newItems.length, words: newItems.map(w => w.word) }, 'Context words found via strategy');
                 for (const item of newItems) {
                     if (!currentExclude.has(item.id)) {
                         selected.push(item);

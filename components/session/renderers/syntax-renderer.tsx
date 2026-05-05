@@ -39,6 +39,7 @@ export interface SyntaxRendererProps {
     setStatus: (status: 'idle' | 'correct' | 'wrong') => void;
     variant?: FocusShellVariant; // [Fixed] Explicit type
     totalDrills?: number;
+    rightAction?: React.ReactNode;
 }
 
 export function SyntaxRenderer({
@@ -51,7 +52,8 @@ export function SyntaxRenderer({
     onComplete,
     setStatus,
     variant = 'L0',
-    totalDrills = 20 // Default batch size
+    totalDrills = 20, // Default batch size
+    rightAction
 }: SyntaxRendererProps) {
     const router = useRouter();
     const [isWandOpen, setIsWandOpen] = React.useState(false);
@@ -160,7 +162,7 @@ export function SyntaxRenderer({
     if (!textSegment || !interactSegment) {
         // 畸形 drill: 跳过，不记录 FSRS (用 onComplete(3) 不合理)
         return (
-            <FocusShell variant={shellVariant} progress={progress} onExit={() => router.push('/dashboard')} footer={<div />}>
+            <FocusShell variant={shellVariant} progress={progress} onExit={() => router.push('/dashboard')} rightAction={rightAction} footer={<div />}>
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
                     <p className="text-zinc-400 text-sm">内容加载异常，自动跳过...</p>
                     <button
@@ -193,6 +195,7 @@ export function SyntaxRenderer({
                 progress={progress}
                 onExit={() => router.push('/dashboard')}
                 label={label}
+                rightAction={rightAction}
                 footer={
                     <ControlDeck
                         mode={deckMode}

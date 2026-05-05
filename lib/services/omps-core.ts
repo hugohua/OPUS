@@ -14,6 +14,7 @@ import { db as prisma } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { redis } from '@/lib/queue/connection';
 import { auditOMPSSelection } from '@/lib/services/audit-service';
+import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
 
 const log = createLogger('lib:omps-core');
 
@@ -149,7 +150,10 @@ export async function fetchOMPSCandidates(
     if (cfg.rescueRatio > 0) {
         const rescueQuota = Math.floor(limit * cfg.rescueRatio);
         const rescueExcludeIds = [...excludeIds, ...hotCandidates.map(c => c.vocabId)];
-        const rescueExcludeFilter = rescueExcludeIds.length > 0 ? { id: { notIn: rescueExcludeIds } } : {};
+        const rescueVocabWhere = {
+            ...buildNotMasteredVocabWhere(userId),
+            ...(rescueExcludeIds.length > 0 ? { id: { notIn: rescueExcludeIds } } : {}),
+        };
 
         const rescueRecords = await prisma.userProgress.findMany({
             where: {
@@ -157,7 +161,7 @@ export async function fetchOMPSCandidates(
                 track: currentTrack,
                 status: { in: ['LEARNING', 'REVIEW'] },
                 dim_v_score: { lt: 30 },  // PRD 标准: Visual < 30
-                vocab: { ...rescueExcludeFilter }
+                vocab: rescueVocabWhere
             },
             take: rescueQuota,
             orderBy: { vocab: { frequency_score: 'desc' } }, // 高价值优先
@@ -186,7 +190,10 @@ export async function fetchOMPSCandidates(
         ...rescueCandidates.map(c => c.vocabId)
     ];
     const allExcludeIds = [...excludeIds, ...prevVocabIds];
-    const excludeFilter = allExcludeIds.length > 0 ? { id: { notIn: allExcludeIds } } : {};
+    const reviewVocabWhere = {
+        ...buildNotMasteredVocabWhere(userId),
+        ...(allExcludeIds.length > 0 ? { id: { notIn: allExcludeIds } } : {}),
+    };
 
     // 1. 获取到期复习词 (Debt) - [Fix] Multi-Track Filtering
     const reviews = await prisma.userProgress.findMany({
@@ -195,7 +202,7 @@ export async function fetchOMPSCandidates(
             track: currentTrack, // 🔥 Critical: Only fetch for current track
             status: { in: ['LEARNING', 'REVIEW'] },
             next_review_at: { lte: new Date() },
-            vocab: { ...excludeFilter }
+            vocab: reviewVocabWhere
         },
         take: reviewQuota,
         orderBy: { next_review_at: 'asc' },
@@ -243,7 +250,12 @@ export async function fetchOMPSCandidates(
     newWordsMapped.forEach(c => c.source = 'new');
 
     // --- Phase 3: 整合 + 洗牌 ---
-    const finalBatch = [...hotCandidates, ...rescueCandidates, ...reviewsMapped, ...newWordsMapped];
+    const finalBatch = dedupeCandidates([
+        ...hotCandidates,
+        ...rescueCandidates,
+        ...reviewsMapped,
+        ...newWordsMapped
+    ]);
 
     log.info({
         userId,
@@ -342,6 +354,7 @@ export async function fetchNewBucket(
     if (limit <= 0) return [];
 
     let whereCondition: any = {
+        ...buildNotMasteredVocabWhere(userId),
         progress: { none: { userId } },
         ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
         ...(posFilter ? { partOfSpeech: { in: posFilter } } : {}),
@@ -433,7 +446,10 @@ async function getInventoryBackedWords(
         const currentTrack = mapModeToTrack(mode); // Shared logic helper
 
         const vocabs = await prisma.vocab.findMany({
-            where: { id: { in: availableIds } },
+            where: {
+                ...buildNotMasteredVocabWhere(userId),
+                id: { in: availableIds },
+            },
             include: {
                 progress: {
                     where: { userId, track: currentTrack },
@@ -521,6 +537,19 @@ function mapToCandidate(
         etymology: v.etymology, // [New]
         userNote // [New] User custom memory hint
     };
+}
+
+function dedupeCandidates(candidates: OMPSCandidate[]): OMPSCandidate[] {
+    const seen = new Set<number>();
+    const result: OMPSCandidate[] = [];
+
+    for (const candidate of candidates) {
+        if (seen.has(candidate.vocabId)) continue;
+        seen.add(candidate.vocabId);
+        result.push(candidate);
+    }
+
+    return result;
 }
 
 // Fisher-Yates 洗牌

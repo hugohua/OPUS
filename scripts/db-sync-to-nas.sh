@@ -6,6 +6,7 @@
 #
 # 用法: ./scripts/db-sync-to-nas.sh [选项]
 # 示例:
+#   ./scripts/db-sync-to-nas.sh --dry-run            # 仅校验本地 schema 与静态数据导出，不连接 NAS
 #   ./scripts/db-sync-to-nas.sh                      # 默认: 结构升级 + 追加新题 (无感安全)
 #   ./scripts/db-sync-to-nas.sh --skip-schema        # 仅同步数据
 #   ./scripts/db-sync-to-nas.sh --overwrite-danger   # ⚠️ 危险: 清空所有相关表然后导入 (会清空用户的相关进度)
@@ -84,18 +85,26 @@ remote_ssh_script() {
 # ==================== 解析参数 ====================
 SKIP_SCHEMA=false
 OVERWRITE=false
+DRY_RUN=false
 
 for arg in "$@"; do
     case $arg in
+        --dry-run)          DRY_RUN=true ;;
         --skip-schema)      SKIP_SCHEMA=true ;;
         --overwrite-danger) OVERWRITE=true ;;
         -h|--help)
             echo -e "${CYAN}Opus 数据库同步工具 V2${NC}"
             echo "用法: $0 [选项]"
+            echo "  --dry-run           仅校验本地 Prisma Schema 与静态数据导出，不连接 NAS、不写生产库"
             echo "  --skip-schema       跳过表结构推送到生产环境 (db push)"
             echo "  --overwrite-danger  ⚠️ 警告: 使用 TRUNCATE 清空现存静态数据然后写入。这可能会导致级联删除无辜用户的进度！"
             echo "  -h, --help          显示帮助"
             exit 0
+            ;;
+        *)
+            print_error "未知参数: $arg"
+            echo "使用 $0 --help 查看支持的选项"
+            exit 1
             ;;
     esac
 done
@@ -103,6 +112,10 @@ done
 echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║     Opus 数据库同步 (Local → NAS) V2        ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
+
+if [ "$DRY_RUN" = true ]; then
+    print_warning "Dry Run 模式：不会连接 NAS，不会写入生产数据库，不会重启生产容器"
+fi
 
 # 验证本地容器
 if ! docker ps --format '{{.Names}}' | grep -q "^${LOCAL_DB_CONTAINER}$"; then
@@ -112,23 +125,29 @@ fi
 
 # ---------- Phase 1: Schema Sync ----------
 if [ "$SKIP_SCHEMA" = false ]; then
-    print_step "阶段 1/3: 自动化远程 Schema Sync (npx prisma db push)"
+    if [ "$DRY_RUN" = true ]; then
+        print_step "阶段 1/3: Dry Run - 校验本地 Prisma Schema"
+        (cd "${PROJECT_ROOT}" && npx prisma validate)
+        print_info "Dry Run: 正式同步时将在 NAS 上执行 npx prisma db push（不带 --accept-data-loss）"
+    else
+        print_step "阶段 1/3: 自动化远程 Schema Sync (npx prisma db push)"
     
-    cat << 'EOF' > /tmp/nas_schema_sync.sh
+        cat << 'EOF' > /tmp/nas_schema_sync.sh
 #!/bin/bash
 PASSWORD=$1
-echo "$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-worker-prod npx --yes prisma db push --accept-data-loss
+echo "$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-worker-prod npx --yes prisma db push
 EOF
     
-    print_info "传输临时执行脚本..."
-    remote_scp /tmp/nas_schema_sync.sh "${NAS_USER}@${NAS_IP}:/tmp/nas_schema_sync.sh"
+        print_info "传输临时执行脚本..."
+        remote_scp /tmp/nas_schema_sync.sh "${NAS_USER}@${NAS_IP}:/tmp/nas_schema_sync.sh"
     
-    print_info "在 NAS 上执行 Prisma db push..."
-    if ! remote_ssh_script /tmp/nas_schema_sync.sh; then
-        print_error "Schema Sync 失败！"
-        exit 1
+        print_info "在 NAS 上执行 Prisma db push..."
+        if ! remote_ssh_script /tmp/nas_schema_sync.sh; then
+            print_error "Schema Sync 失败！"
+            exit 1
+        fi
+        print_info "✓ Schema Sync 完成"
     fi
-    print_info "✓ Schema Sync 完成"
 else
     print_step "阶段 1/3: Schema Sync 已跳过"
 fi
@@ -159,6 +178,18 @@ fi
 EXPORT_SIZE=$(du -h "${FULL_EXPORT_PATH}" | cut -f1)
 print_info "✓ SQL 导出生成: ${EXPORT_FILE} (${EXPORT_SIZE})"
 
+if [ "$DRY_RUN" = true ]; then
+    print_step "阶段 3/3: Dry Run - 跳过 NAS 写入"
+    print_info "Dry Run: 正式同步时将上传 ${EXPORT_FILE} 并导入 opus-db-prod"
+    if [ "$OVERWRITE" = true ]; then
+        print_warning "Dry Run: --overwrite-danger 正式执行会 TRUNCATE 静态表并 CASCADE 删除关联用户数据"
+    else
+        print_info "Dry Run: Append 模式只追加静态表新行，冲突行使用 ON CONFLICT DO NOTHING"
+    fi
+    print_info "Dry Run 完成：生产数据库未修改"
+    exit 0
+fi
+
 print_step "阶段 3/3: 传输并部署数据"
 print_info "正在将 SQL 发送至 NAS..."
 REMOTE_SQL_PATH="/tmp/opus_static_sync.sql"
@@ -170,13 +201,13 @@ cat << EOF > /tmp/nas_data_sync.sh
 PASSWORD=\$1
 echo "在容器内部执行 psql 导入..."
 
-if [ "$OVERWRITE" = true ]; then
-    echo "⚠️ 正在执行 TRUNCATE CASCADE..."
-    echo "\$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-db-prod psql -U ${DB_USER} -d ${DB_NAME} -c "TRUNCATE TABLE \\"Vocab\\", \\"SmartContent\\", \\"TTSCache\\", \\"Etymology\\", \\"Passage\\", \\"QuestionSeed\\", \\"GrammarNode\\", \\"InvitationCode\\" CASCADE;"
-fi
-
 echo "\$PASSWORD" | sudo -S /usr/local/bin/docker cp ${REMOTE_SQL_PATH} opus-db-prod:${REMOTE_SQL_PATH}
-echo "\$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-db-prod psql -U ${DB_USER} -d ${DB_NAME} -f ${REMOTE_SQL_PATH}
+if [ "$OVERWRITE" = true ]; then
+    echo "⚠️ 正在执行 TRUNCATE CASCADE + 导入（单事务）..."
+    echo "\$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-db-prod psql -v ON_ERROR_STOP=1 --single-transaction -U ${DB_USER} -d ${DB_NAME} -c "TRUNCATE TABLE \\"Vocab\\", \\"SmartContent\\", \\"TTSCache\\", \\"Etymology\\", \\"Passage\\", \\"QuestionSeed\\", \\"GrammarNode\\", \\"InvitationCode\\" CASCADE;" -f ${REMOTE_SQL_PATH}
+else
+    echo "\$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-db-prod psql -v ON_ERROR_STOP=1 --single-transaction -U ${DB_USER} -d ${DB_NAME} -f ${REMOTE_SQL_PATH}
+fi
 echo "\$PASSWORD" | sudo -S /usr/local/bin/docker exec opus-db-prod rm -f ${REMOTE_SQL_PATH}
 rm -f ${REMOTE_SQL_PATH}
 EOF

@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
+import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
 
 export interface DashboardStats {
     syntax: {
@@ -50,6 +51,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 status: {
                     in: ["LEARNING", "REVIEW"],
                 },
+                vocab: buildNotMasteredVocabWhere(user.id),
             },
         });
 
@@ -57,7 +59,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         const newCount = await db.userProgress.count({
             where: {
                 userId: user.id,
-                status: "NEW"
+                status: "NEW",
+                vocab: buildNotMasteredVocabWhere(user.id),
             }
         })
 
@@ -75,14 +78,22 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
         // FSRS Stats (Precise)
         const [mastered, learning, due] = await Promise.all([
-            db.userProgress.count({ where: { userId: user.id, track: 'VISUAL', status: 'MASTERED' } }),
-            db.userProgress.count({ where: { userId: user.id, track: 'VISUAL', status: { in: ['LEARNING', 'REVIEW'] } } }),
+            db.userVocabState.count({ where: { userId: user.id, status: 'MASTERED' } }),
+            db.userProgress.count({
+                where: {
+                    userId: user.id,
+                    track: 'VISUAL',
+                    status: { in: ['LEARNING', 'REVIEW'] },
+                    vocab: buildNotMasteredVocabWhere(user.id),
+                }
+            }),
             db.userProgress.count({
                 where: {
                     userId: user.id,
                     track: 'VISUAL',
                     next_review_at: { lte: now },
-                    status: { in: ['LEARNING', 'REVIEW', 'MASTERED'] }
+                    status: { in: ['LEARNING', 'REVIEW'] },
+                    vocab: buildNotMasteredVocabWhere(user.id),
                 }
             })
         ]);

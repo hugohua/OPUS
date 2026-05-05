@@ -5,6 +5,8 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { SessionRunner } from '../session-runner';
 import { getNextDrillBatch } from '@/actions/get-next-drill';
 import { recordOutcome } from '@/actions/record-outcome';
+import { markVocabMastered } from '@/actions/vocab-actions';
+import { toast } from 'sonner';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { BriefingPayload } from '@/types/briefing';
 
@@ -18,11 +20,22 @@ vi.mock('@/actions/get-next-drill', () => ({
 vi.mock('@/actions/record-outcome', () => ({
     recordOutcome: vi.fn().mockResolvedValue({ status: 'success' })
 }));
+vi.mock('@/actions/vocab-actions', () => ({
+    markVocabMastered: vi.fn().mockResolvedValue({ status: 'success' })
+}));
+vi.mock('sonner', () => ({
+    toast: {
+        success: vi.fn(),
+        error: vi.fn(),
+    }
+}));
+vi.mock('server-only', () => ({}));
 // Mock child components to simplify DOM and focus on Logic
-vi.mock('@/components/drill/universal-card', () => ({
-    UniversalCard: ({ children, footer, onExit, progress }: any) => (
-        <div data-testid="universal-card" data-progress={progress}>
+vi.mock('@/components/drill/focus-shell', () => ({
+    FocusShell: ({ children, footer, onExit, progress, rightAction }: any) => (
+        <div data-testid="focus-shell" data-progress={progress}>
             <button onClick={onExit} data-testid="exit-btn">Exit</button>
+            <div data-testid="right-action">{rightAction}</div>
             <div data-testid="card-body">{children}</div>
             <div data-testid="card-footer">{footer}</div>
         </div>
@@ -92,7 +105,7 @@ describe('SessionRunner Infinite Scroll', () => {
         render(<SessionRunner userId="u1" mode="SYNTAX" initialPayload={initialDrills} />);
 
         // Screen should show first card
-        expect(screen.getByTestId('universal-card')).toBeTruthy();
+        expect(screen.getByTestId('focus-shell')).toBeTruthy();
 
         // Helper to advance one slide
         const advanceSlide = async () => {
@@ -101,7 +114,7 @@ describe('SessionRunner Infinite Scroll', () => {
             fireEvent.click(optA);
 
             // Wait for Next Button
-            const nextBtn = await screen.findByText(/Next Challenge/i);
+            const nextBtn = await screen.findByText(/下一题/i);
             fireEvent.click(nextBtn);
         };
 
@@ -132,13 +145,13 @@ describe('SessionRunner Infinite Scroll', () => {
         const initialDrills = createDrills(5);
         render(<SessionRunner userId="u2" mode="SYNTAX" initialPayload={initialDrills} />);
 
-        expect(screen.getByTestId('universal-card')).toBeTruthy();
+        expect(screen.getByTestId('focus-shell')).toBeTruthy();
 
         // Answer WRONG: Click Option B (Key is A)
         const optB = screen.getByText('Option B');
         fireEvent.click(optB);
 
-        const nextBtn = await screen.findByText(/Next Challenge/i);
+        const nextBtn = await screen.findByText(/下一题/i);
         fireEvent.click(nextBtn);
 
         // Verification:
@@ -155,7 +168,7 @@ describe('SessionRunner Infinite Scroll', () => {
         // If not requeued: Queue 5. Index 1. Progress: 2/5 = 40%.
 
         await waitFor(() => {
-            const card = screen.getByTestId('universal-card');
+            const card = screen.getByTestId('focus-shell');
             const progress = parseFloat(card.getAttribute('data-progress') || '0');
             expect(progress).toBeCloseTo(33.33, 1);
         });
@@ -173,7 +186,7 @@ describe('SessionRunner Infinite Scroll', () => {
 
         render(<SessionRunner userId="u3" mode="SYNTAX" initialPayload={initialDrills} />);
 
-        const card = screen.getByTestId('universal-card');
+        const card = screen.getByTestId('focus-shell');
 
         // 1. Initial State
         // Infinite Scroll triggers immediately on mount (10 <= 10).
@@ -183,7 +196,7 @@ describe('SessionRunner Infinite Scroll', () => {
         // 2. Advance one slide (Correct Answer) -> Index 1
         const optA = screen.getAllByText('Option A')[0];
         fireEvent.click(optA);
-        const nextBtn = await screen.findByText(/Next Challenge/i);
+        const nextBtn = await screen.findByText(/下一题/i);
         fireEvent.click(nextBtn);
 
         // Wait for index update
@@ -195,5 +208,38 @@ describe('SessionRunner Infinite Scroll', () => {
             // Progress = 2 / 20 = 10%.
             expect(progress).toBeCloseTo(10, 1);
         });
+    });
+
+    it('should show 熟 for anchored drills and optimistically remove the mastered vocab', async () => {
+        (getNextDrillBatch as any).mockResolvedValue({
+            status: 'success',
+            data: []
+        });
+        const first = createDrills(1, 1)[0];
+        const second = createDrills(1, 2)[0];
+        const duplicateFirst = createDrills(1, 1)[0];
+
+        render(<SessionRunner userId="u4" mode="SYNTAX" initialPayload={[first, second, duplicateFirst]} />);
+
+        fireEvent.click(screen.getByRole('button', { name: '标为已掌握' }));
+
+        await waitFor(() => {
+            expect(markVocabMastered).toHaveBeenCalledWith(1);
+            expect(toast.success).toHaveBeenCalledWith('已标为已掌握');
+        });
+        expect(recordOutcome).not.toHaveBeenCalled();
+        await waitFor(() => {
+            const progress = parseFloat(screen.getByTestId('focus-shell').getAttribute('data-progress') || '0');
+            expect(progress).toBeCloseTo(100, 1);
+        });
+    });
+
+    it('should not show 熟 for unanchored grammar drills', () => {
+        const unanchored = createDrills(1, 0)[0];
+        unanchored.meta!.vocabId = 0;
+
+        render(<SessionRunner userId="u5" mode="SYNTAX" initialPayload={[unanchored]} />);
+
+        expect(screen.queryByRole('button', { name: '标为已掌握' })).toBeNull();
     });
 });
