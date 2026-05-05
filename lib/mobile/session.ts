@@ -7,6 +7,7 @@ import { auditFSRSTransition } from "@/lib/services/audit-service";
 import { getAudioSessionForUser } from "@/lib/session/audio";
 import { GetBriefingSchema, RatingSchema, SessionModeSchema } from "@/lib/validations/briefing";
 import { type ActionState } from "@/types/action";
+import { previewIntervals } from "@/lib/fsrs-preview";
 import { type WordAsset } from "@/types/word";
 import { Card, Rating, State, fsrs } from "ts-fsrs";
 import { z } from "zod";
@@ -85,7 +86,13 @@ export async function getMobileSessionBatch(input: MobileSessionBatchInput, user
         throw new Error(result.message);
     }
 
-    return result.data ?? [];
+    return (result.data ?? []).map((drill: any) => {
+        if (!drill?.meta?.fsrsCard) return drill;
+        return {
+            ...drill,
+            fsrsPreview: previewIntervals(drill.meta.fsrsCard),
+        };
+    });
 }
 
 export async function submitMobileSessionOutcome(

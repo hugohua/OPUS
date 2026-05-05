@@ -15,14 +15,24 @@ final class SessionRunnerViewModel {
     var currentIndex: Int = 0
     var isCompleted = false
     var answerState: AnswerState = .idle
+    var isAnswerRevealed = false
     var inlineErrorMessage: String?
 
     @ObservationIgnored private let service: SessionRunnerServing
+    @ObservationIgnored private let ttsService: DriveTTSServing?
+    @ObservationIgnored private let audioPlayer: DriveAudioPlaying?
     @ObservationIgnored private var hasLoaded = false
 
-    init(destination: DashboardDestination, service: SessionRunnerServing) {
+    init(
+        destination: DashboardDestination,
+        service: SessionRunnerServing,
+        ttsService: DriveTTSServing? = nil,
+        audioPlayer: DriveAudioPlaying? = nil
+    ) {
         self.destination = destination
         self.service = service
+        self.ttsService = ttsService
+        self.audioPlayer = audioPlayer
     }
 
     var sessionTitle: String {
@@ -31,6 +41,13 @@ final class SessionRunnerViewModel {
 
     var sessionSubtitle: String {
         session?.subtitle ?? ""
+    }
+
+    var isPhraseDestination: Bool {
+        if case .training(let mode) = destination {
+            return mode.uppercased() == "PHRASE"
+        }
+        return false
     }
 
     var currentCard: SessionRunnerCard? {
@@ -51,6 +68,8 @@ final class SessionRunnerViewModel {
         isCompleted = false
         currentIndex = 0
         answerState = .idle
+        isAnswerRevealed = false
+        audioPlayer?.stop()
 
         do {
             let nextSession = try await service.fetchSession(for: destination)
@@ -111,23 +130,71 @@ final class SessionRunnerViewModel {
         await submit(grade: grade)
     }
 
+    func revealAnswer() {
+        guard case .phraseFlashcard = currentCard?.interaction else { return }
+        isAnswerRevealed = true
+    }
+
+    func submitPhraseGrade(_ grade: Int) async {
+        guard case .phraseFlashcard = currentCard?.interaction else { return }
+        guard (1...4).contains(grade) else { return }
+        await submit(grade: grade)
+    }
+
+    func playPhraseAudio() async {
+        guard case .phraseFlashcard(let phrase) = currentCard?.interaction else { return }
+        await playPhraseAudio(text: cleanPhraseMarkdown(phrase.phraseMarkdown))
+    }
+
+    func playWordAudio() async {
+        guard case .phraseFlashcard(let phrase) = currentCard?.interaction else { return }
+        await playPhraseAudio(text: phrase.targetWord)
+    }
+
     func resetForSessionChange() {
         contentState = .loading
         session = nil
         currentIndex = 0
         isCompleted = false
         answerState = .idle
+        isAnswerRevealed = false
         inlineErrorMessage = nil
         hasLoaded = false
+        audioPlayer?.stop()
     }
 
     private func advance() {
         answerState = .idle
+        isAnswerRevealed = false
+        audioPlayer?.stop()
         if let session, currentIndex < session.cards.count - 1 {
             currentIndex += 1
         } else {
             isCompleted = true
         }
     }
-}
 
+    private func playPhraseAudio(text: String) async {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty, let ttsService, let audioPlayer else { return }
+
+        do {
+            inlineErrorMessage = nil
+            let result = try await ttsService.generateTTS(
+                text: trimmedText,
+                voice: "Cherry",
+                speed: 1
+            )
+            audioPlayer.play(url: result.audioURL) {}
+        } catch {
+            inlineErrorMessage = "音频播放失败，请稍后重试。"
+        }
+    }
+
+    private func cleanPhraseMarkdown(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "<chunk>", with: "")
+            .replacingOccurrences(of: "</chunk>", with: "")
+    }
+}

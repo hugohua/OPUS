@@ -59,7 +59,12 @@ struct AppDependencies {
 
     @MainActor
     func makeSessionRunnerViewModel(destination: DashboardDestination) -> SessionRunnerViewModel {
-        SessionRunnerViewModel(destination: destination, service: sessionRunnerService)
+        SessionRunnerViewModel(
+            destination: destination,
+            service: sessionRunnerService,
+            ttsService: driveService,
+            audioPlayer: DriveAudioPlayer()
+        )
     }
 
     @MainActor

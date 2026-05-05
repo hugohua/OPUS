@@ -85,18 +85,39 @@ struct SessionRunnerService: SessionRunnerServing {
             let prompt = interactionSegment?.task?.questionMarkdown
                 ?? textSegment?.contentMarkdown
                 ?? "完成本轮训练"
-            let supportingText = textSegment?.contentMarkdown
-                ?? textSegment?.translationCN
-                ?? item.meta.definitionCN
-                ?? ""
+            let supportingText = item.meta.mode == "PHRASE"
+                ? (textSegment?.translationCN ?? item.meta.definitionCN ?? "")
+                : (textSegment?.contentMarkdown
+                    ?? textSegment?.translationCN
+                    ?? item.meta.definitionCN
+                    ?? "")
 
-            let interaction: SessionRunnerInteraction = choiceOptions.isEmpty
-                ? .grading
-                : .choice(
+            let interaction: SessionRunnerInteraction
+            if item.meta.mode == "PHRASE" {
+                let phraseMarkdown = textSegment?.contentMarkdown
+                    ?? interactionSegment?.task?.questionMarkdown
+                    ?? prompt
+                interaction = .phraseFlashcard(
+                    SessionRunnerPhraseFlashcard(
+                        phraseMarkdown: phraseMarkdown,
+                        translation: textSegment?.translationCN ?? "",
+                        targetWord: item.meta.targetWord ?? title,
+                        definition: item.meta.definitionCN ?? extractDefinition(from: interactionSegment?.task?.explanationMarkdown),
+                        phonetic: textSegment?.phonetic,
+                        userNote: item.meta.userNote,
+                        etymology: item.meta.etymology,
+                        fsrsPreview: item.fsrsPreview
+                    )
+                )
+            } else if choiceOptions.isEmpty {
+                interaction = .grading
+            } else {
+                interaction = .choice(
                     options: choiceOptions,
                     answerKey: answerKey,
                     explanation: interactionSegment?.task?.explanationMarkdown
                 )
+            }
 
             return SessionRunnerCard(
                 id: "\(item.meta.vocabID ?? index)-\(index)",
@@ -212,6 +233,18 @@ struct SessionRunnerService: SessionRunnerServing {
             return .violet
         }
     }
+
+    private func extractDefinition(from explanationMarkdown: String?) -> String {
+        guard let explanationMarkdown else { return "" }
+        let firstLine = explanationMarkdown
+            .split(separator: "\n")
+            .map(String.init)
+            .first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+            ?? ""
+        return firstLine
+            .replacingOccurrences(of: "**", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 enum SessionRunnerServiceError: Error {
@@ -276,6 +309,7 @@ private struct SessionRunnerBatchPayload: Decodable {
 private struct SessionRunnerBatchItem: Decodable {
     let meta: SessionRunnerBatchMeta
     let segments: [SessionRunnerBatchSegment]
+    let fsrsPreview: SessionRunnerFSRSPreview?
 }
 
 private struct SessionRunnerBatchMeta: Decodable {
@@ -284,6 +318,8 @@ private struct SessionRunnerBatchMeta: Decodable {
     let targetWord: String?
     let targetZh: String?
     let definitionCN: String?
+    let userNote: String?
+    let etymology: SessionRunnerEtymology?
 
     private enum CodingKeys: String, CodingKey {
         case mode
@@ -291,6 +327,8 @@ private struct SessionRunnerBatchMeta: Decodable {
         case targetWord = "target_word"
         case targetZh = "target_zh"
         case definitionCN = "definition_cn"
+        case userNote
+        case etymology
     }
 }
 
@@ -298,23 +336,27 @@ private struct SessionRunnerBatchSegment: Decodable {
     let type: String
     let contentMarkdown: String?
     let translationCN: String?
+    let phonetic: String?
     let task: SessionRunnerBatchTask?
 
     private enum CodingKeys: String, CodingKey {
         case type
         case contentMarkdown = "content_markdown"
         case translationCN = "translation_cn"
+        case phonetic
         case task
     }
 }
 
 private struct SessionRunnerBatchTask: Decodable {
+    let style: String?
     let questionMarkdown: String
     let options: [SessionRunnerBatchOption]
     let answerKey: String
     let explanationMarkdown: String?
 
     private enum CodingKeys: String, CodingKey {
+        case style
         case questionMarkdown = "question_markdown"
         case options
         case answerKey = "answer_key"

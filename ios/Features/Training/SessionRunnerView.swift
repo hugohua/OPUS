@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionRunnerView: View {
     @Bindable var viewModel: SessionRunnerViewModel
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -29,6 +30,8 @@ struct SessionRunnerView: View {
             }
         }
         .navigationTitle(viewModel.sessionTitle)
+        .toolbar(isPhraseSession ? .hidden : .visible, for: .navigationBar)
+        .toolbar(isPhraseSession ? .hidden : .visible, for: .tabBar)
         .task {
             await viewModel.load()
         }
@@ -39,40 +42,45 @@ struct SessionRunnerView: View {
         if viewModel.isCompleted {
             completionView
         } else if let card = viewModel.currentCard {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    headerView
+            switch card.interaction {
+            case .phraseFlashcard(let phrase):
+                phraseSessionView(phrase)
+            default:
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        headerView
 
-                    OpusCard(accent: card.accent, style: .standard) {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text(card.title)
-                                .font(OpusTypography.cardTitle)
-                                .foregroundStyle(OpusColorPalette.primaryText)
+                        OpusCard(accent: card.accent, style: .standard) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text(card.title)
+                                    .font(OpusTypography.cardTitle)
+                                    .foregroundStyle(OpusColorPalette.primaryText)
 
-                            Text(card.prompt)
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.primaryText)
-
-                            if !card.supportingText.isEmpty {
-                                Text(card.supportingText)
+                                Text(card.prompt)
                                     .font(OpusTypography.body)
-                                    .foregroundStyle(OpusColorPalette.secondaryText)
+                                    .foregroundStyle(OpusColorPalette.primaryText)
+
+                                if !card.supportingText.isEmpty {
+                                    Text(card.supportingText)
+                                        .font(OpusTypography.body)
+                                        .foregroundStyle(OpusColorPalette.secondaryText)
+                                }
+                            }
+                        }
+
+                        interactionView(for: card)
+
+                        if let inlineErrorMessage = viewModel.inlineErrorMessage {
+                            OpusCard(accent: .amber, style: .compact) {
+                                Text(inlineErrorMessage)
+                                    .font(OpusTypography.body)
+                                    .foregroundStyle(OpusColorPalette.warning)
                             }
                         }
                     }
-
-                    interactionView(for: card)
-
-                    if let inlineErrorMessage = viewModel.inlineErrorMessage {
-                        OpusCard(accent: .amber, style: .compact) {
-                            Text(inlineErrorMessage)
-                                .font(OpusTypography.body)
-                                .foregroundStyle(OpusColorPalette.warning)
-                        }
-                    }
+                    .padding(OpusSpacing.screenPadding)
+                    .padding(.bottom, 120)
                 }
-                .padding(OpusSpacing.screenPadding)
-                .padding(.bottom, 120)
             }
         } else {
             OpusStateView(state: .empty(
@@ -81,6 +89,160 @@ struct SessionRunnerView: View {
             ))
             .padding(OpusSpacing.screenPadding)
         }
+    }
+
+    private func phraseSessionView(_ phrase: SessionRunnerPhraseFlashcard) -> some View {
+        OpusTrainingShell(
+            label: "L0 • PHRASE",
+            progress: progressFraction,
+            accent: .amber,
+            onExit: { dismiss() }
+        ) {
+            VStack(alignment: .leading, spacing: 22) {
+                Text("BUSINESS • PHRASE")
+                    .font(.caption2.monospaced().weight(.bold))
+                    .tracking(1.8)
+                    .foregroundStyle(OpusColorPalette.tertiaryText)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(OpusColorPalette.elevatedSurface)
+                            .shadow(color: OpusColorPalette.shadow.opacity(0.45), radius: 8, x: 0, y: 2)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(OpusColorPalette.border, lineWidth: 1)
+                    )
+
+                OpusHighlightedPhraseText(markdown: phrase.phraseMarkdown, style: .phrase)
+                    .accessibilityLabel(phrase.phraseMarkdown.replacingOccurrences(of: "**", with: ""))
+                    .accessibilityAddTraits(.isButton)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        Task { await viewModel.playPhraseAudio() }
+                    }
+
+                if viewModel.isAnswerRevealed {
+                    phraseAnswerView(phrase)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
+                if let inlineErrorMessage = viewModel.inlineErrorMessage {
+                    Text(inlineErrorMessage)
+                        .font(OpusTypography.body)
+                        .foregroundStyle(OpusColorPalette.warning)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(OpusAccent.amber.softColor)
+                        )
+                }
+            }
+            .animation(.easeInOut(duration: 0.24), value: viewModel.isAnswerRevealed)
+        } footer: {
+            if viewModel.isAnswerRevealed {
+                OpusFSRSGradeDeck(preview: phrase.fsrsPreview) { grade in
+                    Task { await viewModel.submitPhraseGrade(grade) }
+                }
+            } else {
+                OpusRevealControl {
+                    viewModel.revealAnswer()
+                }
+            }
+        }
+    }
+
+    private func phraseAnswerView(_ phrase: SessionRunnerPhraseFlashcard) -> some View {
+        let display = SessionRunnerPhraseDisplay(
+            targetWord: phrase.targetWord,
+            definition: phrase.definition
+        )
+
+        return VStack(alignment: .leading, spacing: 20) {
+            if !phrase.translation.isEmpty {
+                Text(phrase.translation)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(OpusColorPalette.secondaryText)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+
+            Divider()
+                .padding(.top, 4)
+
+            VStack(alignment: .leading, spacing: 14) {
+                Button {
+                    Task { await viewModel.playWordAudio() }
+                } label: {
+                    phraseDefinitionText(phrase: phrase, display: display)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("播放 \(phrase.targetWord) 发音")
+
+                if let userNote = phrase.userNote, !userNote.isEmpty {
+                    phraseInfoRow(systemImage: "sparkle", text: userNote, accent: .amber)
+                }
+
+                if let etymology = phrase.etymology {
+                    OpusEtymologyCard(etymology: etymology)
+                        .padding(.top, 2)
+                }
+            }
+        }
+    }
+
+    private func phraseDefinitionText(
+        phrase: SessionRunnerPhraseFlashcard,
+        display: SessionRunnerPhraseDisplay
+    ) -> Text {
+        var text = Text("")
+
+        if let phonetic = phrase.phonetic, !phonetic.isEmpty {
+            text = text + Text("/\(phonetic.replacingOccurrences(of: "/", with: ""))/ ")
+                .font(.body.monospaced())
+                .foregroundColor(OpusColorPalette.tertiaryText)
+        }
+
+        if !phrase.targetWord.isEmpty {
+            text = text + Text(phrase.targetWord)
+                .font(.headline.weight(.bold))
+                .foregroundColor(OpusAccent.indigo.primaryColor)
+        }
+
+        if !display.cleanedDefinition.isEmpty {
+            text = text + Text(" : \(display.cleanedDefinition)")
+                .font(.headline.weight(.semibold))
+                .foregroundColor(OpusColorPalette.primaryText)
+        }
+
+        return text
+    }
+
+    private func phraseInfoRow(systemImage: String, text: String, accent: OpusAccent) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(accent.primaryColor)
+                .frame(width: 22)
+
+            Text(text)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(OpusColorPalette.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(accent.softColor)
+        )
     }
 
     private var headerView: some View {
@@ -99,6 +261,8 @@ struct SessionRunnerView: View {
     @ViewBuilder
     private func interactionView(for card: SessionRunnerCard) -> some View {
         switch card.interaction {
+        case .phraseFlashcard:
+            EmptyView()
         case .grading:
             VStack(alignment: .leading, spacing: 12) {
                 Text("提交本题结果")
@@ -199,6 +363,15 @@ struct SessionRunnerView: View {
         return false
     }
 
+    private var isPhraseSession: Bool {
+        viewModel.isPhraseDestination && !viewModel.isCompleted
+    }
+
+    private var progressFraction: Double {
+        guard let session = viewModel.session, !session.cards.isEmpty else { return 0 }
+        return Double(min(viewModel.currentIndex + 1, session.cards.count)) / Double(session.cards.count)
+    }
+
     private var completionView: some View {
         VStack(alignment: .leading, spacing: 16) {
             OpusStateView(
@@ -226,4 +399,3 @@ struct SessionRunnerView: View {
         }
     }
 }
-

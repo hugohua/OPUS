@@ -3,6 +3,24 @@ import XCTest
 
 final class SessionRunnerViewModelTests: XCTestCase {
     @MainActor
+    func testIdentifiesPhraseDestinationBeforeSessionLoads() {
+        let service = StubSessionRunnerService(
+            session: SessionRunnerSession(
+                kind: .training(mode: "PHRASE"),
+                title: "短语卡组",
+                subtitle: "移动端 Session Runner · PHRASE",
+                cards: []
+            )
+        )
+        let viewModel = SessionRunnerViewModel(
+            destination: .training(mode: "PHRASE"),
+            service: service
+        )
+
+        XCTAssertTrue(viewModel.isPhraseDestination)
+    }
+
+    @MainActor
     func testLoadsTrainingModeBatchFromService() async {
         let service = StubSessionRunnerService(
             session: SessionRunnerSession(
@@ -125,6 +143,160 @@ final class SessionRunnerViewModelTests: XCTestCase {
         ])
         XCTAssertTrue(viewModel.isCompleted)
     }
+
+    @MainActor
+    func testPhraseRevealDoesNotSubmitUntilGradeIsSelected() async {
+        let service = StubSessionRunnerService(
+            session: SessionRunnerSession(
+                kind: .training(mode: "PHRASE"),
+                title: "短语训练",
+                subtitle: "移动端 Session Runner · PHRASE",
+                cards: [
+                    SessionRunnerCard(
+                        id: "phrase-1",
+                        vocabID: 401,
+                        mode: "PHRASE",
+                        title: "initially",
+                        prompt: "**initially** planned",
+                        supportingText: "最初计划的",
+                        detail: "1 / 1",
+                        accent: .amber,
+                        interaction: .phraseFlashcard(
+                            SessionRunnerPhraseFlashcard(
+                                phraseMarkdown: "**initially** planned",
+                                translation: "最初计划的",
+                                targetWord: "initially",
+                                definition: "最初地",
+                                phonetic: "ɪˈnɪʃəli",
+                                userNote: nil,
+                                fsrsPreview: nil
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        let viewModel = SessionRunnerViewModel(
+            destination: .training(mode: "PHRASE"),
+            service: service
+        )
+
+        await viewModel.load(force: true)
+        XCTAssertFalse(viewModel.isAnswerRevealed)
+
+        viewModel.revealAnswer()
+
+        XCTAssertTrue(viewModel.isAnswerRevealed)
+        XCTAssertTrue(service.submittedOutcomes.isEmpty)
+    }
+
+    @MainActor
+    func testPhraseGradesSubmitFSRSRatingsAndResetRevealForNextCard() async {
+        let service = StubSessionRunnerService(
+            session: SessionRunnerSession(
+                kind: .training(mode: "PHRASE"),
+                title: "短语训练",
+                subtitle: "移动端 Session Runner · PHRASE",
+                cards: [
+                    makePhraseCard(id: "phrase-1", vocabID: 501, word: "initially"),
+                    makePhraseCard(id: "phrase-2", vocabID: 502, word: "additional"),
+                    makePhraseCard(id: "phrase-3", vocabID: 503, word: "relevant"),
+                    makePhraseCard(id: "phrase-4", vocabID: 504, word: "accurate")
+                ]
+            )
+        )
+        let viewModel = SessionRunnerViewModel(
+            destination: .training(mode: "PHRASE"),
+            service: service
+        )
+
+        await viewModel.load(force: true)
+        viewModel.revealAnswer()
+        await viewModel.submitPhraseGrade(1)
+
+        XCTAssertEqual(service.submittedOutcomes, [
+            SessionRunnerOutcomeRequest(vocabID: 501, grade: 1, mode: "PHRASE")
+        ])
+        XCTAssertEqual(viewModel.currentCard?.title, "additional")
+        XCTAssertFalse(viewModel.isAnswerRevealed)
+
+        viewModel.revealAnswer()
+        await viewModel.submitPhraseGrade(2)
+        XCTAssertEqual(service.submittedOutcomes.map(\.grade), [1, 2])
+        XCTAssertEqual(viewModel.currentCard?.title, "relevant")
+        XCTAssertFalse(viewModel.isAnswerRevealed)
+
+        viewModel.revealAnswer()
+        await viewModel.submitPhraseGrade(3)
+        XCTAssertEqual(service.submittedOutcomes.map(\.grade), [1, 2, 3])
+        XCTAssertEqual(viewModel.currentCard?.title, "accurate")
+        XCTAssertFalse(viewModel.isAnswerRevealed)
+
+        viewModel.revealAnswer()
+        await viewModel.submitPhraseGrade(4)
+        XCTAssertEqual(service.submittedOutcomes.map(\.grade), [1, 2, 3, 4])
+        XCTAssertTrue(viewModel.isCompleted)
+    }
+
+    @MainActor
+    func testPhraseAudioUsesCleanPhraseMarkdownForTTS() async {
+        let service = StubSessionRunnerService(
+            session: SessionRunnerSession(
+                kind: .training(mode: "PHRASE"),
+                title: "短语训练",
+                subtitle: "移动端 Session Runner · PHRASE",
+                cards: [
+                    makePhraseCard(id: "phrase-1", vocabID: 601, word: "initially")
+                ]
+            )
+        )
+        let ttsService = StubSessionRunnerTTSService()
+        let audioPlayer = StubSessionRunnerAudioPlayer()
+        let viewModel = SessionRunnerViewModel(
+            destination: .training(mode: "PHRASE"),
+            service: service,
+            ttsService: ttsService,
+            audioPlayer: audioPlayer
+        )
+
+        await viewModel.load(force: true)
+        await viewModel.playPhraseAudio()
+
+        XCTAssertEqual(ttsService.requests, [
+            DriveTTSRequest(text: "initially planned", voice: "Cherry", speed: 1)
+        ])
+        XCTAssertEqual(audioPlayer.playedURLs, [ttsService.result.audioURL])
+    }
+
+    @MainActor
+    func testWordAudioUsesTargetWordForTTS() async {
+        let service = StubSessionRunnerService(
+            session: SessionRunnerSession(
+                kind: .training(mode: "PHRASE"),
+                title: "短语训练",
+                subtitle: "移动端 Session Runner · PHRASE",
+                cards: [
+                    makePhraseCard(id: "phrase-1", vocabID: 701, word: "initially")
+                ]
+            )
+        )
+        let ttsService = StubSessionRunnerTTSService()
+        let audioPlayer = StubSessionRunnerAudioPlayer()
+        let viewModel = SessionRunnerViewModel(
+            destination: .training(mode: "PHRASE"),
+            service: service,
+            ttsService: ttsService,
+            audioPlayer: audioPlayer
+        )
+
+        await viewModel.load(force: true)
+        await viewModel.playWordAudio()
+
+        XCTAssertEqual(ttsService.requests, [
+            DriveTTSRequest(text: "initially", voice: "Cherry", speed: 1)
+        ])
+        XCTAssertEqual(audioPlayer.playedURLs, [ttsService.result.audioURL])
+    }
 }
 
 @MainActor
@@ -148,4 +320,55 @@ private final class StubSessionRunnerService: SessionRunnerServing {
     func submitAudioGrade(_ request: SessionRunnerAudioGradeRequest) async throws {
         submittedAudioGrades.append(request)
     }
+}
+
+@MainActor
+private final class StubSessionRunnerTTSService: DriveTTSServing {
+    let result = DriveTTSResult(
+        audioURL: URL(string: "https://example.com/phrase-audio.mp3")!,
+        cached: true,
+        hash: "phrase-audio"
+    )
+    private(set) var requests: [DriveTTSRequest] = []
+
+    func generateTTS(text: String, voice: String, speed: Double) async throws -> DriveTTSResult {
+        requests.append(DriveTTSRequest(text: text, voice: voice, speed: speed))
+        return result
+    }
+}
+
+@MainActor
+private final class StubSessionRunnerAudioPlayer: DriveAudioPlaying {
+    private(set) var playedURLs: [URL] = []
+
+    func play(url: URL, onEnded: @escaping @MainActor () async -> Void) {
+        playedURLs.append(url)
+    }
+
+    func stop() {
+    }
+}
+
+private func makePhraseCard(id: String, vocabID: Int, word: String) -> SessionRunnerCard {
+    SessionRunnerCard(
+        id: id,
+        vocabID: vocabID,
+        mode: "PHRASE",
+        title: word,
+        prompt: "**\(word)** planned",
+        supportingText: "短语翻译",
+        detail: "1 / 2",
+        accent: .amber,
+        interaction: .phraseFlashcard(
+            SessionRunnerPhraseFlashcard(
+                phraseMarkdown: "**\(word)** planned",
+                translation: "短语翻译",
+                targetWord: word,
+                definition: "定义",
+                phonetic: nil,
+                userNote: nil,
+                fsrsPreview: nil
+            )
+        )
+    )
 }

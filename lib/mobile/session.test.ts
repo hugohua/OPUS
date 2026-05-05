@@ -88,6 +88,46 @@ describe("mobile session adapters", () => {
         expect(result).toHaveLength(1);
     });
 
+    it("adds FSRS preview labels to mobile session batch cards when FSRS state is present", async () => {
+        const { getMobileSessionBatch } = await import("./session");
+
+        getNextDrillBatchMock.mockResolvedValueOnce({
+            status: "success",
+            data: [{
+                meta: {
+                    vocabId: 2,
+                    mode: "PHRASE",
+                    fsrsCard: {
+                        stability: 0,
+                        difficulty: 0,
+                        reps: 0,
+                        lapses: 0,
+                        state: State.New,
+                    },
+                },
+                segments: [],
+            }],
+        });
+
+        const result = await getMobileSessionBatch(
+            {
+                mode: "PHRASE",
+                limit: 1,
+                excludeVocabIds: [],
+            },
+            "user-phrase"
+        );
+
+        expect(result[0]).toMatchObject({
+            fsrsPreview: {
+                again: expect.any(String),
+                hard: expect.any(String),
+                good: expect.any(String),
+                easy: expect.any(String),
+            },
+        });
+    });
+
     it("skips FSRS persistence for unanchored arena vocab ids", async () => {
         const { submitMobileSessionOutcome } = await import("./session");
 
