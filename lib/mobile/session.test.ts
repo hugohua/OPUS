@@ -3,7 +3,7 @@ import { State } from "ts-fsrs";
 
 const getAudioSessionForUserMock = vi.fn();
 const getReviewCardsMock = vi.fn();
-const getNextDrillBatchMock = vi.fn();
+const getSessionDrillBatchForUserMock = vi.fn();
 const auditFSRSTransitionMock = vi.fn();
 
 const prismaMock = {
@@ -21,12 +21,12 @@ vi.mock("@/lib/session/audio", () => ({
     getAudioSessionForUser: getAudioSessionForUserMock,
 }));
 
-vi.mock("@/actions/get-next-drill", () => ({
-    getNextDrillBatch: getNextDrillBatchMock,
+vi.mock("@/lib/backend-core/session/batch", () => ({
+    getSessionDrillBatchForUser: getSessionDrillBatchForUserMock,
 }));
 
-vi.mock("@/app/dashboard/cards/actions", () => ({
-    getReviewCards: getReviewCardsMock,
+vi.mock("@/lib/backend-core/session/review-cards", () => ({
+    getReviewCardsForUser: getReviewCardsMock,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -62,13 +62,13 @@ describe("mobile session adapters", () => {
 
         await getMobileReviewCards(20, "user-456");
 
-        expect(getReviewCardsMock).toHaveBeenCalledWith(20, [], "user-456");
+        expect(getReviewCardsMock).toHaveBeenCalledWith("user-456", 20);
     });
 
     it("passes mixed-mode batch requests through to the drill action", async () => {
         const { getMobileSessionBatch } = await import("./session");
 
-        getNextDrillBatchMock.mockResolvedValueOnce({
+        getSessionDrillBatchForUserMock.mockResolvedValueOnce({
             status: "success",
             data: [{ meta: { vocabId: 1, mode: "DAILY_BLITZ" }, segments: [] }],
         });
@@ -82,7 +82,7 @@ describe("mobile session adapters", () => {
             "user-789"
         );
 
-        expect(getNextDrillBatchMock).toHaveBeenCalledWith({
+        expect(getSessionDrillBatchForUserMock).toHaveBeenCalledWith({
             userId: "user-789",
             mode: "DAILY_BLITZ",
             limit: 5,
@@ -95,7 +95,7 @@ describe("mobile session adapters", () => {
     it("adds FSRS preview labels to mobile session batch cards when FSRS state is present", async () => {
         const { getMobileSessionBatch } = await import("./session");
 
-        getNextDrillBatchMock.mockResolvedValueOnce({
+        getSessionDrillBatchForUserMock.mockResolvedValueOnce({
             status: "success",
             data: [{
                 meta: {

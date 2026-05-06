@@ -491,6 +491,35 @@ describe('Suite E: Inventory First Strategy', () => {
         expect(target?.type).toBe('NEW');
     });
 
+    it('E4: CHUNKING 选词应读取 AUDIO track，避免 L1 队列污染 VISUAL 进度', async () => {
+        const vocabId = 301;
+        const MODE = 'CHUNKING';
+
+        (redis.keys as any).mockResolvedValue([`user:${MOCK_USER_ID}:mode:${MODE}:vocab:${vocabId}:drills`]);
+        const mockPipeline = {
+            llen: vi.fn(),
+            exec: vi.fn().mockResolvedValue([[null, 5]])
+        };
+        (redis.pipeline as any).mockReturnValue(mockPipeline);
+
+        const vocab = createVocab(vocabId);
+        (vocab as any).progress = [];
+        (prisma.vocab.findMany as any).mockResolvedValue([vocab]);
+
+        await fetchOMPSCandidates(MOCK_USER_ID, 10, {}, [], MODE);
+
+        expect(prisma.vocab.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            include: expect.objectContaining({
+                progress: expect.objectContaining({
+                    where: {
+                        userId: MOCK_USER_ID,
+                        track: 'AUDIO',
+                    },
+                }),
+            }),
+        }));
+    });
+
 
 });
 

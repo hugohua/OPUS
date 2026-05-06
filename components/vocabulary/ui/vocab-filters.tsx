@@ -2,7 +2,7 @@
 
 import { Search, ListFilter, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { VocabFilterStatus, VocabSortOption } from "@/actions/get-vocab-list";
+import type { VocabFilterStatus, VocabSortOption } from "@/lib/backend-core/vocabulary/list";
 import { useEffect, useState } from "react";
 
 

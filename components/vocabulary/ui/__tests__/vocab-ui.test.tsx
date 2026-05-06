@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VocabListItem } from '@/actions/get-vocab-list';
+import type { VocabListItem } from '@/lib/backend-core/vocabulary/list';
 import { VocabFilters } from '../vocab-filters';
 import { VocabListItemRow } from '../vocab-list-item';
 import { VocabSheet } from '../vocab-sheet';
@@ -104,7 +104,7 @@ describe('Vocabulary UI mastered state', () => {
             />
         );
 
-        fireEvent.click(screen.getByRole('button', { name: '熟' }));
+        fireEvent.click(screen.getByRole('button', { name: '已掌握' }));
 
         expect(onStatusChange).toHaveBeenCalledWith('MASTERED');
     });

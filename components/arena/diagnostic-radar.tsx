@@ -18,7 +18,7 @@ import { HelpCircle } from "lucide-react";
 import { getRadarData } from "@/actions/diagnostic-engine";
 import type { RadarDataPoint } from "@/lib/services/diagnostic-service";
 import { RadarChart } from "@/components/arena/radar-chart";
-import type { RadarDomain } from "@/actions/grammar-dashboard";
+import type { RadarDomain } from "@/lib/backend-core/arena/dashboard";
 
 export function DiagnosticRadar({ userId }: { userId?: string }) {
     const [radarData, setRadarData] = useState<RadarDomain[]>([]);

@@ -15,6 +15,7 @@ import { createLogger } from '@/lib/logger';
 import { redis } from '@/lib/queue/connection';
 import { auditOMPSSelection } from '@/lib/services/audit-service';
 import { buildNotMasteredVocabWhere } from '@/lib/vocab-state/filters';
+import { resolveSelectionTrack } from '@/lib/backend-core/session/policy';
 
 const log = createLogger('lib:omps-core');
 
@@ -96,19 +97,6 @@ export const OMPS_ARENA_CONFIG: Partial<OMPSConfig> = {
  * @param excludeIds 排除的词汇 ID 列表
  * @param mode 可选的 Session 模式，用于库存优先策略
  */
-// --- Helper: Mode to Track Mapping (Shared Logic) ---
-function mapModeToTrack(mode?: string): string {
-    if (!mode) return 'VISUAL'; // Default
-    // L0: Syntax/Visual -> VISUAL
-    if (['SYNTAX', 'VISUAL', 'BLITZ', 'PHRASE'].includes(mode)) return 'VISUAL';
-    // L1: Audio -> AUDIO
-    if (['AUDIO', 'CHUNKING'].includes(mode)) return 'AUDIO';
-    // L2: Context -> CONTEXT
-    if (['CONTEXT', 'NUANCE', 'READING'].includes(mode)) return 'CONTEXT';
-
-    return 'VISUAL';
-}
-
 /**
  * 获取符合 OMPS 策略的候选词列表
  * 
@@ -126,7 +114,7 @@ export async function fetchOMPSCandidates(
     mode?: string
 ): Promise<OMPSCandidate[]> {
     const cfg = { ...DEFAULT_CONFIG, ...config };
-    const currentTrack = mapModeToTrack(mode); // Determine Track
+    const currentTrack = resolveSelectionTrack(mode);
 
     // --- Phase 0: 库存优先策略 (Inventory-First) ---
     let hotCandidates: OMPSCandidate[] = [];
@@ -443,7 +431,7 @@ async function getInventoryBackedWords(
 
         // 5. 从数据库获取完整信息（包括 FSRS 状态）
         // [Fix] 必须只获取当前 Track 的进度，否则可能误读 Audio 进度为 Visual
-        const currentTrack = mapModeToTrack(mode); // Shared logic helper
+        const currentTrack = resolveSelectionTrack(mode);
 
         const vocabs = await prisma.vocab.findMany({
             where: {

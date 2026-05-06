@@ -1,6 +1,6 @@
 import { Activity, Clock } from "lucide-react";
 import Link from "next/link";
-import type { ActionRequiredNode } from "@/actions/grammar-dashboard";
+import type { ActionRequiredNode } from "@/lib/backend-core/arena/dashboard";
 
 export interface ActionRequiredProps {
     nodes: ActionRequiredNode[];

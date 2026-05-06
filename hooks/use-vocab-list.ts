@@ -1,7 +1,8 @@
 'use client';
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getVocabList, VocabFilterStatus, VocabSortOption } from "@/actions/get-vocab-list";
+import { getVocabList } from "@/actions/get-vocab-list";
+import type { VocabFilterStatus, VocabSortOption } from "@/lib/backend-core/vocabulary/list";
 
 export function useVocabList(
     search: string,

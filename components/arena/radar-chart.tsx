@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { RadarDomain } from "@/actions/grammar-dashboard";
+import type { RadarDomain } from "@/lib/backend-core/arena/dashboard";
 
 export interface RadarChartProps {
     domains: RadarDomain[];

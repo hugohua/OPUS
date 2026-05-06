@@ -8,7 +8,7 @@ import {
     DrawerClose,
     DrawerTitle,
 } from "@/components/ui/drawer";
-import { VocabListItem } from "@/actions/get-vocab-list";
+import type { VocabListItem } from "@/lib/backend-core/vocabulary/list";
 import { getVocabDetail } from "@/actions/get-vocab-detail";
 import { X, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";

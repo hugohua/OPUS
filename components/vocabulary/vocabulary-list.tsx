@@ -6,7 +6,7 @@ import { VocabFilters } from "./ui/vocab-filters";
 import { VocabListItemRow } from "./ui/vocab-list-item";
 import { VocabSheet } from "./ui/vocab-sheet";
 import { useVocabList } from "@/hooks/use-vocab-list";
-import { VocabFilterStatus, VocabSortOption, VocabListItem } from "@/actions/get-vocab-list";
+import type { VocabFilterStatus, VocabSortOption, VocabListItem } from "@/lib/backend-core/vocabulary/list";
 import { getUserAllTags } from "@/actions/vocab-actions";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDebounce } from "@/hooks/use-debounce";

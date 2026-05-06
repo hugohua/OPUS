@@ -1,21 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getVocabListMock = vi.fn();
-const getVocabDetailMock = vi.fn();
-const queryRawMock = vi.fn();
+const getVocabListForUserMock = vi.fn();
+const getVocabDetailForUserMock = vi.fn();
+const getVocabTagsForUserMock = vi.fn();
 
-vi.mock("@/actions/get-vocab-list", () => ({
-    getVocabList: getVocabListMock,
+vi.mock("@/lib/backend-core/vocabulary/list", () => ({
+    getVocabListForUser: getVocabListForUserMock,
 }));
 
-vi.mock("@/actions/get-vocab-detail", () => ({
-    getVocabDetail: getVocabDetailMock,
+vi.mock("@/lib/backend-core/vocabulary/detail", () => ({
+    getVocabDetailForUser: getVocabDetailForUserMock,
 }));
 
-vi.mock("@/lib/db", () => ({
-    db: {
-        $queryRaw: queryRawMock,
-    },
+vi.mock("@/lib/backend-core/vocabulary/tags", () => ({
+    getVocabTagsForUser: getVocabTagsForUserMock,
 }));
 
 describe("mobile vocabulary adapters", () => {
@@ -26,7 +24,7 @@ describe("mobile vocabulary adapters", () => {
     it("passes the mobile bearer user into vocab list queries", async () => {
         const { getMobileVocabList } = await import("./vocabulary");
 
-        getVocabListMock.mockResolvedValueOnce({ items: [], metadata: { total: 0 } });
+        getVocabListForUserMock.mockResolvedValueOnce({ items: [], metadata: { total: 0 } });
 
         await getMobileVocabList({
             userId: "user-123",
@@ -36,9 +34,9 @@ describe("mobile vocabulary adapters", () => {
             search: "audit",
         });
 
-        expect(getVocabListMock).toHaveBeenCalledWith(
+        expect(getVocabListForUserMock).toHaveBeenCalledWith(
+            "user-123",
             expect.objectContaining({
-                userIdOverride: "user-123",
                 page: 2,
                 status: "REVIEW",
                 sort: "RANK",
@@ -50,23 +48,19 @@ describe("mobile vocabulary adapters", () => {
     it("passes the mobile bearer user into vocab detail queries", async () => {
         const { getMobileVocabDetail } = await import("./vocabulary");
 
-        getVocabDetailMock.mockResolvedValueOnce({ vocab: { id: 7 } });
+        getVocabDetailForUserMock.mockResolvedValueOnce({ vocab: { id: 7 } });
 
         await getMobileVocabDetail("7", "user-456");
 
-        expect(getVocabDetailMock).toHaveBeenCalledWith("7", "user-456");
+        expect(getVocabDetailForUserMock).toHaveBeenCalledWith("user-456", "7");
     });
 
     it("returns sorted non-empty mobile tags", async () => {
         const { getMobileVocabTags } = await import("./vocabulary");
 
-        queryRawMock.mockResolvedValueOnce([
-            { tag: "finance" },
-            { tag: "" },
-            { tag: "audit" },
-        ]);
+        getVocabTagsForUserMock.mockResolvedValueOnce(["audit", "finance"]);
 
         await expect(getMobileVocabTags("user-789")).resolves.toEqual(["audit", "finance"]);
-        expect(queryRawMock).toHaveBeenCalledTimes(1);
+        expect(getVocabTagsForUserMock).toHaveBeenCalledWith("user-789");
     });
 });

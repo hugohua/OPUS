@@ -1,6 +1,6 @@
 ---
 name: opus-code-review
-description: OPUS deep code review workflow. Use when reviewing diffs, pull requests, or changed files for logic bugs, architecture drift, Zero-Wait regressions, Fail-Safe gaps, FSRS integrity issues, type safety, and OPUS business alignment.
+description: OPUS deep code review workflow. Use when reviewing diffs, pull requests, or changed files for logic bugs, backend shared core violations, architecture drift, Zero-Wait regressions, Fail-Safe gaps, FSRS integrity issues, type safety, and OPUS business alignment.
 ---
 
 # Role
@@ -16,6 +16,7 @@ description: OPUS deep code review workflow. Use when reviewing diffs, pull requ
    - **Zero-Wait**: 不允许阻塞 UI 的同步 await（除非必要）。
    - **Fail-Safe**: AI 生成失败时必须有兜底（Pivot Rule）。
    - **FSRS Integrity**: 记忆分数的更新必须是原子操作，不可破坏算法逻辑。
+   - **Backend Shared Core**: Web 是业务主合同；可复用业务逻辑必须在 `lib/backend-core/**`，Web/H5/iOS adapter 不得复制业务规则。
 
 # 🔍 深度审查清单 (Deep Drill Checklist)
 
@@ -28,6 +29,11 @@ description: OPUS deep code review workflow. Use when reviewing diffs, pull requ
 - [ ] **Next.js Server Actions**: 是否正确处理了 Server/Client 边界？是否泄漏了敏感 Key？
 - [ ] **数据库原子性**: 对 `UserDrillProgress` 的更新是否使用了 Prisma 的 `transaction` 或原子操作？
 - [ ] **类型安全**: 是否使用了 Zod 严格校验 LLM 的输出？(Fail-Fast at boundaries)。
+- [ ] **共享核心边界**: FSRS、OMPS、Session batch、outcome、评分、状态写入、审计、用户策略读取是否集中在 `lib/backend-core/**` 或既有共享 service 中？
+- [ ] **Adapter 纯度**: `actions/**` 是否只做 auth、用户一致性、Zod、`ActionState`、revalidate？`app/api/**` 是否只做 HTTP envelope/DTO/状态码？`lib/mobile/**` 是否只做 iOS Demo DTO、`fsrsPreview` 等消费端适配？
+- [ ] **Web 合同优先**: 与 iOS/H5 模型不一致时，是否保留 Web payload、Web 行为、Web 字段语义为主源？
+- [ ] **禁止重复规则**: 是否重复实现 `mode -> track`、跨轨评分降级、MASTERED 跳过、纯语法跳过、维度分数、fallback、OMPS 选词？
+- [ ] **Server Action 类型安全**: `"use server"` 模块是否只导出运行时 action/function？客户端需要的类型是否从非 Server Action 模块 `import type`？
 
 ## C. 代码异味与规范 (The Clean Code Check)
 - [ ] **本地化**: 注释必须是**简体中文**。
@@ -43,6 +49,12 @@ description: OPUS deep code review workflow. Use when reviewing diffs, pull requ
 - **位置**: `lib/generators/blitz.ts:42`
 - **问题**: 这里的挖空逻辑写反了，挖掉了 Target Word。
 - **修正**: 应该挖掉 `options` 里的词。
+
+共享核心相关 Blocker 示例：
+- **业务规则复制**: Web Action、Mobile API 或 H5 Route Handler 内重新实现 FSRS/OMPS/评分/选词，而不是调用 `lib/backend-core/**`。
+- **端侧反向污染核心**: 为适配 iOS Demo/Swift model 改弱 Web payload 合同、Zod schema 或后端核心字段语义。
+- **轨道规则漂移**: 不同模块各自维护 `mode -> track`，导致 Web、H5、iOS 或 OMPS/outcome 行为不一致。
+- **Server Action type export**: 从 `"use server"` 模块导出 type-only 名称供客户端使用，造成 Turbopack Server Actions manifest 运行时导出错误。
 
 ## 2. ⚠️ Warnings (架构/性能建议)
 > *建议优化，涉及性能、可读性或 FSRS 最佳实践。*

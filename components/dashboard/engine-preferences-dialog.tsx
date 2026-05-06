@@ -3,7 +3,8 @@
 import * as React from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { getUserSettings, updateUserSettings, EnginePreferences } from "@/actions/update-user-settings";
+import { getUserSettings, updateUserSettings } from "@/actions/update-user-settings";
+import type { EnginePreferences } from "@/lib/backend-core/settings/preferences";
 import { SlidersHorizontal, Save, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";

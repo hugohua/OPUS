@@ -15,7 +15,8 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { HelpCircle } from "lucide-react";
-import { getRadarData, type RadarDomain } from "@/actions/grammar-dashboard";
+import { getRadarData } from "@/actions/grammar-dashboard";
+import type { RadarDomain } from "@/lib/backend-core/arena/dashboard";
 import { RadarChart } from "@/components/arena/radar-chart";
 
 export function GrammarRadar({ initialData }: { initialData?: RadarDomain[] }) {

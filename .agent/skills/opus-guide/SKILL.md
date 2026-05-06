@@ -1,6 +1,6 @@
 ---
 name: opus-guide
-description: OPUS project documentation index and task routing guide. Use before starting OPUS work to find the correct product docs, architecture rules, testing rules, UI specs, deployment notes, and source-of-truth references.
+description: OPUS project documentation index and task routing guide. Use before starting OPUS work to find source-of-truth docs, including backend shared core rules for Web/H5/iOS reusable business logic.
 ---
 # Project Documentation Guide
 
@@ -19,8 +19,21 @@ This skill acts as an index for the project's documentation. When you are asked 
 | **Product Identity** | `docs/SYSTEM_PROMPT.md` | The Soul of Opus. Anti-Spec, User Persona, Core Principles. **Non-negotiable**. |
 | **Architecture** | `docs/architecture-rules.md` | Tech Stack, Folder Structure, Coding Standards, Anti-Patterns. |
 | **Critical Rules** | `.agent/rules/000-critical-language.md` | Language (Chinese for reasoning), etc. |
+| **Backend Shared Core** | `lib/backend-core/**` + relevant PRD/dev-notes | Web 合同优先；可复用业务逻辑必须沉入后端共享核心，Web/H5/iOS 只做 adapter。 |
 | **L2 PRD (Weaver + Wand)** | `docs/PRD-L2-WEAVER-WAND.md` | Weaver Lab 文章生成 + Magic Wand 即时解析。 |
 | **L2 架构 (Weaver + Wand)** | `docs/dev-notes/weaver-wand-technical-architecture.md` | **v2.1 技术架构**：4 层瀑布选词、Density 控制、幻觉检测、审计。 |
+
+## 🧠 Backend Shared Core Rule (MUST OBEY)
+
+后续开发默认采用 **后端共享核心** 架构：
+
+- Web 端现有业务逻辑是主合同；若 Web、H5、iOS 行为不一致，除非用户另有明确要求，按 Web 端修正核心与 API。
+- 可复用业务规则必须优先抽到 `lib/backend-core/**`，包括 FSRS、OMPS、Session batch、评分、状态写入、审计、用户策略读取等。
+- `actions/**` 只保留 Web 边界职责：`auth()`、用户一致性校验、Zod 输入、`ActionState` 包装、`revalidatePath`。
+- `app/api/**` Route Handler 只保留 HTTP 边界职责：认证、envelope、DTO 映射、状态码。
+- `lib/mobile/**` 和未来 H5 adapter 只做消费端适配：DTO、`fsrsPreview`、iOS/H5 envelope；不得复制 FSRS/OMPS/选词/状态规则。
+- iOS 当前视为 Demo consumer；Swift model 只能作为消费端适配参考，不能反向决定后端 schema 或削弱 Web payload 合同。
+- Type-only 定义不得从 `"use server"` 模块导出给客户端；共享类型放到非 Server Action 模块。
 
 ## 🗺️ Feature Map
 
@@ -45,6 +58,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 - **Arena 架构解密**: `docs/dev-notes/arena-mode-integration-guide.md` (特指竞技场数据流与 O(1) 兜底)
 - **Adaptive Diagnostic Engine**: `docs/dev-notes/adaptive-diagnostic-engine.md` (**NEW**: V7.0 自适应诊断引擎：遥测、加权选词与降维打击)
 - **Grammar Skill Tree**: `docs/PRD-GRAMMAR-SKILL-TREE.md` (**NEW**: L1-L3 语法诊断树，BKT 算法与靶向出题)
+- **Backend Shared Core**: `lib/backend-core/session/**` (Session 共享 usecase；Web Action、H5 Route Handler、iOS API 必须复用同一核心)
 
 ### 3. Data & Inventory
 - **Schema**: `prisma/schema.prisma` (The DB Source of Truth)
@@ -124,6 +138,7 @@ This skill acts as an index for the project's documentation. When you are asked 
 
 
 - **If implementing Mixed Mode / L0_MIXED / L1_MIXED / DAILY_BLITZ** -> Read `mixed-mode-architecture.md` (**Stability 阈值、Track 隔离、批量操作**).
+- **If modifying Server Actions, Route Handlers, Mobile/H5 APIs, FSRS, OMPS, Session batch, outcome recording, or shared settings** -> first check whether the behavior belongs in `lib/backend-core/**`; adapters must not duplicate business rules.
 - **If modifying the Card/Drill UI** -> Read `unified-ui-system-v1.md` AND `drill-engine-implementation.md`.
 - **If changing how words are fetched** -> Read `omps-word-selection-engine.md` (选词) AND `context-selector-guide.md` (上下文).
 - **If touching Worker/Queue/缓存生成逻辑** -> **必读** `cache-hit-rate-optimization.md`（理解生产端和消费端如何协作）.

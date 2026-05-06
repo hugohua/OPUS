@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { updateUserSettings, UserSettings } from "@/actions/update-user-settings";
+import { updateUserSettings } from "@/actions/update-user-settings";
 import { EnginePreferencesDialog } from "@/components/dashboard/engine-preferences-dialog";
+import type { UserSettings } from "@/lib/backend-core/settings/preferences";
 import { SlidersHorizontal, Moon, Sun, Volume2, Vibrate, Gauge } from "lucide-react";
 
 /**

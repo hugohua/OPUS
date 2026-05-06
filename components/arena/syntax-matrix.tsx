@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { type SyntaxMatrixData, type SyntaxKnot } from "@/actions/grammar-dashboard";
+import type { SyntaxMatrixData, SyntaxKnot } from "@/lib/backend-core/arena/dashboard";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { Target, ChevronRight } from "lucide-react";

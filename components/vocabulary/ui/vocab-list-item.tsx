@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from "@/lib/utils";
-import { VocabListItem } from "@/actions/get-vocab-list";
+import type { VocabListItem } from "@/lib/backend-core/vocabulary/list";
 import { Sparkles } from "lucide-react";
 
 interface VocabListItemProps {

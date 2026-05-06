@@ -1,25 +1,13 @@
-import { getActionRequiredNodes, getRadarData, getSyntaxMatrixData } from "@/actions/grammar-dashboard";
-import { recordArenaOutcomeForUser, type AttemptRecordPayload } from "@/actions/arena-telemetry";
-import { generatePart6SessionForUser } from "@/actions/part6-queue";
+import { recordArenaAttemptForUser, type AttemptRecordPayload } from "@/lib/backend-core/arena/attempt";
+import { getArenaMatrixForUser, getArenaOverviewForUser } from "@/lib/backend-core/arena/dashboard";
+import { generateArenaMissionForUser } from "@/lib/backend-core/arena/mission";
 
 export async function getMobileArenaOverview(userId: string) {
-    const [radar, weakNodes] = await Promise.all([
-        getRadarData(userId),
-        getActionRequiredNodes(userId),
-    ]);
-
-    return {
-        radar,
-        weakNodes,
-        destinations: {
-            part5: { kind: "arena", value: "part5" },
-            mission: { kind: "arena", value: "mission" },
-        },
-    };
+    return getArenaOverviewForUser(userId);
 }
 
 export async function getMobileArenaMatrix(domain: string, userId: string) {
-    return getSyntaxMatrixData(domain, userId);
+    return getArenaMatrixForUser(userId, domain);
 }
 
 type MobileArenaUser = {
@@ -29,12 +17,12 @@ type MobileArenaUser = {
 };
 
 export async function getMobileArenaMission(user: MobileArenaUser) {
-    return generatePart6SessionForUser(user.id);
+    return generateArenaMissionForUser(user.id);
 }
 
 export async function recordMobileArenaAttempt(
     user: MobileArenaUser,
     payload: AttemptRecordPayload
 ) {
-    return recordArenaOutcomeForUser(user.id, payload);
+    return recordArenaAttemptForUser(user.id, payload);
 }

@@ -1,15 +1,23 @@
 ---
 name: opus-aidot-test
-description: OPUS Spec-First testing workflow. Use when adding API routes, Server Actions, core logic, FSRS algorithm changes, or LLM prompt changes that need Hurl, Vitest, or eval specifications before implementation.
+description: OPUS Spec-First testing workflow. Use when adding API routes, Server Actions, backend shared core logic, FSRS algorithm changes, OMPS/session changes, or LLM prompt changes that need Hurl, Vitest, or eval specifications before implementation.
 ---
 # 编写测试规格工作流 (Spec-First)
 
 > **用途**: 为新功能创建测试规格文件  
-> **触发场景**: 新增 API 端点、新增 Server Action、修改核心逻辑
+> **触发场景**: 新增 API 端点、新增 Server Action、修改后端共享核心、修改核心逻辑
 
 ## 核心原则
 
 > **先写测试规格，再写实现代码。**
+
+后续默认采用 **后端共享核心** 测试分层：
+
+- 可复用业务逻辑先写 `lib/backend-core/**/*.test.ts` 或既有共享 service 单测，覆盖核心行为。
+- Web Server Action 测认证、用户一致性、Zod、`ActionState` 包装，不重复测试核心算法。
+- H5/Mobile Route Handler 测 HTTP envelope、状态码、DTO 映射、鉴权，不重复测试 FSRS/OMPS。
+- iOS Demo adapter 测消费端字段和 `fsrsPreview` 等扩展，不作为后端 schema 决策来源。
+- 若 Web、H5、iOS 行为冲突，测试以 Web 合同为主源。
 
 ---
 
@@ -28,6 +36,11 @@ description: OPUS Spec-First testing workflow. Use when adding API routes, Serve
    - 1 个 Logic Assertion
 4. 获得用户确认
 5. 创建 route.ts 实现
+
+**共享核心约束**:
+- Route Handler 不直接实现 FSRS、OMPS、Session batch、评分、状态写入、审计等业务规则。
+- 业务规则必须通过 `lib/backend-core/**` 或既有共享 service 调用。
+- Hurl/contract 测试只断言 envelope、HTTP 状态、DTO 稳定性和鉴权边界。
 
 **Hurl 模板**:
 ```hurl
@@ -80,6 +93,11 @@ HTTP 400
 4. 获得用户确认
 5. 创建 Action 实现
 
+**共享核心约束**:
+- Server Action 不直接承载可复用业务规则；先创建或更新 `lib/backend-core/**` usecase。
+- Action 单测只覆盖 `auth()`、用户一致性、Zod、`ActionState`、`revalidatePath` 等 Web 边界。
+- 客户端需要的类型不得从 `"use server"` 模块导出；放到非 Server Action 模块并用 `import type`。
+
 **Vitest 模板**:
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -113,6 +131,8 @@ describe('{FeatureName} Action', () => {
 
 **核心约束**: 必须验证状态转换
 
+FSRS 变更必须优先落在共享核心测试中，例如 `lib/backend-core/session/**/__tests__`；Web、H5、iOS 只保留 adapter contract 测试。
+
 **必须断言**:
 1. `stability_new > stability_old`
 2. `next_review > now`
@@ -124,9 +144,25 @@ expect(result.nextReviewAt).toBeAfter(new Date());
 expect(result.state).toBe('REVIEW');
 ```
 
+### 场景 D: 修改后端共享核心 (`lib/backend-core/**`)
+
+**使用工具**: Vitest
+
+**步骤**:
+1. 先写共享核心失败测试，固定 Web 合同行为。
+2. 覆盖至少一个跨端复用入口：Web Action、Mobile/H5 adapter 或 Route Handler contract。
+3. 实现核心 usecase，adapter 只做边界映射。
+4. 回归相关 Web Action、Mobile/H5 route contract、共享核心测试。
+
+**必须断言**:
+- 业务结果与 Web 旧行为一致。
+- iOS/H5 adapter 不复制核心规则，只调用共享核心。
+- 输入验证复用 `lib/validations/**` 或同等 Zod schema。
+- 关键写入仍保持事务、MASTERED 跳过、纯语法跳过、审计写入等数据完整性约束。
+
 ---
 
-### 场景 D: 修改 LLM Prompt
+### 场景 E: 修改 LLM Prompt
 
 **核心约束**: 必须建立质量基线
 

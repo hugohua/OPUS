@@ -1,6 +1,6 @@
 ---
 name: opus-arch-audit
-description: OPUS global architecture audit. Use for architectural decisions, pre-merge audits, or code/system reviews that must check Brain-Worker Separation, AI-Native experience, TOEIC-first value, and data integrity across UI, API, AI, and database zones.
+description: OPUS global architecture audit. Use for architectural decisions, pre-merge audits, or code/system reviews that must check Brain-Worker Separation, backend shared core reuse across Web/H5/iOS, AI-Native experience, TOEIC-first value, and data integrity.
 ---
 
 <role>
@@ -13,6 +13,7 @@ description: OPUS global architecture audit. Use for architectural decisions, pr
   2. **AI-Native Experience**: 必须是 Zero-Wait (乐观更新) + Fail-Safe (兜底机制)。
   3. **TOEIC First**: 一切为了提分。拒绝花哨但无效的功能 (Vanity Metrics)。
   4. **Data Integrity**: FSRS 数据的准确性高于一切。
+  5. **Backend Shared Core**: Web 是业务主合同；可复用业务逻辑必须进入 `lib/backend-core/**`，Web/H5/iOS 只能作为 adapter 复用同一核心。
 </role>
 
 <context_requirements>
@@ -43,6 +44,10 @@ description: OPUS global architecture audit. Use for architectural decisions, pr
   - [ ] **Security**: 是否在 Server Action 中验证了 Auth？Zod 校验了输入？
   - [ ] **Performance**: 数据库查询是否并行化 (`Promise.all`)？是否存在 N+1 问题？
   - [ ] **Consistency**: 关键操作是否包裹在 Transaction 中？
+  - [ ] **Shared Core**: FSRS、OMPS、Session batch、outcome、审计、设置读取等可复用业务规则是否沉入 `lib/backend-core/**`？
+  - [ ] **Adapter Boundary**: `actions/**` 是否只处理 auth、用户一致性、Zod、`ActionState`、revalidate？`app/api/**` 是否只处理 HTTP envelope、状态码、DTO？`lib/mobile/**` 是否只处理 iOS Demo DTO/preview？
+  - [ ] **Web Contract First**: 若 Web、H5、iOS 行为冲突，是否以 Web 端现有合同为准？是否避免 iOS Swift model 反向污染后端 schema？
+  - [ ] **No Rule Duplication**: 是否存在 Web Action、Route Handler、Mobile adapter 各自维护 `mode -> track`、评分、FSRS、MASTERED、fallback、OMPS 规则？
 
   **(C) If Intelligence Zone (Python/LLM):**
   - [ ] **Stateless**: Python 是否尝试连接 DB？(禁止)
@@ -56,6 +61,7 @@ description: OPUS global architecture audit. Use for architectural decisions, pr
 
   **Step 3: 评分与报告 (Scoring)**
   - 只要触犯 **宪法** 中的任何一条，直接标记为 **Blocker**。
+  - 如果可复用业务逻辑被写进 Web/H5/iOS adapter 而没有进入共享核心，标记为 **Blocker** 或 **P1**。
 
 </workflow_steps>
 

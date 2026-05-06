@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import type { UserSettings } from '@/actions/update-user-settings';
+import type { UserSettings } from '@/lib/backend-core/settings/preferences';
 
 const defaultSettings: UserSettings = { autoPlay: true, hapticFeedback: false };
 const UserSettingsContext = createContext<UserSettings>(defaultSettings);

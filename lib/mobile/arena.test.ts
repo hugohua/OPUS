@@ -1,24 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AttemptRecordPayload } from "@/actions/arena-telemetry";
+import type { AttemptRecordPayload } from "@/lib/backend-core/arena/attempt";
 
-const getRadarDataMock = vi.fn();
-const getActionRequiredNodesMock = vi.fn();
-const getSyntaxMatrixDataMock = vi.fn();
-const generatePart6SessionForUserMock = vi.fn();
-const recordArenaOutcomeForUserMock = vi.fn();
+const getArenaOverviewForUserMock = vi.fn();
+const getArenaMatrixForUserMock = vi.fn();
+const generateArenaMissionForUserMock = vi.fn();
+const recordArenaAttemptForUserMock = vi.fn();
 
-vi.mock("@/actions/grammar-dashboard", () => ({
-    getRadarData: getRadarDataMock,
-    getActionRequiredNodes: getActionRequiredNodesMock,
-    getSyntaxMatrixData: getSyntaxMatrixDataMock,
+vi.mock("@/lib/backend-core/arena/dashboard", () => ({
+    getArenaOverviewForUser: getArenaOverviewForUserMock,
+    getArenaMatrixForUser: getArenaMatrixForUserMock,
 }));
 
-vi.mock("@/actions/part6-queue", () => ({
-    generatePart6SessionForUser: generatePart6SessionForUserMock,
+vi.mock("@/lib/backend-core/arena/mission", () => ({
+    generateArenaMissionForUser: generateArenaMissionForUserMock,
 }));
 
-vi.mock("@/actions/arena-telemetry", () => ({
-    recordArenaOutcomeForUser: recordArenaOutcomeForUserMock,
+vi.mock("@/lib/backend-core/arena/attempt", () => ({
+    recordArenaAttemptForUser: recordArenaAttemptForUserMock,
 }));
 
 describe("mobile arena adapters", () => {
@@ -29,29 +27,27 @@ describe("mobile arena adapters", () => {
     it("passes the mobile user into arena overview queries", async () => {
         const { getMobileArenaOverview } = await import("./arena");
 
-        getRadarDataMock.mockResolvedValueOnce([]);
-        getActionRequiredNodesMock.mockResolvedValueOnce([]);
+        getArenaOverviewForUserMock.mockResolvedValueOnce({ radar: [], weakNodes: [], destinations: {} });
 
         await getMobileArenaOverview("user-123");
 
-        expect(getRadarDataMock).toHaveBeenCalledWith("user-123");
-        expect(getActionRequiredNodesMock).toHaveBeenCalledWith("user-123");
+        expect(getArenaOverviewForUserMock).toHaveBeenCalledWith("user-123");
     });
 
     it("passes the mobile user into arena matrix queries", async () => {
         const { getMobileArenaMatrix } = await import("./arena");
 
-        getSyntaxMatrixDataMock.mockResolvedValueOnce(null);
+        getArenaMatrixForUserMock.mockResolvedValueOnce(null);
 
         await getMobileArenaMatrix("L1_VERBS", "user-456");
 
-        expect(getSyntaxMatrixDataMock).toHaveBeenCalledWith("L1_VERBS", "user-456");
+        expect(getArenaMatrixForUserMock).toHaveBeenCalledWith("user-456", "L1_VERBS");
     });
 
-    it("loads a mission session through the existing part 6 generator", async () => {
+    it("loads a mission session through the backend-core mission generator", async () => {
         const { getMobileArenaMission } = await import("./arena");
 
-        generatePart6SessionForUserMock.mockResolvedValueOnce({
+        generateArenaMissionForUserMock.mockResolvedValueOnce({
             meta: { format: "part6", mode: "ARENA_PART6" },
             segments: [],
         });
@@ -62,18 +58,18 @@ describe("mobile arena adapters", () => {
             email: "hugo@example.com",
         });
 
-        expect(generatePart6SessionForUserMock).toHaveBeenCalledTimes(1);
-        expect(generatePart6SessionForUserMock).toHaveBeenCalledWith("user-789");
+        expect(generateArenaMissionForUserMock).toHaveBeenCalledTimes(1);
+        expect(generateArenaMissionForUserMock).toHaveBeenCalledWith("user-789");
         expect(payload).toEqual({
             meta: { format: "part6", mode: "ARENA_PART6" },
             segments: [],
         });
     });
 
-    it("records arena attempts through the existing telemetry action", async () => {
+    it("records arena attempts through the backend-core telemetry entrypoint", async () => {
         const { recordMobileArenaAttempt } = await import("./arena");
 
-        recordArenaOutcomeForUserMock.mockResolvedValueOnce({
+        recordArenaAttemptForUserMock.mockResolvedValueOnce({
             success: true,
             attemptId: "attempt-1",
         });
@@ -95,7 +91,7 @@ describe("mobile arena adapters", () => {
             email: "hugo@example.com",
         }, payload);
 
-        expect(recordArenaOutcomeForUserMock).toHaveBeenCalledWith("user-999", payload);
+        expect(recordArenaAttemptForUserMock).toHaveBeenCalledWith("user-999", payload);
         expect(result).toEqual({
             success: true,
             attemptId: "attempt-1",

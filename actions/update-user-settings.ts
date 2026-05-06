@@ -4,6 +4,11 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import {
+    getEnginePreferencesByUserId as getEnginePreferencesByUserIdCore,
+    type EnginePreferences,
+    type UserSettings,
+} from "@/lib/backend-core/settings/preferences";
 
 // ────────────────────────────────────────
 // 输入校验 (Zod)
@@ -17,16 +22,6 @@ const UpdateSettingsSchema = z.discriminatedUnion("key", [
     z.object({ key: z.literal("hapticFeedback"), value: z.boolean() }),
     z.object({ key: z.literal("engine_preferences"), value: EnginePreferencesSchema }),
 ]);
-
-export type EnginePreferences = {
-    review_ratio: number;
-};
-
-export type UserSettings = {
-    autoPlay?: boolean;
-    hapticFeedback?: boolean;
-    engine_preferences?: EnginePreferences;
-};
 
 // ────────────────────────────────────────
 // 读取用户设置
@@ -93,15 +88,5 @@ export async function updateUserSettings(
 // 按 userId 直接读取引擎偏好 (跳过 auth，供热路径使用)
 // ────────────────────────────────────────
 export async function getEnginePreferencesByUserId(userId: string): Promise<EnginePreferences | undefined> {
-    try {
-        const user = await db.user.findUnique({
-            where: { id: userId },
-            select: { settings: true },
-        });
-        if (!user?.settings || typeof user.settings !== 'object') return undefined;
-        const settings = user.settings as UserSettings;
-        return settings.engine_preferences;
-    } catch {
-        return undefined;
-    }
+    return getEnginePreferencesByUserIdCore(userId);
 }

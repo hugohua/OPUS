@@ -1,70 +1,14 @@
 'use server';
 
-import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import { getVocabDetailForUser } from "@/lib/backend-core/vocabulary/detail";
 
-export async function getVocabDetail(identifier: number | string, userIdOverride?: string) {
-    const session = userIdOverride ? null : await auth();
-    const userId = userIdOverride ?? session?.user?.id;
+export async function getVocabDetail(identifier: number | string) {
+    const session = await auth();
+    const userId = session?.user?.id;
     if (!userId) {
         throw new Error("Unauthorized");
     }
 
-    // Determine if identifier is ID or Word
-    const isId = typeof identifier === 'number' || !isNaN(Number(identifier));
-
-    const vocab = await prisma.vocab.findUnique({
-        where: isId
-            ? { id: Number(identifier) }
-            : { word: String(identifier) },
-        include: {
-            etymology: true,
-        },
-    });
-
-    if (!vocab) {
-        return null;
-    }
-
-    // [Phase 5] Fetch Multi-Track Progress
-    // We fetch ALL tracks for this user + vocab combination
-    const progressList = await prisma.userProgress.findMany({
-        where: {
-            userId,
-            vocabId: vocab.id,
-        },
-    });
-
-    // Transform to structured tracks object
-    const tracks = {
-        VISUAL: progressList.find(p => p.track === 'VISUAL') || null,
-        AUDIO: progressList.find(p => p.track === 'AUDIO') || null,
-        CONTEXT: progressList.find(p => p.track === 'CONTEXT') || null,
-    };
-
-    // Backward compatibility for existing UI
-    const progress = tracks.VISUAL;
-
-    // Extract user custom data (Tags/Notes) from primary track
-    let userTags: string[] = [];
-    let userNote: string = "";
-
-    if (progress && progress.masteryMatrix) {
-        // Safe read according to the schema
-        const matrix = progress.masteryMatrix as Record<string, any>;
-        if (Array.isArray(matrix.userTags)) {
-            userTags = matrix.userTags;
-        }
-        if (typeof matrix.userNote === 'string') {
-            userNote = matrix.userNote;
-        }
-    }
-
-    return {
-        vocab,
-        progress, // Legacy support
-        tracks,   // New Multi-Track Data
-        userTags, // Content Ops: User tags array
-        userNote, // Content Ops: User memory hook note
-    };
+    return getVocabDetailForUser(userId, identifier);
 }
