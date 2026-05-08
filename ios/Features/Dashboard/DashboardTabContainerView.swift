@@ -190,15 +190,21 @@ struct DashboardTabContainerView: View {
             .navigationTitle(DashboardTab.home.title)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         isDiagnosticsPresented = true
                     } label: {
                         Label("诊断", systemImage: "stethoscope")
                     }
+
+                    DashboardAvatarView(displayName: homeAvatarDisplayName)
                 }
             }
         }
+    }
+
+    private var homeAvatarDisplayName: String {
+        viewModel.homeState?.greetingName ?? DashboardAvatarInitials.fallback
     }
 
     private func applyTabBarAppearance() {

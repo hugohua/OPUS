@@ -191,6 +191,50 @@ enum DashboardHomeLayout {
     }
 }
 
+enum DashboardAvatarInitials {
+    static let fallback = "学"
+
+    static func initials(for displayName: String) -> String {
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let firstCharacter = trimmedName.first else {
+            return fallback
+        }
+
+        return String(firstCharacter).uppercased()
+    }
+}
+
+struct DashboardAvatarView: View {
+    let displayName: String
+
+    private var initials: String {
+        DashboardAvatarInitials.initials(for: displayName)
+    }
+
+    private var accessibilityDisplayName: String {
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "学习者" : trimmedName
+    }
+
+    var body: some View {
+        Text(initials)
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(OpusColorPalette.brand)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(width: 38, height: 38)
+            .background(
+                Circle()
+                    .fill(OpusColorPalette.brandSoft)
+            )
+            .overlay {
+                Circle()
+                    .stroke(OpusColorPalette.brand.opacity(0.24), lineWidth: 1)
+            }
+            .accessibilityLabel("用户头像，\(accessibilityDisplayName)")
+    }
+}
+
 private enum DashboardFeatureEmphasis {
     case large
     case compact

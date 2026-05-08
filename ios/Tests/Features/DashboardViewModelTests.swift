@@ -72,6 +72,23 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertEqual(DashboardHomeLayout.skillColumnCount(for: .accessibility3), 1)
     }
 
+    func testDashboardAvatarInitialsUseFirstCharacter() {
+        XCTAssertEqual(DashboardAvatarInitials.initials(for: "Hugo"), "H")
+        XCTAssertEqual(DashboardAvatarInitials.initials(for: "学习者"), "学")
+    }
+
+    func testDashboardAvatarInitialsFallbackForBlankName() {
+        XCTAssertEqual(DashboardAvatarInitials.initials(for: ""), "学")
+        XCTAssertEqual(DashboardAvatarInitials.initials(for: "   "), "学")
+    }
+
+    func testDashboardAvatarInitialsStayCompactForLongName() {
+        XCTAssertEqual(
+            DashboardAvatarInitials.initials(for: "Hugo With A Remarkably Long Display Name"),
+            "H"
+        )
+    }
+
     @MainActor
     func testUpdatesSelectedTabWhenUserNavigates() {
         let viewModel = DashboardViewModel(
