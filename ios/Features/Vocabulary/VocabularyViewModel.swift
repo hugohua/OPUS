@@ -53,6 +53,16 @@ final class VocabularyViewModel {
         await load(force: true)
     }
 
+    func applyPendingStatus(_ status: VocabularyStatus) async {
+        guard selectedStatus != status else {
+            await load(force: true)
+            return
+        }
+
+        selectedStatus = status
+        await reloadFilters()
+    }
+
     func loadNextPageIfNeeded(currentItem item: VocabularyListItem) async {
         guard hasMore, item.id == items.last?.id else { return }
 

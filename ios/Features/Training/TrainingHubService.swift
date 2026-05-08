@@ -8,35 +8,19 @@ struct TrainingHubService: TrainingHubServing {
     let apiClient: APIClient
 
     func fetchTrainingSections() async throws -> [TrainingHubSection] {
-        async let summaryState = DashboardSummaryService(apiClient: apiClient).fetchSummary()
-        async let audioPayload = fetchAudioAvailability()
-        async let reviewPayload = fetchReviewCards()
+        let envelope = try await apiClient.send(
+            TrainingHubMatrixEndpoint(),
+            as: MobileEnvelope<TrainingHubMatrixPayload>.self
+        )
 
-        let homeState = try await summaryState
-        let audio = try? await audioPayload
-        let review = try? await reviewPayload
-
-        let coreEntries = homeState.trainingCards.map { card in
-            mapEntry(card, audio: audio, review: review)
-        }
-        let skillEntries = homeState.skillCards.map { card in
-            mapEntry(card, audio: audio, review: review)
-        }
-
-        return [
+        return envelope.data.sections.map { section in
             TrainingHubSection(
-                id: "core",
-                title: "核心训练入口",
-                subtitle: "Arena 与复习入口集中在这里。",
-                entries: coreEntries
-            ),
-            TrainingHubSection(
-                id: "skills",
-                title: "技能训练",
-                subtitle: "混合模式与听力入口。",
-                entries: skillEntries
+                id: section.id,
+                title: section.title,
+                subtitle: section.subtitle,
+                entries: section.entries.map(mapMatrixEntry)
             )
-        ]
+        }
     }
 
     private func fetchAudioAvailability() async throws -> TrainingHubAudioPayload {
@@ -88,6 +72,90 @@ struct TrainingHubService: TrainingHubServing {
             availability: availability
         )
     }
+
+    private func mapMatrixEntry(_ entry: TrainingHubMatrixEntryPayload) -> TrainingHubEntry {
+        TrainingHubEntry(
+            id: entry.id,
+            title: entry.title,
+            subtitle: entry.subtitle,
+            detail: entry.detail,
+            systemImage: entry.systemImage,
+            accent: accent(for: entry.accent),
+            destination: destination(for: entry.destination),
+            availability: .available(label: entry.queue.map { "\($0) 个待练习" } ?? entry.tag)
+        )
+    }
+
+    private func accent(for rawValue: String) -> DashboardAccent {
+        switch rawValue {
+        case "emerald":
+            return .emerald
+        case "amber":
+            return .amber
+        case "rose":
+            return .rose
+        case "indigo":
+            return .indigo
+        case "cyan", "blue":
+            return .blue
+        case "violet":
+            return .violet
+        default:
+            return .slate
+        }
+    }
+
+    private func destination(for payload: TrainingHubMatrixDestinationPayload) -> DashboardDestination {
+        switch (payload.kind, payload.value) {
+        case ("diagnostics", let value):
+            return .diagnostics(path: value)
+        case ("arena", "mission"):
+            return .arena(path: "mission")
+        case ("arena", "part5"):
+            return .arena(path: "part5")
+        case ("briefing", "history"):
+            return .briefingHistory
+        case ("briefing", "console"):
+            return .briefingComposer
+        case ("training", let mode):
+            return mode == "AUDIO" ? .audio : .training(mode: mode)
+        default:
+            return .training(mode: payload.value)
+        }
+    }
+}
+
+struct TrainingHubMatrixEndpoint: Endpoint {
+    let path = "/api/mobile/v1/training/matrix"
+    let method: HTTPMethod = .get
+}
+
+struct TrainingHubMatrixPayload: Decodable {
+    let sections: [TrainingHubMatrixSectionPayload]
+}
+
+struct TrainingHubMatrixSectionPayload: Decodable {
+    let id: String
+    let title: String
+    let subtitle: String?
+    let entries: [TrainingHubMatrixEntryPayload]
+}
+
+struct TrainingHubMatrixEntryPayload: Decodable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let detail: String
+    let tag: String
+    let systemImage: String
+    let accent: String
+    let destination: TrainingHubMatrixDestinationPayload
+    let queue: Int?
+}
+
+struct TrainingHubMatrixDestinationPayload: Decodable {
+    let kind: String
+    let value: String
 }
 
 struct TrainingHubAudioEndpoint: Endpoint {

@@ -86,6 +86,19 @@ final class TrainingHubViewModelTests: XCTestCase {
             .drive(mode: "SANDWICH")
         )
     }
+
+    @MainActor
+    func testBuildsBriefingRoutesFromTrainingMatrixDestinations() {
+        let viewModel = TrainingHubViewModel(
+            service: StubTrainingHubService(result: .success([])),
+            makeSessionRunnerViewModel: { destination in
+                SessionRunnerViewModel(destination: destination, service: SessionRunnerUnavailableService())
+            }
+        )
+
+        XCTAssertEqual(viewModel.route(for: .briefingComposer), .briefing)
+        XCTAssertEqual(viewModel.route(for: .briefingHistory), .briefing)
+    }
 }
 
 private enum StubTrainingHubError: Error {

@@ -9,6 +9,7 @@ final class TrainingHubViewModel {
         case arenaPart5(grammarNodeID: String?)
         case arenaMission
         case drive(mode: String)
+        case briefing
     }
 
     var contentState: OpusContentState = .loading
@@ -64,6 +65,10 @@ final class TrainingHubViewModel {
                 return .arenaMission
             }
             return .arenaPart5(grammarNodeID: grammarNodeID)
+        case .diagnostics:
+            return nil
+        case .briefing, .briefingComposer, .briefingHistory:
+            return .briefing
         default:
             return nil
         }

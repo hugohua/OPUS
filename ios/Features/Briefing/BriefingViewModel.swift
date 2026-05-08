@@ -13,6 +13,7 @@ final class BriefingViewModel {
     var selectedDensity = "balanced"
     var selectedHistoryScenario: BriefingScenarioOption?
     var selectedHistoryStatus: BriefingHistoryStatusFilter = .all
+    var isHistoryFocused = false
     var priorityWords: [BriefingWord] = []
     var fillerWords: [BriefingWord] = []
     var historyItems: [BriefingHistoryItem] = []
@@ -143,6 +144,21 @@ final class BriefingViewModel {
         }
     }
 
+    func applyPendingDestination(_ destination: DashboardDestination) async {
+        switch destination {
+        case .briefing(let articleID):
+            await openLatestBriefing(articleID: articleID)
+        case .briefingComposer:
+            phase = .console
+            isHistoryFocused = false
+        case .briefingHistory:
+            phase = .console
+            isHistoryFocused = true
+        default:
+            break
+        }
+    }
+
     func reloadHistory() async {
         historyContentState = .loading
         historyErrorMessage = nil
@@ -255,6 +271,7 @@ final class BriefingViewModel {
         selectedDensity = "balanced"
         selectedHistoryScenario = nil
         selectedHistoryStatus = .all
+        isHistoryFocused = false
         priorityWords = []
         fillerWords = []
         historyItems = []

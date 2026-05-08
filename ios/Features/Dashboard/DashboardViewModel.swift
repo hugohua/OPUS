@@ -67,9 +67,11 @@ final class DashboardViewModel {
         switch destination {
         case .training, .reviewCards, .audio, .drive:
             selectedTab = .training
-        case .arena:
+        case .arena, .diagnostics:
             selectedTab = .arena
-        case .briefing:
+        case .vocabulary:
+            selectedTab = .vocabulary
+        case .briefing, .briefingComposer, .briefingHistory:
             selectedTab = .briefing
         }
     }

@@ -2,7 +2,16 @@ import SwiftUI
 
 struct VocabularyView: View {
     @Bindable var viewModel: VocabularyViewModel
+    let pendingDestination: DashboardDestination?
     @State private var searchDraftText = ""
+
+    init(
+        viewModel: VocabularyViewModel,
+        pendingDestination: DashboardDestination? = nil
+    ) {
+        self.viewModel = viewModel
+        self.pendingDestination = pendingDestination
+    }
 
     var body: some View {
         NavigationStack {
@@ -61,6 +70,12 @@ struct VocabularyView: View {
         .task {
             syncSearchDraft(to: viewModel.searchText)
             await viewModel.load()
+            await applyPendingDestinationIfNeeded()
+        }
+        .onChange(of: pendingDestination) { _, _ in
+            Task {
+                await applyPendingDestinationIfNeeded()
+            }
         }
         .sheet(item: Binding(
             get: { viewModel.selectedDetail.map(DetailSheetItem.init(payload:)) },
@@ -191,6 +206,11 @@ struct VocabularyView: View {
     private func syncSearchDraft(to searchText: String) {
         guard searchDraftText != searchText else { return }
         searchDraftText = searchText
+    }
+
+    private func applyPendingDestinationIfNeeded() async {
+        guard case .vocabulary(let status) = pendingDestination else { return }
+        await viewModel.applyPendingStatus(status)
     }
 
     private func statsCard(_ stats: VocabularyStats) -> some View {

@@ -556,9 +556,12 @@ struct BriefingView: View {
 
     private func routePendingDestinationIfNeeded() async {
         guard !hasRoutedPendingDestination, let pendingDestination else { return }
-        if case .briefing(let articleID) = pendingDestination {
+        switch pendingDestination {
+        case .briefing, .briefingComposer, .briefingHistory:
             hasRoutedPendingDestination = true
-            await viewModel.openLatestBriefing(articleID: articleID)
+            await viewModel.applyPendingDestination(pendingDestination)
+        default:
+            break
         }
     }
 }

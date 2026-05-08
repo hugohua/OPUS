@@ -23,7 +23,7 @@ final class DashboardViewModelTests: XCTestCase {
         )
 
         XCTAssertEqual(viewModel.tabs, [.home, .training, .arena, .vocabulary, .briefing])
-        XCTAssertEqual(viewModel.tabs.map(\.title), ["首页", "训练", "竞技", "词库", "简报"])
+        XCTAssertEqual(viewModel.tabs.map(\.title), ["首页", "模拟", "竞技", "词库", "简报"])
     }
 
     @MainActor
@@ -46,10 +46,10 @@ final class DashboardViewModelTests: XCTestCase {
     func testDashboardHomeStartsFromPrimaryTaskWithoutIntroSections() {
         XCTAssertEqual(
             DashboardHomeLayout.visibleSections,
-            [.primaryTask, .training, .skills, .briefing]
+            [.greeting, .memorySummary, .primaryTask, .training, .skills, .briefing]
         )
-        XCTAssertFalse(DashboardHomeLayout.visibleSections.contains(.greeting))
-        XCTAssertFalse(DashboardHomeLayout.visibleSections.contains(.memorySummary))
+        XCTAssertTrue(DashboardHomeLayout.visibleSections.contains(.greeting))
+        XCTAssertTrue(DashboardHomeLayout.visibleSections.contains(.memorySummary))
     }
 
     func testDashboardHomeCopyUsesSimplifiedChineseLabels() {
@@ -97,6 +97,27 @@ final class DashboardViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.selectedTab, .arena)
         XCTAssertEqual(viewModel.consumePendingDestination(), .arena(path: "part5"))
+    }
+
+    @MainActor
+    func testRoutesHomeTelemetryAndBriefingActions() {
+        let viewModel = DashboardViewModel(
+            summaryService: StubDashboardSummaryService(result: .success(DashboardPreviewData.defaultHomeState)),
+            diagnosticsSummary: DashboardPreviewData.defaultDiagnosticsSummary,
+            initialHomeState: DashboardPreviewData.defaultHomeState
+        )
+
+        viewModel.open(.vocabulary(status: .review))
+        XCTAssertEqual(viewModel.selectedTab, .vocabulary)
+        XCTAssertEqual(viewModel.consumePendingDestination(), .vocabulary(status: .review))
+
+        viewModel.open(.briefingComposer)
+        XCTAssertEqual(viewModel.selectedTab, .briefing)
+        XCTAssertEqual(viewModel.consumePendingDestination(), .briefingComposer)
+
+        viewModel.open(.briefingHistory)
+        XCTAssertEqual(viewModel.selectedTab, .briefing)
+        XCTAssertEqual(viewModel.consumePendingDestination(), .briefingHistory)
     }
 
     func testDashboardSummaryMapperSupportsPhraseAndDriveDestinations() {

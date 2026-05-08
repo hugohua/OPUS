@@ -1,170 +1,68 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Zap, Activity, Brain, Network, Play, FileText, Layers, Split, BookOpen, History, Target, Wand2 } from 'lucide-react';
-import { Badge } from "@/components/ui/badge";
+import {
+    Activity,
+    BookOpen,
+    Brain,
+    FileText,
+    History,
+    Layers,
+    Play,
+    Split,
+    Zap,
+    type LucideIcon,
+} from 'lucide-react';
 import { DiagnosticRadar } from "@/components/arena/diagnostic-radar";
-import { SimulateScenarioCard } from "@/components/dashboard/simulate-scenario-card";
-import { GlobalHeader } from "@/components/ui/global-header";
-import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
+import { SimulateScenarioCard, type ScenarioTheme } from "@/components/dashboard/simulate-scenario-card";
 import { FloatingDockClient } from "@/components/dashboard/floating-dock-client";
+import { HeaderActionDropdown } from "@/components/dashboard/header-action-dropdown";
+import { GlobalHeader } from "@/components/ui/global-header";
+import { cn } from "@/lib/utils";
+import {
+    buildTrainingMatrix,
+    type TrainingMatrixDestination,
+    type TrainingMatrixEntry,
+    type TrainingMatrixSection,
+} from "@/lib/backend-core/training/matrix";
 
-// --- Matrix UI Configuration ---
-interface ScenarioCard {
-    id: string;
-    title: string;
-    file: string;
-    desc: string;
-    queue: number;
-    icon: any;
-    mode: string;
-    color: string;
-}
+const TRAINING_MATRIX = buildTrainingMatrix();
 
-interface L3ScenarioCard {
-    id: string;
-    title: string;
-    desc: string;
-    icon: any;
-    href: string;
-    color: string;
-}
+const ICONS: Record<string, LucideIcon> = {
+    activity: Activity,
+    bolt: Zap,
+    zap: Zap,
+    book: BookOpen,
+    "book-open": BookOpen,
+    brain: Brain,
+    "file-text": FileText,
+    history: History,
+    layers: Layers,
+    play: Play,
+    split: Split,
+};
 
-const L0_SCENARIOS: ScenarioCard[] = [
-    {
-        id: "L0-SYNTAX",
-        title: "语法核心",
-        file: "", // 内部标识，不展示
-        desc: "S-V-O 结构训练",
-        queue: 12,
-        icon: Zap,
-        mode: "SYNTAX",
-        color: "group-hover:text-amber-500 group-hover:bg-amber-500"
-    },
-    {
-        id: "L0-PHRASE",
-        title: "短语扩展",
-        file: "", // 内部标识，不展示
-        desc: "词组搭配 (1+N)",
-        queue: 8,
-        icon: Layers,
-        mode: "PHRASE",
-        color: "group-hover:text-amber-500 group-hover:bg-amber-500"
-    },
-    {
-        id: "L0-BLITZ",
-        title: "极速闪卡",
-        file: "", // 内部标识，不展示
-        desc: "快速识别训练",
-        queue: 45,
-        icon: Activity,
-        mode: "BLITZ",
-        color: "group-hover:text-amber-500 group-hover:bg-amber-500"
-    }
-];
-
-const L1_SCENARIOS: ScenarioCard[] = [
-    {
-        id: "L1-AUDIO",
-        title: "听力训练",
-        file: "", // 内部标识，不展示
-        desc: "听觉反射 (闭眼模式)",
-        queue: 0,
-        icon: Play,
-        mode: "AUDIO",
-        color: "group-hover:text-cyan-500 bg-cyan-950/30 text-cyan-500"
-    },
-    {
-        id: "L1-CHUNKING",
-        title: "意群断句",
-        file: "", // 内部标识，不展示
-        desc: "语流切分训练",
-        queue: 0,
-        icon: Split,
-        mode: "CHUNKING",
-        color: "group-hover:text-cyan-500 bg-cyan-950/30 text-cyan-500"
-    }
-];
-
-const L2_SCENARIOS: ScenarioCard[] = [
-    {
-        id: "L2-CONTEXT",
-        title: "语境填空",
-        file: "", // 内部标识，不展示
-        desc: "逻辑填空 (Part 5/6)",
-        queue: 0,
-        icon: FileText,
-        mode: "CONTEXT",
-        color: "group-hover:text-violet-400 text-zinc-500"
-    },
-    {
-        id: "L2-NUANCE",
-        title: "精准辨析",
-        file: "", // 内部标识，不展示
-        desc: "词义辨析 (Part 7)",
-        queue: 0,
-        icon: Brain,
-        mode: "NUANCE",
-        color: "group-hover:text-violet-400 text-zinc-500"
-    }
-];
-
-const L3_SCENARIOS: L3ScenarioCard[] = [
-    {
-        id: "L3-WEAVER",
-        title: "简报中心",
-        desc: "场景驱动 · 沉浸阅读",
-        icon: BookOpen,
-        href: "/weaver",
-        color: "group-hover:text-emerald-500"
-    },
-    {
-        id: "L3-HISTORY",
-        title: "阅读历史",
-        desc: "回顾已生成的简报",
-        icon: History,
-        href: "/weaver/history",
-        color: "group-hover:text-emerald-500"
-    }
-];
-
-const ARENA_SCENARIOS = [
-    {
-        id: "ARENA-BLITZ",
-        title: "单句闪电战",
-        desc: "碎片极速快测",
-        tag: "Part 5",
-        icon: Zap,
-        href: "/dashboard/arena/blitz",
-        theme: "violet" as const
-    },
-    {
-        id: "ARENA-MISSION",
-        title: "阅读狙击战",
-        desc: "沉浸商务实战",
-        tag: "Part 6/7",
-        icon: BookOpen,
-        href: "/dashboard/arena/mission",
-        theme: "indigo" as const
-    }
-];
+const sectionThemeStyles: Record<ScenarioTheme, string> = {
+    amber: "text-amber-600 dark:text-amber-500 bg-amber-100/50 dark:bg-amber-950/30 border-amber-200/50 dark:border-amber-900/50",
+    cyan: "text-cyan-600 dark:text-cyan-500 bg-cyan-100/50 dark:bg-cyan-950/30 border-cyan-200/50 dark:border-cyan-900/50",
+    emerald: "text-emerald-600 dark:text-emerald-500 bg-emerald-100/50 dark:bg-emerald-950/30 border-emerald-200/50 dark:border-emerald-900/50",
+    indigo: "text-indigo-600 dark:text-indigo-500 bg-indigo-100/50 dark:bg-indigo-950/30 border-indigo-200/50 dark:border-indigo-900/50",
+    rose: "text-rose-600 dark:text-rose-500 bg-rose-100/50 dark:bg-rose-950/30 border-rose-200/50 dark:border-rose-900/50",
+    violet: "text-violet-600 dark:text-violet-500 bg-violet-100/50 dark:bg-violet-950/30 border-violet-200/50 dark:border-violet-900/50",
+};
 
 export default function SimulatePage() {
     const router = useRouter();
 
-    // L0/L1/L2 模式页面跳转（无静态 href，使用 router.push）
-    const handleNavigate = (mode: string) => {
-        router.push(`/dashboard/session/${mode}`);
+    const handleDestination = (destination: TrainingMatrixDestination) => {
+        const href = hrefForDestination(destination);
+        if (href) {
+            router.push(href);
+        }
     };
 
     return (
         <div className="relative min-h-screen w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300 font-sans antialiased selection:bg-indigo-500/30 pb-20">
-
-            {/* Background Grid */}
-
-
-            {/* Header - Variant A Strict Compliance */}
             <GlobalHeader
                 title="训练矩阵"
                 showStatusLight={true}
@@ -172,152 +70,145 @@ export default function SimulatePage() {
             />
 
             <main className="max-w-4xl mx-auto p-6 space-y-8 relative z-10">
-                {/* AI 诊断雷达（核心加餐提示区） */}
-                <section className="mb-8">
-                    <DiagnosticRadar />
-                </section>
-
-                {/* --- The Arena --- */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-500 bg-rose-100/50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded border border-rose-200/50 dark:border-rose-900/50">ARC</span>
-                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">实战演练舱</h2>
-                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
-                        {ARENA_SCENARIOS.map((item) => (
-                            <SimulateScenarioCard
-                                key={item.id}
-                                title={item.title}
-                                desc={item.desc}
-                                tag={item.tag}
-                                icon={item.icon}
-                                href={item.href}
-                                theme={item.theme}
-                            />
-                        ))}
-                    </div>
-                </section>
-
-                {/* --- L0 Foundation --- */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-500 bg-amber-100/50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-900/50">L0</span>
-                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">基础层</h2>
-                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {L0_SCENARIOS.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleNavigate(item.mode)}
-                                    className="group relative flex flex-col p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-amber-500/40 dark:hover:border-amber-500/40 transition-all text-left overflow-hidden"
-                                >
-                                    <div className="flex justify-between items-start w-full mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <Icon className="w-4 h-4 text-zinc-400 group-hover:text-amber-500 transition-colors" />
-                                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300">{item.mode}</span>
-                                        </div>
-                                        <span className={cn("w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 transition-colors", item.color)}></span>
-                                    </div>
-                                    <h3 className="text-zinc-900 dark:text-zinc-100 font-bold mb-1">{item.title}</h3>
-
-
-                                    <div className="mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-col items-start w-full gap-1">
-                                        <span className="text-[10px] text-zinc-500 dark:text-zinc-600">{item.desc}</span>
-                                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-500">队列: {item.queue}</span>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </section>
-
-                {/* --- L1 Sensory --- */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-500 bg-cyan-100/50 dark:bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-200/50 dark:border-cyan-900/50">L1</span>
-                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">感知层</h2>
-                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {L1_SCENARIOS.map((item) => {
-                            return (
-                                <SimulateScenarioCard
-                                    key={item.id}
-                                    title={item.title}
-                                    desc={item.desc}
-                                    tag={item.mode}
-                                    icon={item.icon}
-                                    onClick={() => handleNavigate(item.mode)}
-                                    theme="cyan"
-                                />
-                            );
-                        })}
-                    </div>
-                </section>
-
-                {/* --- L2 Context --- */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] font-mono font-bold text-violet-600 dark:text-violet-500 bg-violet-100/50 dark:bg-violet-950/30 px-1.5 py-0.5 rounded border border-violet-200/50 dark:border-violet-900/50">L2</span>
-                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">语境层</h2>
-                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {L2_SCENARIOS.map((item) => {
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => handleNavigate(item.mode)}
-                                    className="group relative p-5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-violet-500/40 dark:hover:border-violet-500/40 transition-all text-left"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-zinc-900 dark:text-zinc-100 font-bold">{item.title}</h3>
-                                        <span className="text-[9px] font-mono text-zinc-500 dark:text-zinc-500 group-hover:text-violet-500 dark:group-hover:text-violet-400">{item.id}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <span className={cn("w-1.5 h-1.5 rounded-full", item.id === "L2-CONTEXT" ? "bg-violet-500" : "bg-rose-500")}></span>
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{item.desc}</p>
-                                    </div>
-
-                                </button>
-                            );
-                        })}
-                    </div>
-                </section>
-
-                {/* --- L3 Synthesis --- */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-500 bg-emerald-100/50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-900/50">L3</span>
-                        <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">综合层</h2>
-                        <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {L3_SCENARIOS.map((item) => (
-                            <SimulateScenarioCard
-                                key={item.id}
-                                title={item.title}
-                                desc={item.desc}
-                                tag={item.id}
-                                icon={item.icon}
-                                href={item.href}
-                                theme="emerald"
-                            />
-                        ))}
-                    </div>
-                </section>
-
+                {TRAINING_MATRIX.sections.map((section) => (
+                    <MatrixSection
+                        key={section.id}
+                        section={section}
+                        onNavigate={handleDestination}
+                    />
+                ))}
             </main>
+
             <FloatingDockClient />
         </div>
     );
+}
+
+function MatrixSection({
+    section,
+    onNavigate,
+}: {
+    section: TrainingMatrixSection;
+    onNavigate: (destination: TrainingMatrixDestination) => void;
+}) {
+    if (section.id === "diagnostics") {
+        return (
+            <section className="mb-8">
+                <DiagnosticRadar />
+            </section>
+        );
+    }
+
+    return (
+        <section>
+            <div className="flex items-center gap-2 mb-4">
+                <span className={cn(
+                    "text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border",
+                    sectionThemeStyles[section.theme]
+                )}>
+                    {section.label}
+                </span>
+                <h2 className="text-xs font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">
+                    {section.title}
+                </h2>
+                <div className="h-px bg-zinc-200 dark:bg-zinc-800 flex-1 ml-2" />
+            </div>
+
+            <div className={cn(
+                "grid grid-cols-1 gap-3",
+                section.id === "l0" ? "md:grid-cols-3" : "md:grid-cols-2",
+                section.id === "arena" && "mb-8"
+            )}>
+                {section.entries.map((entry) => section.id === "l0" ? (
+                    <QueueScenarioButton
+                        key={entry.id}
+                        entry={entry}
+                        onClick={() => onNavigate(entry.destination)}
+                    />
+                ) : (
+                    <MatrixScenarioCard
+                        key={entry.id}
+                        entry={entry}
+                        onClick={() => onNavigate(entry.destination)}
+                    />
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function MatrixScenarioCard({
+    entry,
+    onClick,
+}: {
+    entry: TrainingMatrixEntry;
+    onClick: () => void;
+}) {
+    const Icon = iconForEntry(entry);
+    const href = hrefForDestination(entry.destination);
+
+    return (
+        <SimulateScenarioCard
+            title={entry.title}
+            desc={entry.subtitle}
+            tag={entry.tag}
+            icon={Icon}
+            href={href}
+            onClick={href ? undefined : onClick}
+            theme={entry.accent}
+        />
+    );
+}
+
+function QueueScenarioButton({
+    entry,
+    onClick,
+}: {
+    entry: TrainingMatrixEntry;
+    onClick: () => void;
+}) {
+    const Icon = iconForEntry(entry);
+
+    return (
+        <button
+            onClick={onClick}
+            className="group relative flex flex-col p-4 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/15 shadow-sm dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] dark:backdrop-blur-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-amber-500/40 dark:hover:border-amber-500/40 transition-all text-left overflow-hidden"
+        >
+            <div className="flex justify-between items-start w-full mb-3">
+                <div className="flex items-center gap-2">
+                    <Icon className="w-4 h-4 text-zinc-400 group-hover:text-amber-500 transition-colors" />
+                    <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300">
+                        {entry.tag}
+                    </span>
+                </div>
+                <span className="w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 transition-colors group-hover:bg-amber-500" />
+            </div>
+
+            <h3 className="text-zinc-900 dark:text-zinc-100 font-bold mb-1">{entry.title}</h3>
+
+            <div className="mt-auto pt-3 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-col items-start w-full gap-1">
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-600">{entry.subtitle}</span>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-500">{entry.detail}</span>
+            </div>
+        </button>
+    );
+}
+
+function iconForEntry(entry: TrainingMatrixEntry): LucideIcon {
+    return ICONS[entry.systemImage] ?? Activity;
+}
+
+function hrefForDestination(destination: TrainingMatrixDestination): string | undefined {
+    switch (destination.kind) {
+        case "arena":
+            return destination.value === "mission"
+                ? "/dashboard/arena/mission"
+                : "/dashboard/arena/blitz";
+        case "briefing":
+            return destination.value === "history" ? "/weaver/history" : "/weaver";
+        case "training":
+            return `/dashboard/session/${destination.value}`;
+        case "diagnostics":
+            return undefined;
+    }
 }

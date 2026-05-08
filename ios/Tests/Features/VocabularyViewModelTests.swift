@@ -20,6 +20,16 @@ final class VocabularyViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.selectedDetail?.vocab.word, "audit")
     }
+
+    @MainActor
+    func testApplyPendingStatusReloadsVocabularyFilter() async {
+        let viewModel = VocabularyViewModel(service: StubVocabularyService())
+
+        await viewModel.applyPendingStatus(.review)
+
+        XCTAssertEqual(viewModel.selectedStatus, .review)
+        XCTAssertEqual(viewModel.items.count, 1)
+    }
 }
 
 private struct StubVocabularyService: VocabularyServing {

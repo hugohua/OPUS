@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
+import { getDashboardFSRSSummary } from "@/lib/backend-core/dashboard/fsrs-summary";
 
 export type MobileDashboardSummary = {
     userName: string;
@@ -74,36 +74,11 @@ function formatRelativeDate(date: Date): string {
     return `${Math.floor(deltaDays / 30)} 个月前`;
 }
 
-function buildTelemetryScore(mastered: number, learning: number, due: number): string {
-    const total = Math.max(mastered + learning + due, 1);
-    const score = Math.round(((mastered + learning) * 100) / total);
-    return `${score}% R`;
-}
-
 export async function getMobileDashboardSummary(userId: string, userName?: string | null): Promise<MobileDashboardSummary> {
     const now = new Date();
 
-    const [mastered, learning, due, latestBriefing] = await Promise.all([
-        db.userVocabState.count({
-            where: { userId, status: "MASTERED" },
-        }),
-        db.userProgress.count({
-            where: {
-                userId,
-                track: "VISUAL",
-                status: { in: ["LEARNING", "REVIEW"] },
-                vocab: buildNotMasteredVocabWhere(userId),
-            },
-        }),
-        db.userProgress.count({
-            where: {
-                userId,
-                track: "VISUAL",
-                next_review_at: { lte: now },
-                status: { in: ["LEARNING", "REVIEW"] },
-                vocab: buildNotMasteredVocabWhere(userId),
-            },
-        }),
+    const [fsrs, latestBriefing] = await Promise.all([
+        getDashboardFSRSSummary(userId, now),
         db.article.findFirst({
             where: { userId },
             orderBy: { createdAt: "desc" },
@@ -121,17 +96,12 @@ export async function getMobileDashboardSummary(userId: string, userName?: strin
 
     return {
         userName: userName || "学习者",
-        fsrs: {
-            mastered,
-            learning,
-            due,
-            telemetryScoreText: buildTelemetryScore(mastered, learning, due),
-        },
+        fsrs,
         primaryTask: {
             id: "daily-blitz",
             title: "每日闪电战",
             subtitle: "20 词 · 混合模式",
-            detail: due > 0 ? `${due} 个待复习` : "今天可直接开练",
+            detail: fsrs.due > 0 ? `${fsrs.due} 个待复习` : "今天可直接开练",
             ctaTitle: "进入训练",
             mode: "DAILY_BLITZ",
         },

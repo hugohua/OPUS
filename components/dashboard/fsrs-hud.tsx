@@ -7,11 +7,11 @@ interface FsrsHudProps {
         mastered: number;
         learning: number;
         due: number; // or total? Usually total for progress bar denominator? 
+        telemetryScoreText: string;
     };
-    retentionRate?: number; // Optional prop for the top right
 }
 
-export function FsrsHud({ stats, retentionRate = 94 }: FsrsHudProps) {
+export function FsrsHud({ stats }: FsrsHudProps) {
     const total = stats.mastered + stats.learning + stats.due || 1; // Avoid divide by zero
 
     // Calculate widths (floored to avoid overflow, or use flex-grow)
@@ -38,7 +38,7 @@ export function FsrsHud({ stats, retentionRate = 94 }: FsrsHudProps) {
                     {/* Retention Badge */}
                     <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
                         <svg className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                        <span className="text-[10px] font-bold font-mono text-emerald-700 dark:text-emerald-400">{retentionRate}% R</span>
+                        <span className="text-[10px] font-bold font-mono text-emerald-700 dark:text-emerald-400">{stats.telemetryScoreText}</span>
                     </div>
                 </div>
 

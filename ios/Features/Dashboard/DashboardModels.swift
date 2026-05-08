@@ -8,7 +8,11 @@ enum DashboardDestination: Equatable, Hashable {
     case audio
     case drive(mode: String)
     case arena(path: String, grammarNodeID: String? = nil)
+    case diagnostics(path: String)
+    case vocabulary(status: VocabularyStatus)
     case briefing(articleID: String?)
+    case briefingComposer
+    case briefingHistory
 }
 
 struct DashboardMetric: Equatable, Identifiable {

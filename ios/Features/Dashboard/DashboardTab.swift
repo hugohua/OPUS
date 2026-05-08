@@ -14,7 +14,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
         case .home:
             return "首页"
         case .training:
-            return "训练"
+            return "模拟"
         case .arena:
             return "竞技"
         case .vocabulary:

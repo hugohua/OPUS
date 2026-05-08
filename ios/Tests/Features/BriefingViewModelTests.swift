@@ -91,6 +91,20 @@ final class BriefingViewModelTests: XCTestCase {
         XCTAssertEqual(service.deletedArticleIDs, ["article-1"])
         XCTAssertEqual(viewModel.historyItems.map(\.id), ["article-2"])
     }
+
+    @MainActor
+    func testAppliesPendingBriefingDestinations() async {
+        let viewModel = BriefingViewModel(service: StubBriefingService())
+
+        await viewModel.loadInitialData()
+        await viewModel.applyPendingDestination(.briefingHistory)
+        XCTAssertEqual(viewModel.phase, .console)
+        XCTAssertTrue(viewModel.isHistoryFocused)
+
+        await viewModel.applyPendingDestination(.briefingComposer)
+        XCTAssertEqual(viewModel.phase, .console)
+        XCTAssertFalse(viewModel.isHistoryFocused)
+    }
 }
 
 private struct StubBriefingService: BriefingServing {

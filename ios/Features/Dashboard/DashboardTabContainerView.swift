@@ -26,7 +26,10 @@ struct DashboardTabContainerView: View {
                 pendingDestination: trainingPendingDestination,
                 makeArenaPart5ViewModel: makeArenaPart5ViewModel,
                 makeArenaMissionViewModel: makeArenaMissionViewModel,
-                makeDrivePlayerViewModel: makeDrivePlayerViewModel
+                makeDrivePlayerViewModel: makeDrivePlayerViewModel,
+                onOpenExternalDestination: { destination in
+                    viewModel.open(destination)
+                }
             )
                 .tag(DashboardTab.training)
                 .tabItem {
@@ -44,7 +47,10 @@ struct DashboardTabContainerView: View {
                     Label(DashboardTab.arena.title, systemImage: DashboardTab.arena.systemImage)
                 }
 
-            VocabularyView(viewModel: vocabularyViewModel)
+            VocabularyView(
+                viewModel: vocabularyViewModel,
+                pendingDestination: vocabularyPendingDestination
+            )
                 .tag(DashboardTab.vocabulary)
                 .tabItem {
                     Label(DashboardTab.vocabulary.title, systemImage: DashboardTab.vocabulary.systemImage)
@@ -105,15 +111,27 @@ struct DashboardTabContainerView: View {
 
     private var briefingPendingDestination: DashboardDestination? {
         guard let pendingDestination = viewModel.pendingDestination else { return nil }
-        if case .briefing = pendingDestination {
+        switch pendingDestination {
+        case .briefing, .briefingComposer, .briefingHistory:
             return pendingDestination
+        default:
+            return nil
         }
-        return nil
     }
 
     private var arenaPendingDestination: DashboardDestination? {
         guard let pendingDestination = viewModel.pendingDestination else { return nil }
-        if case .arena = pendingDestination {
+        switch pendingDestination {
+        case .arena, .diagnostics:
+            return pendingDestination
+        default:
+            return nil
+        }
+    }
+
+    private var vocabularyPendingDestination: DashboardDestination? {
+        guard let pendingDestination = viewModel.pendingDestination else { return nil }
+        if case .vocabulary = pendingDestination {
             return pendingDestination
         }
         return nil
@@ -267,9 +285,11 @@ private struct DashboardPlaceholderView: View {
         switch (tab, pendingDestination) {
         case (.training, .training), (.training, .reviewCards), (.training, .audio), (.training, .drive):
             return true
-        case (.arena, .arena):
+        case (.arena, .arena), (.arena, .diagnostics):
             return true
-        case (.briefing, .briefing):
+        case (.vocabulary, .vocabulary):
+            return true
+        case (.briefing, .briefing), (.briefing, .briefingComposer), (.briefing, .briefingHistory):
             return true
         default:
             return false
@@ -291,11 +311,19 @@ private struct DashboardPlaceholderView: View {
                 return "后续会话将承接 Arena `\(path)`，并带入 grammarNodeId=`\(grammarNodeID)`。"
             }
             return "后续会话将承接 Arena `\(path)` 入口。"
+        case .diagnostics(let path):
+            return "后续会话将承接诊断入口：\(path)。"
+        case .vocabulary(let status):
+            return "后续会话将承接词库筛选：\(status.title)。"
         case .briefing(let articleID):
             if let articleID {
                 return "后续会话将承接 articleId=`\(articleID)` 的简报阅读。"
             }
             return "后续会话将承接简报入口。"
+        case .briefingComposer:
+            return "后续会话将承接简报生成入口。"
+        case .briefingHistory:
+            return "后续会话将承接简报历史入口。"
         }
     }
 }

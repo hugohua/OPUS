@@ -31,6 +31,31 @@ vi.mock("@/lib/mobile/dashboard", () => ({
     getMobileDashboardSummary: vi.fn(async () => ({ primaryTask: { mode: "DAILY_BLITZ" } })),
 }));
 
+vi.mock("@/lib/backend-core/training/matrix", () => ({
+    buildTrainingMatrix: vi.fn(() => ({
+        sections: [
+            {
+                id: "arena",
+                title: "实战演练舱",
+                label: "ARC",
+                theme: "rose",
+                entries: [
+                    {
+                        id: "arena-blitz",
+                        title: "单句闪电战",
+                        subtitle: "碎片极速快测",
+                        detail: "Part 5",
+                        tag: "Part 5",
+                        systemImage: "bolt",
+                        accent: "violet",
+                        destination: { kind: "arena", value: "part5" },
+                    },
+                ],
+            },
+        ],
+    })),
+}));
+
 vi.mock("@/lib/mobile/session", () => ({
     getMobileAudioAvailability: vi.fn(async () => ({ key: "audio", available: true, count: 2, items: [] })),
     getMobileReviewCards: vi.fn(async () => ([{ id: 1, word: "audit" }])),
@@ -127,6 +152,38 @@ describe("mobile route contracts", () => {
         expect(await response.json()).toEqual({
             status: "success",
             data: { primaryTask: { mode: "DAILY_BLITZ" } },
+        });
+    });
+
+    it("returns training matrix from the shared core contract", async () => {
+        const { GET } = await import("./training/matrix/route");
+
+        const response = await GET(new Request("http://localhost/api/mobile/v1/training/matrix"));
+
+        expect(await response.json()).toEqual({
+            status: "success",
+            data: {
+                sections: [
+                    {
+                        id: "arena",
+                        title: "实战演练舱",
+                        label: "ARC",
+                        theme: "rose",
+                        entries: [
+                            {
+                                id: "arena-blitz",
+                                title: "单句闪电战",
+                                subtitle: "碎片极速快测",
+                                detail: "Part 5",
+                                tag: "Part 5",
+                                systemImage: "bolt",
+                                accent: "violet",
+                                destination: { kind: "arena", value: "part5" },
+                            },
+                        ],
+                    },
+                ],
+            },
         });
     });
 

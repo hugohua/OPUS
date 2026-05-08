@@ -6,6 +6,7 @@ struct TrainingHubView: View {
     let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
     let makeArenaMissionViewModel: () -> ArenaMissionViewModel
     let makeDrivePlayerViewModel: (String) -> DrivePlayerViewModel
+    var onOpenExternalDestination: (DashboardDestination) -> Void = { _ in }
 
     var body: some View {
         NavigationStack {
@@ -64,7 +65,12 @@ struct TrainingHubView: View {
 
                             Button {
                                 if isAvailable {
-                                    viewModel.open(entry.destination)
+                                    switch viewModel.route(for: entry.destination) {
+                                    case .briefing:
+                                        onOpenExternalDestination(entry.destination)
+                                    default:
+                                        viewModel.open(entry.destination)
+                                    }
                                 }
                             } label: {
                                 OpusCard(accent: entry.accent, style: .standard, isInteractive: isAvailable) {
@@ -126,6 +132,8 @@ struct TrainingHubView: View {
                     ArenaMissionView(viewModel: makeArenaMissionViewModel())
                 case .drive(let mode):
                     DrivePlayerView(viewModel: makeDrivePlayerViewModel(mode))
+                case .briefing:
+                    EmptyView()
                 case nil:
                     EmptyView()
                 }

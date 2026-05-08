@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { buildNotMasteredVocabWhere } from "@/lib/vocab-state/filters";
+import { getDashboardFSRSSummary } from "@/lib/backend-core/dashboard/fsrs-summary";
 
 export interface DashboardStats {
     syntax: {
@@ -21,6 +22,7 @@ export interface DashboardStats {
         mastered: number;
         learning: number;
         due: number;
+        telemetryScoreText: string;
     };
 }
 
@@ -35,7 +37,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 syntax: { count: 0, status: "ready" },
                 chunking: { count: 0, status: "locked" },
                 nuance: { count: 0, status: "locked" },
-                fsrs: { mastered: 0, learning: 0, due: 0 },
+                fsrs: { mastered: 0, learning: 0, due: 0, telemetryScoreText: "0% R" },
             };
         }
 
@@ -76,27 +78,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         const syntaxCount = newCount + Math.min(pendingCount, 20); // Cap syntax batch at 20
         const chunkingCount = pendingCount; // Chunking handles the bulk
 
-        // FSRS Stats (Precise)
-        const [mastered, learning, due] = await Promise.all([
-            db.userVocabState.count({ where: { userId: user.id, status: 'MASTERED' } }),
-            db.userProgress.count({
-                where: {
-                    userId: user.id,
-                    track: 'VISUAL',
-                    status: { in: ['LEARNING', 'REVIEW'] },
-                    vocab: buildNotMasteredVocabWhere(user.id),
-                }
-            }),
-            db.userProgress.count({
-                where: {
-                    userId: user.id,
-                    track: 'VISUAL',
-                    next_review_at: { lte: now },
-                    status: { in: ['LEARNING', 'REVIEW'] },
-                    vocab: buildNotMasteredVocabWhere(user.id),
-                }
-            })
-        ]);
+        const fsrs = await getDashboardFSRSSummary(user.id, now);
 
         return {
             syntax: {
@@ -111,11 +93,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
                 count: 0,
                 status: "locked",
             },
-            fsrs: {
-                mastered,
-                learning,
-                due
-            }
+            fsrs,
         };
     } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -123,7 +101,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
             syntax: { count: 0, status: "ready" },
             chunking: { count: 0, status: "locked" },
             nuance: { count: 0, status: "locked" },
-            fsrs: { mastered: 0, learning: 0, due: 0 },
+            fsrs: { mastered: 0, learning: 0, due: 0, telemetryScoreText: "0% R" },
         };
     }
 }

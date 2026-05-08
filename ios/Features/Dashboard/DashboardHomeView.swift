@@ -12,6 +12,8 @@ struct DashboardHomeView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(alignment: .leading, spacing: OpusSpacing.sectionSpacing) {
+                    greetingSection
+                    memorySummarySection
                     primaryTaskSection
 
                     trainingSection
@@ -28,6 +30,27 @@ struct DashboardHomeView: View {
     private var backgroundLayer: some View {
         Color(.systemGroupedBackground)
             .ignoresSafeArea()
+    }
+
+    private var greetingSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("你好，\(homeState.greetingName)")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(OpusColorPalette.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(homeState.greetingLine)
+                .font(.subheadline)
+                .foregroundStyle(OpusColorPalette.secondaryText)
+        }
+    }
+
+    private var memorySummarySection: some View {
+        DashboardMemoryTelemetryView(
+            telemetryScoreText: homeState.telemetryScoreText,
+            metrics: homeState.metrics,
+            onOpenDestination: onOpenDestination
+        )
     }
 
     private var primaryTaskSection: some View {
@@ -139,6 +162,8 @@ enum DashboardHomeSection: Equatable {
 
 enum DashboardHomeLayout {
     static let visibleSections: [DashboardHomeSection] = [
+        .greeting,
+        .memorySummary,
         .primaryTask,
         .training,
         .skills,
@@ -170,6 +195,113 @@ private enum DashboardFeatureEmphasis {
     case large
     case compact
     case mini
+}
+
+private struct DashboardMemoryTelemetryView: View {
+    let telemetryScoreText: String
+    let metrics: [DashboardMetric]
+    let onOpenDestination: (DashboardDestination) -> Void
+
+    var body: some View {
+        OpusCard(accent: .emerald, style: .compact) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center, spacing: 10) {
+                    Label("记忆遥测", systemImage: "chart.bar.xaxis")
+                        .font(OpusTypography.mono)
+                        .foregroundStyle(OpusColorPalette.secondaryText)
+
+                    Spacer(minLength: 8)
+
+                    OpusBadge(
+                        title: telemetryScoreText,
+                        accent: .emerald,
+                        variant: .soft,
+                        size: .mini
+                    )
+                }
+
+                OpusProgressMeter(
+                    segments: [
+                        OpusProgressSegment(value: metricValue("mastered"), color: OpusColorPalette.success),
+                        OpusProgressSegment(value: metricValue("learning"), color: OpusColorPalette.warning),
+                        OpusProgressSegment(value: metricValue("review"), color: OpusColorPalette.rose.opacity(0.72))
+                    ],
+                    height: 9,
+                    spacing: 2
+                )
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        metricButtons
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        metricButtons
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var metricButtons: some View {
+        ForEach(metrics) { metric in
+            Button {
+                onOpenDestination(destination(for: metric.id))
+            } label: {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(color(for: metric.id))
+                        .frame(width: 7, height: 7)
+
+                    Text(metric.title)
+                        .font(.caption)
+                        .foregroundStyle(OpusColorPalette.secondaryText)
+
+                    Text(metric.value)
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(valueColor(for: metric.id))
+                }
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.opusPress(variant: .ghost, size: .small, feel: .tactile))
+            .accessibilityLabel("\(metric.title)，\(metric.value)")
+        }
+    }
+
+    private func metricValue(_ id: String) -> Double {
+        Double(metrics.first(where: { $0.id == id })?.value ?? "") ?? 0
+    }
+
+    private func destination(for id: String) -> DashboardDestination {
+        switch id {
+        case "mastered":
+            return .vocabulary(status: .mastered)
+        case "learning":
+            return .vocabulary(status: .learning)
+        case "review":
+            return .vocabulary(status: .review)
+        default:
+            return .vocabulary(status: .all)
+        }
+    }
+
+    private func color(for id: String) -> Color {
+        switch id {
+        case "mastered":
+            return OpusColorPalette.success
+        case "learning":
+            return OpusColorPalette.warning
+        case "review":
+            return OpusColorPalette.rose.opacity(0.72)
+        default:
+            return OpusColorPalette.tertiaryText
+        }
+    }
+
+    private func valueColor(for id: String) -> Color {
+        id == "review" ? OpusColorPalette.primaryText : color(for: id)
+    }
 }
 
 private struct DashboardFeatureCardView: View {
