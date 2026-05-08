@@ -57,6 +57,7 @@
 		6DA2EA8A808C1B2E3DAE82AF /* ArenaMissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD627F63B11F132BF5BFAFF /* ArenaMissionService.swift */; };
 		7397B447F9173945C8F576C7 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE17D944DF2523782C65BF8 /* BriefingView.swift */; };
 		7667EC5A508422FA0A2CD75B /* URLSessionAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F7A23628213736D6973722 /* URLSessionAPIClient.swift */; };
+		81ED40F5E99ED9FC01862B3B /* TrainingHubServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB124EB21C0FD4FA66B78F1 /* TrainingHubServiceTests.swift */; };
 		83A89981AF85F81A8C27CC2C /* AuthSessionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F5C2E93EDCCA885EC909BA /* AuthSessionServiceTests.swift */; };
 		85758D0F576D4BB0A657C6C7 /* DashboardTabContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B20F7867ED32784C2F9C5DD /* DashboardTabContainerView.swift */; };
 		8BD68287E79FB8815605EA19 /* ArenaPart5ServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A3D6A0BC902A5610957C472 /* ArenaPart5ServiceTests.swift */; };
@@ -174,6 +175,7 @@
 		666EB4918792242D00EF7620 /* DashboardHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHomeView.swift; sourceTree = "<group>"; };
 		6743AD88D9C846B2CDE0CECB /* ArenaMissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaMissionView.swift; sourceTree = "<group>"; };
 		686EB246317BA4656CB9E050 /* ArenaPart5Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArenaPart5Models.swift; sourceTree = "<group>"; };
+		6CB124EB21C0FD4FA66B78F1 /* TrainingHubServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHubServiceTests.swift; sourceTree = "<group>"; };
 		6F28B7BA8B2CC74AD0A98D17 /* SessionRunnerServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRunnerServiceTests.swift; sourceTree = "<group>"; };
 		70AE51EAD3597A6762578801 /* DashboardPreviewData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPreviewData.swift; sourceTree = "<group>"; };
 		726176BED395045CA05F3D25 /* DrivePlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrivePlayerViewModel.swift; sourceTree = "<group>"; };
@@ -453,6 +455,7 @@
 				6359C19B2549D3FB05CAC84D /* HealthCheckServiceTests.swift */,
 				6F28B7BA8B2CC74AD0A98D17 /* SessionRunnerServiceTests.swift */,
 				2A1AE2ADC200D8056BEDF8A7 /* SessionRunnerViewModelTests.swift */,
+				6CB124EB21C0FD4FA66B78F1 /* TrainingHubServiceTests.swift */,
 				E7A171551EEEEEDF646B9354 /* TrainingHubViewModelTests.swift */,
 				ABD78E311FF81ABBBAA71E9E /* VocabularyViewModelTests.swift */,
 			);
@@ -635,6 +638,7 @@
 				3CA450797A252989DDC6F8BC /* SSEClientTests.swift in Sources */,
 				0743E3D5E5FBA900CE454691 /* SessionRunnerServiceTests.swift in Sources */,
 				97316488910B974EC2D5F8D6 /* SessionRunnerViewModelTests.swift in Sources */,
+				81ED40F5E99ED9FC01862B3B /* TrainingHubServiceTests.swift in Sources */,
 				3BE3D7802670C71E2C4DAFA0 /* TrainingHubViewModelTests.swift in Sources */,
 				2F194059106FC330347CD2B1 /* URLSessionAPIClientTests.swift in Sources */,
 				2AE575699205E780197F4A61 /* VocabularyViewModelTests.swift in Sources */,

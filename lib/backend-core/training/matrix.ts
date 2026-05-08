@@ -22,6 +22,13 @@ export type TrainingMatrixEntry = {
     systemImage: string;
     accent: TrainingMatrixAccent;
     destination: TrainingMatrixDestination;
+    availability?: "ready" | "empty" | "unavailable";
+    count?: number;
+    statusLabel?: string;
+    /**
+     * @deprecated 只保留给旧消费端宽松解码。真实待练状态必须使用
+     * buildTrainingMatrixForUser 动态填充的 count/statusLabel。
+     */
     queue?: number;
 };
 
@@ -98,34 +105,31 @@ export function buildTrainingMatrix(): TrainingMatrix {
                         id: "l0-syntax",
                         title: "语法核心",
                         subtitle: "S-V-O 结构训练",
-                        detail: "队列: 12",
+                        detail: "SYNTAX",
                         tag: "SYNTAX",
                         systemImage: "zap",
                         accent: "amber",
                         destination: { kind: "training", value: "SYNTAX" },
-                        queue: 12,
                     },
                     {
                         id: "l0-phrase",
                         title: "短语扩展",
                         subtitle: "词组搭配 (1+N)",
-                        detail: "队列: 8",
+                        detail: "PHRASE",
                         tag: "PHRASE",
                         systemImage: "layers",
                         accent: "amber",
                         destination: { kind: "training", value: "PHRASE" },
-                        queue: 8,
                     },
                     {
                         id: "l0-blitz",
                         title: "极速闪卡",
                         subtitle: "快速识别训练",
-                        detail: "队列: 45",
+                        detail: "BLITZ",
                         tag: "BLITZ",
                         systemImage: "activity",
                         accent: "amber",
                         destination: { kind: "training", value: "BLITZ" },
-                        queue: 45,
                     },
                 ],
             },
@@ -144,7 +148,6 @@ export function buildTrainingMatrix(): TrainingMatrix {
                         systemImage: "play",
                         accent: "cyan",
                         destination: { kind: "training", value: "AUDIO" },
-                        queue: 0,
                     },
                     {
                         id: "l1-chunking",
@@ -155,7 +158,6 @@ export function buildTrainingMatrix(): TrainingMatrix {
                         systemImage: "split",
                         accent: "cyan",
                         destination: { kind: "training", value: "CHUNKING" },
-                        queue: 0,
                     },
                 ],
             },
@@ -174,7 +176,6 @@ export function buildTrainingMatrix(): TrainingMatrix {
                         systemImage: "file-text",
                         accent: "violet",
                         destination: { kind: "training", value: "CONTEXT" },
-                        queue: 0,
                     },
                     {
                         id: "l2-nuance",
@@ -185,7 +186,6 @@ export function buildTrainingMatrix(): TrainingMatrix {
                         systemImage: "brain",
                         accent: "violet",
                         destination: { kind: "training", value: "NUANCE" },
-                        queue: 0,
                     },
                 ],
             },

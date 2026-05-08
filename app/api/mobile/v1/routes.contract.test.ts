@@ -56,6 +56,44 @@ vi.mock("@/lib/backend-core/training/matrix", () => ({
     })),
 }));
 
+vi.mock("@/lib/backend-core/training/matrix-status", () => ({
+    buildTrainingMatrixForUser: vi.fn(async (userId: string) => ({
+        sections: [
+            {
+                id: "arena",
+                title: "实战演练舱",
+                label: "ARC",
+                theme: "rose",
+                entries: [
+                    {
+                        id: "arena-blitz",
+                        title: "单句闪电战",
+                        subtitle: "碎片极速快测",
+                        detail: "Part 5",
+                        tag: "Part 5",
+                        systemImage: "bolt",
+                        accent: "violet",
+                        destination: { kind: "arena", value: "part5" },
+                    },
+                    {
+                        id: "l0-syntax",
+                        title: "语法核心",
+                        subtitle: "S-V-O 结构训练",
+                        detail: "SYNTAX",
+                        tag: "SYNTAX",
+                        systemImage: "zap",
+                        accent: "amber",
+                        destination: { kind: "training", value: "SYNTAX" },
+                        availability: userId === "user-1" ? "ready" : "empty",
+                        count: 3,
+                        statusLabel: "可练: 3",
+                    },
+                ],
+            },
+        ],
+    })),
+}));
+
 vi.mock("@/lib/mobile/session", () => ({
     getMobileAudioAvailability: vi.fn(async () => ({ key: "audio", available: true, count: 2, items: [] })),
     getMobileReviewCards: vi.fn(async () => ([{ id: 1, word: "audit" }])),
@@ -156,10 +194,12 @@ describe("mobile route contracts", () => {
     });
 
     it("returns training matrix from the shared core contract", async () => {
+        const matrixCore = await import("@/lib/backend-core/training/matrix-status");
         const { GET } = await import("./training/matrix/route");
 
         const response = await GET(new Request("http://localhost/api/mobile/v1/training/matrix"));
 
+        expect(matrixCore.buildTrainingMatrixForUser).toHaveBeenCalledWith("user-1");
         expect(await response.json()).toEqual({
             status: "success",
             data: {
@@ -179,6 +219,19 @@ describe("mobile route contracts", () => {
                                 systemImage: "bolt",
                                 accent: "violet",
                                 destination: { kind: "arena", value: "part5" },
+                            },
+                            {
+                                id: "l0-syntax",
+                                title: "语法核心",
+                                subtitle: "S-V-O 结构训练",
+                                detail: "SYNTAX",
+                                tag: "SYNTAX",
+                                systemImage: "zap",
+                                accent: "amber",
+                                destination: { kind: "training", value: "SYNTAX" },
+                                availability: "ready",
+                                count: 3,
+                                statusLabel: "可练: 3",
                             },
                         ],
                     },

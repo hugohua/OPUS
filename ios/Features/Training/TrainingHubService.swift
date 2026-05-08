@@ -74,7 +74,15 @@ struct TrainingHubService: TrainingHubServing {
     }
 
     private func mapMatrixEntry(_ entry: TrainingHubMatrixEntryPayload) -> TrainingHubEntry {
-        TrainingHubEntry(
+        let availability: TrainingHubAvailability
+        switch entry.availability {
+        case "unavailable":
+            availability = .unavailable(reason: entry.statusLabel ?? "当前入口暂不可用。")
+        default:
+            availability = .available(label: entry.statusLabel ?? entry.tag)
+        }
+
+        return TrainingHubEntry(
             id: entry.id,
             title: entry.title,
             subtitle: entry.subtitle,
@@ -82,7 +90,7 @@ struct TrainingHubService: TrainingHubServing {
             systemImage: entry.systemImage,
             accent: accent(for: entry.accent),
             destination: destination(for: entry.destination),
-            availability: .available(label: entry.queue.map { "\($0) 个待练习" } ?? entry.tag)
+            availability: availability
         )
     }
 
@@ -150,7 +158,9 @@ struct TrainingHubMatrixEntryPayload: Decodable {
     let systemImage: String
     let accent: String
     let destination: TrainingHubMatrixDestinationPayload
-    let queue: Int?
+    let availability: String?
+    let count: Int?
+    let statusLabel: String?
 }
 
 struct TrainingHubMatrixDestinationPayload: Decodable {

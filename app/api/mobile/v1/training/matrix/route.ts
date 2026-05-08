@@ -1,4 +1,4 @@
-import { buildTrainingMatrix } from "@/lib/backend-core/training/matrix";
+import { buildTrainingMatrixForUser } from "@/lib/backend-core/training/matrix-status";
 import { createMobileSuccessEnvelope, mobileInternalErrorResponse, mobileUnauthorizedResponse, requireMobileSession } from "@/lib/mobile/contracts";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        return Response.json(createMobileSuccessEnvelope(buildTrainingMatrix()));
+        return Response.json(createMobileSuccessEnvelope(await buildTrainingMatrixForUser(session.user.id)));
     } catch {
         return mobileInternalErrorResponse();
     }

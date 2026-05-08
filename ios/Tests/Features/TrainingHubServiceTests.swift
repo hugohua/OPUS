@@ -23,7 +23,10 @@ final class TrainingHubServiceTests: XCTestCase {
                     "tag": "Part 5",
                     "systemImage": "bolt",
                     "accent": "violet",
-                    "destination": { "kind": "arena", "value": "part5" }
+                    "destination": { "kind": "arena", "value": "part5" },
+                    "availability": "ready",
+                    "count": 3,
+                    "statusLabel": "可练: 3"
                   },
                   {
                     "id": "l3-history",
@@ -50,6 +53,7 @@ final class TrainingHubServiceTests: XCTestCase {
         XCTAssertEqual(sections.first?.entries.map(\.id), ["arena-blitz", "l3-history"])
         XCTAssertEqual(sections.first?.entries.first?.destination, .arena(path: "part5"))
         XCTAssertEqual(sections.first?.entries.last?.destination, .briefingHistory)
+        XCTAssertEqual(sections.first?.entries.first?.availability, .available(label: "可练: 3"))
     }
 }
 
