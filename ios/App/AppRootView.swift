@@ -5,6 +5,7 @@ struct AppRootView: View {
     @Bindable var dashboardViewModel: DashboardViewModel
     @Bindable var diagnosticsViewModel: DiagnosticsViewModel
     @Bindable var trainingHubViewModel: TrainingHubViewModel
+    @Bindable var learningDiagnosticRadarViewModel: LearningDiagnosticRadarViewModel
     @Bindable var arenaDashboardViewModel: ArenaDashboardViewModel
     @Bindable var vocabularyViewModel: VocabularyViewModel
     @Bindable var briefingViewModel: BriefingViewModel
@@ -24,6 +25,7 @@ struct AppRootView: View {
                     viewModel: dashboardViewModel,
                     diagnosticsViewModel: diagnosticsViewModel,
                     trainingHubViewModel: trainingHubViewModel,
+                    learningDiagnosticRadarViewModel: learningDiagnosticRadarViewModel,
                     arenaDashboardViewModel: arenaDashboardViewModel,
                     vocabularyViewModel: vocabularyViewModel,
                     briefingViewModel: briefingViewModel,
@@ -41,6 +43,7 @@ struct AppRootView: View {
                 diagnosticsViewModel.resetTransientState()
                 dashboardViewModel.resetForSessionChange()
                 trainingHubViewModel.resetForSessionChange()
+                learningDiagnosticRadarViewModel.resetForSessionChange()
                 arenaDashboardViewModel.resetForSessionChange()
                 vocabularyViewModel.resetForSessionChange()
                 briefingViewModel.resetForSessionChange()

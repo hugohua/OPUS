@@ -9,6 +9,7 @@ struct AppDependencies {
     let healthService: HealthCheckService
     let dashboardSummaryService: DashboardSummaryService
     let trainingHubService: TrainingHubService
+    let learningDiagnosticRadarService: LearningDiagnosticRadarService
     let sessionRunnerService: SessionRunnerService
     let arenaDashboardService: ArenaDashboardService
     let arenaPart5Service: ArenaPart5Service
@@ -55,6 +56,11 @@ struct AppDependencies {
                 makeSessionRunnerViewModel(destination: destination)
             }
         )
+    }
+
+    @MainActor
+    func makeLearningDiagnosticRadarViewModel() -> LearningDiagnosticRadarViewModel {
+        LearningDiagnosticRadarViewModel(service: learningDiagnosticRadarService)
     }
 
     @MainActor
@@ -138,6 +144,7 @@ struct AppDependencies {
             healthService: HealthCheckService(apiClient: apiClient),
             dashboardSummaryService: DashboardSummaryService(apiClient: apiClient),
             trainingHubService: TrainingHubService(apiClient: apiClient),
+            learningDiagnosticRadarService: LearningDiagnosticRadarService(apiClient: apiClient),
             sessionRunnerService: SessionRunnerService(apiClient: apiClient),
             arenaDashboardService: ArenaDashboardService(apiClient: apiClient),
             arenaPart5Service: ArenaPart5Service(apiClient: apiClient),

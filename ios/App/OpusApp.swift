@@ -7,6 +7,7 @@ struct OpusApp: App {
     @State private var dashboardViewModel: DashboardViewModel
     @State private var diagnosticsViewModel: DiagnosticsViewModel
     @State private var trainingHubViewModel: TrainingHubViewModel
+    @State private var learningDiagnosticRadarViewModel: LearningDiagnosticRadarViewModel
     @State private var arenaDashboardViewModel: ArenaDashboardViewModel
     @State private var vocabularyViewModel: VocabularyViewModel
     @State private var briefingViewModel: BriefingViewModel
@@ -18,6 +19,7 @@ struct OpusApp: App {
         _launchCoordinator = State(initialValue: launchCoordinator)
         _dashboardViewModel = State(initialValue: dependencies.makeDashboardViewModel())
         _trainingHubViewModel = State(initialValue: dependencies.makeTrainingHubViewModel())
+        _learningDiagnosticRadarViewModel = State(initialValue: dependencies.makeLearningDiagnosticRadarViewModel())
         _arenaDashboardViewModel = State(initialValue: dependencies.makeArenaDashboardViewModel())
         _vocabularyViewModel = State(initialValue: dependencies.makeVocabularyViewModel())
         _briefingViewModel = State(initialValue: dependencies.makeBriefingViewModel())
@@ -37,6 +39,7 @@ struct OpusApp: App {
                 dashboardViewModel: dashboardViewModel,
                 diagnosticsViewModel: diagnosticsViewModel,
                 trainingHubViewModel: trainingHubViewModel,
+                learningDiagnosticRadarViewModel: learningDiagnosticRadarViewModel,
                 arenaDashboardViewModel: arenaDashboardViewModel,
                 vocabularyViewModel: vocabularyViewModel,
                 briefingViewModel: briefingViewModel,

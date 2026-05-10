@@ -14,7 +14,7 @@ import {
     getRadarDataRaw,
     type WeaknessProfile,
     type RadarDataPoint,
-} from '@/lib/services/diagnostic-service';
+} from '@/lib/backend-core/diagnostics/radar';
 
 // Types should be imported directly from \`@/lib/services/diagnostic-service\` in client components
 

@@ -99,6 +99,18 @@ final class TrainingHubViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.route(for: .briefingComposer), .briefing)
         XCTAssertEqual(viewModel.route(for: .briefingHistory), .briefing)
     }
+
+    @MainActor
+    func testKeepsDiagnosticsDestinationAvailableForEmbeddedLearningCard() {
+        let viewModel = TrainingHubViewModel(
+            service: StubTrainingHubService(result: .success([])),
+            makeSessionRunnerViewModel: { destination in
+                SessionRunnerViewModel(destination: destination, service: SessionRunnerUnavailableService())
+            }
+        )
+
+        XCTAssertEqual(viewModel.route(for: .diagnostics(path: "radar")), .diagnostics)
+    }
 }
 
 private enum StubTrainingHubError: Error {

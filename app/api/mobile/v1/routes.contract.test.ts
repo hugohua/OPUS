@@ -94,6 +94,25 @@ vi.mock("@/lib/backend-core/training/matrix-status", () => ({
     })),
 }));
 
+vi.mock("@/lib/backend-core/diagnostics/radar", () => ({
+    getRadarDataRaw: vi.fn(async (userId: string) => ({
+        radarData: userId === "user-1"
+            ? [{ subject: "基础语法", A: 42, fullMark: 100 }]
+            : [],
+        weakest: userId === "user-1"
+            ? {
+                questionType: "GRAMMAR",
+                label: "基础语法",
+                total: 7,
+                correct: 3,
+                accuracy: 42,
+                avgResponseMs: 3200,
+            }
+            : null,
+        totalAttempts: userId === "user-1" ? 7 : 0,
+    })),
+}));
+
 vi.mock("@/lib/mobile/session", () => ({
     getMobileAudioAvailability: vi.fn(async () => ({ key: "audio", available: true, count: 2, items: [] })),
     getMobileReviewCards: vi.fn(async () => ([{ id: 1, word: "audit" }])),
@@ -237,6 +256,46 @@ describe("mobile route contracts", () => {
                     },
                 ],
             },
+        });
+    });
+
+    it("returns diagnostics radar from the shared core contract", async () => {
+        const diagnosticsCore = await import("@/lib/backend-core/diagnostics/radar");
+        const route = await import("./diagnostics/radar/route");
+        vi.mocked(diagnosticsCore.getRadarDataRaw).mockClear();
+
+        const response = await route.GET(new Request("http://localhost/api/mobile/v1/diagnostics/radar"));
+
+        expect(diagnosticsCore.getRadarDataRaw).toHaveBeenCalledWith("user-1");
+        expect(await response.json()).toEqual({
+            status: "success",
+            data: {
+                radarData: [{ subject: "基础语法", A: 42, fullMark: 100 }],
+                weakest: {
+                    questionType: "GRAMMAR",
+                    label: "基础语法",
+                    total: 7,
+                    correct: 3,
+                    accuracy: 42,
+                    avgResponseMs: 3200,
+                },
+                totalAttempts: 7,
+            },
+        });
+    });
+
+    it("returns unauthorized for diagnostics radar without mobile session", async () => {
+        const contracts = await import("@/lib/mobile/contracts");
+        const route = await import("./diagnostics/radar/route");
+        vi.mocked(contracts.requireMobileSession).mockResolvedValueOnce(null);
+
+        const response = await route.GET(new Request("http://localhost/api/mobile/v1/diagnostics/radar"));
+
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({
+            status: "error",
+            code: "UNAUTHORIZED",
+            message: "Unauthorized",
         });
     });
 

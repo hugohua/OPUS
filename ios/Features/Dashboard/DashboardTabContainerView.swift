@@ -5,6 +5,7 @@ struct DashboardTabContainerView: View {
     @Bindable var viewModel: DashboardViewModel
     @Bindable var diagnosticsViewModel: DiagnosticsViewModel
     @Bindable var trainingHubViewModel: TrainingHubViewModel
+    @Bindable var learningDiagnosticRadarViewModel: LearningDiagnosticRadarViewModel
     @Bindable var arenaDashboardViewModel: ArenaDashboardViewModel
     @Bindable var vocabularyViewModel: VocabularyViewModel
     @Bindable var briefingViewModel: BriefingViewModel
@@ -23,6 +24,7 @@ struct DashboardTabContainerView: View {
 
             TrainingHubView(
                 viewModel: trainingHubViewModel,
+                diagnosticRadarViewModel: learningDiagnosticRadarViewModel,
                 pendingDestination: trainingPendingDestination,
                 makeArenaPart5ViewModel: makeArenaPart5ViewModel,
                 makeArenaMissionViewModel: makeArenaMissionViewModel,

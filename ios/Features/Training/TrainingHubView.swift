@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TrainingHubView: View {
     @Bindable var viewModel: TrainingHubViewModel
+    @Bindable var diagnosticRadarViewModel: LearningDiagnosticRadarViewModel
     let pendingDestination: DashboardDestination?
     let makeArenaPart5ViewModel: (String?) -> ArenaPart5ViewModel
     let makeArenaMissionViewModel: () -> ArenaMissionViewModel
@@ -57,43 +58,53 @@ struct TrainingHubView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
                 ForEach(viewModel.sections) { section in
-                    VStack(alignment: .leading, spacing: 12) {
-                        OpusSectionHeader(title: section.title, subtitle: section.subtitle)
-
-                        ForEach(section.entries) { entry in
-                            let isAvailable = viewModel.route(for: entry.destination) != nil
-
-                            Button {
-                                if isAvailable {
-                                    switch viewModel.route(for: entry.destination) {
-                                    case .briefing:
-                                        onOpenExternalDestination(entry.destination)
-                                    default:
-                                        viewModel.open(entry.destination)
-                                    }
-                                }
-                            } label: {
-                                OpusCard(accent: entry.accent, style: .standard, isInteractive: isAvailable) {
-                                    OpusListRow(
-                                        systemImage: entry.systemImage,
-                                        title: entry.title,
-                                        subtitle: entry.subtitle,
-                                        caption: entry.detail,
-                                        accent: entry.accent,
-                                        isDisabled: !isAvailable
-                                    ) {
-                                        availabilityView(entry.availability)
-                                    }
-                                }
-                            }
-                            .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
-                            .disabled(!isAvailable)
-                        }
+                    if section.id == "diagnostics" {
+                        TrainingDiagnosticRadarCard(viewModel: diagnosticRadarViewModel)
+                    } else {
+                        matrixSection(section)
                     }
                 }
             }
             .padding(OpusSpacing.screenPadding)
             .padding(.bottom, 120)
+        }
+    }
+
+    private func matrixSection(_ section: TrainingHubSection) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            OpusSectionHeader(title: section.title, subtitle: section.subtitle)
+
+            ForEach(section.entries) { entry in
+                let isAvailable = viewModel.route(for: entry.destination) != nil
+
+                Button {
+                    if isAvailable {
+                        switch viewModel.route(for: entry.destination) {
+                        case .briefing:
+                            onOpenExternalDestination(entry.destination)
+                        case .diagnostics:
+                            break
+                        default:
+                            viewModel.open(entry.destination)
+                        }
+                    }
+                } label: {
+                    OpusCard(accent: entry.accent, style: .standard, isInteractive: isAvailable) {
+                        OpusListRow(
+                            systemImage: entry.systemImage,
+                            title: entry.title,
+                            subtitle: entry.subtitle,
+                            caption: entry.detail,
+                            accent: entry.accent,
+                            isDisabled: !isAvailable
+                        ) {
+                            availabilityView(entry.availability)
+                        }
+                    }
+                }
+                .buttonStyle(.opusPress(variant: .ghost, size: .icon, feel: .tactile))
+                .disabled(!isAvailable)
+            }
         }
     }
 
@@ -133,6 +144,8 @@ struct TrainingHubView: View {
                 case .drive(let mode):
                     DrivePlayerView(viewModel: makeDrivePlayerViewModel(mode))
                 case .briefing:
+                    EmptyView()
+                case .diagnostics:
                     EmptyView()
                 case nil:
                     EmptyView()
